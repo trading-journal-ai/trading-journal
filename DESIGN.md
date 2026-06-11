@@ -63,19 +63,18 @@ There are **two distinct data inputs**, both currently **manual CSV exports**:
 - Both are **execution/fill level** — one row per buy/sell, *not* pre-bundled
   round-trips.
 
-**B. Price/candle data (for the per-trade chart) — manual chart export.**
-- OHLCV candles come from a **manual "Export chart data" CSV**
-  (`epoch,open,high,low,close,…,volume`) from either:
-  - **TradingView** (already subscribed, $10/mo), or
-  - **ThinkorSwim** (free; chart → right-click → Export chart data) — keeps the
-    whole workflow in one platform.
-- **⚠️ Pre-market gap.** Both default to **regular-hours only (RTH)**.
-  Pre-market / extended-hours fills land *outside* RTH candles and cluster on the
-  first visible candle. Fix: turn on the chart's **extended-hours session**
-  before exporting. This matters — the small-cap momentum style here trades
-  pre-market.
-- **Cost stance: free for v1** (use the $10 TradingView sub already paid +/or
-  free ToS export). No paid market-data API. See §9 for the full rationale.
+**B. Price/candle data (for the per-trade chart) — auto-fetched, free.**
+- OHLCV candles (`epoch,open,high,low,close,…,volume`) are **auto-fetched by the
+  app** for the symbols it parsed from the execution import — no per-symbol
+  manual work. Source: **Alpha Vantage free tier** (1-min, extended hours by
+  default, historical by month). See §9.
+- **Manual "Export chart data" CSV** (TradingView, already paid; or free ToS) is
+  the **fallback** for any symbol the API misses — turn on the chart's
+  **extended-hours session** first to capture pre-market.
+- **⚠️ Pre-market matters** (this style trades pre-market) — extended hours is
+  required from whatever source. AV includes it; manual exports need the
+  extended-hours session enabled.
+- **Cost stance: free**, data local & private. See §9 for the full rationale.
 
 **C. Manual entry** — a form to add/edit an execution or trade by hand
 (corrections, missing fills, non-broker trades).
@@ -228,7 +227,8 @@ is a derived grouping of executions for one round-trip position.
 
 **ImportBatch** (audit trail for imports)
 - `kind` (`executions` | `candles`)
-- `source` (`das_csv` | `tos_csv` | `tradingview_csv` | `manual` | `schwab_api`)
+- `source` (`tos_csv` | `das_csv` | `manual` | `alpha_vantage` |
+  `tradingview_csv` | `tos_chart_csv`)
 - `imported_at`, `row_count`, `file_name`
 
 > Note: derived metrics (P&L, R) computed in the analytics layer so the source
@@ -254,10 +254,14 @@ is a derived grouping of executions for one round-trip position.
   prototype** (but make the TZ offset **DST-aware**, not hardcoded −4).
 - Add the **DAS** parser (two formats from the §8 prototype) as a second source.
 
-### Phase 3 — Trade chart
+### Phase 3 — Trade chart + candle auto-fetch
 - Port the §8 candlestick + entry/exit-marker chart into the trade detail view;
-  ingest a TradingView candle CSV; keep SVG export. (Earlier than analytics
-  because the code already exists and it's the most distinctive feature.)
+  keep SVG export. (Earlier than analytics because the code already exists and
+  it's the most distinctive feature.)
+- **Auto-fetch candles** for the parsed symbols via the `CandleProvider`
+  (Alpha Vantage free) into the `candles` cache — eliminates per-symbol manual
+  exports (§9). Manual CSV import stays as the fallback for missed symbols.
+- **Prereq:** run the AV penny-stock pre-market coverage test first.
 
 ### Phase 4 — Analytics
 - Summary dashboard, equity curve, filters & breakdowns.
@@ -268,21 +272,21 @@ is a derived grouping of executions for one round-trip position.
 ### Phase 6 — Screenshots
 - Image upload, attach to trades, display in detail view.
 
-### Phase 7 — Optional candle automation (later, only if wanted)
-- v1 already caches manually-exported candles. This phase swaps the manual
-  export for an automated `CandleProvider` (prefer **Databento** usage-based for
-  deep backfill; Polygon if full automation is worth $29/mo) — see §9.
-  Optional; not required for the journal to be useful.
+### Phase 7 — Provider hardening (optional)
+- Candle auto-fetch already lands in Phase 3 (Alpha Vantage, free). This optional
+  phase adds robustness only if needed: a paid fallback provider for symbols AV
+  misses (**Databento** usage-based, or **Polygon**), retry/rate-limit handling,
+  and bulk historical backfill — all behind the existing `CandleProvider`.
 
 ---
 
 ## 7. Open Questions
-- ~~Automate the candle data?~~ — **resolved for v1: stay free/manual** (§9).
-  Candles via the TradingView ($10/mo, already paid) or free ToS chart export,
-  cached once on import. No paid API — Polygon $29/mo would eat the ~$30
-  TraderVue saving. If automation/backfill is ever wanted, prefer Databento
-  (usage-based, one-time) over a subscription. Schwab ruled out (30-day 1-min
-  window + weekly OAuth re-auth).
+- ~~Automate the candle data?~~ — **resolved: free *and* automated** (§9). App
+  auto-fetches candles for the parsed symbols via **Alpha Vantage free tier**
+  (1-min, extended hours, historical by month) — kills the per-symbol export
+  drudgery, no paid API, no UI scraping. Manual TradingView/ToS export = fallback.
+  **One open validation:** AV penny-stock pre-market coverage (test before
+  committing). Paid providers (Databento/Polygon) only if AV coverage fails.
 - ~~DAS vs TOS for executions~~ — **resolved: TOS primary** (Pos Effect +
   built-in P&L), DAS secondary. See §8 for the confirmed TOS format.
 - **Pre-market coverage** — accept the RTH-only gap for v1, or require an
@@ -386,9 +390,10 @@ how it feeds this project:
 
 The per-trade chart needs 1-minute OHLCV candles **with extended hours**.
 
-> **Decision: stay free for v1 — manual candle exports, no paid data API.**
-> Rationale below; provider options kept for a *later, optional* automation
-> upgrade only.
+> **Decision: free *and* automated.** The app auto-fetches candles for the
+> symbols it parsed from the TOS export (via Alpha Vantage free tier) — no paid
+> API, and no per-symbol manual chart exports. Manual TradingView/ToS export is
+> the fallback. Pending one validation: penny-stock pre-market coverage.
 
 ### Economics (why free is the right call, not a compromise)
 - Current spend: **TraderVue $29.95/mo + TradingView $10/mo ≈ $40/mo.**
@@ -401,14 +406,43 @@ The per-trade chart needs 1-minute OHLCV candles **with extended hours**.
   OHLCV for a ticker+date) — so the reason to skip Polygon is **cost, not
   privacy**.
 
-### v1 candle sources (free / already paid — both manual)
-1. **TradingView "Export chart data"** — already subscribed ($10/mo). Set the
-   chart to show the **extended-hours session** before exporting to capture
-   pre-market.
-2. **ThinkorSwim chart → right-click → "Export chart data…"** — free, same
-   `timestamp,o,h,l,c,vol` format; lets the whole workflow live in one platform
-   (ToS for executions *and* candles). Also set the chart's extended-hours
-   session on. (1-min history depth is limited — fine for recent trades.)
+### The real pain point: per-symbol chart exports
+- The TOS execution export is **one step** for the whole session.
+- But candles must be pulled **per symbol** — 2–10 manual chart exports per
+  session, every session. That repetition is the friction worth automating.
+- **Automating TradingView's UI** (agent / browser bot) to do those exports is
+  the *wrong* fix: it violates TradingView's ToS (and ToS runs on the brokerage
+  login), it's brittle, and it's more work than the API path below.
+
+### Recommended: app auto-fetches candles for the parsed symbols (free)
+Because the importer already parsed the executions, **the app knows exactly which
+symbols + dates were traded** — so it fetches their candles itself. Per-symbol
+manual exports drop to **zero**:
+
+1. Export TOS Account Statement (1 step, unchanged).
+2. Import → parse executions → **app auto-fetches candles for each traded symbol
+   via the `CandleProvider`** → cache locally → render.
+
+- **Provider: Alpha Vantage free tier** (verified June 2026,
+  [docs](https://www.alphavantage.co/documentation/)):
+  - `TIME_SERIES_INTRADAY`, **1-min**, **`extended_hours=true` by default**
+    (4:00am–8:00pm ET → covers pre-market). ✅
+  - **Historical backfill by month**: `outputsize=full&month=YYYY-MM` returns a
+    full past month — so even **year-old trades are reachable** (fixes the
+    backfill problem below). ✅
+  - **Free**, API-key only, legitimate (no scraping). ✅
+  - Limit **~25 req/day**: a session's 2–10 symbols = 2–10 calls → well under
+    cap for daily use; throttle large one-time backfills over a few days.
+- **Open risk to validate:** thin **penny-stock pre-market** coverage (e.g.
+  MOBX ~$0.95, CDTG ~$0.53). Must test AV against real traded symbols/dates
+  before relying on it (see the coverage-test task).
+
+### Manual fallback (free / already paid)
+If a symbol isn't covered by the API, fall back to a manual export, same
+`timestamp,o,h,l,c,vol` format, **with the chart's extended-hours session on**:
+1. **TradingView "Export chart data"** — already subscribed ($10/mo).
+2. **ThinkorSwim chart → right-click → "Export chart data…"** — free; keeps the
+   whole workflow in one platform.
 
 ### Core strategy: fetch once on import, cache forever
 - On import, for each traded symbol+day, fetch the 1-min candles **once** and
@@ -420,38 +454,31 @@ The per-trade chart needs 1-minute OHLCV candles **with extended hours**.
   (`getCandles(symbol, fromEpoch, toEpoch, timeframe)`), so the source is a
   config/adapter choice, not a rewrite.
 
-### The backfill problem (acknowledged, deferred)
-- Caching solves *new* trades, but **importing old account history (e.g. a year
-  ago) needs deep historical intraday + extended hours.** Manual TradingView/ToS
-  exports have limited 1-min lookback, so very old trades may not get a chart.
-- **For v1 this is accepted** — journal new trades going forward; old trades can
-  go chart-less or use whatever manual export reaches. Deep backfill is an
-  optional later upgrade, not a v1 requirement.
-- **How TraderVue does it (for reference):** renders with TradingView's charting
+### Backfill (old trades) — now handled by the free path
+- Alpha Vantage's `month=YYYY-MM` history means old trades are reachable too, not
+  just recent ones — so the earlier "needs a paid deep-history vendor" worry is
+  largely moot, pending the penny-stock coverage test.
+- **How TraderVue does it (reference):** renders with TradingView's charting
   library but feeds it their **own licensed historical data vendor** — the deep
   history is the data feed, not TradingView.
 
-### Optional paid providers (only if we later want automation/backfill)
-> Not for v1. Listed so the `CandleProvider` adapter targets are known. A
-> ~$10/mo or **usage-based one-time** option is preferred over a $29/mo
-> subscription, to stay under the TraderVue saving.
-| Provider | Cost | Ext. hours | 1-min history depth | Notes |
+### Provider options (alternatives / fallbacks)
+| Provider | Cost | Ext. hours | 1-min history | Notes |
 |---|---|---|---|---|
-| **Schwab Market Data** | Free w/ account | ✅ `needExtendedHoursData=true` | ⚠️ **~30–35 days only** | `/marketdata/v1/pricehistory`, 1 symbol/call, 120 req/min. **Access token 30 min; refresh token hard-expires at 7 days, no extension → manual re-auth weekly.** Can't backfill old trades. |
-| **Polygon.io** | ~$29/mo (verify) | ✅ full session | ✅ **years** | `/v2/aggs/ticker/{sym}/range/1/minute/{from}/{to}`. Simple API key. Best practical backfill. |
-| **Databento** ⭐ | **Usage-based (one-time)** | ✅ | ✅ deepest/highest quality | Pay only for what you pull — a one-time year backfill of just your traded symbols is likely a few $, $0 ongoing. Best fit for the "$10-ish, not a subscription" preference. |
-| **Tiingo / Twelve Data** | ~$10/mo | ⚠️ varies (often IEX-only on cheap tiers) | mid | Hits the $10 target but IEX-based feeds are thin for penny/pre-market. |
-| **Polygon.io** | ~$29/mo | ✅ full session | ✅ years | Cleanest full automation, but $29 ≈ the TraderVue saving. |
-| **Alpha Vantage** | Free (25 req/day) / ~$50mo | ✅ `extended_hours=true` | ~2yr by month | Free tier too rate-limited for daily use; fine to prototype. |
-| **yfinance** (unofficial) | Free | ⚠️ `prepost=True`, gappy | ⚠️ **~last 7–30 days** | Zero setup; thin/penny names unreliable pre-market. |
+| **Alpha Vantage** ⭐ | **Free** (~25 req/day) | ✅ `extended_hours=true` (default) | ✅ by month (years) | Recommended automated source. Validate penny-stock pre-market coverage. |
+| **Polygon.io** | ~$29/mo (free tier 5/min, delayed) | ✅ full session | ✅ years (paid) | Free tier *may* work since we only need delayed historical data — verify free minute-history depth. |
+| **Databento** | Usage-based (one-time) | ✅ | ✅ deepest quality | Best paid option for a one-time deep backfill if AV coverage is poor. |
+| **Schwab Market Data** | Free w/ account | ✅ `needExtendedHoursData=true` | ⚠️ ~30–35 days | Ruled out: short window + 7-day OAuth re-auth. |
+| **Twelve Data** | free / paid | ❌ ext. hours = Pro only | mid | Free tier lacks pre-market → unsuitable. |
+| **yfinance** (unofficial) | Free | ⚠️ gappy | ⚠️ ~7–30 days | Zero setup; unreliable on thin names. |
 
 ### Decision
-- **v1: free, manual.** Candles from the TradingView/ToS chart exports above,
-  cached once on import. No paid data API.
-- **`CandleProvider` interface + `candles` cache** built in from the start so a
-  provider can drop in later without rework.
-- **If/when automation or deep backfill is wanted:** prefer **Databento
-  (usage-based one-time backfill)** over a monthly subscription, to stay within
-  the TraderVue saving. Polygon only if full hands-off automation is worth $29.
-- ⚠️ **No sanctioned TradingView automation** — no public export API; scraping
-  violates ToS.
+- **Automated + free + legitimate: Alpha Vantage**, app-driven (fetch candles for
+  the parsed symbols), cached locally. Eliminates the per-symbol manual exports.
+- **Manual TradingView/ToS export = fallback** for any symbol the API misses.
+- **`CandleProvider` interface + `candles` cache** so swapping/adding a provider
+  (Polygon, Databento) later is config, not a rewrite.
+- ⚠️ **Do not automate TradingView/ToS UIs** — ToS violation, brittle, and
+  unnecessary now that the API path exists.
+- **Blocking validation:** the AV penny-stock pre-market coverage test before
+  committing to it as primary.
