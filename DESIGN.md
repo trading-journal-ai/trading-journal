@@ -38,20 +38,36 @@ reflectively, and tracking performance over time.
   multi-leg/contract logic now.
 
 ### Data entry methods
-1. **Manual entry** — a form to add/edit a trade by hand.
-2. **CSV import** — parse broker trade-history exports into trades.
-3. **Broker API sync (later phase)** — automated pull from **Schwab** (formerly
-   TD Ameritrade). Designed as a pluggable importer, not a v1 deliverable.
+1. **DAS Trader CSV import (primary).** Trading is done through **DAS Trader**
+   (direct-access platform) on a **Schwab** account. DAS exports at the
+   **execution/fill level** — each row is a single buy or sell with timestamp,
+   price, quantity, and route — *not* pre-bundled round-trip trades. This is the
+   main way data enters the journal.
+2. **Manual entry** — a form to add/edit an execution or trade by hand (for
+   corrections, missing fills, or non-DAS trades).
+3. **Automated sync (later phase).** Either scripted ingestion of DAS export
+   files or the Schwab API. Designed as a pluggable importer behind a common
+   interface; not a v1 deliverable.
+
+> **Key implication:** because DAS gives us fills, the import pipeline must group
+> executions into positions / round-trips itself (see §5). Day-trading means
+> frequent scaling in and out, so an execution-level model is required, not
+> optional.
 
 ---
 
 ## 3. Core Features (v1)
 
 ### 3.1 Trade Logging
-- Add / edit / delete trades.
-- Fields: symbol, side (long/short), entry & exit date/time, entry & exit price,
-  quantity, fees/commissions, stop loss, target.
-- Derived: P&L ($ and %), R-multiple, holding period.
+- Store raw **executions** (fills) as the immutable source of truth.
+- **Group executions into trades** (round-trips / positions) via a matching
+  algorithm (FIFO by default) — opening and closing fills for the same symbol.
+- A *trade* exposes: symbol, side (long/short), avg entry & exit price, total
+  quantity, first-entry & last-exit time, fees, derived stop/target, status
+  (`open` | `closed`).
+- Derived: P&L ($ and %), R-multiple, holding period, # of fills, max
+  size/exposure.
+- Manual add / edit / delete for executions and trades.
 - Tags (free-form, reusable), setup/strategy label.
 - Free-text notes (markdown).
 
@@ -113,20 +129,39 @@ trading-journal/
 
 ## 5. Data Model (first cut)
 
-**Trade**
+Because DAS exports fills, **`Execution` is the source of truth** and a `Trade`
+is a derived grouping of executions for one round-trip position.
+
+**Execution** (one DAS fill — immutable)
+- `id`
+- `symbol`
+- `side` (`buy` | `sell`)
+- `quantity`
+- `price`
+- `executed_at`
+- `fees`, `route` (nullable)
+- `trade_id` (FK — assigned by the matching step, nullable until matched)
+- `import_batch_id` (FK), `source_row_hash` (for dedupe)
+
+**Trade** (derived round-trip / position)
 - `id`
 - `symbol`
 - `side` (`long` | `short`)
-- `quantity`
-- `entry_price`, `entry_at`
-- `exit_price`, `exit_at` (nullable while open)
-- `fees`
-- `stop_loss`, `target` (nullable)
+- `quantity` (total shares traded)
+- `avg_entry_price`, `entry_at` (first opening fill)
+- `avg_exit_price`, `exit_at` (last closing fill; nullable while open)
+- `fees` (sum of constituent executions)
+- `stop_loss`, `target` (nullable — user-supplied for R calc)
 - `setup` (label)
 - `status` (`open` | `closed`)
 - `created_at`, `updated_at`
 - Derived (computed, not stored): `pnl`, `pnl_pct`, `r_multiple`,
-  `holding_period`.
+  `holding_period`, fill count.
+
+> Matching: a FIFO algorithm walks a symbol's executions chronologically,
+> opening a Trade on the first fill and closing it when net position returns to
+> zero. Scaling in/out stays within one Trade; a flip through zero starts a new
+> one. FIFO vs LIFO should be configurable.
 
 **Tag** + **TradeTag** (many-to-many)
 
@@ -138,8 +173,9 @@ trading-journal/
 **Attachment**
 - `trade_id`, `file_path`, `caption`
 
-**ImportBatch** (audit trail for CSV/API imports)
-- `source` (`csv` | `schwab`), `imported_at`, `row_count`
+**ImportBatch** (audit trail for imports)
+- `source` (`das_csv` | `manual` | `schwab_api`), `imported_at`, `row_count`,
+  `file_name`
 
 > Note: derived metrics (P&L, R) computed in the analytics layer so the source
 > fields stay the single source of truth.
@@ -151,11 +187,13 @@ trading-journal/
 ### Phase 0 — Foundations
 - Next.js + TS scaffold, Tailwind, SQLite + migrations, base layout.
 
-### Phase 1 — Trade logging (MVP)
-- Manual add/edit/delete, trade list, trade detail, derived P&L/R.
+### Phase 1 — Execution & trade model (MVP)
+- `Execution` + `Trade` schema, FIFO matching engine, manual add/edit/delete,
+  trade list, trade detail, derived P&L/R.
 
-### Phase 2 — CSV import
-- Upload + map broker CSV → trades, with a preview/confirm step and dedupe.
+### Phase 2 — DAS Trader CSV import
+- Upload a DAS export, map columns → executions, run matching into trades, with
+  a preview/confirm step and row-hash dedupe.
 
 ### Phase 3 — Analytics
 - Summary dashboard, equity curve, filters & breakdowns.
@@ -166,16 +204,21 @@ trading-journal/
 ### Phase 5 — Charts & screenshots
 - Image upload, attach to trades, display in detail view.
 
-### Phase 6 — Schwab API sync (later)
-- Schwab adapter behind the importer interface; auth, fetch, map, dedupe.
+### Phase 6 — Automated sync (later)
+- Scripted ingestion of DAS export files, and/or a Schwab API adapter, behind
+  the importer interface; auth, fetch, map, dedupe.
 
 ---
 
 ## 7. Open Questions
+- **DAS export format:** need a real DAS Trader export sample to pin down exact
+  columns, timestamp format, and how DAS labels side/route/fees.
+- **Matching edge cases:** position flips through zero, shorts, overnight holds
+  spanning export files, partial-day exports. FIFO vs LIFO default.
 - Styling lib: confirm Tailwind.
 - ORM: Drizzle vs Prisma for SQLite.
 - Charting lib choice.
-- CSV format: which exact Schwab export are we targeting? (need a real sample).
-- How to handle partial fills / scaling in & out (multiple entries/exits per
-  position)? May need a `TradeLeg` / execution table sooner than expected.
 - Backup strategy for the SQLite file.
+
+> **Resolved:** partial fills / scaling in & out — handled by the
+> `Execution` → `Trade` (FIFO matching) model in §5.
