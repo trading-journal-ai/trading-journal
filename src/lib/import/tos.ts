@@ -81,8 +81,10 @@ function sliceSection(lines: string[], header: string): string[][] {
  * Build a lookup of fees from the Cash Balance section, keyed by
  * `symbol|epochSeconds|absQty|price` (best-effort join to trade-history rows).
  */
-function buildFeeIndex(lines: string[]): Map<string, number> {
-  const fees = new Map<string, number>();
+function buildFeeIndex(lines: string[]): Map<string, { sum: number; n: number }> {
+  // sum + count per key, so identical fills split the fee instead of each
+  // claiming the full summed amount (which double-counts duplicates).
+  const fees = new Map<string, { sum: number; n: number }>();
   const idx = lines.findIndex((l) => l.trim() === "Cash Balance");
   if (idx === -1) return fees;
   const headers = parseCsvLine(lines[idx + 1]);
@@ -111,7 +113,8 @@ function buildFeeIndex(lines: string[]): Map<string, number> {
     const epoch = tosWallClockToEpochSeconds(date, c[iTime] ?? "");
     const misc = Math.abs(parseNumber(c[iMisc]) ?? 0);
     const key = `${symbol.toUpperCase()}|${epoch}|${qty}|${price}`;
-    fees.set(key, (fees.get(key) ?? 0) + misc);
+    const prev = fees.get(key) ?? { sum: 0, n: 0 };
+    fees.set(key, { sum: prev.sum + misc, n: prev.n + 1 });
   }
   return fees;
 }
@@ -150,7 +153,8 @@ export function parseTosStatement(csv: string): ParsedExecution[] {
     const executedAt = tosWallClockToEpochSeconds(date, time);
     const side = (c[iSide] ?? "").toUpperCase() === "SELL" ? "sell" : "buy";
     const posEffect = (c[iPos] ?? "").trim() || null;
-    const fees = feeIndex.get(`${symbol}|${executedAt}|${qty}|${price}`) ?? 0;
+    const feeEntry = feeIndex.get(`${symbol}|${executedAt}|${qty}|${price}`);
+    const fees = feeEntry ? feeEntry.sum / feeEntry.n : 0;
 
     out.push({
       symbol,

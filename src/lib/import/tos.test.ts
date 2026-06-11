@@ -22,6 +22,17 @@ describe("parseTosStatement", () => {
     expect(execs.length).toBe(91);
   });
 
+  maybe("splits fees across identical fills (no double-count)", () => {
+    const execs = parseTosStatement(csv!);
+    // Two identical fills: SOLD -100 AIFF @1.7534 at 11:49:09 PT on 3/4.
+    const dupes = execs.filter(
+      (e) => e.symbol === "AIFF" && e.price === 1.7534 && e.quantity === 100,
+    );
+    expect(dupes.length).toBe(2);
+    // Each should carry ~0.02 of reg fees, not the summed 0.04.
+    for (const e of dupes) expect(e.fees).toBeCloseTo(0.02, 2);
+  });
+
   maybe("maps fields and converts PT→UTC correctly (first TMDE fill)", () => {
     const execs = parseTosStatement(csv!);
     const tmde = execs.find((e) => e.symbol === "TMDE");
