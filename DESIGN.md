@@ -263,19 +263,20 @@ is a derived grouping of executions for one round-trip position.
 - Image upload, attach to trades, display in detail view.
 
 ### Phase 7 — Automated candle/sync (later)
-- Replace the manual TradingView export with an API source (**Schwab
-  price-history** or a market-data provider) — also fixes the pre-market gap.
+- Replace the manual TradingView export with a **`CandleProvider`** (planned
+  default **Polygon.io**), fetch-once-on-import into the local `candles` cache —
+  see §9. Fixes the pre-market gap and enables backfilling old trades.
   Optionally scripted execution ingestion. All behind the importer interface.
 
 ---
 
 ## 7. Open Questions
-- **Automate the TradingView candle export?** Wanted ("big help, not a deal
-  breaker"). TradingView has **no sanctioned export API**, so true automation
-  means swapping the source: pull candles from the **Schwab price-history API**
-  (account already exists; can include extended hours) or a data provider
-  (Polygon, Alpaca, etc.). Decision: ship v1 on manual TradingView CSV, treat
-  API candles as the Phase 7 upgrade that also solves pre-market.
+- **Automate the candle data?** Wanted ("big help, not a deal breaker"). Fully
+  speced in **§9**. Summary: no TradingView API exists, so automation = swap to a
+  data provider. Verified that **Schwab can't backfill** (1-min history ~30 days
+  + weekly OAuth re-auth), so the planned default is **Polygon.io** (deep history
+  + extended hours), with a fetch-once-and-cache strategy. v1 still ships on the
+  manual TradingView CSV; provider automation is Phase 7.
 - ~~DAS vs TOS for executions~~ — **resolved: TOS primary** (Pos Effect +
   built-in P&L), DAS secondary. See §8 for the confirmed TOS format.
 - **Pre-market coverage** — accept the RTH-only gap for v1, or require an
@@ -372,3 +373,52 @@ how it feeds this project:
 
 ### Source repo
 - `github.com/justin-carlson/trading-journal` (private) — this project.
+
+---
+
+## 9. Candle Data Pipeline (OHLCV for the chart)
+
+The per-trade chart needs 1-minute OHLCV candles **with extended hours**. Today
+that's a manual TradingView CSV (§2-B); this section is the plan to automate it.
+
+### Core strategy: fetch once on import, cache forever
+- On import, for each traded symbol+day, fetch the 1-min candles **once** and
+  **persist them in SQLite** (new `candles` table: `symbol, timeframe, t (epoch),
+  o,h,l,c,vol`, unique on `symbol+timeframe+t`).
+- After that the chart reads from the local cache — no re-fetch, works offline,
+  and a short-lookback provider stops mattering for *ongoing* trades.
+- All providers sit behind one **`CandleProvider` interface**
+  (`getCandles(symbol, fromEpoch, toEpoch, timeframe)`), so the source is a
+  config/adapter choice, not a rewrite.
+
+### The backfill problem (the fragile part)
+- Caching solves *new* trades, but **importing old account history (e.g. a year
+  ago) needs a provider with deep historical intraday + extended hours.**
+- This is the make-or-break dimension. It rules Schwab out for backfill (see
+  below) and points to Polygon/Databento.
+- **How TraderVue does it:** they render with **TradingView's charting library**
+  but feed it their **own licensed historical market-data vendor** — the deep
+  history is the data feed, not TradingView. Our equivalent = free rendering
+  (the §8 prototype / Lightweight Charts) + a deep-history data provider.
+
+### Provider comparison (verified June 2026 where noted)
+| Provider | Cost | Ext. hours | 1-min history depth | Notes |
+|---|---|---|---|---|
+| **Schwab Market Data** | Free w/ account | ✅ `needExtendedHoursData=true` | ⚠️ **~30–35 days only** | `/marketdata/v1/pricehistory`, 1 symbol/call, 120 req/min. **Access token 30 min; refresh token hard-expires at 7 days, no extension → manual re-auth weekly.** Can't backfill old trades. |
+| **Polygon.io** | ~$29/mo (verify) | ✅ full session | ✅ **years** | `/v2/aggs/ticker/{sym}/range/1/minute/{from}/{to}`. Simple API key. Best practical backfill. |
+| **Databento** | Pay-as-you-go | ✅ | ✅ deepest/highest quality | Per-symbol historical pulls; great for one-time backfill. |
+| **Alpha Vantage** | Free (25 req/day) / ~$50mo | ✅ `extended_hours=true` | ~2yr by month | Free tier too rate-limited for daily use; fine to prototype. |
+| **yfinance** (unofficial) | Free | ⚠️ `prepost=True`, gappy | ⚠️ **~last 7–30 days** | Zero setup; thin/penny names unreliable pre-market. |
+
+### Decision (planned)
+- **Default to Polygon.io** as the single provider: one API key (no weekly OAuth
+  re-auth), years of 1-min incl. pre/post — covers **both** ongoing trades and
+  the year-old backfill. If we're paying for backfill anyway, paying once
+  removes Schwab's two frictions entirely.
+- **Schwab = the $0 fallback** *only if* avoiding a subscription and journaling
+  recent trades only (accept the 30-day wall + weekly re-auth).
+- **Prototype** the pipeline with yfinance / Alpha Vantage (no setup) before
+  wiring real providers.
+- Implement as Phase 7; everything behind `CandleProvider` + the `candles` cache.
+- ⚠️ **No sanctioned TradingView automation** — no public export API; scraping
+  violates ToS. "Automating TradingView" = replacing it with a provider above.
