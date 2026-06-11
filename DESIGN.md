@@ -1,9 +1,16 @@
 # Trading Journal — Design Doc
 
-> Status: **Draft v1** · Last updated: 2026-06-11
+> Status: **Draft v2** · Last updated: 2026-06-11
 
 A personal, local-first web app for logging stock/ETF trades, reviewing them
 reflectively, and tracking performance over time.
+
+> **Catch-up note (read first).** Work on this has been spread across several
+> standalone files and chats. This doc is the single place that brings it
+> together. The most important prior asset is a working, self-contained
+> trade-chart prototype — see [§8 Prior Work & Assets](#8-prior-work--assets).
+> The charting approach is considered **proven**; we'll refine it as needed
+> rather than redesign it.
 
 ---
 
@@ -38,21 +45,42 @@ reflectively, and tracking performance over time.
   multi-leg/contract logic now.
 
 ### Data entry methods
-1. **DAS Trader CSV import (primary).** Trading is done through **DAS Trader**
-   (direct-access platform) on a **Schwab** account. DAS exports at the
-   **execution/fill level** — each row is a single buy or sell with timestamp,
-   price, quantity, and route — *not* pre-bundled round-trip trades. This is the
-   main way data enters the journal.
-2. **Manual entry** — a form to add/edit an execution or trade by hand (for
-   corrections, missing fills, or non-DAS trades).
-3. **Automated sync (later phase).** Either scripted ingestion of DAS export
-   files or the Schwab API. Designed as a pluggable importer behind a common
-   interface; not a v1 deliverable.
 
-> **Key implication:** because DAS gives us fills, the import pipeline must group
-> executions into positions / round-trips itself (see §5). Day-trading means
-> frequent scaling in and out, so an execution-level model is required, not
-> optional.
+There are **two distinct data inputs**, both currently **manual CSV exports**:
+
+**A. Execution data (the trades) — DAS Trader or ThinkorSwim.**
+- Trading is done through **DAS Trader** (direct-access platform) on a **Schwab**
+  account; **ThinkorSwim (TOS)** is also available on the same account.
+- Both export at the **execution/fill level** — each row is a single buy or sell
+  with timestamp, price, quantity (and DAS adds route) — *not* pre-bundled
+  round-trip trades.
+- **Either source works; we're not locked in.** The existing chart prototype
+  already parses **two DAS formats** (see §8), so DAS is the path of least
+  resistance for v1. A TOS parser can be added behind the same importer
+  interface.
+
+**B. Price/candle data (for the per-trade chart) — TradingView CSV export.**
+- OHLCV candles come from a **manual TradingView "Export chart data" CSV**
+  (`epoch,open,high,low,close,…,volume`).
+- **⚠️ Pre-market gap.** TradingView's default export is **regular-hours only
+  (RTH)**. Pre-market / extended-hours fills land *outside* the RTH candles and
+  their markers cluster on the first visible candle. Covering pre-market
+  requires exporting **extended-hours** data from TradingView separately. This
+  matters: the small-cap momentum style here includes pre-market trading.
+
+**C. Manual entry** — a form to add/edit an execution or trade by hand
+(corrections, missing fills, non-broker trades).
+
+**D. Automated sync (later phase).** Pluggable importer behind a common
+interface; not a v1 deliverable. See §7 — automating the *candle* fetch
+(TradingView has no sanctioned export API, so this likely means the **Schwab
+price-history API** or a market-data provider) is the highest-value automation
+and would also fix the pre-market gap.
+
+> **Key implication:** because the broker gives us fills, the import pipeline
+> must group executions into positions / round-trips itself (see §5).
+> Day-trading means frequent scaling in and out, so an execution-level model is
+> required, not optional.
 
 ---
 
@@ -84,7 +112,20 @@ reflectively, and tracking performance over time.
   trade?).
 - Searchable journal of mistakes & lessons across trades.
 
-### 3.4 Charts & Screenshots
+### 3.4 Trade Chart (entry/exit visualization)
+- Per-trade candlestick chart with **entry/exit markers** plotted on the
+  candles (buy = green up-triangle, sell = red down-triangle).
+- Fed by **TradingView candle CSV** (§2-B) + the trade's executions; ET→UTC
+  alignment handled so markers land on the right candle.
+- Interactive: pan/zoom, crosshair showing OHLCV per candle.
+- **Export to SVG** — capture a static snapshot of the chart into the journal
+  entry for that trade.
+- **Approach is proven** — adapt the existing prototype (§8) rather than rebuild
+  from scratch. Open choice: keep its hand-rolled canvas+SVG renderer, or port
+  the interactive view to TradingView **Lightweight Charts** while keeping the
+  SVG-snapshot idea. See §7.
+
+### 3.5 Screenshots
 - Attach one or more chart images to a trade.
 - Store images locally; display in the trade detail view.
 - (Stretch) lightweight annotation / markup.
@@ -96,7 +137,9 @@ reflectively, and tracking performance over time.
 ### Stack
 - **Framework:** Next.js (App Router) + React + TypeScript.
 - **Styling:** TBD (Tailwind likely — fast for data-dense UI).
-- **Charts:** a React charting lib (e.g. Recharts / visx — decide at build time).
+- **Charts:** general analytics charts via a React lib (Recharts / visx — TBD).
+  The **trade entry/exit chart** is its own thing, adapted from the proven
+  prototype (§8) — candlestick + markers + SVG export.
 - **Data store:** **local-first SQLite.**
   - Accessed server-side via Next.js route handlers / server actions.
   - ORM/query layer: TBD (Drizzle or Prisma — Drizzle preferred for SQLite +
@@ -117,11 +160,12 @@ trading-journal/
   components/         # UI components
   lib/
     db/               # schema, migrations, queries
-    import/           # CSV parsers + broker importers (Schwab adapter later)
+    import/           # CSV parsers: DAS (2 formats), TOS, TradingView candles
+    chart/            # candlestick + entry/exit markers + SVG export
     analytics/        # P&L, R-multiple, equity curve calcs
   data/
     journal.db        # SQLite database (gitignored)
-    uploads/          # screenshots (gitignored)
+    uploads/          # screenshots + imported CSVs (gitignored)
   DESIGN.md
 ```
 
@@ -174,8 +218,9 @@ is a derived grouping of executions for one round-trip position.
 - `trade_id`, `file_path`, `caption`
 
 **ImportBatch** (audit trail for imports)
-- `source` (`das_csv` | `manual` | `schwab_api`), `imported_at`, `row_count`,
-  `file_name`
+- `kind` (`executions` | `candles`)
+- `source` (`das_csv` | `tos_csv` | `tradingview_csv` | `manual` | `schwab_api`)
+- `imported_at`, `row_count`, `file_name`
 
 > Note: derived metrics (P&L, R) computed in the analytics layer so the source
 > fields stay the single source of truth.
@@ -191,34 +236,98 @@ is a derived grouping of executions for one round-trip position.
 - `Execution` + `Trade` schema, FIFO matching engine, manual add/edit/delete,
   trade list, trade detail, derived P&L/R.
 
-### Phase 2 — DAS Trader CSV import
-- Upload a DAS export, map columns → executions, run matching into trades, with
-  a preview/confirm step and row-hash dedupe.
+### Phase 2 — Execution CSV import (DAS/TOS)
+- Upload a broker export, map columns → executions, run matching into trades,
+  with preview/confirm and row-hash dedupe. **Reuse the DAS parser + ET→UTC +
+  fill-aggregation logic from the §8 prototype**; add TOS as a second format.
 
-### Phase 3 — Analytics
+### Phase 3 — Trade chart
+- Port the §8 candlestick + entry/exit-marker chart into the trade detail view;
+  ingest a TradingView candle CSV; keep SVG export. (Earlier than analytics
+  because the code already exists and it's the most distinctive feature.)
+
+### Phase 4 — Analytics
 - Summary dashboard, equity curve, filters & breakdowns.
 
-### Phase 4 — Review & journaling
+### Phase 5 — Review & journaling
 - Reflection fields, emotional/discipline tracking, lessons search.
 
-### Phase 5 — Charts & screenshots
+### Phase 6 — Screenshots
 - Image upload, attach to trades, display in detail view.
 
-### Phase 6 — Automated sync (later)
-- Scripted ingestion of DAS export files, and/or a Schwab API adapter, behind
-  the importer interface; auth, fetch, map, dedupe.
+### Phase 7 — Automated candle/sync (later)
+- Replace the manual TradingView export with an API source (**Schwab
+  price-history** or a market-data provider) — also fixes the pre-market gap.
+  Optionally scripted execution ingestion. All behind the importer interface.
 
 ---
 
 ## 7. Open Questions
-- **DAS export format:** need a real DAS Trader export sample to pin down exact
-  columns, timestamp format, and how DAS labels side/route/fees.
+- **Automate the TradingView candle export?** Wanted ("big help, not a deal
+  breaker"). TradingView has **no sanctioned export API**, so true automation
+  means swapping the source: pull candles from the **Schwab price-history API**
+  (account already exists; can include extended hours) or a data provider
+  (Polygon, Alpaca, etc.). Decision: ship v1 on manual TradingView CSV, treat
+  API candles as the Phase 7 upgrade that also solves pre-market.
+- **DAS vs TOS for executions** — both are manual fill-level exports; either is
+  fine. Lean DAS for v1 since the parser already exists; add TOS later. (Need a
+  fresh sample of whichever to confirm current columns.)
+- **Pre-market coverage** — accept the RTH-only gap for v1, or require an
+  extended-hours TradingView export per trade? (Resolved cleanly by API candles
+  later.)
+- **Trade chart renderer** — keep the prototype's canvas+SVG, or port to
+  Lightweight Charts + keep SVG snapshot? (Either works; not blocking.)
 - **Matching edge cases:** position flips through zero, shorts, overnight holds
   spanning export files, partial-day exports. FIFO vs LIFO default.
 - Styling lib: confirm Tailwind.
 - ORM: Drizzle vs Prisma for SQLite.
-- Charting lib choice.
+- Analytics charting lib choice.
 - Backup strategy for the SQLite file.
 
-> **Resolved:** partial fills / scaling in & out — handled by the
-> `Execution` → `Trade` (FIFO matching) model in §5.
+> **Resolved:**
+> - Partial fills / scaling in & out — `Execution` → `Trade` FIFO matching (§5).
+> - Candle data source — **TradingView "Export chart data" CSV** (§2-B), manual
+>   for v1.
+> - Trade-chart approach — adapt the proven §8 prototype.
+
+---
+
+## 8. Prior Work & Assets
+
+Work to date has been scattered across files and chats. Index of what exists and
+how it feeds this project:
+
+### Trade-chart prototype ⭐ (the key reusable asset)
+- **File:** `~/Desktop/trade_chart (10).html` — a single self-contained HTML
+  file (~886 lines, embedded ROLR sample data, opens standalone in a browser).
+- **What it does:** drag-drop a **TradingView candle CSV** + a **DAS Trader
+  log**; renders a candlestick chart (canvas) with **buy/sell markers**,
+  crosshair OHLCV, an execution table with running P&L, multi-symbol tabs, and
+  an **Export-SVG** button. Price axis is SVG.
+- **Reusable logic (port these):**
+  - **DAS parser, two formats** — new (`TradeID,OrderID,…`, `B`/`S`,
+    `MM/DD/YY HH:MM:SS`, every row an execution) and old (`Event,B/S,…`, filter
+    `Event=Execute`, `HH:MM:SS`).
+  - **ET→UTC** timestamp conversion (EDT = UTC−4).
+  - **Same-minute, same-side fill aggregation** → effectively the
+    execution-grouping step.
+  - **Running avg-cost P&L** per symbol.
+  - Candle CSV ingestion (`epoch,o,h,l,c,…,vol`).
+- **History:** evolved over a long chat (started pure-SVG, fixed candle slots,
+  pan/zoom + momentum, price-range bug fixes when zoomed out) — see the shared
+  thread "Trade entry and exit visualization tool".
+
+### Reference: current journal tool (UI inspiration)
+- Four screenshots of the journal app currently in use define the target feature
+  set: **Trades table** (filters, gross/net, pagination, CSV export), **Reports
+  → Detailed** (stats grid + day/hour/month/duration distributions), **Reports →
+  Calendar** (monthly P&L heatmap), and a widget **Dashboard**. Scope to the
+  basics — not a full clone of every widget.
+
+### Not related (ruled out)
+- `~/Working/trading-learning-app` (GitHub: `justin-carlson/trading-learning-app`)
+  — an *educational* app (trading patterns, risk calculator, L2 simulator). No
+  chart/journal code. Cloned locally only for evaluation.
+
+### Source repo
+- `github.com/justin-carlson/trading-journal` (private) — this project.
