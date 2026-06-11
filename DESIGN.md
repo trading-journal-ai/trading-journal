@@ -72,7 +72,8 @@ There are **two distinct data inputs**, both currently **manual CSV exports**:
   (TradingView/ToS, extended-hours session on) = last resort.
 - **⚠️ Extended hours required** (this style trades pre-market) — Massive
   includes it.
-- **Cost:** Massive (~$29/mo, confirm tier) accepted; data stays local & private.
+- **Cost: $0** — the Massive **free tier** works (just per-minute rate-limited,
+  which is fine for a session's handful of symbols). Data stays local & private.
   See §9.
 
 **C. Manual entry** — a form to add/edit an execution or trade by hand
@@ -285,8 +286,8 @@ is a derived grouping of executions for one round-trip position.
 - ~~Automate the candle data?~~ — **resolved: Massive, validated 91/91** (§9).
   App auto-fetches candles for the parsed symbols, key proxied server-side. Kills
   the per-symbol export drudgery; no UI scraping. Alpha Vantage = free fallback.
-  *Loose ends:* confirm Massive plan/pricing; prove an actual pre-market fill
-  (sample had none).
+  Massive **free tier confirmed working** (rate-limited, fine). *Loose end:*
+  prove an actual pre-market fill (sample had none).
 - ~~DAS vs TOS for executions~~ — **resolved: TOS primary** (Pos Effect +
   built-in P&L), DAS secondary. See §8 for the confirmed TOS format.
 - ~~Pre-market coverage~~ — **resolved:** Massive includes extended-hours
@@ -423,14 +424,12 @@ The per-trade chart needs 1-minute OHLCV candles **with extended hours**.
   on an actual pre-market fill. Re-check when a pre-market trade appears.
 
 ### Cost
-- Current spend: TraderVue $29.95/mo + TradingView ~$10/mo. This project
-  **replaces TraderVue**; Massive (≈ Polygon, ~$29/mo) is accepted as the candle
-  source. Net ongoing ≈ flat vs today, but data is **local, private, and owned**,
-  and the journal is ours. *(Loose end: confirm the exact Massive plan/tier the
-  current key is on.)*
-- **Alpha Vantage stays documented as the $0 fallback** so a free path always
-  exists. Privacy note: a candle API never sees trades — only public OHLCV
-  requests for a ticker+date.
+- **Candles are $0** — the Massive **free tier** is sufficient (per-minute rate
+  limit only; a session's handful of symbols fits). This project **replaces
+  TraderVue ($29.95/mo)** with no new recurring data cost.
+- **Alpha Vantage = $0 fallback** if Massive's free tier ever changes. Privacy
+  note: a candle API never sees trades — only public OHLCV requests for a
+  ticker+date. Data stays local, private, and owned.
 
 ### The real pain point: per-symbol chart exports
 - The TOS execution export is **one step** for the whole session.
@@ -504,7 +503,7 @@ itself. Per-symbol manual exports drop to **zero**:
 ### Provider options
 | Provider | Cost | Ext. hours | 1-min history | Notes |
 |---|---|---|---|---|
-| **Massive** ⭐ (Polygon platform) | ~$29/mo (confirm tier) | ✅ full session | ✅ years | **Chosen + validated 91/91.** `/v2/aggs/ticker/.../range/1/minute/...`. |
+| **Massive** ⭐ (Polygon platform) | **Free tier** (rate-limited) | ✅ full session | ✅ years | **Chosen + validated 91/91.** `/v2/aggs/ticker/.../range/1/minute/...`. Free tier sufficient. |
 | **Alpha Vantage** | **Free** (~25 req/day) | ✅ `extended_hours=true` (default) | ✅ by month (years) | $0 fallback; thin-name coverage unverified. |
 | **Databento** | Usage-based (one-time) | ✅ | ✅ deepest quality | If a one-time deep backfill is ever needed. |
 | **Schwab Market Data** | Free w/ account | ✅ `needExtendedHoursData=true` | ⚠️ ~30–35 days | Ruled out: short window + 7-day OAuth re-auth. |
