@@ -392,6 +392,16 @@ how it feeds this project:
   Calendar** (monthly P&L heatmap), and a widget **Dashboard**. Scope to the
   basics — not a full clone of every widget.
 
+### `trading-dashboard` — dead prototype, harvest for parts
+- `~/Working/trading-dashboard` ("Momentum Trading Dashboard") — an **abandoned
+  early prototype** (Supabase is pausing its DB for inactivity). A *market-regime
+  memory companion* (daily mood, pattern types, Gemini AI sentiment/news) —
+  explicitly *not* a trade journal/chart tool.
+- **Decision: scaffold fresh, don't harvest.** It's coupled to **Supabase
+  (hosted Postgres) + RLS + auth**, conflicting with our **local-first SQLite,
+  single-user, no-auth** design. Cleaner to start clean than to untangle it — we
+  build a **fresh `trading-journal` app** from scratch (Phase 0).
+
 ### Not related (ruled out)
 - `~/Working/trading-learning-app` (GitHub: `justin-carlson/trading-learning-app`)
   — an *educational* app (trading patterns, risk calculator, L2 simulator). No

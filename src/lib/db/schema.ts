@@ -1,0 +1,141 @@
+/**
+ * Drizzle schema for the trading journal (SQLite).
+ *
+ * Source of truth = `executions` (raw fills). A `trade` is a derived round-trip
+ * grouping of executions (see DESIGN.md §5). Market timestamps (`executedAt`,
+ * `entryAt`, `exitAt`, candle `t`) are stored as **epoch seconds** to align with
+ * the chart prototype; `createdAt`/`updatedAt` use Drizzle timestamp mode.
+ */
+import { sql } from "drizzle-orm";
+import {
+  integer,
+  primaryKey,
+  real,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
+
+/** Audit trail for each CSV/API import. */
+export const importBatches = sqliteTable("import_batches", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  kind: text("kind", { enum: ["executions", "candles"] }).notNull(),
+  // tos_csv | das_csv | manual | massive | alpha_vantage | tradingview_csv | tos_chart_csv
+  source: text("source").notNull(),
+  fileName: text("file_name"),
+  rowCount: integer("row_count").notNull().default(0),
+  importedAt: integer("imported_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+/** A derived round-trip position (one or more executions). */
+export const trades = sqliteTable("trades", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  symbol: text("symbol").notNull(),
+  side: text("side", { enum: ["long", "short"] }).notNull(),
+  quantity: integer("quantity").notNull(),
+  avgEntryPrice: real("avg_entry_price"),
+  entryAt: integer("entry_at"), // epoch seconds, first opening fill
+  avgExitPrice: real("avg_exit_price"),
+  exitAt: integer("exit_at"), // epoch seconds, last closing fill (null while open)
+  fees: real("fees").notNull().default(0),
+  stopLoss: real("stop_loss"),
+  target: real("target"),
+  setup: text("setup"),
+  status: text("status", { enum: ["open", "closed"] })
+    .notNull()
+    .default("open"),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+/** One immutable broker fill. */
+export const executions = sqliteTable(
+  "executions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    symbol: text("symbol").notNull(),
+    side: text("side", { enum: ["buy", "sell"] }).notNull(),
+    quantity: integer("quantity").notNull(),
+    price: real("price").notNull(),
+    executedAt: integer("executed_at").notNull(), // epoch seconds (UTC)
+    fees: real("fees").notNull().default(0),
+    route: text("route"),
+    posEffect: text("pos_effect"), // TO OPEN | TO CLOSE (from TOS) — drives matching
+    tradeId: integer("trade_id").references(() => trades.id),
+    importBatchId: integer("import_batch_id").references(() => importBatches.id),
+    sourceRowHash: text("source_row_hash"),
+  },
+  (t) => [uniqueIndex("executions_source_row_hash_unq").on(t.sourceRowHash)],
+);
+
+/** Cached OHLCV candles (fetched once on import). */
+export const candles = sqliteTable(
+  "candles",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    symbol: text("symbol").notNull(),
+    timeframe: text("timeframe").notNull().default("1m"),
+    t: integer("t").notNull(), // bar start, epoch seconds
+    o: real("o").notNull(),
+    h: real("h").notNull(),
+    l: real("l").notNull(),
+    c: real("c").notNull(),
+    vol: real("vol").notNull().default(0),
+  },
+  (tbl) => [
+    uniqueIndex("candles_symbol_tf_t_unq").on(tbl.symbol, tbl.timeframe, tbl.t),
+  ],
+);
+
+/** Reusable free-form tags. */
+export const tags = sqliteTable("tags", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull().unique(),
+});
+
+/** Trade <-> Tag join. */
+export const tradeTags = sqliteTable(
+  "trade_tags",
+  {
+    tradeId: integer("trade_id")
+      .notNull()
+      .references(() => trades.id),
+    tagId: integer("tag_id")
+      .notNull()
+      .references(() => tags.id),
+  },
+  (t) => [primaryKey({ columns: [t.tradeId, t.tagId] })],
+);
+
+/** Reflective journal entry attached to a trade. */
+export const journalEntries = sqliteTable("journal_entries", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  tradeId: integer("trade_id")
+    .notNull()
+    .references(() => trades.id),
+  thesis: text("thesis"),
+  whatWentWell: text("what_went_well"),
+  whatWentWrong: text("what_went_wrong"),
+  lessons: text("lessons"),
+  followedPlan: integer("followed_plan", { mode: "boolean" }),
+  emotionalState: text("emotional_state"),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+/** Screenshot / image attached to a trade. */
+export const attachments = sqliteTable("attachments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  tradeId: integer("trade_id")
+    .notNull()
+    .references(() => trades.id),
+  filePath: text("file_path").notNull(),
+  caption: text("caption"),
+});

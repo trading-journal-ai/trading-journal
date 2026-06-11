@@ -63,4 +63,21 @@ prototype converts it to Eastern market time before matching 1-minute candles.
 
 ## Getting started
 
-Main app scaffold not yet created — coming in Phase 0.
+The app is a **Next.js 16 (App Router) + TypeScript + Tailwind** project with a
+**local-first SQLite** database via **Drizzle + better-sqlite3**.
+
+```bash
+npm install
+npm run db:migrate      # creates data/journal.db from drizzle/ migrations
+npm run dev             # http://localhost:3000
+```
+
+Useful scripts:
+
+- `npm run db:generate` — generate a migration after editing `src/lib/db/schema.ts`
+- `npm run db:migrate` / `db:push` — apply migrations
+- `npm run db:studio` — Drizzle Studio
+- `npm run build` / `npm test` / `npm run lint`
+
+Data layout (gitignored): `data/journal.db` (SQLite), `data/uploads/`
+(screenshots), `data/samples/` (broker-export fixtures).
