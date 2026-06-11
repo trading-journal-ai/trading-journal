@@ -93,6 +93,10 @@ a v1 deliverable.
 
 ## 3. Core Features (v1)
 
+> See **[FEATURES.md](FEATURES.md)** for the full scoped feature inventory
+> (✅ MVP / 🔜 Later / ⛔ Out), grounded in the reference-tool screenshots. The
+> subsections here describe the core; FEATURES.md is the checklist.
+
 ### 3.1 Trade Logging
 - Store raw **executions** (fills) as the immutable source of truth.
 - **Group executions into trades** (round-trips / positions) via a matching
