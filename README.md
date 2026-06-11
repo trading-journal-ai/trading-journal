@@ -20,10 +20,10 @@ Two manual CSV inputs feed the journal:
 
 - **Executions (your trades)** — exported from **DAS Trader** (or **ThinkorSwim**)
   at the fill level. Grouped into round-trip trades via FIFO matching.
-- **Candles (for the chart)** — exported from **TradingView** ("Export chart
-  data"). ⚠️ Default export is regular-hours only; pre-market needs an
-  extended-hours export. Automating this (Schwab price-history API) is a later
-  upgrade.
+- **Candles (for the chart)** — fetched from **Massive** using 1-minute stock
+  aggregate bars. The local prototype maps ThinkorSwim execution times into
+  Eastern market time, fetches the matching symbol/day candles, and overlays
+  entries/exits on the chart.
 
 A working **trade-chart prototype** already exists at
 `~/Desktop/trade_chart (10).html` — candlesticks + entry/exit markers + SVG
@@ -35,6 +35,32 @@ export, with a reusable DAS parser. We adapt it rather than rebuild. See
 Scaffold → execution/trade model + FIFO matching → DAS/TOS import → trade chart
 → analytics → journaling → screenshots → automated candle/sync.
 
+## Local chart prototype
+
+Create `.env.local` in the project root:
+
+```bash
+MASSIVE_API_KEY=your_key_here
+```
+
+Run the local prototype server:
+
+```bash
+node scripts/dev-chart-server.mjs
+```
+
+Open:
+
+[http://127.0.0.1:4173/](http://127.0.0.1:4173/)
+
+Use the **TOS + Massive Visual Test** panel to load a ThinkorSwim Account
+Statement CSV. The browser calls the local server, and the server reads
+`MASSIVE_API_KEY` from `.env.local`, so the key does not need to be pasted into
+the HTML page.
+
+For this sample export, ThinkorSwim `Exec Time` appears to be Pacific time; the
+prototype converts it to Eastern market time before matching 1-minute candles.
+
 ## Getting started
 
-_Scaffold not yet created — coming in Phase 0._
+Main app scaffold not yet created — coming in Phase 0.
