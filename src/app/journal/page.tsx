@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { and, gte, lte, sql } from "drizzle-orm";
+import { and, gte, inArray, lte, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { fmtMoney } from "@/lib/format";
 import { netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
+import RecapNote from "@/components/RecapNote";
 import { updateJournalEntryAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -198,6 +199,24 @@ function tradeNoteText(note: typeof schema.journalEntries.$inferSelect): string 
 
 async function loadTagOptions() {
   return db.select({ name: schema.tags.name }).from(schema.tags);
+}
+
+/** Scoped recap notes (day/week/month) keyed by `${scope}:${scopeKey}`. */
+async function loadRecaps(): Promise<Map<string, string>> {
+  const rows = await db
+    .select({
+      scope: schema.journalEntries.scope,
+      scopeKey: schema.journalEntries.scopeKey,
+      lessons: schema.journalEntries.lessons,
+    })
+    .from(schema.journalEntries)
+    .where(inArray(schema.journalEntries.scope, ["day", "week", "month"]));
+
+  const map = new Map<string, string>();
+  for (const row of rows) {
+    if (row.scopeKey) map.set(`${row.scope}:${row.scopeKey}`, row.lessons ?? "");
+  }
+  return map;
 }
 
 async function loadJournalTrades(filters: JournalFilters): Promise<JournalTrade[]> {
@@ -420,7 +439,11 @@ export default async function JournalPage({
   }>;
 }) {
   const filters = parseSearchParams(await searchParams);
-  const [trades, tagOptions] = await Promise.all([loadJournalTrades(filters), loadTagOptions()]);
+  const [trades, tagOptions, recaps] = await Promise.all([
+    loadJournalTrades(filters),
+    loadTagOptions(),
+    loadRecaps(),
+  ]);
   const months = groupJournal(trades);
   const totalNotes = trades.reduce((sum, trade) => sum + trade.notes.length, 0);
 
@@ -448,7 +471,14 @@ export default async function JournalPage({
                     <h3 className="text-lg font-semibold">Month Review</h3>
                     <span className="text-sm text-[var(--muted)]">{month.trades} trades · {noteWord(month.noteCount)} · {fmtMoney(month.pnl)}</span>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-[var(--muted)]">[ Add a light monthly recap: themes, bigger-picture progress, drawdown context, what carries into next month. ]</p>
+                  <div className="mt-3">
+                    <RecapNote
+                      scope="month"
+                      scopeKey={month.key}
+                      text={recaps.get(`month:${month.key}`) ?? ""}
+                      placeholder="Add a light monthly recap: themes, bigger-picture progress, drawdown context, what carries into next month."
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -461,7 +491,12 @@ export default async function JournalPage({
                         <span className="text-sm text-[var(--muted)]">{week.rangeLabel} · {fmtMoney(week.pnl)}</span>
                       </div>
                       <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
-                        <p className="text-sm leading-6 text-[var(--muted)]">[ Add a short weekly recap: did I keep red days small, what repeated, what to focus on next week. ]</p>
+                        <RecapNote
+                          scope="week"
+                          scopeKey={week.key}
+                          text={recaps.get(`week:${week.key}`) ?? ""}
+                          placeholder="Add a short weekly recap: did I keep red days small, what repeated, what to focus on next week."
+                        />
                       </div>
                     </div>
 
@@ -475,7 +510,14 @@ export default async function JournalPage({
                                   <h4 className="text-xl font-semibold">{dayOnlyLabel(day.date)}</h4>
                                   <span className="text-sm text-[var(--muted)]">{day.trades.length} trades · {noteWord(day.noteCount)} · {fmtMoney(day.pnl)}</span>
                                 </div>
-                                <p className="mt-2 text-base leading-7 text-[var(--muted)]">[ Note on overall day: market read, plan, execution, emotions, what worked, what to fix tomorrow. ]</p>
+                                <div className="mt-2">
+                                  <RecapNote
+                                    scope="day"
+                                    scopeKey={day.date}
+                                    text={recaps.get(`day:${day.date}`) ?? ""}
+                                    placeholder="Add a daily note: market read, plan, execution, emotions, what worked, what to fix tomorrow."
+                                  />
+                                </div>
                               </div>
 
                               <div className="space-y-6 pt-4">
