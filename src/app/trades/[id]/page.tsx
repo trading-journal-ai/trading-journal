@@ -65,6 +65,8 @@ export default async function TradeDetailPage({
   type Stat = { label: string; value: string; sub?: string; color?: string };
   const stats: Stat[] = [
     { label: "Shares", value: trade.quantity.toLocaleString() },
+    { label: "Fills", value: String(execs.length) },
+    { label: "Held", value: trade.exitAt ? holdingPeriod(firstAt, trade.exitAt) : "open" },
     {
       label: "P&L",
       value: net == null ? "—" : fmtMoney(net),
@@ -72,8 +74,6 @@ export default async function TradeDetailPage({
       color:
         net == null ? undefined : net >= 0 ? "var(--green)" : "var(--red)",
     },
-    { label: "Held", value: trade.exitAt ? holdingPeriod(firstAt, trade.exitAt) : "open" },
-    { label: "Fills", value: String(execs.length) },
   ];
 
   return (
