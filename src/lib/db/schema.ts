@@ -113,12 +113,18 @@ export const tradeTags = sqliteTable(
   (t) => [primaryKey({ columns: [t.tradeId, t.tagId] })],
 );
 
-/** Reflective journal entry attached to a trade. */
+/**
+ * Reflective journal note. Scoped: a `trade` note attaches to a trade; `day` /
+ * `week` / `month` notes stand alone (tradeId null) keyed by `scopeKey`
+ * (YYYY-MM-DD, week-start date, or YYYY-MM). See JOURNAL_DESIGN.md §2/§9.
+ */
 export const journalEntries = sqliteTable("journal_entries", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  tradeId: integer("trade_id")
+  tradeId: integer("trade_id").references(() => trades.id),
+  scope: text("scope", { enum: ["trade", "day", "week", "month"] })
     .notNull()
-    .references(() => trades.id),
+    .default("trade"),
+  scopeKey: text("scope_key"),
   thesis: text("thesis"),
   whatWentWell: text("what_went_well"),
   whatWentWrong: text("what_went_wrong"),

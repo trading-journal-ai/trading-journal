@@ -239,6 +239,7 @@ async function loadJournalTrades(filters: JournalFilters): Promise<JournalTrade[
     .orderBy(schema.journalEntries.createdAt);
   const notesByTrade = new Map<number, JournalTrade["notes"]>();
   for (const note of noteRows) {
+    if (note.tradeId == null) continue; // standalone day/week/month notes aren't trade notes
     const text = tradeNoteText(note);
     const notes = notesByTrade.get(note.tradeId) ?? [];
     notes.push({
