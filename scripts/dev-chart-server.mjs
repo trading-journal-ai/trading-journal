@@ -2,7 +2,7 @@
 
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
-import { extname, join, normalize, resolve } from "node:path";
+import { extname, isAbsolute, join, normalize, relative, resolve } from "node:path";
 
 const ROOT = resolve(process.cwd());
 const PORT = Number(process.env.PORT || 4173);
@@ -68,7 +68,15 @@ function contentTypeFor(path) {
 async function serveStatic(req, res, url) {
   const decodedPath = decodeURIComponent(url.pathname === "/" ? "/trade_chart (10)-prototype.html" : url.pathname);
   const filePath = normalize(join(ROOT, decodedPath));
-  if (!filePath.startsWith(ROOT)) {
+  const relativePath = relative(ROOT, filePath);
+  const pathSegments = relativePath.split(/[\\/]+/);
+
+  if (
+    relativePath.startsWith("..") ||
+    isAbsolute(relativePath) ||
+    pathSegments.some((segment) => segment.startsWith(".")) ||
+    pathSegments.includes("node_modules")
+  ) {
     sendText(res, 403, "Forbidden");
     return;
   }
