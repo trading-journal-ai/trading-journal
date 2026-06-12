@@ -50,7 +50,7 @@ export default async function TradesPage() {
     );
   }
 
-  const cols = ["Date", "Symbol", "Volume", "Execs", "Entry", "Exit", "P&L (net)", "Status"];
+  const cols = ["Date", "Symbol", "Shares", "Execs", "Entry", "Exit", "P&L", "Status"];
 
   return (
     <div className="space-y-4">
