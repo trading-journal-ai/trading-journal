@@ -24,7 +24,6 @@ const nav = [
   { href: "/trades", label: "Trades" },
   { href: "/calendar", label: "Calendar" },
   { href: "/reports", label: "Reports" },
-  { href: "/import", label: "Import" },
 ];
 
 export default function RootLayout({
