@@ -5,9 +5,12 @@ import { netPnl } from "@/lib/pnl";
 import { etDateString } from "@/lib/time";
 import { fmtDate, fmtMoney } from "@/lib/format";
 import ImportForm from "@/components/ImportForm";
+import CumulativePnlChart, { type PnlPoint, type PnlSeries } from "@/components/CumulativePnlChart";
 import { RowLink } from "./trades/RowLink";
 
 export const dynamic = "force-dynamic";
+
+const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const dayLabelFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
@@ -59,14 +62,54 @@ export default async function Home() {
     if (date.startsWith(thisMonth)) monthPnl += net;
   }
 
+  // Build cumulative series with plain loops (avoids in-render closure mutation).
+  function cumulativeSeries(dates: string[], label: (d: string, i: number) => string): PnlSeries {
+    const points: PnlPoint[] = [];
+    let cum = 0;
+    let trades = 0;
+    for (let i = 0; i < dates.length; i += 1) {
+      const a = byDate.get(dates[i]);
+      cum += a?.pnl ?? 0;
+      trades += a?.trades ?? 0;
+      points.push({ label: label(dates[i], i), value: cum });
+    }
+    return { points, trades };
+  }
+
   // current week (Sun–Sat) containing today
   const weekStart = isoAddDays(todayStr, -isoWeekday(todayStr));
   const weekDates = Array.from({ length: 7 }, (_, i) => isoAddDays(weekStart, i));
-  let weekPnl = 0;
-  for (const d of weekDates) {
-    const a = byDate.get(d);
-    if (a) weekPnl += a.pnl;
+  const weekSeries = cumulativeSeries(weekDates, (d) => d.slice(5));
+  const weekPnl = weekSeries.points.at(-1)?.value ?? 0;
+
+  // current month — daily cumulative
+  const [yr, moNum] = thisMonth.split("-").map(Number);
+  const daysInMonth = new Date(Date.UTC(yr, moNum, 0)).getUTCDate();
+  const monthDates = Array.from(
+    { length: daysInMonth },
+    (_, i) => `${thisMonth}-${String(i + 1).padStart(2, "0")}`,
+  );
+  const monthSeries = cumulativeSeries(monthDates, (_d, i) => String(i + 1));
+
+  // current year — monthly cumulative (aggregate each month's daily totals)
+  const monthlyTotals = new Array(12).fill(0);
+  const monthlyTradeCounts = new Array(12).fill(0);
+  for (const [date, a] of byDate) {
+    if (!date.startsWith(`${yr}-`)) continue;
+    const idx = Number(date.slice(5, 7)) - 1;
+    monthlyTotals[idx] += a.pnl;
+    monthlyTradeCounts[idx] += a.trades;
   }
+  const yearPoints: PnlPoint[] = [];
+  let yearCum = 0;
+  for (let i = 0; i < 12; i += 1) {
+    yearCum += monthlyTotals[i];
+    yearPoints.push({ label: MONTHS_SHORT[i], value: yearCum });
+  }
+  const yearSeries: PnlSeries = {
+    points: yearPoints,
+    trades: monthlyTradeCounts.reduce((s: number, n: number) => s + n, 0),
+  };
 
   const winRate = closed > 0 ? Math.round((wins / closed) * 100) : null;
   const recent = trades.slice(0, 8);
@@ -80,12 +123,10 @@ export default async function Home() {
 
   return (
     <div className="max-w-4xl space-y-8">
-      <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
-
-      <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 space-y-2">
-        <div className="text-sm font-semibold">Import a ThinkorSwim statement</div>
+      <div className="flex items-start justify-between gap-4">
+        <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
         <ImportForm />
-      </section>
+      </div>
 
       {trades.length === 0 ? (
         <p className="text-sm text-[var(--muted)]">
@@ -103,6 +144,8 @@ export default async function Home() {
               </div>
             ))}
           </section>
+
+          <CumulativePnlChart week={weekSeries} month={monthSeries} year={yearSeries} />
 
           <section className="space-y-2">
             <h2 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wide">This week</h2>
