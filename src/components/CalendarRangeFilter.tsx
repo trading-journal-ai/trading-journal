@@ -75,7 +75,7 @@ export default function CalendarRangeFilter({
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className={`flex h-10 min-w-48 items-center gap-2 rounded-md border bg-[var(--surface)] px-4 text-sm font-semibold transition-colors ${
+          className={`flex h-10 items-center gap-2 rounded-md border bg-[var(--surface)] px-4 text-sm font-semibold transition-colors ${
             open || label
               ? "border-[#58a6ff] text-[var(--foreground)]"
               : "border-[var(--border)] text-[var(--muted)] hover:border-[#58a6ff]"
@@ -94,18 +94,16 @@ export default function CalendarRangeFilter({
           <span>{label ?? "From - To"}</span>
         </button>
 
-        {label && (
-          <Link
-            href={clearHref}
-            className="flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm text-[var(--muted)] hover:border-[#58a6ff]"
-          >
-            Clear
-          </Link>
-        )}
+        <Link
+          href={clearHref}
+          className="flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm text-[var(--muted)] hover:border-[#58a6ff]"
+        >
+          Clear
+        </Link>
       </div>
 
       {open && (
-        <div className="absolute left-0 top-full z-20 mt-2 w-full max-w-xl rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl md:w-[520px]">
+        <div className="absolute right-0 top-full z-20 mt-2 w-[calc(100vw-2rem)] max-w-xl rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl md:w-[520px]">
           <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
             <label className="space-y-1">
               <span className="block text-sm font-semibold text-[var(--muted)]">From</span>
@@ -135,6 +133,14 @@ export default function CalendarRangeFilter({
                 Apply
               </button>
             </div>
+          </div>
+          <div className="mt-3 flex justify-end">
+            <Link
+              href={clearHref}
+              className="text-sm font-semibold text-[var(--muted)] hover:text-[var(--foreground)]"
+            >
+              Clear
+            </Link>
           </div>
         </div>
       )}

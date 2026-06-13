@@ -2,13 +2,14 @@ import Link from "next/link";
 import { and, gte, lte, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { fmtDate, fmtMoney, fmtPrice } from "@/lib/format";
-import { netPnl } from "@/lib/pnl";
+import { grossPnl, netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
+import MonthPicker from "@/components/MonthPicker";
 import { RowLink } from "./RowLink";
 
 export const dynamic = "force-dynamic";
 
-type TradeSort = "date" | "symbol" | "side" | "shares" | "execs" | "entry" | "exit" | "pnl";
+type TradeSort = "date" | "symbol" | "side" | "shares" | "execs" | "entry" | "exit" | "perShare" | "pnl";
 type SortDir = "asc" | "desc";
 type DatePreset = "all" | "today" | "week" | "month" | "custom";
 
@@ -23,7 +24,12 @@ type TradeFilters = {
   account?: string;
   sort: TradeSort;
   dir: SortDir;
+  page: number;
+  perPage: number;
 };
+
+const PAGE_SIZE_OPTIONS = [50, 100, 200, 500] as const;
+const DEFAULT_PAGE_SIZE = 200;
 
 function parseSearchParams(params: {
   date?: string;
@@ -36,13 +42,18 @@ function parseSearchParams(params: {
   account?: string;
   sort?: string;
   dir?: string;
+  page?: string;
+  perPage?: string;
 }): TradeFilters {
-  const sortOptions = new Set<TradeSort>(["date", "symbol", "side", "shares", "execs", "entry", "exit", "pnl"]);
+  const sortOptions = new Set<TradeSort>(["date", "symbol", "side", "shares", "execs", "entry", "exit", "perShare", "pnl"]);
   const presetOptions = new Set<DatePreset>(["all", "today", "week", "month", "custom"]);
+  const pageSizeOptions = new Set<number>(PAGE_SIZE_OPTIONS);
   const side = params.side === "long" || params.side === "short" ? params.side : undefined;
   const sort = sortOptions.has(params.sort as TradeSort) ? (params.sort as TradeSort) : "date";
   const dir = params.dir === "asc" ? "asc" : "desc";
-  const preset = presetOptions.has(params.preset as DatePreset) ? (params.preset as DatePreset) : "all";
+  const preset = presetOptions.has(params.preset as DatePreset) ? (params.preset as DatePreset) : "month";
+  const page = Number.parseInt(params.page ?? "1", 10);
+  const perPage = Number.parseInt(params.perPage ?? String(DEFAULT_PAGE_SIZE), 10);
   const validDate = (value: string | undefined) => value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
   return {
     date: validDate(params.date),
@@ -55,6 +66,8 @@ function parseSearchParams(params: {
     account: params.account || undefined,
     sort,
     dir,
+    page: Number.isFinite(page) && page > 0 ? page : 1,
+    perPage: pageSizeOptions.has(perPage) ? perPage : DEFAULT_PAGE_SIZE,
   };
 }
 
@@ -78,17 +91,41 @@ function lastDayOfMonth(date: string): string {
   return `${date.slice(0, 7)}-${String(day).padStart(2, "0")}`;
 }
 
+const monthLabelFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  month: "long",
+  year: "numeric",
+});
+
+const dateLabelFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
+function dateLabel(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  return dateLabelFmt.format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+function monthLabel(date: string): string {
+  const [year, month] = date.split("-").map(Number);
+  return monthLabelFmt.format(new Date(Date.UTC(year, month - 1, 1)));
+}
+
 function dateRangeFor(filters: TradeFilters): { from: string; to: string } | undefined {
   if (filters.date) return { from: filters.date, to: filters.date };
 
   const today = currentEtDate();
-  if (filters.preset === "today") return { from: today, to: today };
+  const anchor = filters.from ?? today;
+  if (filters.preset === "today") return { from: anchor, to: anchor };
   if (filters.preset === "week") {
-    const monday = isoAddDays(today, -((isoWeekday(today) + 6) % 7));
+    const monday = isoAddDays(anchor, -((isoWeekday(anchor) + 6) % 7));
     return { from: monday, to: isoAddDays(monday, 4) };
   }
   if (filters.preset === "month") {
-    return { from: `${today.slice(0, 7)}-01`, to: lastDayOfMonth(today) };
+    return { from: `${anchor.slice(0, 7)}-01`, to: lastDayOfMonth(anchor) };
   }
   if (filters.preset === "custom") {
     if (!filters.from && !filters.to) return undefined;
@@ -102,7 +139,7 @@ function dateRangeFor(filters: TradeFilters): { from: string; to: string } | und
 }
 
 async function loadTrades(filters: TradeFilters) {
-  const { symbol, side, tag, sort, dir } = filters;
+  const { symbol, side, tag, sort, dir, perPage } = filters;
   const range = dateRangeFor(filters);
   const where =
     range
@@ -149,7 +186,15 @@ async function loadTrades(filters: TradeFilters) {
     rows = rows.filter((t) => taggedTradeIds.has(t.id));
   }
 
-  const mapped = rows.map((t) => ({ ...t, execs: countByTrade.get(t.id) ?? 0, pnl: netPnl(t) }));
+  const mapped = rows.map((t) => {
+    const gross = grossPnl(t);
+    return {
+      ...t,
+      execs: countByTrade.get(t.id) ?? 0,
+      pnl: netPnl(t),
+      perShare: gross == null || t.quantity === 0 ? null : gross / Math.abs(t.quantity),
+    };
+  });
   const multiplier = dir === "asc" ? 1 : -1;
   mapped.sort((a, b) => {
     const value = (t: (typeof mapped)[number]): string | number | null => {
@@ -160,6 +205,7 @@ async function loadTrades(filters: TradeFilters) {
         case "execs": return t.execs;
         case "entry": return t.avgEntryPrice;
         case "exit": return t.avgExitPrice;
+        case "perShare": return t.perShare;
         case "pnl": return t.pnl;
         case "date":
         default: return t.entryAt ?? 0;
@@ -174,7 +220,17 @@ async function loadTrades(filters: TradeFilters) {
     return (Number(av) - Number(bv)) * multiplier;
   });
 
-  return mapped.slice(0, 200);
+  const total = mapped.length;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  const page = Math.min(filters.page, totalPages);
+  const start = (page - 1) * perPage;
+
+  return {
+    page,
+    total,
+    totalPages,
+    trades: mapped.slice(start, start + perPage),
+  };
 }
 
 async function loadTagOptions() {
@@ -192,9 +248,51 @@ function filterHref(filters: TradeFilters, updates: Partial<TradeFilters>) {
   if (next.side) params.set("side", next.side);
   if (next.tag) params.set("tag", next.tag);
   if (next.account) params.set("account", next.account);
+  if (next.page > 1) params.set("page", String(next.page));
+  if (next.perPage !== DEFAULT_PAGE_SIZE) params.set("perPage", String(next.perPage));
   params.set("sort", next.sort);
   params.set("dir", next.dir);
   return `/trades?${params.toString()}`;
+}
+
+function rangeSummary(filters: TradeFilters, shownCount: number, totalCount: number, page: number): { title: string; detail: string } {
+  const range = dateRangeFor(filters);
+  const firstShown = totalCount === 0 ? 0 : (page - 1) * filters.perPage + 1;
+  const lastShown = firstShown + shownCount - 1;
+  const countLabel =
+    totalCount > shownCount
+      ? `Showing ${firstShown.toLocaleString()}-${lastShown.toLocaleString()} of ${totalCount.toLocaleString()}`
+      : shownCount === 1 ? "Showing 1" : `Showing ${shownCount.toLocaleString()}`;
+
+  if (!range) {
+    return {
+      title: "All trades",
+      detail: countLabel,
+    };
+  }
+
+  if (range.from === range.to) {
+    return { title: dateLabel(range.from), detail: countLabel };
+  }
+
+  if (filters.preset === "month") {
+    return { title: monthLabel(range.from), detail: countLabel };
+  }
+
+  return { title: `${dateLabel(range.from)} to ${dateLabel(range.to)}`, detail: countLabel };
+}
+
+function paginationItems(page: number, totalPages: number): (number | "...")[] {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
+
+  const pages = [...new Set([1, page - 1, page, page + 1, totalPages])]
+    .filter((item) => item >= 1 && item <= totalPages)
+    .sort((a, b) => a - b);
+
+  return pages.flatMap((item, index) => {
+    const previous = pages[index - 1];
+    return previous && item - previous > 1 ? ["..." as const, item] : [item];
+  });
 }
 
 function SortHeader({
@@ -210,7 +308,7 @@ function SortHeader({
   const nextDir: SortDir = active && filters.dir === "asc" ? "desc" : "asc";
   return (
     <Link
-      href={filterHref(filters, { sort, dir: nextDir })}
+      href={filterHref(filters, { sort, dir: nextDir, page: 1 })}
       className="inline-flex items-center gap-1 hover:text-[var(--foreground)]"
     >
       {label}
@@ -233,14 +331,18 @@ export default async function TradesPage({
     account?: string;
     sort?: string;
     dir?: string;
+    page?: string;
+    perPage?: string;
   }>;
 }) {
   const filters = parseSearchParams(await searchParams);
-  const trades = await loadTrades(filters);
+  const { trades, total, page, totalPages } = await loadTrades(filters);
   const tagOptions = await loadTagOptions();
   const date = filters.date;
-  const activeRange = dateRangeFor(filters);
   const activePreset: DatePreset = date ? "custom" : filters.preset;
+  const pageFilters = { ...filters, page };
+  const currentHref = filterHref(pageFilters, {});
+  const summary = rangeSummary(filters, trades.length, total, page);
   const presetBase = { date: undefined, from: undefined, to: undefined };
   const presetButtonClass = (preset: DatePreset) =>
     `flex h-10 items-center rounded-md border px-3 text-sm font-semibold transition-colors ${
@@ -248,108 +350,44 @@ export default async function TradesPage({
         ? "border-[#58a6ff] bg-[var(--surface)] text-[var(--foreground)]"
         : "border-[var(--border)] text-[var(--muted)] hover:border-[#58a6ff]"
     }`;
-  const customRangeClass =
-    `flex h-10 min-w-48 items-center gap-2 rounded-md border px-4 text-sm font-semibold transition-colors ${
-      activePreset === "custom"
-        ? "border-[#58a6ff] bg-[var(--surface)] text-[var(--foreground)]"
-        : "border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] hover:border-[#58a6ff]"
-    }`;
+  const navButtonClass = "flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[#58a6ff] hover:text-[var(--foreground)]";
+  const disabledNavButtonClass = "flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] opacity-40";
+  const selectedDate = dateRangeFor(filters)?.from ?? currentEtDate();
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-baseline justify-between">
-        <div className="flex items-baseline gap-3">
-          <h1 className="text-xl font-semibold tracking-tight">Trades</h1>
-          {date && (
-            <span className="text-sm text-[var(--muted)]">
-              {fmtDate(etDayRange(date).start)} ·{" "}
-              <Link href="/trades" className="text-[#58a6ff] hover:underline">
-                clear
-              </Link>
-            </span>
-          )}
-          {!date && activeRange && (
-            <span className="text-sm text-[var(--muted)]">
-              {activeRange.from === activeRange.to ? activeRange.from : `${activeRange.from} to ${activeRange.to}`}
-            </span>
-          )}
-        </div>
-        <span className="text-xs text-[var(--muted)]">{trades.length} shown</span>
-      </div>
-
-      <form action="/trades" className="space-y-3">
+    <div className="space-y-6">
+      <form action="/trades" className="space-y-4">
         <input type="hidden" name="sort" value={filters.sort} />
         <input type="hidden" name="dir" value={filters.dir} />
+        <input type="hidden" name="page" value="1" />
+        <input type="hidden" name="perPage" value={filters.perPage} />
 
         <input type="hidden" name="preset" value={activePreset} />
 
         <div className="relative space-y-2">
           <span className="block text-sm font-semibold text-[var(--muted)]">Date range</span>
-          <div className="flex flex-wrap gap-2">
-            <Link href={filterHref(filters, { ...presetBase, preset: "today" })} className={presetButtonClass("today")}>
-              Today
-            </Link>
-            <Link href={filterHref(filters, { ...presetBase, preset: "week" })} className={presetButtonClass("week")}>
-              Week
-            </Link>
-            <Link href={filterHref(filters, { ...presetBase, preset: "month" })} className={presetButtonClass("month")}>
-              Month
-            </Link>
-            <Link href={filterHref(filters, { date: undefined, preset: "custom" })} className={customRangeClass}>
-              <svg
-                aria-hidden="true"
-                className="h-5 w-5 shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                viewBox="0 0 24 24"
-              >
-                <path d="M7 3v4M17 3v4M4.5 9h15M6 5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
-              </svg>
-              <span>From - To</span>
-            </Link>
-            <Link
-              href="/trades"
-              className="flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm text-[var(--muted)] hover:border-[#58a6ff]"
-            >
-              Clear
-            </Link>
-          </div>
-
-          {activePreset === "custom" && (
-            <div className="absolute left-0 top-full z-20 mt-2 w-full max-w-xl rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl md:w-[520px]">
-              <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-                <label className="space-y-1">
-                  <span className="block text-sm font-semibold text-[var(--muted)]">From</span>
-                  <input
-                    type="date"
-                    name="from"
-                    defaultValue={date ?? filters.from ?? ""}
-                    className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:border-[#58a6ff]"
-                  />
-                </label>
-
-                <label className="space-y-1">
-                  <span className="block text-sm font-semibold text-[var(--muted)]">To</span>
-                  <input
-                    type="date"
-                    name="to"
-                    defaultValue={date ?? filters.to ?? ""}
-                    className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:border-[#58a6ff]"
-                  />
-                </label>
-
-                <div className="flex items-end">
-                  <button
-                    type="submit"
-                    className="h-10 rounded-md border border-[#58a6ff] px-3 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--background)]"
-                  >
-                    Apply
-                  </button>
-                </div>
-              </div>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <div className="flex flex-wrap gap-2">
+              <Link href={filterHref(filters, { ...presetBase, preset: "today", page: 1 })} className={presetButtonClass("today")}>
+                Today
+              </Link>
+              <Link href={filterHref(filters, { ...presetBase, preset: "week", page: 1 })} className={presetButtonClass("week")}>
+                Week
+              </Link>
+              <Link href={filterHref(filters, { ...presetBase, preset: "month", page: 1 })} className={presetButtonClass("month")}>
+                Month
+              </Link>
             </div>
-          )}
+            <div className="flex flex-wrap gap-2">
+              <MonthPicker selectedDate={selectedDate} />
+              <Link
+                href="/trades"
+                className="flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm text-[var(--muted)] hover:border-[#58a6ff]"
+              >
+                Clear
+              </Link>
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_1fr_1fr_auto]">
@@ -417,6 +455,13 @@ export default async function TradesPage({
         </div>
       </form>
 
+      <div className="flex flex-wrap items-baseline justify-between gap-3 pt-6">
+        <div className="flex flex-wrap items-baseline gap-3">
+          <h1 className="text-xl font-semibold tracking-tight">{summary.title}</h1>
+        </div>
+        <span className="text-sm font-semibold text-[var(--muted)]">{summary.detail}</span>
+      </div>
+
       <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
         <table className="w-full text-sm">
           <thead>
@@ -428,23 +473,25 @@ export default async function TradesPage({
               <th className="px-3 py-2 font-medium whitespace-nowrap"><SortHeader label="Execs" sort="execs" filters={filters} /></th>
               <th className="px-3 py-2 font-medium whitespace-nowrap"><SortHeader label="Entry" sort="entry" filters={filters} /></th>
               <th className="px-3 py-2 font-medium whitespace-nowrap"><SortHeader label="Exit" sort="exit" filters={filters} /></th>
+              <th className="px-3 py-2 font-medium whitespace-nowrap"><SortHeader label="Per Share" sort="perShare" filters={filters} /></th>
               <th className="px-3 py-2 font-medium whitespace-nowrap"><SortHeader label="P&L" sort="pnl" filters={filters} /></th>
             </tr>
           </thead>
           <tbody>
             {trades.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-[var(--muted)]">
+                <td colSpan={9} className="px-3 py-6 text-center text-[var(--muted)]">
                   {date ? `No trades on ${fmtDate(etDayRange(date).start)} match these filters.` : "No trades match these filters."}
                 </td>
               </tr>
             ) : trades.map((t) => {
               const net = t.pnl;
               const pos = (net ?? 0) >= 0;
+              const perSharePos = (t.perShare ?? 0) >= 0;
               return (
                 <RowLink
                   key={t.id}
-                  href={`/trades/${t.id}`}
+                  href={`/trades/${t.id}?returnTo=${encodeURIComponent(currentHref)}`}
                   className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface)] cursor-pointer"
                 >
                   <td className="px-3 py-2 whitespace-nowrap">{fmtDate(t.entryAt)}</td>
@@ -454,6 +501,12 @@ export default async function TradesPage({
                   <td className="px-3 py-2 tabular-nums">{t.execs}</td>
                   <td className="px-3 py-2 tabular-nums">{fmtPrice(t.avgEntryPrice)}</td>
                   <td className="px-3 py-2 tabular-nums">{fmtPrice(t.avgExitPrice)}</td>
+                  <td
+                    className="px-3 py-2 tabular-nums"
+                    style={{ color: perSharePos ? "var(--green)" : "var(--red)" }}
+                  >
+                    {t.perShare == null ? "—" : fmtMoney(t.perShare)}
+                  </td>
                   <td
                     className="px-3 py-2 tabular-nums"
                     style={{ color: pos ? "var(--green)" : "var(--red)" }}
@@ -466,6 +519,88 @@ export default async function TradesPage({
           </tbody>
         </table>
       </div>
+
+      {total > 0 && (
+        <nav className="grid items-center gap-3 md:grid-cols-[1fr_auto_1fr]" aria-label="Trade pages">
+          <div className="text-sm font-semibold text-[var(--muted)]">
+            Page {page} of {totalPages}
+          </div>
+          {totalPages > 1 ? (
+            <div className="flex flex-wrap justify-center gap-2">
+              {page > 1 ? (
+                <Link href={filterHref(filters, { page: page - 1 })} className={navButtonClass}>
+                  Previous
+                </Link>
+              ) : (
+                <span aria-disabled="true" className={disabledNavButtonClass}>Previous</span>
+              )}
+
+              {paginationItems(page, totalPages).map((item, index) => (
+                item === "..." ? (
+                  <span key={`ellipsis-${index}`} className="flex h-10 items-center px-2 text-sm font-semibold text-[var(--muted)]">
+                    ...
+                  </span>
+                ) : (
+                  <Link
+                    key={item}
+                    href={filterHref(filters, { page: item })}
+                    className={`flex h-10 min-w-10 items-center justify-center rounded-md border px-3 text-sm font-semibold ${
+                      item === page
+                        ? "border-[#58a6ff] bg-[var(--surface)] text-[var(--foreground)]"
+                        : "border-[var(--border)] text-[var(--muted)] hover:border-[#58a6ff] hover:text-[var(--foreground)]"
+                    }`}
+                  >
+                    {item}
+                  </Link>
+                )
+              ))}
+
+              {page < totalPages ? (
+                <Link href={filterHref(filters, { page: page + 1 })} className={navButtonClass}>
+                  Next
+                </Link>
+              ) : (
+                <span aria-disabled="true" className={disabledNavButtonClass}>Next</span>
+              )}
+            </div>
+          ) : (
+            <div />
+          )}
+          <form action="/trades" className="flex items-center justify-start gap-2 md:justify-end">
+            <input type="hidden" name="sort" value={filters.sort} />
+            <input type="hidden" name="dir" value={filters.dir} />
+            <input type="hidden" name="page" value="1" />
+            {filters.date && <input type="hidden" name="date" value={filters.date} />}
+            {filters.preset !== "all" && <input type="hidden" name="preset" value={filters.preset} />}
+            {filters.from && <input type="hidden" name="from" value={filters.from} />}
+            {filters.to && <input type="hidden" name="to" value={filters.to} />}
+            {filters.symbol && <input type="hidden" name="symbol" value={filters.symbol} />}
+            {filters.side && <input type="hidden" name="side" value={filters.side} />}
+            {filters.tag && <input type="hidden" name="tag" value={filters.tag} />}
+            {filters.account && <input type="hidden" name="account" value={filters.account} />}
+            <label className="flex items-center gap-2 text-sm font-semibold text-[var(--muted)]">
+              Show
+              <select
+                name="perPage"
+                defaultValue={String(filters.perPage)}
+                className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[#58a6ff]"
+              >
+                {PAGE_SIZE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="submit"
+              className="h-10 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[#58a6ff] hover:text-[var(--foreground)]"
+            >
+              Apply
+            </button>
+          </form>
+        </nav>
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { db, schema } from "@/lib/db";
 import { fmtMoney } from "@/lib/format";
 import { grossPnl, netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange, MARKET_TZ, timeZoneParts } from "@/lib/time";
+import MonthPicker from "@/components/MonthPicker";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,9 @@ type Bucket = {
   count: number;
   pnl: number;
 };
+
+type Stat = { label: string; value: string };
+type StatSection = { title: string; stats: Stat[] };
 
 const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -84,16 +88,40 @@ function lastDayOfMonth(date: string): string {
   return `${date.slice(0, 7)}-${String(day).padStart(2, "0")}`;
 }
 
+const monthLabelFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  month: "long",
+  year: "numeric",
+});
+
+const dateLabelFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
+function dateLabel(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  return dateLabelFmt.format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+function monthLabel(date: string): string {
+  const [year, month] = date.split("-").map(Number);
+  return monthLabelFmt.format(new Date(Date.UTC(year, month - 1, 1)));
+}
+
 function dateRangeFor(filters: ReportFilters): { from: string; to: string } | undefined {
   if (filters.date) return { from: filters.date, to: filters.date };
 
   const today = currentEtDate();
-  if (filters.preset === "today") return { from: today, to: today };
+  const anchor = filters.from ?? today;
+  if (filters.preset === "today") return { from: anchor, to: anchor };
   if (filters.preset === "week") {
-    const monday = isoAddDays(today, -((isoWeekday(today) + 6) % 7));
+    const monday = isoAddDays(anchor, -((isoWeekday(anchor) + 6) % 7));
     return { from: monday, to: isoAddDays(monday, 4) };
   }
-  if (filters.preset === "month") return { from: `${today.slice(0, 7)}-01`, to: lastDayOfMonth(today) };
+  if (filters.preset === "month") return { from: `${anchor.slice(0, 7)}-01`, to: lastDayOfMonth(anchor) };
   if (filters.preset === "custom") {
     if (!filters.from && !filters.to) return undefined;
     return {
@@ -103,6 +131,14 @@ function dateRangeFor(filters: ReportFilters): { from: string; to: string } | un
   }
 
   return undefined;
+}
+
+function reportRangeLabel(filters: ReportFilters): string {
+  const range = dateRangeFor(filters);
+  if (!range) return "All dates";
+  if (range.from === range.to) return dateLabel(range.from);
+  if (filters.preset === "month") return monthLabel(range.from);
+  return `${dateLabel(range.from)} to ${dateLabel(range.to)}`;
 }
 
 function filterHref(filters: ReportFilters, updates: Partial<ReportFilters>) {
@@ -160,12 +196,23 @@ function average(values: number[]): number | null {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+}
+
 function moneyOrDash(value: number | null | undefined): string {
   return value == null || !Number.isFinite(value) ? "-" : fmtMoney(value);
 }
 
 function ratioOrDash(value: number | null): string {
   return value == null || !Number.isFinite(value) ? "-" : value.toFixed(2);
+}
+
+function percentOrDash(value: number | null): string {
+  return value == null || !Number.isFinite(value) ? "-" : `${(value * 100).toFixed(1)}%`;
 }
 
 function minutesLabel(minutes: number | null): string {
@@ -215,6 +262,16 @@ function buildStats(trades: ReportTrade[]) {
   const grossValues = closed.map((t) => t.gross ?? 0);
   const totalGross = grossValues.reduce((sum, pnl) => sum + pnl, 0);
   const totalShares = closed.reduce((sum, t) => sum + t.quantity, 0);
+  const shareSizes = closed.map((t) => Math.abs(t.quantity));
+  const perShareValues = closed
+    .filter((t) => t.quantity !== 0)
+    .map((t) => ({
+      pnl: t.pnl as number,
+      value: (t.gross ?? t.pnl ?? 0) / Math.abs(t.quantity),
+    }));
+  const winningPerShare = perShareValues
+    .filter((t) => t.pnl > 0)
+    .map((t) => t.value);
   const dailyPnl = [...closed.reduce((map, trade) => {
     if (trade.entryAt == null) return map;
     const date = etDateString(trade.entryAt);
@@ -224,33 +281,69 @@ function buildStats(trades: ReportTrade[]) {
   const holdMinutesFor = (predicate: (pnl: number) => boolean) => closed
     .filter((t) => t.entryAt != null && t.exitAt != null && t.pnl != null && predicate(t.pnl))
     .map((t) => ((t.exitAt as number) - (t.entryAt as number)) / 60);
+  const holdMinutes = closed
+    .filter((t) => t.entryAt != null && t.exitAt != null)
+    .map((t) => ((t.exitAt as number) - (t.entryAt as number)) / 60);
   const pnlStdev = standardDeviation(pnls);
   const avgTrade = average(pnls);
   const sqn = pnlStdev && avgTrade != null ? (avgTrade / pnlStdev) * Math.sqrt(pnls.length) : null;
+  const winRate = winners.length + losers.length === 0 ? null : winners.length / (winners.length + losers.length);
+  const avgWinner = average(winners);
+  const avgLoser = average(losers);
+  const payoffRatio = avgWinner == null || avgLoser == null || avgLoser === 0 ? null : avgWinner / Math.abs(avgLoser);
 
   return [
-    { label: "Total Gain/Loss", value: fmtMoney(totalPnl) },
-    { label: "Largest Gain", value: moneyOrDash(winners.length ? Math.max(...winners) : null) },
-    { label: "Largest Loss", value: moneyOrDash(losers.length ? Math.min(...losers) : null) },
-    { label: "Average Daily Gain/Loss", value: moneyOrDash(average(dailyPnl)) },
-    { label: "Average Daily Volume", value: dailyPnl.length ? Math.round(totalShares / dailyPnl.length).toLocaleString() : "-" },
-    { label: "Average Per-share Gain/Loss", value: totalShares > 0 ? fmtMoney(totalGross / totalShares) : "-" },
-    { label: "Average Trade Gain/Loss", value: moneyOrDash(avgTrade) },
-    { label: "Average Winning Trade", value: moneyOrDash(average(winners)) },
-    { label: "Average Losing Trade", value: moneyOrDash(average(losers)) },
-    { label: "Total Number of Trades", value: String(trades.length) },
-    { label: "Number of Winning Trades", value: countWithPercent(winners.length, closed.length) },
-    { label: "Number of Losing Trades", value: countWithPercent(losers.length, closed.length) },
-    { label: "Average Hold Time (scratch trades)", value: minutesLabel(average(holdMinutesFor((pnl) => pnl === 0))) },
-    { label: "Average Hold Time (winning trades)", value: minutesLabel(average(holdMinutesFor((pnl) => pnl > 0))) },
-    { label: "Average Hold Time (losing trades)", value: minutesLabel(average(holdMinutesFor((pnl) => pnl < 0))) },
-    { label: "Number of Scratch Trades", value: countWithPercent(scratches.length, closed.length) },
-    { label: "Max Consecutive Wins", value: String(maxStreak(pnls, (pnl) => pnl > 0)) },
-    { label: "Max Consecutive Losses", value: String(maxStreak(pnls, (pnl) => pnl < 0)) },
-    { label: "Trade P&L Standard Deviation", value: moneyOrDash(pnlStdev) },
-    { label: "System Quality Number (SQN)", value: ratioOrDash(sqn) },
-    { label: "Profit Factor", value: ratioOrDash(grossLosses === 0 ? null : grossWins / grossLosses) },
-  ];
+    {
+      title: "Performance",
+      stats: [
+        { label: "Total Gain/Loss", value: fmtMoney(totalPnl) },
+        { label: "Average Daily Gain/Loss", value: moneyOrDash(average(dailyPnl)) },
+        { label: "Average Trade Gain/Loss", value: moneyOrDash(avgTrade) },
+        { label: "Largest Gain", value: moneyOrDash(winners.length ? Math.max(...winners) : null) },
+        { label: "Largest Loss", value: moneyOrDash(losers.length ? Math.min(...losers) : null) },
+        { label: "Trade P&L Standard Deviation", value: moneyOrDash(pnlStdev) },
+      ],
+    },
+    {
+      title: "Accuracy / Payoff",
+      stats: [
+        { label: "Win Rate", value: percentOrDash(winRate) },
+        { label: "Number of Winning Trades", value: countWithPercent(winners.length, closed.length) },
+        { label: "Number of Losing Trades", value: countWithPercent(losers.length, closed.length) },
+        { label: "Average Winning Trade", value: moneyOrDash(avgWinner) },
+        { label: "Average Losing Trade", value: moneyOrDash(avgLoser) },
+        { label: "Payoff Ratio", value: ratioOrDash(payoffRatio) },
+        { label: "Profit Factor", value: ratioOrDash(grossLosses === 0 ? null : grossWins / grossLosses) },
+        { label: "Max Consecutive Wins", value: String(maxStreak(pnls, (pnl) => pnl > 0)) },
+        { label: "Max Consecutive Losses", value: String(maxStreak(pnls, (pnl) => pnl < 0)) },
+      ],
+    },
+    {
+      title: "Sizing / Per-share",
+      stats: [
+        { label: "Average Share Size", value: shareSizes.length ? Math.round(average(shareSizes) ?? 0).toLocaleString() : "-" },
+        { label: "Median Share Size", value: shareSizes.length ? Math.round(median(shareSizes) ?? 0).toLocaleString() : "-" },
+        { label: "Total Shares Traded", value: totalShares.toLocaleString() },
+        { label: "Average Daily Volume", value: dailyPnl.length ? Math.round(totalShares / dailyPnl.length).toLocaleString() : "-" },
+        { label: "Average Per-share Gain/Loss", value: totalShares > 0 ? fmtMoney(totalGross / totalShares) : "-" },
+        { label: "High Winning Per-share", value: moneyOrDash(winningPerShare.length ? Math.max(...winningPerShare) : null) },
+        { label: "Average Winning Per-share", value: moneyOrDash(average(winningPerShare)) },
+        { label: "Low Winning Per-share", value: moneyOrDash(winningPerShare.length ? Math.min(...winningPerShare) : null) },
+        { label: "System Quality Number (SQN)", value: ratioOrDash(sqn) },
+      ],
+    },
+    {
+      title: "Behavior / Timing",
+      stats: [
+        { label: "Total Number of Trades", value: String(trades.length) },
+        { label: "Number of Scratch Trades", value: countWithPercent(scratches.length, closed.length) },
+        { label: "Average Hold Time", value: minutesLabel(average(holdMinutes)) },
+        { label: "Average Hold Time (scratch trades)", value: minutesLabel(average(holdMinutesFor((pnl) => pnl === 0))) },
+        { label: "Average Hold Time (winning trades)", value: minutesLabel(average(holdMinutesFor((pnl) => pnl > 0))) },
+        { label: "Average Hold Time (losing trades)", value: minutesLabel(average(holdMinutesFor((pnl) => pnl < 0))) },
+      ],
+    },
+  ] satisfies StatSection[];
 }
 
 function emptyBuckets(labels: string[]): Bucket[] {
@@ -337,36 +430,25 @@ function FilterBar({ filters, tagOptions }: { filters: ReportFilters; tagOptions
         ? "border-[#58a6ff] bg-[var(--surface)] text-[var(--foreground)]"
         : "border-[var(--border)] text-[var(--muted)] hover:border-[#58a6ff]"
     }`;
+  const selectedDate = dateRangeFor(filters)?.from ?? currentEtDate();
 
   return (
-    <form action="/reports" className="space-y-3">
+    <form action="/reports" className="space-y-4">
       <input type="hidden" name="preset" value={activePreset} />
       <input type="hidden" name="chart" value={filters.chart} />
-      <div className="relative space-y-2">
+      <div className="relative mb-4 space-y-2">
         <span className="block text-sm font-semibold text-[var(--muted)]">Date range</span>
-        <div className="flex flex-wrap gap-2">
-          <Link href={filterHref(filters, { ...presetBase, preset: "today" })} className={presetButtonClass("today")}>Today</Link>
-          <Link href={filterHref(filters, { ...presetBase, preset: "week" })} className={presetButtonClass("week")}>Week</Link>
-          <Link href={filterHref(filters, { ...presetBase, preset: "month" })} className={presetButtonClass("month")}>Month</Link>
-          <Link href={filterHref(filters, { date: undefined, preset: "custom" })} className={presetButtonClass("custom")}>Custom range</Link>
-          <Link href="/reports" className="flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm text-[var(--muted)] hover:border-[#58a6ff]">Clear</Link>
-        </div>
-
-        {activePreset === "custom" && (
-          <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-            <label className="space-y-1">
-              <span className="block text-sm font-semibold text-[var(--muted)]">From</span>
-              <input type="date" name="from" defaultValue={filters.date ?? filters.from ?? ""} className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[#58a6ff]" />
-            </label>
-            <label className="space-y-1">
-              <span className="block text-sm font-semibold text-[var(--muted)]">To</span>
-              <input type="date" name="to" defaultValue={filters.date ?? filters.to ?? ""} className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[#58a6ff]" />
-            </label>
-            <div className="flex items-end">
-              <button type="submit" className="h-10 rounded-md border border-[#58a6ff] px-3 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--surface)]">Apply range</button>
-            </div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <div className="flex flex-wrap gap-2">
+            <Link href={filterHref(filters, { ...presetBase, preset: "today" })} className={presetButtonClass("today")}>Today</Link>
+            <Link href={filterHref(filters, { ...presetBase, preset: "week" })} className={presetButtonClass("week")}>Week</Link>
+            <Link href={filterHref(filters, { ...presetBase, preset: "month" })} className={presetButtonClass("month")}>Month</Link>
           </div>
-        )}
+          <div className="flex flex-wrap gap-2">
+            <MonthPicker selectedDate={selectedDate} />
+            <Link href="/reports" className="flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm text-[var(--muted)] hover:border-[#58a6ff]">Clear</Link>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_1fr_1fr_auto]">
@@ -406,15 +488,24 @@ function FilterBar({ filters, tagOptions }: { filters: ReportFilters; tagOptions
   );
 }
 
-function StatsGrid({ stats }: { stats: { label: string; value: string }[] }) {
+function StatsGrid({ sections, rangeLabel }: { sections: StatSection[]; rangeLabel: string }) {
   return (
-    <section>
-      <h2 className="mb-3 text-xl font-semibold tracking-tight text-[var(--foreground)]">Stats</h2>
-      <div className="grid gap-px overflow-hidden rounded-md border border-[var(--border)] bg-[var(--border)] md:grid-cols-3">
-        {stats.map((stat) => (
-          <div key={stat.label} className="flex min-h-16 items-center justify-between gap-3 bg-[var(--surface)] px-4 py-3">
-            <div className="text-sm font-semibold text-[var(--muted)]">{stat.label}</div>
-            <div className="shrink-0 text-right text-base font-semibold tabular-nums text-[var(--foreground)]">{stat.value}</div>
+    <section className="pt-6">
+      <h2 className="mb-3 text-xl font-semibold tracking-tight text-[var(--foreground)]">
+        Stats - {rangeLabel}
+      </h2>
+      <div className="space-y-5">
+        {sections.map((section) => (
+          <div key={section.title} className="space-y-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">{section.title}</h3>
+            <div className="grid gap-px overflow-hidden rounded-md border border-[var(--border)] bg-[var(--border)] md:grid-cols-3">
+              {section.stats.map((stat) => (
+                <div key={stat.label} className="flex min-h-16 items-center justify-between gap-3 bg-[var(--surface)] px-4 py-3">
+                  <div className="text-sm font-semibold text-[var(--muted)]">{stat.label}</div>
+                  <div className="shrink-0 text-right text-base font-semibold tabular-nums text-[var(--foreground)]">{stat.value}</div>
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>
@@ -596,27 +687,23 @@ export default async function ReportsPage({
 }) {
   const filters = parseSearchParams(await searchParams);
   const [trades, tagOptions] = await Promise.all([loadTrades(filters), loadTagOptions()]);
-  const stats = buildStats(trades);
+  const statSections = buildStats(trades);
   const dayBuckets = buildDayBuckets(trades);
   const hourBuckets = buildHourBuckets(trades);
   const monthBuckets = buildMonthBuckets(trades);
   const durationBuckets = buildDurationBuckets(trades);
   const dailyPnl = buildDailyPnl(trades);
+  const rangeLabel = reportRangeLabel(filters);
 
   return (
-    <div className="max-w-6xl space-y-5">
-      <div className="flex items-baseline justify-between gap-3">
-        <h1 className="text-xl font-semibold tracking-tight">Reports</h1>
-        <span className="text-xs text-[var(--muted)]">{trades.length} trades</span>
-      </div>
-
+    <div className="mx-auto max-w-6xl space-y-6">
       <FilterBar filters={filters} tagOptions={tagOptions} />
 
-      <StatsGrid stats={stats} />
+      <StatsGrid sections={statSections} rangeLabel={rangeLabel} />
 
       <PnlModule filters={filters} points={dailyPnl} />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <CountChart title="Trade Distribution by Day of Week" buckets={dayBuckets} />
         <PnlChart title="Performance by Day of Week" buckets={dayBuckets} />
         <CountChart title="Trade Distribution by Hour of Day" buckets={hourBuckets} />

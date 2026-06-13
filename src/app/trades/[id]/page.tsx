@@ -28,12 +28,16 @@ function holdingPeriod(from: number, to: number): string {
 
 export default async function TradeDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ returnTo?: string }>;
 }) {
   const { id } = await params;
+  const { returnTo } = await searchParams;
   const tradeId = Number(id);
   if (!Number.isInteger(tradeId)) notFound();
+  const backHref = returnTo?.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/trades";
 
   const trade = (
     await db.select().from(schema.trades).where(eq(schema.trades.id, tradeId)).limit(1)
@@ -86,7 +90,7 @@ export default async function TradeDetailPage({
   return (
     <div className="max-w-4xl space-y-6">
       <div className="space-y-2">
-        <Link href="/trades" className="inline-flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]">
+        <Link href={backHref} className="inline-flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]">
           &lt; Back
         </Link>
         <h1 className="text-xl font-semibold tracking-tight">

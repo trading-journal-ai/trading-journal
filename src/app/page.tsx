@@ -41,24 +41,23 @@ export default async function Home() {
     .from(schema.trades)
     .orderBy(desc(schema.trades.entryAt));
 
+  // current trading week (Mon-Fri) containing today
+  const weekStart = isoAddDays(todayStr, -((isoWeekday(todayStr) + 6) % 7));
+  const weekDates = Array.from({ length: 5 }, (_, i) => isoAddDays(weekStart, i));
+  const weekDateSet = new Set(weekDates);
+
   // daily + monthly aggregation
   const byDate = new Map<string, { pnl: number; trades: number }>();
-  let monthPnl = 0;
-  let wins = 0;
-  let closed = 0;
+  const weekPnls: number[] = [];
   for (const t of trades) {
     const net = netPnl(t) ?? 0;
-    if (t.status === "closed") {
-      closed += 1;
-      if (net > 0) wins += 1;
-    }
     if (t.entryAt == null) continue;
     const date = etDateString(t.entryAt);
     const cur = byDate.get(date) ?? { pnl: 0, trades: 0 };
     cur.pnl += net;
     cur.trades += 1;
     byDate.set(date, cur);
-    if (date.startsWith(thisMonth)) monthPnl += net;
+    if (t.status === "closed" && weekDateSet.has(date)) weekPnls.push(net);
   }
 
   // Build cumulative series with plain loops (avoids in-render closure mutation).
@@ -75,9 +74,6 @@ export default async function Home() {
     return { points, trades };
   }
 
-  // current trading week (Mon-Fri) containing today
-  const weekStart = isoAddDays(todayStr, -((isoWeekday(todayStr) + 6) % 7));
-  const weekDates = Array.from({ length: 5 }, (_, i) => isoAddDays(weekStart, i));
   const weekSeries = cumulativeSeries(weekDates, (d) => d.slice(5));
   const weekPnl = weekSeries.points.at(-1)?.value ?? 0;
 
@@ -110,74 +106,99 @@ export default async function Home() {
     trades: monthlyTradeCounts.reduce((s: number, n: number) => s + n, 0),
   };
 
-  const winRate = closed > 0 ? Math.round((wins / closed) * 100) : null;
+  const weeklyWins = weekPnls.filter((pnl) => pnl > 0);
+  const weeklyLosses = weekPnls.filter((pnl) => pnl < 0);
+  const weeklyCounted = weeklyWins.length + weeklyLosses.length;
+  const weeklyWinRate = weeklyCounted > 0 ? Math.round((weeklyWins.length / weeklyCounted) * 100) : null;
+  const grossWeeklyWins = weeklyWins.reduce((sum, pnl) => sum + pnl, 0);
+  const grossWeeklyLosses = Math.abs(weeklyLosses.reduce((sum, pnl) => sum + pnl, 0));
+  const weeklyProfitFactor = grossWeeklyLosses > 0 ? grossWeeklyWins / grossWeeklyLosses : null;
+  const averageWeeklyWin = weeklyWins.length > 0 ? grossWeeklyWins / weeklyWins.length : null;
+  const averageWeeklyLoss = weeklyLosses.length > 0 ? grossWeeklyLosses / weeklyLosses.length : null;
+  const weeklyPayoffRatio = averageWeeklyWin != null && averageWeeklyLoss != null && averageWeeklyLoss > 0
+    ? averageWeeklyWin / averageWeeklyLoss
+    : null;
+  const averageWeeklyTrade = weekPnls.length > 0
+    ? weekPnls.reduce((sum, pnl) => sum + pnl, 0) / weekPnls.length
+    : null;
   const recent = trades.slice(0, 8);
 
   const stats: { label: string; value: string; color?: string }[] = [
-    { label: "This week", value: fmtMoney(weekPnl), color: weekPnl >= 0 ? "var(--green)" : "var(--red)" },
-    { label: "This month", value: fmtMoney(monthPnl), color: monthPnl >= 0 ? "var(--green)" : "var(--red)" },
-    { label: "Win rate", value: winRate == null ? "—" : `${winRate}%` },
-    { label: "Total trades", value: String(trades.length) },
+    { label: "Weekly P&L", value: fmtMoney(weekPnl), color: weekPnl >= 0 ? "var(--green)" : "var(--red)" },
+    { label: "Win rate", value: weeklyWinRate == null ? "—" : `${weeklyWinRate}%` },
+    { label: "Profit factor", value: weeklyProfitFactor == null ? "—" : weeklyProfitFactor.toFixed(2) },
+    { label: "Payoff ratio", value: weeklyPayoffRatio == null ? "—" : weeklyPayoffRatio.toFixed(2) },
+    {
+      label: "Avg trade",
+      value: averageWeeklyTrade == null ? "—" : fmtMoney(averageWeeklyTrade),
+      color: averageWeeklyTrade == null ? undefined : averageWeeklyTrade >= 0 ? "var(--green)" : "var(--red)",
+    },
   ];
 
   return (
     <div className="max-w-4xl space-y-8">
-      <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
-
       {trades.length === 0 ? (
         <p className="text-sm text-[var(--muted)]">
           No trades yet — import a statement to get started.
         </p>
       ) : (
         <>
-          <section className="space-y-2">
-            <h2 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wide">This week</h2>
-            <div className="grid grid-cols-5 gap-1.5">
-              {weekDates.map((d) => {
-                const agg = byDate.get(d);
-                const { wd, day } = dayLabel(d);
-                const today = d === todayStr;
-                const pos = agg ? agg.pnl >= 0 : false;
-                const cell = (
-                  <div
-                    className="rounded-md border p-3 h-24 flex flex-col"
-                    style={{
-                      borderColor: today ? "#58a6ff" : "var(--border)",
-                      background: "var(--surface)",
-                    }}
-                  >
-                    <span className="text-sm font-semibold text-[var(--muted)]">{wd} {day}</span>
-                    {agg ? (
-                      <span className="mt-auto">
-                        <span className="block text-base font-semibold tabular-nums" style={{ color: pos ? "var(--green)" : "var(--red)" }}>
-                          {fmtMoney(agg.pnl)}
+          <div className="space-y-4">
+            <section className="space-y-2">
+              <h2 className="text-xl font-semibold tracking-tight">This week</h2>
+              <div className="grid grid-cols-5 gap-1.5">
+                {weekDates.map((d) => {
+                  const agg = byDate.get(d);
+                  const { wd, day } = dayLabel(d);
+                  const today = d === todayStr;
+                  const pos = agg ? agg.pnl >= 0 : false;
+                  const cell = (
+                    <div
+                      className="rounded-md border p-3 h-24 flex flex-col"
+                      style={{
+                        borderColor: today ? "#58a6ff" : "var(--border)",
+                        background: "var(--surface)",
+                      }}
+                    >
+                      <span className="text-sm font-semibold text-[var(--muted)]">{wd} {day}</span>
+                      {agg ? (
+                        <span className="mt-auto">
+                          <span className="block text-base font-semibold tabular-nums" style={{ color: pos ? "var(--green)" : "var(--red)" }}>
+                            {fmtMoney(agg.pnl)}
+                          </span>
+                          <span className="block text-sm font-semibold text-[var(--muted)]">{agg.trades} {agg.trades === 1 ? "trade" : "trades"}</span>
                         </span>
-                        <span className="block text-sm font-semibold text-[var(--muted)]">{agg.trades} {agg.trades === 1 ? "trade" : "trades"}</span>
-                      </span>
-                    ) : (
-                      <span className="mt-auto text-base font-semibold text-[var(--muted)]">—</span>
-                    )}
-                  </div>
-                );
-                return agg ? (
-                  <Link key={d} href={`/trades?date=${d}`} className="block">{cell}</Link>
-                ) : (
-                  <div key={d}>{cell}</div>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="grid grid-cols-4 gap-3">
-            {stats.map((s) => (
-              <div key={s.label} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
-                <div className="text-2xl font-semibold tabular-nums" style={s.color ? { color: s.color } : undefined}>
-                  {s.value}
-                </div>
-                <div className="text-sm font-semibold text-[var(--muted)] mt-1">{s.label}</div>
+                      ) : (
+                        <span className="mt-auto text-base font-semibold text-[var(--muted)]">—</span>
+                      )}
+                    </div>
+                  );
+                  return agg ? (
+                    <Link key={d} href={`/trades?date=${d}`} className="block">{cell}</Link>
+                  ) : (
+                    <div key={d}>{cell}</div>
+                  );
+                })}
               </div>
-            ))}
-          </section>
+            </section>
+
+            <section className="grid grid-cols-5 gap-1.5">
+              {stats.map((s) => (
+                <div
+                  key={s.label}
+                  className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-3 h-24 flex flex-col"
+                >
+                  <div className="text-sm font-semibold text-[var(--muted)]">{s.label}</div>
+                  <div
+                    className="mt-auto text-base font-semibold tabular-nums"
+                    style={s.color ? { color: s.color } : undefined}
+                  >
+                    {s.value}
+                  </div>
+                </div>
+              ))}
+            </section>
+          </div>
 
           <CumulativePnlChart week={weekSeries} month={monthSeries} year={yearSeries} />
 

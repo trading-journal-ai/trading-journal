@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db, schema } from "@/lib/db";
 
 type ScopedNoteState = { ok: boolean };
+type TradeNoteState = { ok: boolean };
 const RECAP_SCOPES = ["day", "week", "month"] as const;
 type RecapScope = (typeof RECAP_SCOPES)[number];
 
@@ -65,4 +66,12 @@ export async function updateJournalEntryAction(formData: FormData) {
   if (Number.isInteger(tradeId) && tradeId > 0) {
     revalidatePath(`/trades/${tradeId}`);
   }
+}
+
+export async function updateJournalEntryStateAction(
+  _prev: TradeNoteState | null,
+  formData: FormData,
+): Promise<TradeNoteState> {
+  await updateJournalEntryAction(formData);
+  return { ok: true };
 }

@@ -37,6 +37,10 @@ function shiftMonth(ym: string, delta: number): string {
   return `${y}-${String(m).padStart(2, "0")}`;
 }
 
+function shiftYear(year: number, delta: number): number {
+  return year + delta;
+}
+
 /** Calendar cells for a month: leading blanks + day numbers, padded to weeks. */
 function monthMatrix(year: number, month: number): (number | null)[] {
   const firstWeekday = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
@@ -175,7 +179,7 @@ function ViewToggle({ active, monthHref, yearHref }: { active: "month" | "year";
   const on = "bg-[var(--surface)] border-[#58a6ff] text-[var(--foreground)]";
   const off = "border-[var(--border)] text-[var(--muted)] hover:border-[#58a6ff]";
   return (
-    <div className="flex gap-1.5">
+    <div className="flex gap-2">
       <Link href={monthHref} className={`${base} ${active === "month" ? on : off}`}>Month</Link>
       <Link href={yearHref} className={`${base} ${active === "year" ? on : off}`}>Year</Link>
     </div>
@@ -206,50 +210,48 @@ function MonthView({
   const weeks = workweeksForMonth(year, month, byDate);
 
   let monthPnl = 0;
-  let monthTrades = 0;
   for (const week of weeks) {
     monthPnl += week.pnl;
-    monthTrades += week.trades;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold tracking-tight">
-            {monthFmt.format(new Date(Date.UTC(year, month - 1, 1)))}
-          </h1>
-          {monthTrades > 0 && (
-            <span className="text-sm tabular-nums" style={{ color: monthPnl >= 0 ? "var(--green)" : "var(--red)" }}>
-              {fmtMoney(monthPnl)} · {monthTrades} trades
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-3">
+    <div className="mx-auto max-w-6xl space-y-6">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ViewToggle
             active="month"
             monthHref={calendarHref({ ...params, view: undefined, y: undefined, m: ym })}
             yearHref={calendarHref({ ...params, view: "year", y: String(year), m: undefined })}
           />
-          <div className="flex gap-2">
-            <NavButton href={calendarHref({ ...params, m: shiftMonth(ym, -1), view: undefined, y: undefined })}>
-              Prev
-            </NavButton>
-            <NavButton href={calendarHref({ ...params, m: shiftMonth(ym, 1), view: undefined, y: undefined })}>
-              Next
-            </NavButton>
-          </div>
-          <CalendarRangeFilter
-            params={params}
-            clearHref={calendarHref({ ...params, range: undefined, from: undefined, to: undefined })}
-          />
+          <NavButton href={calendarHref({ ...params, m: shiftMonth(ym, -1), view: undefined, y: undefined })}>
+            Prev
+          </NavButton>
+          <NavButton href={calendarHref({ ...params, m: shiftMonth(ym, 1), view: undefined, y: undefined })}>
+            Next
+          </NavButton>
+        </div>
+        <CalendarRangeFilter
+          params={params}
+          clearHref={calendarHref({ ...params, range: undefined, from: undefined, to: undefined })}
+        />
+      </div>
+
+      <div className="flex items-baseline justify-between gap-3 pt-6">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {monthFmt.format(new Date(Date.UTC(year, month - 1, 1)))}
+        </h1>
+        <div className="flex items-baseline gap-1.5 text-right text-[15px] font-semibold">
+          <span className="text-[var(--muted)]">Monthly P&L</span>
+          <span className="tabular-nums" style={{ color: monthPnl >= 0 ? "var(--green)" : "var(--red)" }}>
+            {fmtMoney(monthPnl)}
+          </span>
         </div>
       </div>
 
-      <div className="max-w-6xl">
+      <div>
         <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_minmax(150px,0.8fr)] px-1 pb-1">
           {[...WORKDAYS, "Total"].map((d) => (
-            <div key={d} className="text-center text-lg font-semibold text-[var(--muted)]">
+            <div key={d} className="text-center text-sm font-semibold text-[var(--muted)]">
               {d}
             </div>
           ))}
@@ -259,17 +261,17 @@ function MonthView({
           {weeks.map((week, weekIndex) => (
             <div
               key={weekIndex}
-              className="grid min-h-48 grid-cols-[repeat(5,minmax(0,1fr))_minmax(150px,0.8fr)] border-b border-[var(--border)] last:border-b-0"
+              className="grid min-h-36 grid-cols-[repeat(5,minmax(0,1fr))_minmax(150px,0.8fr)] border-b border-[var(--border)] last:border-b-0"
             >
               {week.days.map((day) => {
                 const pos = day.agg ? day.agg.pnl >= 0 : false;
                 const content = (
                   <div
-                    className={`flex h-full min-h-48 flex-col border-r border-[var(--border)] p-4 ${
+                    className={`flex h-full min-h-36 flex-col border-r border-[var(--border)] p-4 ${
                       day.inMonth ? "" : "opacity-30"
                     }`}
                   >
-                    <span className="text-lg font-semibold leading-none text-[var(--foreground)]">
+                    <span className="text-base font-semibold leading-none text-[var(--foreground)]">
                       {day.day}
                     </span>
                     <span className="mt-auto">
@@ -294,8 +296,8 @@ function MonthView({
                 );
               })}
 
-              <div className="flex min-h-48 flex-col p-4">
-                <span className="text-lg font-semibold leading-none text-[var(--foreground)]">
+              <div className="flex min-h-36 flex-col p-4">
+                <span className="text-base font-semibold leading-none text-[var(--foreground)]">
                   Week {weekIndex + 1}
                 </span>
                 <span className="mt-auto">
@@ -392,36 +394,30 @@ function YearView({
   latest: string;
   params: CalendarSearch;
 }) {
-  let yearPnl = 0;
-  let yearTrades = 0;
-  for (const [date, agg] of byDate) {
-    if (!date.startsWith(`${year}-`)) continue;
-    yearPnl += agg.pnl;
-    yearTrades += agg.trades;
-  }
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold tracking-tight">{year}</h1>
-          {yearTrades > 0 && (
-            <span className="text-sm tabular-nums" style={{ color: yearPnl >= 0 ? "var(--green)" : "var(--red)" }}>
-              {fmtMoney(yearPnl)} · {yearTrades} trades
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-3">
+    <div className="mx-auto max-w-6xl space-y-6">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ViewToggle
             active="year"
             monthHref={calendarHref({ ...params, m: latest, view: undefined, y: undefined })}
             yearHref={calendarHref({ ...params, view: "year", y: String(year), m: undefined })}
           />
-          <CalendarRangeFilter
-            params={params}
-            clearHref={calendarHref({ ...params, range: undefined, from: undefined, to: undefined })}
-          />
+          <NavButton href={calendarHref({ ...params, view: "year", y: String(shiftYear(year, -1)), m: undefined })}>
+            Prev
+          </NavButton>
+          <NavButton href={calendarHref({ ...params, view: "year", y: String(shiftYear(year, 1)), m: undefined })}>
+            Next
+          </NavButton>
         </div>
+        <CalendarRangeFilter
+          params={params}
+          clearHref={calendarHref({ ...params, range: undefined, from: undefined, to: undefined })}
+        />
+      </div>
+
+      <div className="flex items-baseline gap-3 pt-6">
+        <h1 className="text-2xl font-semibold tracking-tight">{year}</h1>
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">

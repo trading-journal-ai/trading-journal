@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { and, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, gte, inArray, lte } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { fmtMoney } from "@/lib/format";
 import { netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
+import MonthPicker from "@/components/MonthPicker";
 import RecapNote from "@/components/RecapNote";
-import { updateJournalEntryAction } from "./actions";
+import TradeJournalNote from "@/components/TradeJournalNote";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +17,6 @@ type JournalFilters = {
   preset: DatePreset;
   from?: string;
   to?: string;
-  symbol?: string;
-  side?: "long" | "short";
-  tag?: string;
 };
 
 type JournalTrade = typeof schema.trades.$inferSelect & {
@@ -73,9 +71,6 @@ function parseSearchParams(params: {
   preset?: string;
   from?: string;
   to?: string;
-  symbol?: string;
-  side?: string;
-  tag?: string;
 }): JournalFilters {
   const presetOptions = new Set<DatePreset>(["all", "today", "week", "month", "custom"]);
   return {
@@ -83,9 +78,6 @@ function parseSearchParams(params: {
     preset: presetOptions.has(params.preset as DatePreset) ? (params.preset as DatePreset) : "month",
     from: validDate(params.from),
     to: validDate(params.to),
-    symbol: params.symbol?.trim().toUpperCase() || undefined,
-    side: params.side === "long" || params.side === "short" ? params.side : undefined,
-    tag: params.tag || undefined,
   };
 }
 
@@ -113,12 +105,13 @@ function dateRangeFor(filters: JournalFilters): { from: string; to: string } | u
   if (filters.date) return { from: filters.date, to: filters.date };
 
   const today = currentEtDate();
-  if (filters.preset === "today") return { from: today, to: today };
+  const anchor = filters.from ?? today;
+  if (filters.preset === "today") return { from: anchor, to: anchor };
   if (filters.preset === "week") {
-    const monday = isoAddDays(today, -((isoWeekday(today) + 6) % 7));
+    const monday = isoAddDays(anchor, -((isoWeekday(anchor) + 6) % 7));
     return { from: monday, to: isoAddDays(monday, 4) };
   }
-  if (filters.preset === "month") return { from: `${today.slice(0, 7)}-01`, to: lastDayOfMonth(today) };
+  if (filters.preset === "month") return { from: `${anchor.slice(0, 7)}-01`, to: lastDayOfMonth(anchor) };
   if (filters.preset === "custom") {
     if (!filters.from && !filters.to) return undefined;
     return {
@@ -126,7 +119,6 @@ function dateRangeFor(filters: JournalFilters): { from: string; to: string } | u
       to: filters.to ?? "9999-12-31",
     };
   }
-
   return undefined;
 }
 
@@ -137,18 +129,14 @@ function filterHref(filters: JournalFilters, updates: Partial<JournalFilters>) {
   if (next.preset !== "all") params.set("preset", next.preset);
   if (next.from) params.set("from", next.from);
   if (next.to) params.set("to", next.to);
-  if (next.symbol) params.set("symbol", next.symbol);
-  if (next.side) params.set("side", next.side);
-  if (next.tag) params.set("tag", next.tag);
   const query = params.toString();
   return query ? `/journal?${query}` : "/journal";
 }
 
-const dateLabelFmt = new Intl.DateTimeFormat("en-US", {
+const dateLabelNoYearFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
-  month: "short",
+  month: "long",
   day: "numeric",
-  year: "numeric",
 });
 
 const monthLabelFmt = new Intl.DateTimeFormat("en-US", {
@@ -163,14 +151,33 @@ const dayOnlyLabelFmt = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
 });
 
-function dateLabel(date: string): string {
+const weekdayLabelFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  weekday: "long",
+});
+
+function dateLabelNoYear(date: string): string {
   const [year, month, day] = date.split("-").map(Number);
-  return dateLabelFmt.format(new Date(Date.UTC(year, month - 1, day)));
+  return dateLabelNoYearFmt.format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+function dateYear(date: string): string {
+  return date.slice(0, 4);
+}
+
+function weekRangeLabel(weekStart: string): string {
+  const weekEnd = isoAddDays(weekStart, 4);
+  return `${dateLabelNoYear(weekStart)} to ${dateLabelNoYear(weekEnd)}, ${dateYear(weekEnd)}`;
 }
 
 function dayOnlyLabel(date: string): string {
   const [year, month, day] = date.split("-").map(Number);
   return dayOnlyLabelFmt.format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+function weekdayLabel(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  return weekdayLabelFmt.format(new Date(Date.UTC(year, month - 1, day)));
 }
 
 function monthLabel(monthKey: string): string {
@@ -189,16 +196,33 @@ function weekLabel(weekStart: string): string {
   return `Week ${Math.floor(daysFromFirstWeek / 7) + 1}`;
 }
 
-function noteWord(count: number): string {
-  return `${count} ${count === 1 ? "note" : "notes"}`;
+function profitColor(value: number): string {
+  if (value > 0) return "var(--green)";
+  if (value < 0) return "var(--red)";
+  return "var(--muted)";
+}
+
+function formatPercent(value: number): string {
+  return `${Math.round(value)}%`;
+}
+
+function dayAccuracy(trades: JournalTrade[]): string {
+  const wins = trades.filter((trade) => (trade.pnl ?? 0) > 0).length;
+  const losses = trades.filter((trade) => (trade.pnl ?? 0) < 0).length;
+  const counted = wins + losses;
+  return counted === 0 ? "—" : formatPercent((wins / counted) * 100);
+}
+
+function dayProfitFactor(trades: JournalTrade[]): string {
+  const grossWin = trades.reduce((sum, trade) => sum + Math.max(trade.pnl ?? 0, 0), 0);
+  const grossLoss = Math.abs(trades.reduce((sum, trade) => sum + Math.min(trade.pnl ?? 0, 0), 0));
+  if (grossWin === 0 && grossLoss === 0) return "—";
+  if (grossLoss === 0) return "∞";
+  return (grossWin / grossLoss).toFixed(2);
 }
 
 function tradeNoteText(note: typeof schema.journalEntries.$inferSelect): string {
   return note.lessons || note.thesis || note.whatWentWell || note.whatWentWrong || "";
-}
-
-async function loadTagOptions() {
-  return db.select({ name: schema.tags.name }).from(schema.tags);
 }
 
 /** Scoped recap notes (day/week/month) keyed by `${scope}:${scopeKey}`. */
@@ -238,18 +262,6 @@ async function loadJournalTrades(filters: JournalFilters): Promise<JournalTrade[
       const entryDate = etDateString(trade.entryAt);
       return entryDate >= range.from && entryDate <= range.to;
     });
-  }
-
-  if (filters.symbol) rows = rows.filter((trade) => trade.symbol.toUpperCase().includes(filters.symbol!));
-  if (filters.side) rows = rows.filter((trade) => trade.side === filters.side);
-
-  if (filters.tag) {
-    const taggedRows = await db
-      .select({ tradeId: schema.tradeTags.tradeId, name: schema.tags.name })
-      .from(schema.tradeTags)
-      .innerJoin(schema.tags, sql`${schema.tags.id} = ${schema.tradeTags.tagId}`);
-    const taggedTradeIds = new Set(taggedRows.filter((row) => row.name === filters.tag).map((row) => row.tradeId));
-    rows = rows.filter((trade) => taggedTradeIds.has(trade.id));
   }
 
   const noteRows = await db
@@ -293,17 +305,18 @@ function buildDailySymbolSummary(trades: JournalTrade[]): DailySymbolSummary[] {
     bySymbol.set(trade.symbol, row);
   }
 
-  return [...bySymbol.values()].sort((a, b) => Math.abs(b.pnl) - Math.abs(a.pnl));
+  return [...bySymbol.values()].sort((a, b) => b.pnl - a.pnl);
 }
 
-function groupJournal(trades: JournalTrade[]): JournalMonth[] {
+function groupJournal(trades: JournalTrade[], filters: JournalFilters): JournalMonth[] {
   const monthMap = new Map<string, JournalMonth>();
+  const groupByWeekStart = !filters.date && filters.preset === "week";
 
   for (const trade of trades) {
     if (trade.entryAt == null) continue;
     const date = etDateString(trade.entryAt);
-    const monthKey = date.slice(0, 7);
     const weekKey = weekKeyFor(date);
+    const monthKey = groupByWeekStart ? weekKey.slice(0, 7) : date.slice(0, 7);
     const pnl = trade.pnl ?? 0;
     const noteCount = trade.notes.length;
 
@@ -318,7 +331,7 @@ function groupJournal(trades: JournalTrade[]): JournalMonth[] {
       week = {
         key: weekKey,
         label: weekLabel(weekKey),
-        rangeLabel: `${dateLabel(weekKey)} - ${dateLabel(isoAddDays(weekKey, 4))}`,
+        rangeLabel: weekRangeLabel(weekKey),
         days: [],
         pnl: 0,
         trades: 0,
@@ -357,7 +370,7 @@ function groupJournal(trades: JournalTrade[]): JournalMonth[] {
     }));
 }
 
-function FilterBar({ filters, tagOptions }: { filters: JournalFilters; tagOptions: { name: string }[] }) {
+function FilterBar({ filters }: { filters: JournalFilters }) {
   const activePreset: DatePreset = filters.date ? "custom" : filters.preset;
   const presetBase = { date: undefined, from: undefined, to: undefined };
   const buttonClass = (preset: DatePreset) =>
@@ -366,61 +379,26 @@ function FilterBar({ filters, tagOptions }: { filters: JournalFilters; tagOption
         ? "border-[var(--blue)] bg-[var(--surface)] text-[var(--foreground)]"
         : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--blue)] hover:text-[var(--foreground)]"
     }`;
+  const selectedDate = dateRangeFor(filters)?.from ?? currentEtDate();
 
   return (
     <form action="/journal" className="space-y-3">
       <input type="hidden" name="preset" value={activePreset} />
-      <div className="space-y-2">
+      <div className="relative space-y-2">
         <span className="block text-sm font-semibold text-[var(--muted)]">Date range</span>
-        <div className="flex flex-wrap gap-2">
-          <Link href={filterHref(filters, { ...presetBase, preset: "today" })} className={buttonClass("today")}>Today</Link>
-          <Link href={filterHref(filters, { ...presetBase, preset: "week" })} className={buttonClass("week")}>Week</Link>
-          <Link href={filterHref(filters, { ...presetBase, preset: "month" })} className={buttonClass("month")}>Month</Link>
-          <Link href={filterHref(filters, { date: undefined, preset: "custom" })} className={buttonClass("custom")}>Custom</Link>
-          <Link href="/journal" className="inline-flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm text-[var(--muted)] hover:border-[var(--blue)] hover:text-[var(--foreground)]">Clear</Link>
-        </div>
-
-        {activePreset === "custom" && (
-          <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-            <label className="space-y-1">
-              <span className="block text-sm font-semibold text-[var(--muted)]">From</span>
-              <input type="date" name="from" defaultValue={filters.date ?? filters.from ?? ""} className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[var(--blue)]" />
-            </label>
-            <label className="space-y-1">
-              <span className="block text-sm font-semibold text-[var(--muted)]">To</span>
-              <input type="date" name="to" defaultValue={filters.date ?? filters.to ?? ""} className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[var(--blue)]" />
-            </label>
-            <div className="flex items-end">
-              <button type="submit" className="h-10 rounded-md border border-[var(--blue)] px-3 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--surface)]">Apply range</button>
-            </div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <div className="flex flex-wrap gap-2">
+            <Link href={filterHref(filters, { ...presetBase, preset: "today" })} className={buttonClass("today")}>Today</Link>
+            <Link href={filterHref(filters, { ...presetBase, preset: "week" })} className={buttonClass("week")}>Week</Link>
+            <Link href={filterHref(filters, { ...presetBase, preset: "month" })} className={buttonClass("month")}>Month</Link>
           </div>
-        )}
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_1fr_auto]">
-        <label className="space-y-1">
-          <span className="block text-sm font-semibold text-[var(--muted)]">Symbol</span>
-          <input name="symbol" defaultValue={filters.symbol ?? ""} placeholder="Symbol" className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[var(--blue)]" />
-        </label>
-        <label className="space-y-1">
-          <span className="block text-sm font-semibold text-[var(--muted)]">Tag</span>
-          <select name="tag" defaultValue={filters.tag ?? ""} className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[var(--blue)]">
-            <option value="">All tags</option>
-            {tagOptions.map((tagOption) => <option key={tagOption.name} value={tagOption.name}>{tagOption.name}</option>)}
-          </select>
-        </label>
-        <label className="space-y-1">
-          <span className="block text-sm font-semibold text-[var(--muted)]">Side</span>
-          <select name="side" defaultValue={filters.side ?? ""} className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[var(--blue)]">
-            <option value="">All sides</option>
-            <option value="long">Long</option>
-            <option value="short">Short</option>
-          </select>
-        </label>
-        <div className="flex items-end">
-          <button type="submit" className="h-10 rounded-md border border-[var(--blue)] px-3 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--surface)]">Apply</button>
+          <div className="flex flex-wrap gap-2">
+            <MonthPicker selectedDate={selectedDate} />
+            <Link href="/journal" className="inline-flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm text-[var(--muted)] hover:border-[var(--blue)] hover:text-[var(--foreground)]">Clear</Link>
+          </div>
         </div>
       </div>
+
     </form>
   );
 }
@@ -433,82 +411,122 @@ export default async function JournalPage({
     preset?: string;
     from?: string;
     to?: string;
-    symbol?: string;
-    side?: string;
-    tag?: string;
   }>;
 }) {
   const filters = parseSearchParams(await searchParams);
-  const [trades, tagOptions, recaps] = await Promise.all([
+  const returnTo = filterHref(filters, {});
+  const [trades, recaps] = await Promise.all([
     loadJournalTrades(filters),
-    loadTagOptions(),
     loadRecaps(),
   ]);
-  const months = groupJournal(trades);
-  const totalNotes = trades.reduce((sum, trade) => sum + trade.notes.length, 0);
+  const months = groupJournal(trades, filters);
+  const isWeekView = !filters.date && filters.preset === "week";
+  const emptyDayDate = months.length === 0 && (filters.date || filters.preset === "today")
+    ? dateRangeFor(filters)?.from
+    : undefined;
 
   return (
-    <div className="max-w-6xl space-y-6">
-      <div className="flex items-baseline justify-between gap-3">
-        <h1 className="text-xl font-semibold tracking-tight">Journal</h1>
-        <span className="text-xs text-[var(--muted)]">{noteWord(totalNotes)}</span>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <FilterBar filters={filters} />
 
-      <FilterBar filters={filters} tagOptions={tagOptions} />
+      <section className="space-y-4 pt-6">
+        {emptyDayDate ? (
+          <div className="space-y-6">
+            <div className="space-y-3 border-b border-[var(--border)] pb-6">
+              <h2 className="text-2xl font-semibold tracking-tight">
+                {weekdayLabel(emptyDayDate)}
+                {" "}
+                <span className="align-baseline text-2xl font-semibold text-[var(--foreground)]">
+                  {dayOnlyLabel(emptyDayDate)}
+                </span>
+              </h2>
+              <RecapNote
+                scope="day"
+                scopeKey={emptyDayDate}
+                text={recaps.get(`day:${emptyDayDate}`) ?? ""}
+                placeholder="Add a daily note: market read, plan, execution, emotions, what worked, what to fix tomorrow."
+              />
+            </div>
+            <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_max-content] md:gap-x-20">
+              <div className="space-y-4">
+                <p className="text-sm font-semibold text-[var(--muted)]">
+                  No trades for this day.
+                </p>
+              </div>
 
-      <section className="space-y-4">
-        {months.length === 0 ? (
+              <aside className="w-max min-w-36 max-w-full justify-self-end self-start rounded bg-[var(--surface)] px-4 py-3 text-xs">
+                <div className="font-semibold text-[var(--muted)]">No trades</div>
+                <div className="mx-auto mt-3 w-max space-y-1 whitespace-nowrap pt-2 text-center font-semibold">
+                  <div className="grid grid-cols-[max-content_max-content] items-center justify-center gap-x-3">
+                    <span className="text-[var(--muted)]">Accuracy</span>
+                    <span className="tabular-nums">—</span>
+                  </div>
+                  <div className="grid grid-cols-[max-content_max-content] items-center justify-center gap-x-3">
+                    <span className="text-[var(--muted)]">Profit factor</span>
+                    <span className="tabular-nums">—</span>
+                  </div>
+                  <div className="grid grid-cols-[max-content_max-content] items-center justify-center gap-x-3">
+                    <span className="text-[var(--muted)]">P&L</span>
+                    <span className="tabular-nums" style={{ color: profitColor(0) }}>
+                      {fmtMoney(0)}
+                    </span>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </div>
+        ) : months.length === 0 ? (
           <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-8 text-center text-sm text-[var(--muted)]">
             No trade notes match these filters yet. Add a note from a trade detail page to see it roll up here.
           </div>
         ) : (
           months.map((month) => (
-            <article key={month.key} className="space-y-7">
-              <div className="space-y-3">
-                <h2 className="text-2xl font-semibold tracking-tight">{month.label}</h2>
-                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h3 className="text-lg font-semibold">Month Review</h3>
-                    <span className="text-sm text-[var(--muted)]">{month.trades} trades · {noteWord(month.noteCount)} · {fmtMoney(month.pnl)}</span>
-                  </div>
-                  <div className="mt-3">
-                    <RecapNote
-                      scope="month"
-                      scopeKey={month.key}
-                      text={recaps.get(`month:${month.key}`) ?? ""}
-                      placeholder="Add a light monthly recap: themes, bigger-picture progress, drawdown context, what carries into next month."
-                    />
-                  </div>
+            <article key={month.key} className="space-y-9">
+              {!isWeekView && (
+                <div className="space-y-3 border-b border-[var(--border)] pb-6">
+                  <h2 className="text-2xl font-semibold tracking-tight">{month.label} · Month Review</h2>
+                  <RecapNote
+                    scope="month"
+                    scopeKey={month.key}
+                    text={recaps.get(`month:${month.key}`) ?? ""}
+                    placeholder="Add a light monthly recap: themes, bigger-picture progress, drawdown context, what carries into next month."
+                  />
                 </div>
-              </div>
+              )}
 
-              <div className="space-y-8">
+              <div className="space-y-10">
                 {month.weeks.map((week) => (
-                  <section key={week.key} className="space-y-4">
+                  <section key={week.key} className="space-y-5">
                     <div className="space-y-2">
-                      <div className="flex flex-wrap items-baseline justify-between gap-3">
-                        <h3 className="text-xl font-semibold">{week.label}</h3>
-                        <span className="text-sm text-[var(--muted)]">{week.rangeLabel} · {fmtMoney(week.pnl)}</span>
-                      </div>
-                      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
-                        <RecapNote
-                          scope="week"
-                          scopeKey={week.key}
-                          text={recaps.get(`week:${week.key}`) ?? ""}
-                          placeholder="Add a short weekly recap: did I keep red days small, what repeated, what to focus on next week."
-                        />
-                      </div>
+                      <h3 className={`${isWeekView ? "text-2xl" : "text-xl"} font-semibold`}>
+                        {week.label}
+                        {" - "}
+                        <span className={`align-baseline ${isWeekView ? "text-2xl" : "text-xl"} font-semibold text-[var(--foreground)]`}>
+                          {week.rangeLabel}
+                        </span>
+                      </h3>
+                      <RecapNote
+                        scope="week"
+                        scopeKey={week.key}
+                        text={recaps.get(`week:${week.key}`) ?? ""}
+                        placeholder="Add a short weekly recap: did I keep red days small, what repeated, what to focus on next week."
+                      />
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-8">
                       {week.days.map((day) => (
-                        <div key={day.date} className="rounded-lg border border-[var(--border)] px-5 py-5">
-                          <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_max-content]">
+                        <div key={day.date} className="border-t border-[var(--border)] pt-6">
+                          <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_max-content] md:gap-x-20">
                             <div className="space-y-4">
                               <div>
-                                <div className="flex flex-wrap items-baseline justify-between gap-3">
-                                  <h4 className="text-xl font-semibold">{dayOnlyLabel(day.date)}</h4>
-                                  <span className="text-sm text-[var(--muted)]">{day.trades.length} trades · {noteWord(day.noteCount)} · {fmtMoney(day.pnl)}</span>
+                                <div className="space-y-1">
+                                  <h4 className="text-xl font-semibold">
+                                    {weekdayLabel(day.date)}
+                                    {" "}
+                                    <span className="align-baseline text-xl font-semibold text-[var(--foreground)]">
+                                      {dayOnlyLabel(day.date)}
+                                    </span>
+                                  </h4>
                                 </div>
                                 <div className="mt-2">
                                   <RecapNote
@@ -523,74 +541,52 @@ export default async function JournalPage({
                               <div className="space-y-6 pt-4">
                                 {day.trades.filter((trade) => trade.notes.length > 0).map((trade) => (
                                   <div key={trade.id} className="space-y-2">
-                                    <div>
+                                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                                       <h5 className="text-lg font-semibold">{trade.symbol}</h5>
-                                      <p className="text-sm text-[var(--muted)]">{trade.side} · {trade.quantity.toLocaleString()} shares · {trade.pnl == null ? "-" : fmtMoney(trade.pnl)}</p>
+                                      <Link href={`/trades/${trade.id}?returnTo=${encodeURIComponent(returnTo)}`} className="text-sm font-semibold text-[var(--foreground)] hover:underline">
+                                        Link to trade
+                                      </Link>
                                     </div>
                                     {trade.notes.map((note) => (
-                                      <form key={note.id} action={updateJournalEntryAction} className="space-y-2">
-                                        <input type="hidden" name="noteId" value={note.id} />
-                                        <input type="hidden" name="tradeId" value={trade.id} />
-                                        <div className="flex flex-wrap items-center gap-2">
-                                          <select
-                                            name="emotionalState"
-                                            defaultValue={note.emotionalState ?? ""}
-                                            className="h-9 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 text-sm outline-none focus:border-[var(--blue)]"
-                                          >
-                                            <option value="">Optional</option>
-                                            <option value="Good trade">Good trade</option>
-                                            <option value="Bad trade">Bad trade</option>
-                                            <option value="Rule break">Rule break</option>
-                                            <option value="Revenge trade">Revenge trade</option>
-                                            <option value="Chased">Chased</option>
-                                            <option value="Overtraded">Overtraded</option>
-                                            <option value="Needs review">Needs review</option>
-                                          </select>
-                                          <Link href={`/trades/${trade.id}`} className="text-sm font-semibold text-[var(--foreground)] hover:underline">
-                                            Link to trade
-                                          </Link>
-                                        </div>
-                                        <textarea
-                                          name="note"
-                                          rows={3}
-                                          defaultValue={note.text}
-                                          className="w-full resize-y rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm leading-6 outline-none focus:border-[var(--blue)]"
-                                        />
-                                        <button type="submit" className="h-9 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[var(--blue)] hover:text-[var(--foreground)]">
-                                          Save note
-                                        </button>
-                                      </form>
+                                      <TradeJournalNote
+                                        key={note.id}
+                                        noteId={note.id}
+                                        tradeId={trade.id}
+                                        text={note.text}
+                                        emotionalState={note.emotionalState}
+                                      />
                                     ))}
                                   </div>
                                 ))}
                               </div>
                             </div>
 
-                            <aside className="w-max max-w-full justify-self-end self-start rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm">
-                              <h5 className="mb-3 text-sm font-semibold text-[var(--foreground)]">Trade Recap</h5>
-                              <div className="grid grid-cols-[max-content_2rem_2.75rem_max-content] gap-x-2 text-xs font-semibold text-[var(--muted)]">
-                                <span>Ticker</span>
-                                <span className="text-right">Tr</span>
-                                <span className="text-right">W/L</span>
-                                <span className="text-right">P&L</span>
-                              </div>
-                              <div className="mt-2 space-y-2">
+                            <aside className="w-max min-w-36 max-w-full justify-self-end self-start rounded bg-[var(--surface)] px-4 py-3 text-xs">
+                              <div className="space-y-2">
                                 {buildDailySymbolSummary(day.trades).map((row) => (
-                                  <div key={row.symbol} className="grid grid-cols-[max-content_2rem_2.75rem_max-content] items-center gap-x-2 whitespace-nowrap">
+                                  <div key={row.symbol} className="grid grid-cols-[max-content_1fr] items-center gap-x-4 whitespace-nowrap">
                                     <span className="font-semibold text-[var(--foreground)]">{row.symbol}</span>
-                                    <span className="text-right tabular-nums text-[var(--muted)]">{row.trades}</span>
-                                    <span className="text-right tabular-nums text-[var(--muted)]">{row.wins}/{row.losses}</span>
-                                    <span className="text-right font-semibold tabular-nums text-[var(--foreground)]">{fmtMoney(row.pnl)}</span>
+                                    <span className="justify-self-end font-semibold tabular-nums" style={{ color: profitColor(row.pnl) }}>
+                                      {fmtMoney(row.pnl)}
+                                    </span>
                                   </div>
                                 ))}
                               </div>
-                              <div className="mt-3 grid grid-cols-[max-content_2rem_2.75rem_max-content] items-center gap-x-2 whitespace-nowrap pt-2 font-semibold">
-                                <span>Total</span>
-                                <span className="text-right tabular-nums">{day.trades.length}</span>
-                                <span className="text-right tabular-nums">
-                                  {day.trades.filter((trade) => (trade.pnl ?? 0) > 0).length}/{day.trades.filter((trade) => (trade.pnl ?? 0) < 0).length}
-                                </span>
-                                <span className="text-right tabular-nums">{fmtMoney(day.pnl)}</span>
+                              <div className="mx-auto mt-3 w-max space-y-1 whitespace-nowrap pt-2 text-center font-semibold">
+                                <div className="grid grid-cols-[max-content_max-content] items-center justify-center gap-x-3">
+                                  <span className="text-[var(--muted)]">Accuracy</span>
+                                  <span className="tabular-nums">{dayAccuracy(day.trades)}</span>
+                                </div>
+                                <div className="grid grid-cols-[max-content_max-content] items-center justify-center gap-x-3">
+                                  <span className="text-[var(--muted)]">Profit factor</span>
+                                  <span className="tabular-nums">{dayProfitFactor(day.trades)}</span>
+                                </div>
+                                <div className="grid grid-cols-[max-content_max-content] items-center justify-center gap-x-3">
+                                  <span className="text-[var(--muted)]">P&L</span>
+                                  <span className="tabular-nums" style={{ color: profitColor(day.pnl) }}>
+                                    {fmtMoney(day.pnl)}
+                                  </span>
+                                </div>
                               </div>
                             </aside>
                           </div>

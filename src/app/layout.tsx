@@ -14,20 +14,13 @@ const geistMono = Geist_Mono({
 
 import Link from "next/link";
 import ImportForm from "@/components/ImportForm";
+import NavLinks from "@/components/NavLinks";
 import ThemeToggle from "@/components/ThemeToggle";
 
 export const metadata: Metadata = {
   title: "Trading Journal",
   description: "Personal, local-first trading journal",
 };
-
-const nav = [
-  { href: "/", label: "Dashboard" },
-  { href: "/calendar", label: "Calendar" },
-  { href: "/trades", label: "Trades" },
-  { href: "/reports", label: "Reports" },
-  { href: "/journal", label: "Journal" },
-];
 
 export default function RootLayout({
   children,
@@ -52,17 +45,7 @@ export default function RootLayout({
           <Link href="/" className="font-semibold tracking-tight">
             Trading&nbsp;Journal
           </Link>
-          <nav className="flex gap-4 text-sm text-[var(--muted)]">
-            {nav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="hover:text-[var(--foreground)] transition-colors"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+          <NavLinks />
           <div className="ml-auto flex items-start gap-3">
             <ThemeToggle />
             <ImportForm />
