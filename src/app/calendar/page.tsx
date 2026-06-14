@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { db, schema } from "@/lib/db";
 import { netPnl } from "@/lib/pnl";
 import { etDateString } from "@/lib/time";
@@ -251,23 +252,20 @@ function MonthView({
       <div>
         <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_minmax(150px,0.8fr)] px-1 pb-1">
           {[...WORKDAYS, "Total"].map((d) => (
-            <div key={d} className="text-center text-sm font-semibold text-[var(--muted)]">
+            <div key={d} className="px-4 text-left text-sm font-semibold text-[var(--muted)]">
               {d}
             </div>
           ))}
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-[var(--hairline)] bg-[var(--background)]">
+        <div className="grid overflow-hidden rounded-lg bg-black gap-[2px] grid-cols-[repeat(5,minmax(0,1fr))_minmax(150px,0.8fr)]">
           {weeks.map((week, weekIndex) => (
-            <div
-              key={weekIndex}
-              className="grid min-h-36 grid-cols-[repeat(5,minmax(0,1fr))_minmax(150px,0.8fr)] border-b border-[var(--hairline)] last:border-b-0"
-            >
+            <Fragment key={weekIndex}>
               {week.days.map((day) => {
                 const pos = day.agg ? day.agg.pnl >= 0 : false;
                 const content = (
                   <div
-                    className={`flex h-full min-h-36 flex-col border-r border-[var(--hairline)] p-4 ${
+                    className={`flex h-full min-h-36 flex-col bg-[#14171a] p-4 ${
                       day.inMonth ? "" : "opacity-30"
                     }`}
                   >
@@ -288,15 +286,15 @@ function MonthView({
                   </div>
                 );
                 return day.agg ? (
-                  <Link key={day.date} href={`/trades?date=${day.date}`} className="block">
+                  <Link key={day.date} href={`/trades?date=${day.date}`} className="block bg-[#14171a]">
                     {content}
                   </Link>
                 ) : (
-                  <div key={day.date}>{content}</div>
+                  <div key={day.date} className="bg-[#14171a]">{content}</div>
                 );
               })}
 
-              <div className="flex min-h-36 flex-col p-4">
+              <div className="flex min-h-36 flex-col bg-[#14171a] p-4">
                 <span className="text-base font-semibold leading-none text-[var(--foreground)]">
                   Week {weekIndex + 1}
                 </span>
@@ -312,7 +310,7 @@ function MonthView({
                   </span>
                 </span>
               </div>
-            </div>
+            </Fragment>
           ))}
         </div>
       </div>
@@ -344,7 +342,7 @@ function MiniMonth({
   return (
     <Link
       href={calendarHref({ ...params, m: ym, view: undefined, y: undefined })}
-      className="block rounded-lg border border-[var(--hairline)] bg-[var(--background)] p-5 hover:border-[#58a6ff]"
+      className="block rounded-lg bg-[#14171a] p-5 ring-1 ring-transparent transition-shadow hover:ring-[#58a6ff]"
     >
       <div className="mb-4 flex items-baseline justify-between">
         <span className="text-lg font-semibold">{monthShortFmt.format(new Date(Date.UTC(year, month - 1, 1)))}</span>

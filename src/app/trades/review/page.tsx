@@ -4,13 +4,23 @@ import { db, schema } from "@/lib/db";
 import { getCandles } from "@/lib/candles";
 import TradeChart from "@/components/TradeChart";
 import RecapNote from "@/components/RecapNote";
-import TradeJournalNote from "@/components/TradeJournalNote";
 import { fmtDate, fmtMoney, fmtPrice } from "@/lib/format";
-import { decodeJournalTags } from "@/lib/journalLabels";
 import { netPnl } from "@/lib/pnl";
 import { etDayRange, etDateString } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
+
+type ExecutionRow = typeof schema.executions.$inferSelect;
+type TradeCycle = {
+  id: string;
+  executions: ExecutionRow[];
+  openedAt: number;
+  closedAt: number | null;
+  pnl: number | null;
+  sharesTraded: number;
+  netQuantity: number;
+  tradeIds: number[];
+};
 
 const timeFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/New_York",
@@ -36,8 +46,71 @@ function pnlClass(value: number | null): string {
   return "text-[var(--muted)]";
 }
 
-function tradeNoteBody(note: typeof schema.journalEntries.$inferSelect): string {
-  return note.lessons || note.thesis || "No note text.";
+function executionSignedQuantity(execution: ExecutionRow): number {
+  const quantity = Math.abs(Number(execution.quantity) || 0);
+  const side = execution.side.toLowerCase();
+
+  if (side === "buy") return quantity;
+  if (side === "sell") return -quantity;
+  return 0;
+}
+
+function executionCashflow(execution: ExecutionRow): number {
+  const quantity = Math.abs(Number(execution.quantity) || 0);
+  const price = Number(execution.price) || 0;
+  const side = execution.side.toLowerCase();
+
+  if (side === "buy") return -quantity * price;
+  if (side === "sell") return quantity * price;
+  return 0;
+}
+
+function buildTradeCycles(executions: ExecutionRow[]): TradeCycle[] {
+  const cycles: TradeCycle[] = [];
+  let current: TradeCycle | null = null;
+  let position = 0;
+  let cashflow = 0;
+
+  executions.forEach((execution, index) => {
+    if (!current) {
+      current = {
+        id: `cycle-${index}`,
+        executions: [],
+        openedAt: execution.executedAt,
+        closedAt: null,
+        pnl: null,
+        sharesTraded: 0,
+        netQuantity: 0,
+        tradeIds: [],
+      };
+      position = 0;
+      cashflow = 0;
+    }
+
+    const quantity = Math.abs(Number(execution.quantity) || 0);
+    position += executionSignedQuantity(execution);
+    cashflow += executionCashflow(execution);
+
+    current.executions.push(execution);
+    current.sharesTraded += quantity;
+    current.netQuantity = position;
+    if (execution.tradeId != null && !current.tradeIds.includes(execution.tradeId)) {
+      current.tradeIds.push(execution.tradeId);
+    }
+
+    if (Math.abs(position) < 0.000001) {
+      current.closedAt = execution.executedAt;
+      current.pnl = cashflow;
+      cycles.push(current);
+      current = null;
+    }
+  });
+
+  if (current) {
+    cycles.push(current);
+  }
+
+  return cycles;
 }
 
 export default async function TickerDayReviewPage({
@@ -109,7 +182,12 @@ export default async function TickerDayReviewPage({
           .where(inArray(schema.journalEntries.tradeId, tradeIds))
           .orderBy(asc(schema.journalEntries.createdAt))
       : [];
-  const tradesById = new Map(trades.map((trade) => [trade.id, trade]));
+  const noteByTradeId = new Map<number, typeof schema.journalEntries.$inferSelect>();
+  tradeNotes.forEach((note) => {
+    if (note.tradeId != null) {
+      noteByTradeId.set(note.tradeId, note);
+    }
+  });
 
   const firstAt = execs[0]?.executedAt ?? trades[0]?.entryAt ?? start;
   const lastAt = execs.at(-1)?.executedAt ?? trades.at(-1)?.exitAt ?? firstAt;
@@ -121,14 +199,14 @@ export default async function TickerDayReviewPage({
   const wins = trades.filter((trade) => (netPnl(trade) ?? 0) > 0).length;
   const losses = trades.filter((trade) => (netPnl(trade) ?? 0) < 0).length;
   const counted = wins + losses;
+  const tradeCycles = buildTradeCycles(execs);
 
-  type Stat = { label: string; value: string; className?: string };
-  const stats: Stat[] = [
-    { label: "Trades", value: trades.length.toLocaleString() },
-    { label: "Fills", value: execs.length.toLocaleString() },
-    { label: "Shares", value: totalShares.toLocaleString() },
-    { label: "Accuracy", value: counted === 0 ? "—" : `${Math.round((wins / counted) * 100)}%` },
-    { label: "P&L", value: fmtMoney(totalPnl), className: pnlClass(totalPnl) },
+  const summaryStats = [
+    { value: `${trades.length.toLocaleString()} trades` },
+    { value: `${execs.length.toLocaleString()} fills` },
+    { value: `${totalShares.toLocaleString()} shares` },
+    { value: counted === 0 ? "— win" : `${Math.round((wins / counted) * 100)}% win` },
+    { value: `P&L ${fmtMoney(totalPnl)}`, className: pnlClass(totalPnl) },
   ];
 
   return (
@@ -139,29 +217,29 @@ export default async function TickerDayReviewPage({
         </Link>
       </div>
 
-      <div className="mb-2">
-        <h1 className="text-xl font-semibold tracking-tight">
-          {symbol}
-          <span className="ml-2 text-sm font-normal text-[var(--muted)]">
-            {fmtDate(start)}
-          </span>
-        </h1>
+      <div className="mb-7 space-y-4">
+        <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--muted)]">
+          Ticker Review
+        </div>
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+            <h1 className="text-4xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">
+              {symbol}
+            </h1>
+            <span className="font-mono text-base text-[var(--muted)]">{fmtDate(start)}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[13px] font-medium text-[var(--muted)]">
+            {summaryStats.map((stat, index) => (
+              <span key={stat.value} className="flex items-center gap-x-3">
+                {index > 0 ? <span className="text-[var(--faint)]">·</span> : null}
+                <span className={`tabular-nums ${stat.className ?? ""}`}>{stat.value}</span>
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <section className="mb-2 grid max-w-[820px] gap-6 border-t border-[var(--hairline)] py-4 sm:grid-cols-3 lg:grid-cols-5">
-        {stats.map((stat) => (
-          <div key={stat.label} className="min-w-0">
-            <div className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-              {stat.label}
-            </div>
-            <div className={`text-xl font-semibold tabular-nums ${stat.className ?? ""}`}>
-              {stat.value}
-            </div>
-          </div>
-        ))}
-      </section>
-
-      <section className="mb-8 grid gap-10 xl:grid-cols-[820px_420px] xl:items-start">
+      <section className="mb-8 grid gap-10 border-t border-[var(--hairline)] pt-7 xl:grid-cols-[820px_420px] xl:items-start">
         <div className="min-w-0">
           {error ? (
             <div className="rounded-lg border border-[var(--red)]/40 bg-[var(--red)]/10 px-4 py-3 text-sm text-[var(--red)]">
@@ -175,6 +253,7 @@ export default async function TickerDayReviewPage({
                 price: execution.price,
                 side: execution.side as "buy" | "sell",
               }))}
+              variant="review"
             />
           )}
         </div>
@@ -193,88 +272,84 @@ export default async function TickerDayReviewPage({
               />
             </div>
           </section>
-
-          <section className="space-y-4">
-            <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-              Trade Notes
-            </h2>
-            {tradeNotes.length > 0 ? (
-              <div className="space-y-6">
-                {tradeNotes.map((note) => {
-                  const trade = note.tradeId == null ? undefined : tradesById.get(note.tradeId);
-                  if (!trade) return null;
-
-                  return (
-                    <div key={note.id} className="space-y-3">
-                      <TradeJournalNote
-                        noteId={note.id}
-                        tradeId={trade.id}
-                        symbol={trade.symbol}
-                        text={tradeNoteBody(note)}
-                        primaryLabel={note.emotionalState}
-                        processTags={decodeJournalTags(note.whatWentWell)}
-                        emotionTags={decodeJournalTags(note.whatWentWrong)}
-                        showHeader
-                        showFormHeader
-                      />
-                      <Link
-                        href={`/trades/${trade.id}?returnTo=${encodeURIComponent(`/trades/review?date=${date}&symbol=${symbol}&returnTo=${encodeURIComponent(backHref)}`)}`}
-                        className="inline-flex font-mono text-[12px] text-[var(--blue)] hover:underline"
-                      >
-                        View trade -&gt;
-                      </Link>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm leading-6 text-[var(--muted)] italic">
-                No trade notes for {symbol} on this day yet.
-              </p>
-            )}
-          </section>
         </aside>
       </section>
 
       <section className="max-w-[820px]">
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-          Executions
+          Trade Cycles
         </h2>
-        <div className="overflow-x-auto border-y border-[var(--hairline)]">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--hairline)] text-left font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-                {["Time (ET)", "Side", "Shares", "Price", "Effect"].map((column) => (
-                  <th key={column} className="px-3 py-3 font-semibold">
-                    {column}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {execs.map((execution) => (
-                <tr key={execution.id}>
-                  <td className="px-3 py-2 tabular-nums">{fmtTime(execution.executedAt)}</td>
-                  <td
-                    className="px-3 py-2"
-                    style={{ color: execution.side === "buy" ? "var(--green)" : "var(--red)" }}
-                  >
-                    {execution.side.toUpperCase()}
-                  </td>
-                  <td className="px-3 py-2 tabular-nums">{execution.quantity.toLocaleString()}</td>
-                  <td className="px-3 py-2 tabular-nums">{fmtPrice(execution.price)}</td>
-                  <td className="px-3 py-2 text-[var(--muted)]">{execution.posEffect ?? "—"}</td>
-                </tr>
+        <div className="border-y border-[var(--hairline)]">
+          {tradeCycles.length > 0 ? (
+            <div className="divide-y divide-[var(--hairline)]">
+              {tradeCycles.map((cycle, index) => (
+                <article key={cycle.id} className="py-5">
+                  {(() => {
+                    const cycleNotes = cycle.tradeIds
+                      .map((tradeId) => ({ tradeId, note: noteByTradeId.get(tradeId) }))
+                      .filter((item): item is { tradeId: number; note: typeof schema.journalEntries.$inferSelect } => item.note != null);
+
+                    return (
+                      <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+                            <h3 className="text-base font-semibold text-[var(--foreground)]">
+                              Trade {index + 1}
+                            </h3>
+                            {cycleNotes.length > 0 ? (
+                              <div className="flex flex-wrap items-center gap-3">
+                                {cycleNotes.map(({ tradeId }, noteIndex) => (
+                                  <Link
+                                    key={tradeId}
+                                    href={`/trades/${tradeId}?returnTo=${encodeURIComponent(`/trades/review?date=${date}&symbol=${symbol}&returnTo=${encodeURIComponent(backHref)}`)}`}
+                                    className="font-mono text-[12px] text-[var(--blue)] hover:underline"
+                                  >
+                                    {cycleNotes.length === 1 ? "Trade note" : `Trade note ${noteIndex + 1}`}
+                                  </Link>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[12px] text-[var(--muted)]">
+                            <span className="tabular-nums">{cycle.executions.length} fills</span>
+                            <span className="text-[var(--faint)]">·</span>
+                            <span className="tabular-nums">{cycle.sharesTraded.toLocaleString()} shares</span>
+                            <span className="text-[var(--faint)]">·</span>
+                            <span className={`tabular-nums ${pnlClass(cycle.pnl)}`}>
+                              {cycle.pnl == null ? "Open" : fmtMoney(cycle.pnl)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <div className="grid gap-y-2 font-mono text-[12px] sm:grid-cols-[1fr_72px_84px_92px_1fr]">
+                    <div className="hidden pb-1 uppercase tracking-[0.24em] text-[var(--muted)] sm:block">Time (ET)</div>
+                    <div className="hidden pb-1 uppercase tracking-[0.24em] text-[var(--muted)] sm:block">Side</div>
+                    <div className="hidden pb-1 uppercase tracking-[0.24em] text-[var(--muted)] sm:block">Shares</div>
+                    <div className="hidden pb-1 uppercase tracking-[0.24em] text-[var(--muted)] sm:block">Price</div>
+                    <div className="hidden pb-1 uppercase tracking-[0.24em] text-[var(--muted)] sm:block">Effect</div>
+                    {cycle.executions.map((execution) => (
+                      <div key={execution.id} className="contents">
+                        <div className="tabular-nums text-[var(--foreground)]">{fmtTime(execution.executedAt)}</div>
+                        <div style={{ color: execution.side.toLowerCase() === "buy" ? "var(--green)" : "var(--red)" }}>
+                          {execution.side.toUpperCase()}
+                        </div>
+                        <div className="tabular-nums text-[var(--foreground)]">{execution.quantity.toLocaleString()}</div>
+                        <div className="tabular-nums text-[var(--foreground)]">{fmtPrice(execution.price)}</div>
+                        <div className="text-[var(--muted)]">{execution.posEffect ?? "—"}</div>
+                      </div>
+                    ))}
+                  </div>
+                </article>
               ))}
-              {execs.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-[var(--muted)]">
-                    No executions found.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+            </div>
+          ) : (
+            <div className="px-3 py-6 text-center text-sm text-[var(--muted)]">
+              No executions found.
+            </div>
+          )}
         </div>
       </section>
     </div>
