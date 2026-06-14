@@ -112,9 +112,11 @@ function candleIndexForMarker(candles: ChartCandle[], t: number): number {
 export default function TradeChart({
   candles,
   markers,
+  variant = "default",
 }: {
   candles: ChartCandle[];
   markers: ChartMarker[];
+  variant?: "default" | "review";
 }) {
   const fullEnd = Math.max(candles.length - 1, 0);
   const firstCandleTime = candles[0]?.t ?? 0;
@@ -348,8 +350,13 @@ export default function TradeChart({
     setTargetViewport(nextViewport);
   };
 
+  const shellClass =
+    variant === "review"
+      ? "overflow-hidden rounded-md bg-[#14171a]"
+      : "overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]";
+
   return (
-    <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+    <div className={shellClass}>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}

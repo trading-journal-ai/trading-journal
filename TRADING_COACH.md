@@ -340,10 +340,37 @@ Possible sections:
 - Session summary.
 - Best process trade.
 - Worst process trade.
+- Attribution review.
 - Biggest hidden issue.
 - What the stats say.
 - What the notes say.
 - One focus for next session.
+
+### Daily Attribution Review
+
+Some raw data points are useful, but they become much more valuable when the
+coach interprets them instead of simply repeating them in the UI.
+
+Useful attribution prompts:
+
+- Best lift: which ticker or trade contributed most to the day, and was it good
+  process or just outcome?
+- Biggest drag: which ticker or trade did the most damage, and was the loss
+  planned risk, oversized risk, poor execution, or a rule break?
+- Most active: was the activity focused trading in a clean name, or did it
+  suggest overtrading, chopping, or trying to make money back?
+- Concentration: did one ticker define the whole day, or was the result broad
+  across multiple names?
+- Accuracy versus profit factor: did the trader win often but lose too much, or
+  win less often but let winners carry the day?
+
+This belongs in the AI review layer more than in the static stats layer. The UI
+can show the top-line day health and ticker attribution, while the coach turns
+best/worst/most-active data into a short interpretation:
+
+> Biggest drag was GLXG. It accounted for most of the red day, so the key review
+> is whether that loss was defined risk or preventable damage. EDHL was the most
+> active ticker; review whether that was focused continuation trading or churn.
 
 ### Weekly Review
 
