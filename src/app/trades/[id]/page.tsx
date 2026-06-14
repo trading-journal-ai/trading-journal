@@ -4,8 +4,11 @@ import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getCandles } from "@/lib/candles";
 import TradeChart from "@/components/TradeChart";
+import TradeJournalNote from "@/components/TradeJournalNote";
+import TradeNoteComposer from "@/components/TradeNoteComposer";
 import { fmtDate, fmtMoney, fmtPrice } from "@/lib/format";
-import { addTradeNoteAction } from "./actions";
+import { decodeJournalTags } from "@/lib/journalLabels";
+import { etDateString } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +20,10 @@ const timeFmt = new Intl.DateTimeFormat("en-US", {
   hour12: false,
 });
 const fmtTime = (t: number) => timeFmt.format(new Date(t * 1000));
+
+function journalNoteBody(note: typeof schema.journalEntries.$inferSelect): string {
+  return note.lessons || note.thesis || "No note text.";
+}
 
 function holdingPeriod(from: number, to: number): string {
   const s = Math.max(0, to - from);
@@ -68,12 +75,9 @@ export default async function TradeDetailPage({
       : null;
   const net = gross == null ? null : gross - trade.fees;
 
-  const pct =
-    net != null && trade.avgEntryPrice
-      ? (net / (trade.avgEntryPrice * trade.quantity)) * 100
-      : null;
+  const perShare = net == null || trade.quantity === 0 ? null : net / trade.quantity;
 
-  type Stat = { label: string; value: string; sub?: string; color?: string };
+  type Stat = { label: string; value: string; color?: string };
   const stats: Stat[] = [
     { label: "Shares", value: trade.quantity.toLocaleString() },
     { label: "Fills", value: String(execs.length) },
@@ -81,17 +85,22 @@ export default async function TradeDetailPage({
     {
       label: "P&L",
       value: net == null ? "—" : fmtMoney(net),
-      sub: pct == null ? undefined : `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`,
       color:
         net == null ? undefined : net >= 0 ? "var(--green)" : "var(--red)",
+    },
+    {
+      label: "Per share",
+      value: perShare == null ? "—" : fmtMoney(perShare),
+      color:
+        perShare == null ? undefined : perShare >= 0 ? "var(--green)" : "var(--red)",
     },
   ];
 
   return (
-    <div className="max-w-4xl space-y-6">
-      <div className="space-y-2">
-        <Link href={backHref} className="inline-flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]">
-          &lt; Back
+    <div className="mx-auto max-w-[1280px]">
+      <div className="mb-2">
+        <Link href={backHref} className="mb-12 inline-flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]">
+          Back
         </Link>
         <h1 className="text-xl font-semibold tracking-tight">
           {trade.symbol}
@@ -103,56 +112,94 @@ export default async function TradeDetailPage({
           <span className="ml-2 text-sm font-normal text-[var(--muted)]">
             {fmtDate(trade.entryAt)}
           </span>
+          {trade.entryAt ? (
+            <Link
+              href={`/trades/review?date=${etDateString(trade.entryAt)}&symbol=${trade.symbol}&returnTo=${encodeURIComponent(`/trades/${trade.id}?returnTo=${encodeURIComponent(backHref)}`)}`}
+              className="ml-4 align-middle font-mono text-[12px] font-normal text-[var(--blue)] hover:underline"
+            >
+              Ticker day review -&gt;
+            </Link>
+          ) : null}
         </h1>
       </div>
 
-      <section className="grid grid-cols-4 gap-3">
+      <section className="mb-2 grid max-w-[820px] gap-6 border-t border-[var(--hairline)] py-4 sm:grid-cols-3 lg:grid-cols-5">
         {stats.map((s) => (
           <div
             key={s.label}
-            className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3"
+            className="min-w-0"
           >
+            <div className="mb-2 font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
+              {s.label}
+            </div>
             <div
-              className="text-2xl font-semibold tabular-nums"
+              className="text-xl font-semibold tabular-nums"
               style={s.color ? { color: s.color } : undefined}
             >
               {s.value}
-              {s.sub && (
-                <span className="ml-1.5 text-sm font-normal">{s.sub}</span>
-              )}
-            </div>
-            <div className="mt-1 text-sm font-semibold text-[var(--muted)]">
-              {s.label}
             </div>
           </div>
         ))}
       </section>
 
-      {error ? (
-        <div className="rounded-lg border border-[var(--red)]/40 bg-[var(--red)]/10 px-4 py-3 text-sm text-[var(--red)]">
-          Couldn&apos;t load candles: {error}
+      <section className="mb-6 grid gap-10 xl:grid-cols-[820px_420px] xl:items-start">
+        <div className="min-w-0">
+          {error ? (
+            <div className="rounded-lg border border-[var(--red)]/40 bg-[var(--red)]/10 px-4 py-3 text-sm text-[var(--red)]">
+              Couldn&apos;t load candles: {error}
+            </div>
+          ) : (
+            <TradeChart
+              candles={candles}
+              markers={execs.map((e) => ({
+                t: e.executedAt,
+                price: e.price,
+                side: e.side as "buy" | "sell",
+              }))}
+            />
+          )}
         </div>
-      ) : (
-        <TradeChart
-          candles={candles}
-          markers={execs.map((e) => ({
-            t: e.executedAt,
-            price: e.price,
-            side: e.side as "buy" | "sell",
-          }))}
-        />
-      )}
 
-      <section>
+        <aside className="space-y-4">
+          <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
+            Trade Note
+          </h2>
+
+          {notes.length > 0 ? (
+            <div className="space-y-6">
+              {notes.map((note) => {
+                return (
+                  <TradeJournalNote
+                    key={note.id}
+                    noteId={note.id}
+                    tradeId={trade.id}
+                    symbol={trade.symbol}
+                    text={journalNoteBody(note)}
+                    primaryLabel={note.emotionalState}
+                    processTags={decodeJournalTags(note.whatWentWell)}
+                    emotionTags={decodeJournalTags(note.whatWentWrong)}
+                    showHeader
+                    showFormHeader
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <TradeNoteComposer tradeId={trade.id} symbol={trade.symbol} />
+          )}
+        </aside>
+      </section>
+
+      <section className="max-w-[820px]">
         <h2 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wide mb-2">
           Executions
         </h2>
-        <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
+        <div className="overflow-x-auto border-y border-[var(--hairline)]">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[var(--muted)] border-b border-[var(--border)]">
+              <tr className="border-b border-[var(--hairline)] text-left font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
                 {["Time (ET)", "Side", "Shares", "Price", "Effect"].map((c) => (
-                  <th key={c} className="px-3 py-2 font-medium">
+                  <th key={c} className="px-3 py-3 font-semibold">
                     {c}
                   </th>
                 ))}
@@ -160,85 +207,22 @@ export default async function TradeDetailPage({
             </thead>
             <tbody>
               {execs.map((e) => (
-                <tr key={e.id} className="border-b border-[var(--border)] last:border-0">
-                  <td className="px-3 py-1.5 tabular-nums">{fmtTime(e.executedAt)}</td>
+                <tr key={e.id}>
+                  <td className="px-3 py-2 tabular-nums">{fmtTime(e.executedAt)}</td>
                   <td
-                    className="px-3 py-1.5"
+                    className="px-3 py-2"
                     style={{ color: e.side === "buy" ? "var(--green)" : "var(--red)" }}
                   >
                     {e.side.toUpperCase()}
                   </td>
-                  <td className="px-3 py-1.5 tabular-nums">{e.quantity.toLocaleString()}</td>
-                  <td className="px-3 py-1.5 tabular-nums">{fmtPrice(e.price)}</td>
-                  <td className="px-3 py-1.5 text-[var(--muted)]">{e.posEffect ?? "—"}</td>
+                  <td className="px-3 py-2 tabular-nums">{e.quantity.toLocaleString()}</td>
+                  <td className="px-3 py-2 tabular-nums">{fmtPrice(e.price)}</td>
+                  <td className="px-3 py-2 text-[var(--muted)]">{e.posEffect ?? "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </section>
-
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wide">
-            Trade Journal
-          </h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Add a lightweight trade note here. It will surface in the Journal under this trade&apos;s day, week, and month.
-          </p>
-        </div>
-
-        <form action={addTradeNoteAction} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-          <input type="hidden" name="tradeId" value={trade.id} />
-          <div className="grid gap-3 md:grid-cols-[1fr_220px]">
-            <label className="space-y-1">
-              <span className="block text-sm font-semibold text-[var(--muted)]">Note</span>
-              <textarea
-                name="note"
-                rows={4}
-                placeholder="What happened? Good trade, bad trade, rule break, lesson, emotion, setup quality..."
-                className="w-full resize-y rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--blue)]"
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="block text-sm font-semibold text-[var(--muted)]">Emotion / process</span>
-              <select
-                name="emotionalState"
-                className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:border-[var(--blue)]"
-                defaultValue=""
-              >
-                <option value="">Optional</option>
-                <option value="Good trade">Good trade</option>
-                <option value="Bad trade">Bad trade</option>
-                <option value="Rule break">Rule break</option>
-                <option value="Revenge trade">Revenge trade</option>
-                <option value="Chased">Chased</option>
-                <option value="Overtraded">Overtraded</option>
-                <option value="Needs review">Needs review</option>
-              </select>
-              <button type="submit" className="mt-3 h-10 rounded-md border border-[var(--blue)] px-3 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--background)]">
-                Add note
-              </button>
-            </label>
-          </div>
-        </form>
-
-        {notes.length > 0 && (
-          <div className="space-y-2">
-            {notes.map((note) => (
-              <div key={note.id} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
-                {note.emotionalState && (
-                  <div className="mb-2 inline-flex rounded-md border border-[var(--border)] px-2 py-1 text-xs font-semibold text-[var(--muted)]">
-                    {note.emotionalState}
-                  </div>
-                )}
-                <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">
-                  {note.lessons || note.thesis || note.whatWentWell || note.whatWentWrong || "No note text."}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
       </section>
     </div>
   );

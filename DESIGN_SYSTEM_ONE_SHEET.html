@@ -1,0 +1,1713 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trading Journal Design System One-Sheet</title>
+    <style>
+      :root {
+        --background: #0b0d12;
+        --page-bg: radial-gradient(135% 90% at 50% -10%, #11151d 0%, #0a0c11 60%);
+        --surface: #12151d;
+        --surface-2: #191d27;
+        --border: #242a35;
+        --hairline: rgba(255, 255, 255, 0.06);
+        --foreground: #f1f4f8;
+        --body: #c0c8d4;
+        --prose: #99a3b1;
+        --muted: #6e7886;
+        --faint: #414b58;
+        --blue: #4d9bff;
+        --green: #1db26b;
+        --red: #f05143;
+        --shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        background: var(--background);
+      }
+
+      body {
+        margin: 0;
+        background: var(--page-bg);
+        color: var(--foreground);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.5;
+      }
+
+      a {
+        color: var(--blue);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .page {
+        margin: 0 auto;
+        max-width: 1200px;
+        padding: 56px 32px 96px;
+      }
+
+      .topbar {
+        align-items: center;
+        border-bottom: 1px solid var(--hairline);
+        display: flex;
+        gap: 28px;
+        justify-content: space-between;
+        padding-bottom: 28px;
+      }
+
+      .brand {
+        align-items: baseline;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+      }
+
+      .brand strong {
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+
+      .brand span {
+        color: var(--muted);
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+      }
+
+      .doc-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .hero {
+        padding: 72px 0 56px;
+      }
+
+      .hero-grid {
+        align-items: start;
+        display: grid;
+        gap: 40px;
+        grid-template-columns: minmax(0, 1fr) 340px;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 30px;
+      }
+
+      .hero-pill {
+        align-items: center;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        color: var(--body);
+        display: inline-flex;
+        font-size: 13px;
+        font-weight: 700;
+        min-height: 34px;
+        padding: 0 13px;
+      }
+
+      .usage-card {
+        background: color-mix(in srgb, var(--surface) 76%, transparent);
+        border: 1px solid var(--hairline);
+        border-radius: 7px;
+        box-shadow: var(--shadow);
+        padding: 20px;
+      }
+
+      .usage-card h2 {
+        font-size: 18px;
+        letter-spacing: -0.015em;
+        line-height: 1.2;
+      }
+
+      .usage-card p {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+        margin-top: 10px;
+      }
+
+      .usage-card pre {
+        background: #080b10;
+        border: 1px solid var(--hairline);
+        border-radius: 6px;
+        color: var(--body);
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 11.5px;
+        line-height: 1.55;
+        margin: 18px 0 0;
+        overflow: auto;
+        padding: 14px;
+        white-space: pre-wrap;
+      }
+
+      .eyebrow {
+        color: var(--muted);
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(44px, 8vw, 92px);
+        font-weight: 700;
+        letter-spacing: -0.045em;
+        line-height: 0.94;
+        margin-top: 18px;
+        max-width: 860px;
+      }
+
+      .hero-copy {
+        color: var(--prose);
+        font-size: 18px;
+        font-weight: 400;
+        line-height: 1.7;
+        margin-top: 28px;
+        max-width: 780px;
+      }
+
+      .principles {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-top: 44px;
+      }
+
+      .principle {
+        border-top: 1px solid var(--hairline);
+        padding-top: 16px;
+      }
+
+      .principle strong {
+        display: block;
+        font-size: 15px;
+        margin-bottom: 8px;
+      }
+
+      .principle span {
+        color: var(--muted);
+        display: block;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .section {
+        border-top: 1px solid var(--hairline);
+        padding: 48px 0;
+      }
+
+      .section-head {
+        align-items: end;
+        display: flex;
+        gap: 20px;
+        justify-content: space-between;
+        margin-bottom: 28px;
+      }
+
+      .section-title {
+        font-size: 32px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.05;
+        margin-top: 10px;
+      }
+
+      .section-note {
+        color: var(--muted);
+        font-size: 13px;
+        max-width: 420px;
+        text-align: right;
+      }
+
+      .grid {
+        display: grid;
+        gap: 24px;
+      }
+
+      .grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .grid.four {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .panel {
+        background: color-mix(in srgb, var(--surface) 82%, transparent);
+        border: 1px solid var(--hairline);
+        border-radius: 7px;
+        box-shadow: var(--shadow);
+        padding: 22px;
+      }
+
+      .open-panel {
+        border-top: 1px solid var(--hairline);
+        padding-top: 18px;
+      }
+
+      .mono {
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .color-grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .swatch {
+        border-top: 1px solid var(--hairline);
+        padding-top: 14px;
+      }
+
+      .swatch-chip {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 7px;
+        height: 58px;
+        margin-bottom: 12px;
+      }
+
+      .swatch-name {
+        color: var(--foreground);
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .swatch-code {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 3px;
+      }
+
+      .type-row {
+        align-items: baseline;
+        border-top: 1px solid var(--hairline);
+        display: grid;
+        gap: 20px;
+        grid-template-columns: 150px minmax(0, 1fr) 190px;
+        padding: 22px 0;
+      }
+
+      .type-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .type-meta {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .sample-display {
+        font-size: 48px;
+        font-weight: 700;
+        letter-spacing: -0.04em;
+        line-height: 1;
+      }
+
+      .sample-page {
+        font-size: 34px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.1;
+      }
+
+      .sample-section {
+        font-size: 25px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+      }
+
+      .sample-body {
+        color: var(--prose);
+        font-size: 16px;
+        line-height: 1.65;
+      }
+
+      .sample-metric-strip {
+        color: var(--muted);
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 13.5px;
+        font-variant-numeric: tabular-nums;
+        line-height: 1.4;
+        white-space: nowrap;
+      }
+
+      .sample-metric-strip .sep {
+        color: var(--faint);
+        padding: 0 12px;
+      }
+
+      .sample-figure {
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 20px;
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+      }
+
+      .sample-ticker {
+        display: grid;
+        gap: 4px;
+        max-width: 150px;
+      }
+
+      .sample-ticker div {
+        display: grid;
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+        gap: 12px;
+        grid-template-columns: 1fr auto;
+        line-height: 1.55;
+      }
+
+      .sample-micro-nav {
+        display: grid;
+        gap: 8px;
+        max-width: 220px;
+      }
+
+      .sample-micro-nav div {
+        color: var(--muted);
+        display: grid;
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+        gap: 18px;
+        grid-template-columns: 1fr auto;
+        line-height: 1.45;
+      }
+
+      .sample-micro-nav .active {
+        color: var(--green);
+      }
+
+      .space-ladder {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+
+      .space-step {
+        border-top: 1px solid var(--hairline);
+        padding-top: 16px;
+      }
+
+      .space-step strong {
+        display: block;
+        font-size: 22px;
+        letter-spacing: -0.03em;
+        line-height: 1;
+      }
+
+      .space-step span {
+        color: var(--muted);
+        display: block;
+        font-size: 12.5px;
+        line-height: 1.5;
+        margin-top: 10px;
+      }
+
+      .space-demo {
+        border-top: 1px solid var(--hairline);
+        display: grid;
+        gap: 44px;
+        grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
+        margin-top: 34px;
+        padding-top: 28px;
+      }
+
+      .space-demo h3 {
+        font-size: 20px;
+        letter-spacing: -0.02em;
+      }
+
+      .space-demo p {
+        color: var(--prose);
+        font-size: 15px;
+        line-height: 1.7;
+        margin-top: 16px;
+        max-width: 680px;
+      }
+
+      .space-rules {
+        display: grid;
+        gap: 12px;
+      }
+
+      .space-rule {
+        border-top: 1px solid var(--hairline);
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 82px minmax(0, 1fr);
+        padding-top: 12px;
+      }
+
+      .space-rule strong {
+        color: var(--foreground);
+        font-size: 13px;
+      }
+
+      .space-rule span {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .component-row {
+        border-top: 1px solid var(--hairline);
+        display: grid;
+        gap: 24px;
+        grid-template-columns: 220px minmax(0, 1fr);
+        padding: 24px 0;
+      }
+
+      .component-row h3 {
+        font-size: 18px;
+        letter-spacing: -0.01em;
+      }
+
+      .component-row p {
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 8px;
+      }
+
+      .segmented {
+        align-items: center;
+        align-self: flex-start;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        display: inline-flex;
+        height: 40px;
+        justify-self: flex-start;
+        padding: 4px;
+      }
+
+      .segmented span {
+        align-items: center;
+        border-radius: 5px;
+        color: var(--muted);
+        display: inline-flex;
+        font-size: 14px;
+        font-weight: 700;
+        height: 32px;
+        padding: 0 18px;
+      }
+
+      .segmented .active {
+        background: var(--surface-2);
+        color: var(--foreground);
+      }
+
+      .button-row {
+        align-items: flex-start;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .button {
+        align-items: center;
+        align-self: flex-start;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--body);
+        display: inline-flex;
+        font-size: 14px;
+        font-weight: 700;
+        height: 40px;
+        padding: 0 16px;
+      }
+
+      .button.primary {
+        background: var(--blue);
+        border-color: var(--blue);
+        color: #02070c;
+      }
+
+      .tag-row {
+        align-items: flex-start;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .tag {
+        align-items: center;
+        align-self: flex-start;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        color: var(--foreground);
+        display: inline-flex;
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 11px;
+        gap: 7px;
+        padding: 5px 10px;
+      }
+
+      .metric-strip {
+        color: var(--muted);
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 13.5px;
+        font-variant-numeric: tabular-nums;
+        line-height: 1.4;
+        white-space: nowrap;
+      }
+
+      .metric-strip .sep {
+        color: var(--faint);
+        padding: 0 12px;
+      }
+
+      .sidebar-sample {
+        display: grid;
+        gap: 12px;
+        max-width: 230px;
+      }
+
+      .sidebar-sample .month {
+        color: var(--body);
+        font-size: 13px;
+        margin-bottom: 2px;
+      }
+
+      .sidebar-sample .week {
+        color: var(--muted);
+        display: grid;
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+        gap: 18px;
+        grid-template-columns: 1fr auto;
+        line-height: 1.45;
+      }
+
+      .sidebar-sample .week.active {
+        color: var(--green);
+      }
+
+      .dot {
+        background: var(--green);
+        border-radius: 50%;
+        display: inline-block;
+        height: 6px;
+        width: 6px;
+      }
+
+      .dot.red {
+        background: var(--red);
+      }
+
+      .stats-grid {
+        display: grid;
+        gap: 0 36px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .stat {
+        border-bottom: 1px solid var(--hairline);
+        padding: 18px 0;
+      }
+
+      .stat label {
+        color: var(--body);
+        display: block;
+        font-size: 13px;
+        margin-bottom: 8px;
+      }
+
+      .stat strong {
+        display: block;
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 20px;
+        font-variant-numeric: tabular-nums;
+        line-height: 1.1;
+      }
+
+      .stats-matrix {
+        display: grid;
+        gap: 28px;
+      }
+
+      .stats-summary {
+        border-top: 1px solid var(--hairline);
+        display: grid;
+        gap: 0 26px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .stats-summary .stat {
+        border-bottom: 1px solid var(--hairline);
+        padding: 14px 0;
+      }
+
+      .matrix-section {
+        display: grid;
+        gap: 12px;
+      }
+
+      .matrix-title {
+        color: var(--muted);
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+      }
+
+      .matrix-grid {
+        border-top: 1px solid var(--hairline);
+        display: grid;
+        gap: 0 32px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .matrix-cell {
+        align-items: baseline;
+        border-bottom: 1px solid var(--hairline);
+        display: grid;
+        gap: 18px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        min-height: 46px;
+        padding: 13px 0;
+      }
+
+      .matrix-cell label {
+        color: var(--body);
+        font-size: 12.5px;
+        line-height: 1.35;
+      }
+
+      .matrix-cell strong {
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 15px;
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .green {
+        color: var(--green);
+      }
+
+      .red {
+        color: var(--red);
+      }
+
+      .ledger {
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      .ledger th {
+        border-bottom: 1px solid var(--hairline);
+        color: var(--muted);
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        padding: 0 0 12px;
+        text-align: left;
+        text-transform: uppercase;
+      }
+
+      .ledger td {
+        border-bottom: 1px solid var(--hairline);
+        color: var(--body);
+        font-size: 14px;
+        padding: 13px 0;
+      }
+
+      .ledger td:last-child,
+      .ledger th:last-child {
+        text-align: right;
+      }
+
+      .journal-preview {
+        display: grid;
+        gap: 34px;
+      }
+
+      .journal-day {
+        display: grid;
+        gap: 24px;
+        grid-template-columns: minmax(0, 1fr) 130px;
+      }
+
+      .journal-title {
+        align-items: baseline;
+        display: flex;
+        gap: 16px;
+      }
+
+      .journal-title h3 {
+        font-size: 28px;
+        letter-spacing: -0.03em;
+      }
+
+      .journal-title span {
+        color: var(--muted);
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 14px;
+      }
+
+      .metric-line {
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 8px;
+      }
+
+      .journal-copy {
+        color: var(--prose);
+        font-size: 16px;
+        line-height: 1.7;
+        margin-top: 24px;
+        max-width: 760px;
+      }
+
+      .trade-note {
+        border-left: 1px solid var(--border);
+        margin-top: 24px;
+        padding-left: 18px;
+      }
+
+      .trade-head {
+        align-items: center;
+        display: flex;
+        gap: 10px;
+      }
+
+      .trade-head strong {
+        font-size: 15px;
+      }
+
+      .callout {
+        border: 1px solid var(--green);
+        border-radius: 5px;
+        color: var(--green);
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.22em;
+        padding: 3px 7px;
+        text-transform: uppercase;
+      }
+
+      .ticker-rail {
+        color: var(--body);
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 11px;
+        padding-top: 94px;
+      }
+
+      .ticker-row {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 1fr auto;
+        line-height: 1.7;
+      }
+
+      .ticker-rule {
+        border-top: 1px solid var(--border);
+        margin: 10px 0 8px;
+      }
+
+      .audit-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .audit-item {
+        align-items: start;
+        border-top: 1px solid var(--hairline);
+        display: grid;
+        gap: 18px;
+        grid-template-columns: 90px minmax(0, 1fr);
+        padding-top: 14px;
+      }
+
+      .status {
+        border-radius: 999px;
+        display: inline-flex;
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 10px;
+        font-weight: 700;
+        justify-content: center;
+        letter-spacing: 0.12em;
+        padding: 4px 8px;
+        text-transform: uppercase;
+      }
+
+      .status.fix {
+        background: color-mix(in srgb, var(--red) 16%, transparent);
+        color: var(--red);
+      }
+
+      .status.close {
+        background: color-mix(in srgb, var(--green) 14%, transparent);
+        color: var(--green);
+      }
+
+      .audit-item strong {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+
+      .audit-item span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .phase-list {
+        counter-reset: phase;
+        display: grid;
+        gap: 18px;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+
+      .phase {
+        border-top: 1px solid var(--hairline);
+        padding-top: 16px;
+      }
+
+      .phase:before {
+        color: var(--blue);
+        content: "0" counter(phase);
+        counter-increment: phase;
+        display: block;
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        margin-bottom: 10px;
+      }
+
+      .phase strong {
+        display: block;
+        font-size: 15px;
+        margin-bottom: 8px;
+      }
+
+      .phase span {
+        color: var(--muted);
+        display: block;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      @media (max-width: 900px) {
+        .page {
+          padding: 32px 18px 72px;
+        }
+
+        .principles,
+        .grid.two,
+        .grid.three,
+        .grid.four,
+        .color-grid,
+        .hero-grid,
+        .space-demo,
+        .space-ladder,
+        .stats-summary,
+        .matrix-grid,
+        .stats-grid,
+        .phase-list {
+          grid-template-columns: 1fr;
+        }
+
+        .topbar,
+        .section-head {
+          align-items: start;
+          flex-direction: column;
+        }
+
+        .section-note {
+          text-align: left;
+        }
+
+        .type-row,
+        .component-row,
+        .journal-day,
+        .space-rule,
+        .audit-item {
+          grid-template-columns: 1fr;
+        }
+
+        .ticker-rail {
+          padding-top: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div class="brand">
+          <strong>Trading Journal</strong>
+          <span>Design System One-Sheet</span>
+        </div>
+        <nav class="doc-links" aria-label="Related documents">
+          <a href="./DESIGN_SYSTEM.md">System MD</a>
+          <a href="./DESIGN_SYSTEM_ONE_SHEET.md">Audit MD</a>
+          <a href="#negative-space">Spacing</a>
+          <a href="#fix-list">Fix Order</a>
+          <a href="./JOURNAL_DESIGN.md">Journal Design</a>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <div class="hero-grid">
+          <div>
+            <div class="eyebrow">Deep theme / draft system</div>
+            <h1>Type-led trading tools with journal calm.</h1>
+            <p class="hero-copy">
+              This sheet turns the visual direction into a compact artifact:
+              tokens, typography, components, current app gaps, and the practical
+              fix order. It is a review surface, not production UI.
+            </p>
+            <div class="hero-actions" aria-label="One-sheet sections">
+              <a class="hero-pill" href="#color">Color</a>
+              <a class="hero-pill" href="#typography">Typography</a>
+              <a class="hero-pill" href="#negative-space">Negative Space</a>
+              <a class="hero-pill" href="#components">Components</a>
+              <a class="hero-pill" href="#audit">Audit</a>
+            </div>
+          </div>
+
+          <aside class="usage-card" aria-label="Use this design system">
+            <h2>Use this before UI work</h2>
+            <p>
+              Open this one-sheet and the markdown system before changing visual
+              UI. Preserve the Deep theme, type-first hierarchy, open sections,
+              and calm journal rhythm.
+            </p>
+            <pre>Read DESIGN_SYSTEM.md first.
+Use shared primitives:
+Eyebrow, Money, SegmentedControl,
+GhostButton, StatBlock,
+ReportsStatsMatrix, OpenSection.
+
+Prefer whitespace + hairlines
+before cards, fills, or heavy borders.</pre>
+          </aside>
+        </div>
+
+        <div class="principles">
+          <div class="principle">
+            <strong>Open by default</strong>
+            <span>Use whitespace and hairlines before cards, fills, and heavy borders.</span>
+          </div>
+          <div class="principle">
+            <strong>Numbers carry color</strong>
+            <span>Red and green are reserved for P&L, trading outcomes, and process signals.</span>
+          </div>
+          <div class="principle">
+            <strong>Mono for data</strong>
+            <span>Dates, figures, ticker rails, labels, and metrics should feel ledger-like.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="color">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Foundation</div>
+            <h2 class="section-title">Color Tokens</h2>
+          </div>
+          <p class="section-note">
+            Current app tokens are close. The main work is convergence, adding
+            page glow/prose tokens, and removing hard-coded colors.
+          </p>
+        </div>
+
+        <div class="color-grid">
+          <div class="swatch">
+            <div class="swatch-chip" style="background: #0b0d12"></div>
+            <div class="swatch-name">Background</div>
+            <div class="swatch-code mono">#0b0d12</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-chip" style="background: #12151d"></div>
+            <div class="swatch-name">Surface</div>
+            <div class="swatch-code mono">#12151d</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-chip" style="background: #191d27"></div>
+            <div class="swatch-name">Surface 2</div>
+            <div class="swatch-code mono">#191d27</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-chip" style="background: #242a35"></div>
+            <div class="swatch-name">Border</div>
+            <div class="swatch-code mono">#242a35</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-chip" style="background: #f1f4f8"></div>
+            <div class="swatch-name">Foreground</div>
+            <div class="swatch-code mono">#f1f4f8</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-chip" style="background: #99a3b1"></div>
+            <div class="swatch-name">Prose</div>
+            <div class="swatch-code mono">#99a3b1</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-chip" style="background: #4d9bff"></div>
+            <div class="swatch-name">Accent</div>
+            <div class="swatch-code mono">#4d9bff</div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-chip" style="background: linear-gradient(90deg, #1db26b 0 50%, #f05143 50% 100%)"></div>
+            <div class="swatch-name">P&L</div>
+            <div class="swatch-code mono">#1db26b / #f05143</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="typography">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Foundation</div>
+            <h2 class="section-title">Type Roles</h2>
+          </div>
+          <p class="section-note">
+            Keep Geist Sans and Geist Mono for now. The priority is named roles,
+            tabular figures, and fewer one-off Tailwind sizes.
+          </p>
+        </div>
+
+        <div class="type-row">
+          <div>
+            <div class="type-label">Display</div>
+            <div class="type-meta mono">48 / 1.0 / 600</div>
+          </div>
+          <div class="sample-display">Week 2</div>
+          <div class="type-meta">Journal month, week, or day title only.</div>
+        </div>
+        <div class="type-row">
+          <div>
+            <div class="type-label">Page title</div>
+            <div class="type-meta mono">30-38 / 1.1 / 600</div>
+          </div>
+          <div class="sample-page">June 2026</div>
+          <div class="type-meta">Calendar, Reports, Trades range title.</div>
+        </div>
+        <div class="type-row">
+          <div>
+            <div class="type-label">Section title</div>
+            <div class="type-meta mono">24-26 / 1.2 / 600</div>
+          </div>
+          <div class="sample-section">This week</div>
+          <div class="type-meta">Dashboard sections and major modules.</div>
+        </div>
+        <div class="type-row">
+          <div>
+            <div class="type-label">Body large</div>
+            <div class="type-meta mono">15.5-18 / 1.62-1.75</div>
+          </div>
+          <div class="sample-body">
+            Clean open. Waited for the first pullback instead of chasing the
+            spike. Sized normal and walked away after the morning push.
+          </div>
+          <div class="type-meta">Journal prose and review notes.</div>
+        </div>
+        <div class="type-row">
+          <div>
+            <div class="type-label">Metric strip</div>
+            <div class="type-meta mono">13-14 / 1.4 / 400-500</div>
+          </div>
+          <div class="sample-metric-strip">
+            5 trades <span class="sep">.</span> 63% win <span class="sep">.</span>
+            PF 1.64 <span class="sep">.</span> <span class="green">+$42.33</span>
+          </div>
+          <div class="type-meta">Header submetrics for journal, reports, dashboard.</div>
+        </div>
+        <div class="type-row">
+          <div>
+            <div class="type-label">Figure</div>
+            <div class="type-meta mono">mono / tabular</div>
+          </div>
+          <div class="sample-figure green">+$42.33</div>
+          <div class="type-meta">Prices, counts, P&L, percentages.</div>
+        </div>
+        <div class="type-row">
+          <div>
+            <div class="type-label">Ticker rail</div>
+            <div class="type-meta mono">11 / 1.55 / 400-500</div>
+          </div>
+          <div class="sample-ticker">
+            <div><span>NPT</span><span class="green">+$15.44</span></div>
+            <div><span>INHD</span><span class="green">+$14.71</span></div>
+            <div><span>PPCB</span><span class="red">-$157.77</span></div>
+          </div>
+          <div class="type-meta">Journal right-side ticker/P&L module.</div>
+        </div>
+        <div class="type-row">
+          <div>
+            <div class="type-label">Sidebar nav</div>
+            <div class="type-meta mono">13 / 1.45 / 500</div>
+          </div>
+          <div class="sample-micro-nav">
+            <div><span>Week 1</span><span>Jun 1-5</span></div>
+            <div class="active"><span>Week 2</span><span>Jun 8-12</span></div>
+            <div><span>Week 3</span><span>Jun 15-19</span></div>
+          </div>
+          <div class="type-meta">Journal sidebar month/week navigation; small, but not tiny.</div>
+        </div>
+      </section>
+
+      <section class="section" id="negative-space">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Layout</div>
+            <h2 class="section-title">Negative Space</h2>
+          </div>
+          <p class="section-note">
+            Space is an active part of the design system. It tells the user what
+            belongs together, what can be scanned, and where to slow down.
+          </p>
+        </div>
+
+        <div class="space-ladder">
+          <div class="space-step">
+            <strong class="mono">4-8</strong>
+            <span>Micro gaps inside pills, metric lines, ticker rows, and compact controls.</span>
+          </div>
+          <div class="space-step">
+            <strong class="mono">12-16</strong>
+            <span>Form rows, filter groups, button groups, chart labels, and stat label-to-value rhythm.</span>
+          </div>
+          <div class="space-step">
+            <strong class="mono">24-32</strong>
+            <span>Header-to-content gaps, filter-to-content gaps, and chart title-to-plot spacing.</span>
+          </div>
+          <div class="space-step">
+            <strong class="mono">44-56</strong>
+            <span>Major breaks between stats, P&L, charts, calendar sections, and report modules.</span>
+          </div>
+          <div class="space-step">
+            <strong class="mono">64+</strong>
+            <span>Editorial journal breaks where the user is reading, reflecting, and writing.</span>
+          </div>
+        </div>
+
+        <div class="space-demo">
+          <div>
+            <h3>Level-up rule</h3>
+            <p>
+              Keep density inside the thing being scanned, then give the whole
+              thing room around it. Trades can be tight. Ticker rails can be
+              tight. Stat rows can be compact. But the spaces between filters,
+              sections, charts, and journal entries should be generous enough
+              that the page feels intentional instead of packed.
+            </p>
+            <p>
+              This is especially important in a trading journal: cramped pages
+              feel reactive; open pages feel reflective.
+            </p>
+          </div>
+
+          <div class="space-rules">
+            <div class="space-rule">
+              <strong>Journal</strong>
+              <span>Prose column around 760-860px. Keep ticker rails close to the note, not floating at the far edge.</span>
+            </div>
+            <div class="space-rule">
+              <strong>Reports</strong>
+              <span>Add clear section breaks between stats, P&L, and chart grids. Give two-up charts horizontal gutters.</span>
+            </div>
+            <div class="space-rule">
+              <strong>Calendar</strong>
+              <span>The grid can be structured, but avoid heavy fills. Let text color and hairlines do most of the work.</span>
+            </div>
+            <div class="space-rule">
+              <strong>Dashboard</strong>
+              <span>Remove extra rules under metric groups. Pull labels closer to values; separate only between sections.</span>
+            </div>
+            <div class="space-rule">
+              <strong>Trades</strong>
+              <span>Ledger rows can stay dense, but filters, pagination, and range context need more breathing room.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="components">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Components</div>
+            <h2 class="section-title">Reusable Primitives</h2>
+          </div>
+          <p class="section-note">
+            These are the patterns to build once and reuse so pages stop drifting.
+          </p>
+        </div>
+
+        <div class="component-row">
+          <div>
+            <h3>Segmented Control</h3>
+            <p>For peer view choices: Today, Week, Month, Year.</p>
+          </div>
+          <div class="segmented" role="presentation">
+            <span>Today</span>
+            <span>Week</span>
+            <span class="active">Month</span>
+          </div>
+        </div>
+
+        <div class="component-row">
+          <div>
+            <h3>Ghost Button</h3>
+            <p>For secondary commands, with one primary variant where needed.</p>
+          </div>
+          <div class="button-row">
+            <span class="button">Clear</span>
+            <span class="button">Back</span>
+            <span class="button primary">Import</span>
+          </div>
+        </div>
+
+        <div class="component-row">
+          <div>
+            <h3>Tags and Labels</h3>
+            <p>Quiet process/emotion metadata with tiny valence dots.</p>
+          </div>
+          <div class="tag-row">
+            <span class="tag"><span class="dot"></span>Followed plan</span>
+            <span class="tag"><span class="dot"></span>Patient</span>
+            <span class="tag"><span class="dot red"></span>Overtraded</span>
+            <span class="tag"><span class="dot red"></span>FOMO</span>
+          </div>
+        </div>
+
+        <div class="component-row">
+          <div>
+            <h3>Metric Strip</h3>
+            <p>Compact context under a month, week, or day header.</p>
+          </div>
+          <div class="metric-strip">
+            31 trades <span class="sep">.</span> 60% win <span class="sep">.</span>
+            PF 0.82 <span class="sep">.</span> <span class="red">-$478.64</span>
+          </div>
+        </div>
+
+        <div class="component-row">
+          <div>
+            <h3>Journal Sidebar Nav</h3>
+            <p>Small historical navigation. It should orient without competing with prose, but remain legible at a glance.</p>
+          </div>
+          <div class="sidebar-sample" aria-label="Journal sidebar navigation sample">
+            <div class="month">June</div>
+            <div class="week"><span>Week 1</span><span>Jun 1-5</span></div>
+            <div class="week active"><span>Week 2</span><span>Jun 8-12</span></div>
+            <div class="week"><span>Week 3</span><span>Jun 15-19</span></div>
+            <div class="month" style="margin-top: 10px;">May</div>
+            <div class="month">April</div>
+          </div>
+        </div>
+
+        <div class="component-row">
+          <div>
+            <h3>Reports Stats Matrix</h3>
+            <p>Diagnostic report stats. This should replace loose floating stat blocks on Reports.</p>
+          </div>
+          <div class="stats-matrix">
+            <div class="stats-summary" aria-label="Reports summary stats">
+              <div class="stat">
+                <label>Total Gain/Loss</label>
+                <strong class="red">-$478.64</strong>
+              </div>
+              <div class="stat">
+                <label>Win Rate</label>
+                <strong>60%</strong>
+              </div>
+              <div class="stat">
+                <label>Profit Factor</label>
+                <strong>0.82</strong>
+              </div>
+              <div class="stat">
+                <label>Payoff Ratio</label>
+                <strong>1.10</strong>
+              </div>
+              <div class="stat">
+                <label>Avg Trade</label>
+                <strong class="red">-$15.44</strong>
+              </div>
+              <div class="stat">
+                <label>Avg Per-share G/L</label>
+                <strong class="green">+$0.04</strong>
+              </div>
+            </div>
+
+            <div class="matrix-section">
+              <div class="matrix-title">Performance</div>
+              <div class="matrix-grid">
+                <div class="matrix-cell">
+                  <label>Average Daily Gain/Loss</label>
+                  <strong class="red">-$58.35</strong>
+                </div>
+                <div class="matrix-cell">
+                  <label>Largest Gain</label>
+                  <strong class="green">+$112.75</strong>
+                </div>
+                <div class="matrix-cell">
+                  <label>Largest Loss</label>
+                  <strong class="red">-$287.26</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="matrix-section">
+              <div class="matrix-title">Accuracy</div>
+              <div class="matrix-grid">
+                <div class="matrix-cell">
+                  <label>Winning Trades</label>
+                  <strong>27 (55%)</strong>
+                </div>
+                <div class="matrix-cell">
+                  <label>Losing Trades</label>
+                  <strong>22 (45%)</strong>
+                </div>
+                <div class="matrix-cell">
+                  <label>Avg Losing Trade</label>
+                  <strong class="red">-$41.10</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="component-row">
+          <div>
+            <h3>Ledger Table</h3>
+            <p>Quiet row rules, mono headers, tabular numeric columns.</p>
+          </div>
+          <table class="ledger">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Symbol</th>
+                <th>Shares</th>
+                <th>P&L</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Jun 11</td>
+                <td><strong>GLXG</strong></td>
+                <td class="mono">3,000</td>
+                <td class="mono red">-$287.26</td>
+              </tr>
+              <tr>
+                <td>Jun 10</td>
+                <td><strong>DSY</strong></td>
+                <td class="mono">1,200</td>
+                <td class="mono green">+$15.04</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section" id="journal-preview">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Journal</div>
+            <h2 class="section-title">North-Star Surface</h2>
+          </div>
+          <p class="section-note">
+            The journal direction is the clearest expression of the system:
+            prose-first, compact metrics, and quiet trading context.
+          </p>
+        </div>
+
+        <div class="journal-preview">
+          <article class="journal-day">
+            <div>
+              <div class="journal-title">
+                <h3>Monday</h3>
+                <span>June 8</span>
+              </div>
+              <p class="metric-line mono">
+                5 trades&nbsp;&nbsp;.&nbsp;&nbsp;63% win&nbsp;&nbsp;.&nbsp;&nbsp;PF 1.64&nbsp;&nbsp;.&nbsp;&nbsp;<span class="green">+$42.33</span>
+              </p>
+              <p class="journal-copy">
+                Clean open. Waited for the first pullback on NPT instead of
+                chasing the spike. Sized normal, took profits into strength,
+                and walked away after the morning push.
+              </p>
+              <div class="trade-note">
+                <div class="trade-head">
+                  <strong>NPT</strong>
+                  <span class="callout">Good trade</span>
+                </div>
+                <p class="journal-copy" style="font-size: 14.5px; margin-top: 10px;">
+                  Textbook green-to-red reclaim. Patient entry, defined risk,
+                  let it work.
+                </p>
+                <div class="tag-row" style="margin-top: 14px;">
+                  <span class="tag"><span class="dot"></span>Patient</span>
+                  <span class="tag"><span class="dot"></span>Followed plan</span>
+                </div>
+              </div>
+            </div>
+            <aside class="ticker-rail" aria-label="Ticker P&L summary">
+              <div class="ticker-row"><span>NPT</span><span class="green">+$15.44</span></div>
+              <div class="ticker-row"><span>INHD</span><span class="green">+$14.71</span></div>
+              <div class="ticker-row"><span>SUNE</span><span class="green">+$8.36</span></div>
+              <div class="ticker-row"><span>BYAH</span><span class="green">+$2.91</span></div>
+              <div class="ticker-rule"></div>
+              <div class="ticker-row"><span>Acc</span><span>63%</span></div>
+              <div class="ticker-row"><span>PF</span><span>1.64</span></div>
+              <div class="ticker-row"><span>P&L</span><span class="green">+$42.33</span></div>
+            </aside>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="audit">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Audit</div>
+            <h2 class="section-title">Current App Gaps</h2>
+          </div>
+          <p class="section-note">
+            These are the high-confidence deltas between the target system and
+            the current app code.
+          </p>
+        </div>
+
+        <div class="audit-list">
+          <div class="audit-item">
+            <span class="status fix">Fix</span>
+            <div>
+              <strong>Tokens are close but not aligned.</strong>
+              <span>Add page glow/prose tokens and converge background, surface, border, muted, and accent values.</span>
+            </div>
+          </div>
+          <div class="audit-item">
+            <span class="status fix">Fix</span>
+            <div>
+              <strong>Hard-coded colors still appear.</strong>
+              <span>Replace hard-coded blue and foreground values with tokens so theme changes are reliable.</span>
+            </div>
+          </div>
+          <div class="audit-item">
+            <span class="status fix">Fix</span>
+            <div>
+              <strong>Typography roles are documented, not implemented.</strong>
+              <span>Create reusable utilities or components for eyebrow, page title, stat label, stat value, and figure roles.</span>
+            </div>
+          </div>
+          <div class="audit-item">
+            <span class="status fix">Fix</span>
+            <div>
+              <strong>Controls are duplicated page by page.</strong>
+              <span>Segmented controls and ghost buttons should be shared primitives to prevent width, radius, and state drift.</span>
+            </div>
+          </div>
+          <div class="audit-item">
+            <span class="status fix">Fix</span>
+            <div>
+              <strong>Reports stats need matrix scanning.</strong>
+              <span>Detailed report metrics should use ReportsStatsMatrix so labels and values stay comparable and diagnostic.</span>
+            </div>
+          </div>
+          <div class="audit-item">
+            <span class="status fix">Fix</span>
+            <div>
+              <strong>Journal sidebar nav is too small.</strong>
+              <span>Promote month/week navigation to the Sidebar nav role at 13px so it reads as navigation, not micro annotation.</span>
+            </div>
+          </div>
+          <div class="audit-item">
+            <span class="status close">Close</span>
+            <div>
+              <strong>Journal is closest to the north star.</strong>
+              <span>Use Journal as the reference when bringing Dashboard, Calendar, Reports, and Trades into the same language.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="fix-list">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Implementation</div>
+            <h2 class="section-title">Fix Order</h2>
+          </div>
+          <p class="section-note">
+            Build the system through shared foundations first, then use those
+            primitives to clean up pages without a full rewrite.
+          </p>
+        </div>
+
+        <div class="phase-list">
+          <div class="phase">
+            <strong>Foundations</strong>
+            <span>Update tokens, add page glow/prose, replace hard-coded colors.</span>
+          </div>
+          <div class="phase">
+            <strong>Type</strong>
+            <span>Normalize titles, eyebrows, stat labels, stat values, and table headers.</span>
+          </div>
+          <div class="phase">
+            <strong>Space</strong>
+            <span>Set consistent page widths, section breaks, chart gutters, and journal prose/ticker spacing.</span>
+          </div>
+          <div class="phase">
+            <strong>Primitives</strong>
+            <span>Create shared Money, Eyebrow, SegmentedControl, GhostButton, StatBlock, ReportsStatsMatrix, and OpenSection.</span>
+          </div>
+          <div class="phase">
+            <strong>Pages</strong>
+            <span>Apply primitives to Reports, Dashboard, Calendar, Trades, then Journal polish and states.</span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

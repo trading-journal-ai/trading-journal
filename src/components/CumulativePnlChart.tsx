@@ -49,7 +49,7 @@ function Chart({ series, period }: { series: PnlSeries; period: string }) {
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Cumulative P&L">
       {ticks.map((t, i) => (
         <g key={i}>
-          <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke="var(--border)" strokeWidth={1} />
+          <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke="var(--hairline)" strokeWidth={1} />
           <text x={PAD.left - 6} y={y(t) + 3.5} fill="var(--muted)" fontSize={10} fontFamily="monospace" textAnchor="end">
             {money(t)}
           </text>
@@ -81,18 +81,18 @@ export default function CumulativePnlChart({
   const series = tab === "week" ? week : tab === "month" ? month : year;
 
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-sm font-semibold">Cumulative P&L</h2>
-        <div className="flex gap-1">
+    <section className="border-t border-[var(--hairline)] pt-6">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">Cumulative P&L</h2>
+        <div className="inline-flex h-10 items-center rounded-md border border-[var(--border)] p-1">
           {(["week", "month", "year"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`rounded px-2 py-0.5 text-xs capitalize border ${
+              className={`flex h-8 min-w-16 items-center justify-center rounded px-3 text-sm font-semibold capitalize transition-colors ${
                 tab === t
-                  ? "bg-[var(--background)] border-[#58a6ff] text-[var(--foreground)]"
-                  : "border-[var(--border)] text-[var(--muted)] hover:border-[#58a6ff]"
+                  ? "bg-[var(--surface-2)] text-[var(--foreground)]"
+                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
               }`}
             >
               {t}
@@ -101,6 +101,6 @@ export default function CumulativePnlChart({
         </div>
       </div>
       <Chart series={series} period={tab} />
-    </div>
+    </section>
   );
 }

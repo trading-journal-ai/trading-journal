@@ -13,7 +13,14 @@ export function RowLink({
 }) {
   const router = useRouter();
   return (
-    <tr className={className} onClick={() => router.push(href)}>
+    <tr
+      className={className}
+      onClick={(event) => {
+        const target = event.target as HTMLElement;
+        if (target.closest("a,button,input,select,textarea")) return;
+        router.push(href);
+      }}
+    >
       {children}
     </tr>
   );
