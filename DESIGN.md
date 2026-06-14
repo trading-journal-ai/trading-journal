@@ -12,6 +12,10 @@ reflectively, and tracking performance over time.
 > The charting approach is considered **proven**; we'll refine it as needed
 > rather than redesign it.
 
+> **Design-system note.** Visual language, type roles, color tokens, spacing,
+> and component rules live in [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md). Journal
+> structure and note behavior live in [JOURNAL_DESIGN.md](JOURNAL_DESIGN.md).
+
 ---
 
 ## 1. Goals & Non-Goals

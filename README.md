@@ -1,85 +1,234 @@
 # Trading Journal
 
-A personal, local-first web app for logging stock/ETF trades, reviewing them
-reflectively, and tracking performance over time.
+A local-first trading journal for importing broker executions, reviewing trades
+with candlestick charts, tracking performance, and writing lightweight journal
+notes that roll up from trade to day to week to month.
 
-Built for single-user, private use. Data lives locally in SQLite.
+This project is early, but the core direction is clear: make trade review fast,
+private, and useful without depending on a hosted journaling subscription.
 
-## Status
+## Vision
 
-Early design. See [DESIGN.md](DESIGN.md) for the full plan, scope, and phasing.
-See [JOURNAL_DESIGN.md](JOURNAL_DESIGN.md) for the text-first review and
-coaching journal model.
+Most trading journals are good at tables and reports, but the real review loop is
+more human:
 
-## Planned stack
+- What setup did I take?
+- Did the chart actually support the entry?
+- Did I cut losers quickly enough?
+- Did I hold winners long enough?
+- Was this a process problem, an emotional problem, or just normal variance?
 
-- Next.js (App Router) + React + TypeScript
-- Local-first SQLite
+Trading Journal is designed around that loop. It combines imported executions,
+per-trade charts, reports, a P&L calendar, and a text-first journal so the
+numbers and the reflection live together.
 
-## Data pipeline (current plan)
+## Current Features
 
-Two manual CSV inputs feed the journal:
+- **ThinkorSwim CSV import** for Account Statement exports.
+- **Execution matching** into round-trip trades.
+- **Local SQLite storage** with Drizzle migrations.
+- **Automatic candle fetching** through Massive for OHLCV data.
+- **Trade detail charts** with candlesticks and entry/exit markers.
+- **Trades table** with symbol/tag/side/account filters, sorting, pagination,
+  and per-share value.
+- **Calendar views** for monthly and yearly P&L review.
+- **Reports** with stats, cumulative/daily P&L, and distribution charts.
+- **Dashboard** with weekly P&L, win rate, profit factor, payoff ratio, average
+  trade, and recent trades.
+- **Journal** with month/week/day structure, daily trade recaps, and trade notes
+  that link back to the trade chart.
+- **Light/dark theme toggle**.
 
-- **Executions (your trades)** — exported from **DAS Trader** (or **ThinkorSwim**)
-  at the fill level. Grouped into round-trip trades via FIFO matching.
-- **Candles (for the chart)** — fetched from **Massive** using 1-minute stock
-  aggregate bars. The local prototype maps ThinkorSwim execution times into
-  Eastern market time, fetches the matching symbol/day candles, and overlays
-  entries/exits on the chart.
+See [FEATURES.md](FEATURES.md), [DESIGN.md](DESIGN.md), and
+[JOURNAL_DESIGN.md](JOURNAL_DESIGN.md) for deeper product notes.
 
-A working **trade-chart prototype** already exists at
-`~/Desktop/trade_chart (10).html` — candlesticks + entry/exit markers + SVG
-export, with a reusable DAS parser. We adapt it rather than rebuild. See
-[DESIGN.md §8](DESIGN.md) for the full asset index.
+## How It Works
 
-## Phases
+The app uses broker executions as the source of truth.
 
-Scaffold → execution/trade model + FIFO matching → DAS/TOS import → trade chart
-→ analytics → journaling → screenshots → automated candle/sync.
+1. Export a ThinkorSwim Account Statement CSV.
+2. Import the CSV into the app.
+3. The importer parses fills and groups them into trades.
+4. The app fetches one-minute OHLCV candles for each traded symbol/date.
+5. Trades, candles, reports, and notes are stored locally in SQLite.
 
-## Local chart prototype
+Your trade data stays on your machine unless you intentionally deploy or share
+it.
 
-Create `.env.local` in the project root:
+## Tech Stack
+
+- Next.js 16 App Router
+- React 19
+- TypeScript
+- Tailwind CSS
+- SQLite
+- Drizzle ORM
+- better-sqlite3
+- Massive API for stock candles
+
+## Requirements
+
+- Node.js 20+
+- npm
+- A Massive API key if you want automatic candlestick data
+
+The app can still run without a Massive key, but trade charts that need candle
+data will fail to fetch new candles until the key is configured.
+
+## Setup
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Create a local environment file:
+
+```bash
+cp .env.example .env.local
+```
+
+Set your Massive API key in `.env.local`:
 
 ```bash
 MASSIVE_API_KEY=your_key_here
 ```
 
-Run the local prototype server:
+Create the local SQLite database:
 
 ```bash
-node scripts/dev-chart-server.mjs
+npm run db:migrate
+```
+
+Start the development server:
+
+```bash
+npm run dev
 ```
 
 Open:
 
-[http://127.0.0.1:4173/](http://127.0.0.1:4173/)
+[http://localhost:3000](http://localhost:3000)
 
-Use the **TOS + Massive Visual Test** panel to load a ThinkorSwim Account
-Statement CSV. The browser calls the local server, and the server reads
-`MASSIVE_API_KEY` from `.env.local`, so the key does not need to be pasted into
-the HTML page.
-
-For this sample export, ThinkorSwim `Exec Time` appears to be Pacific time; the
-prototype converts it to Eastern market time before matching 1-minute candles.
-
-## Getting started
-
-The app is a **Next.js 16 (App Router) + TypeScript + Tailwind** project with a
-**local-first SQLite** database via **Drizzle + better-sqlite3**.
+## Useful Scripts
 
 ```bash
-npm install
-npm run db:migrate      # creates data/journal.db from drizzle/ migrations
-npm run dev             # http://localhost:3000
+npm run dev          # Start the local Next.js dev server
+npm run build        # Build the app
+npm run start        # Start the production build
+npm run lint         # Run ESLint
+npm test             # Run tests
+npm run db:migrate   # Apply Drizzle migrations
+npm run db:generate  # Generate migrations after schema changes
+npm run db:push      # Push schema changes directly
+npm run db:studio    # Open Drizzle Studio
 ```
 
-Useful scripts:
+## Data & Privacy
 
-- `npm run db:generate` — generate a migration after editing `src/lib/db/schema.ts`
-- `npm run db:migrate` / `db:push` — apply migrations
-- `npm run db:studio` — Drizzle Studio
-- `npm run build` / `npm test` / `npm run lint`
+Local private data is gitignored:
 
-Data layout (gitignored): `data/journal.db` (SQLite), `data/uploads/`
-(screenshots), `data/samples/` (broker-export fixtures).
+- `data/journal.db`
+- `data/journal.db-*`
+- `data/uploads/`
+- `data/samples/`
+- `.env.local`
+
+Real broker exports should not be committed. They can contain account numbers,
+trade history, symbols, timestamps, and other private information.
+
+## Demo Data
+
+The open-source version should include a fake/demo dataset so contributors can
+try the app immediately after setup.
+
+Recommended demo-data direction:
+
+- Add anonymized or synthetic ThinkorSwim-style CSV exports under `samples/`.
+- Include a small seed script that imports the demo CSV into `data/journal.db`.
+- Use fake symbols or paper-trading exports only.
+- Keep the dataset small enough to be understandable, but rich enough to show:
+  dashboard, calendar, reports, trade detail charts, and journal notes.
+
+Proposed future command:
+
+```bash
+npm run seed:demo
+```
+
+Until that script exists, use the app's **Import** button with a ThinkorSwim
+Account Statement CSV.
+
+## Hosting A Demo
+
+A public hosted demo is a good idea, but it should use demo data only.
+
+Recommended approach:
+
+- Deploy the Next.js app with a separate demo database.
+- Do not expose personal `data/journal.db`.
+- Use a read-only or resettable demo dataset.
+- Keep `MASSIVE_API_KEY` server-side only.
+- Do not let public users upload private broker exports unless there is a clear
+  privacy model.
+
+For an open-source demo, the safest first version is a static/demo deployment
+with fake data that resets regularly.
+
+## Candle Data
+
+Candles are fetched from Massive using one-minute aggregate bars. The API key is
+read server-side from `.env.local`; it is not pasted into the browser.
+
+Environment variable:
+
+```bash
+MASSIVE_API_KEY=your_key_here
+```
+
+The candle cache is stored locally in SQLite so each symbol/date only needs to
+be fetched once.
+
+## Import Notes
+
+The current importer is focused on ThinkorSwim Account Statement CSVs. The
+parser expects the statement sections exported by ThinkorSwim, especially
+`Account Trade History`.
+
+Known assumptions:
+
+- `Exec Time` is interpreted as Pacific time and mapped to Eastern market time.
+- `Net Price` is used for fill price.
+- Re-importing the same file is intended to be safe; duplicate executions are
+  skipped.
+
+## Project Docs
+
+- [DESIGN.md](DESIGN.md) - product design, architecture, data model, and phases.
+- [FEATURES.md](FEATURES.md) - feature inventory and scope.
+- [JOURNAL_DESIGN.md](JOURNAL_DESIGN.md) - journal model, note hierarchy, and
+  review philosophy.
+
+## Roadmap
+
+Near-term:
+
+- Add public-safe demo data and a seed command.
+- Harden import previews and error states.
+- Improve trade chart pan/zoom and volume context.
+- Generalize journal notes beyond trade-level entries.
+- Add backup/export guidance for SQLite data.
+
+Later:
+
+- DAS Trader CSV import.
+- Manual candle CSV fallback.
+- Settings for timezone, fees, and defaults.
+- Search across journal notes.
+- Optional hosted/demo deployment.
+
+## License
+
+No license has been selected yet. Add a license before opening the repository to
+outside contributors.

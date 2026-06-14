@@ -3,6 +3,13 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db, schema } from "@/lib/db";
+import {
+  EMOTION_PILLS,
+  PRIMARY_TRADE_LABELS,
+  PROCESS_PILLS,
+  encodeJournalTags,
+  filterKnownJournalTags,
+} from "@/lib/journalLabels";
 
 type ScopedNoteState = { ok: boolean };
 type TradeNoteState = { ok: boolean };
@@ -50,7 +57,12 @@ export async function updateJournalEntryAction(formData: FormData) {
   const noteId = Number(formData.get("noteId"));
   const tradeId = Number(formData.get("tradeId"));
   const note = String(formData.get("note") ?? "").trim();
-  const emotionalState = String(formData.get("emotionalState") ?? "").trim();
+  const primaryLabel = String(formData.get("primaryLabel") ?? "").trim();
+  const processTags = filterKnownJournalTags(formData.getAll("processTags"), PROCESS_PILLS);
+  const emotionTags = filterKnownJournalTags(formData.getAll("emotionTags"), EMOTION_PILLS);
+  const validPrimaryLabel = PRIMARY_TRADE_LABELS.some((option) => option.value === primaryLabel)
+    ? primaryLabel
+    : "";
 
   if (!Number.isInteger(noteId) || noteId <= 0) return;
 
@@ -58,8 +70,26 @@ export async function updateJournalEntryAction(formData: FormData) {
     .update(schema.journalEntries)
     .set({
       lessons: note || null,
-      emotionalState: emotionalState || null,
+      emotionalState: validPrimaryLabel || null,
+      whatWentWell: encodeJournalTags(processTags),
+      whatWentWrong: encodeJournalTags(emotionTags),
     })
+    .where(eq(schema.journalEntries.id, noteId));
+
+  revalidatePath("/journal");
+  if (Number.isInteger(tradeId) && tradeId > 0) {
+    revalidatePath(`/trades/${tradeId}`);
+  }
+}
+
+export async function deleteJournalEntryAction(formData: FormData) {
+  const noteId = Number(formData.get("noteId"));
+  const tradeId = Number(formData.get("tradeId"));
+
+  if (!Number.isInteger(noteId) || noteId <= 0) return;
+
+  await db
+    .delete(schema.journalEntries)
     .where(eq(schema.journalEntries.id, noteId));
 
   revalidatePath("/journal");

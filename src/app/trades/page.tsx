@@ -345,10 +345,10 @@ export default async function TradesPage({
   const summary = rangeSummary(filters, trades.length, total, page);
   const presetBase = { date: undefined, from: undefined, to: undefined };
   const presetButtonClass = (preset: DatePreset) =>
-    `flex h-10 items-center rounded-md border px-3 text-sm font-semibold transition-colors ${
+    `flex h-8 min-w-16 items-center justify-center rounded px-3 text-sm font-semibold transition-colors ${
       activePreset === preset
-        ? "border-[#58a6ff] bg-[var(--surface)] text-[var(--foreground)]"
-        : "border-[var(--border)] text-[var(--muted)] hover:border-[#58a6ff]"
+        ? "bg-[var(--surface-2)] text-[var(--foreground)]"
+        : "text-[var(--muted)] hover:text-[var(--foreground)]"
     }`;
   const navButtonClass = "flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[#58a6ff] hover:text-[var(--foreground)]";
   const disabledNavButtonClass = "flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] opacity-40";
@@ -367,7 +367,7 @@ export default async function TradesPage({
         <div className="relative space-y-2">
           <span className="block text-sm font-semibold text-[var(--muted)]">Date range</span>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <div className="flex flex-wrap gap-2">
+            <div className="inline-flex h-10 items-center rounded-md border border-[var(--border)] p-1">
               <Link href={filterHref(filters, { ...presetBase, preset: "today", page: 1 })} className={presetButtonClass("today")}>
                 Today
               </Link>
@@ -462,19 +462,19 @@ export default async function TradesPage({
         <span className="text-sm font-semibold text-[var(--muted)]">{summary.detail}</span>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
+      <div className="overflow-x-auto border-y border-[var(--hairline)]">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-[var(--muted)] border-b border-[var(--border)]">
-              <th className="px-3 py-2 font-medium whitespace-nowrap"><SortHeader label="Date" sort="date" filters={filters} /></th>
-              <th className="px-3 py-2 font-medium whitespace-nowrap"><SortHeader label="Symbol" sort="symbol" filters={filters} /></th>
-              <th className="px-3 py-2 font-medium whitespace-nowrap"><SortHeader label="Side" sort="side" filters={filters} /></th>
-              <th className="px-3 py-2 font-medium whitespace-nowrap"><SortHeader label="Shares" sort="shares" filters={filters} /></th>
-              <th className="px-3 py-2 font-medium whitespace-nowrap"><SortHeader label="Execs" sort="execs" filters={filters} /></th>
-              <th className="px-3 py-2 font-medium whitespace-nowrap"><SortHeader label="Entry" sort="entry" filters={filters} /></th>
-              <th className="px-3 py-2 font-medium whitespace-nowrap"><SortHeader label="Exit" sort="exit" filters={filters} /></th>
-              <th className="px-3 py-2 font-medium whitespace-nowrap"><SortHeader label="Per Share" sort="perShare" filters={filters} /></th>
-              <th className="px-3 py-2 font-medium whitespace-nowrap"><SortHeader label="P&L" sort="pnl" filters={filters} /></th>
+            <tr className="border-b border-[var(--hairline)] text-left font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
+              <th className="px-3 py-3 font-semibold whitespace-nowrap"><SortHeader label="Date" sort="date" filters={filters} /></th>
+              <th className="px-3 py-3 font-semibold whitespace-nowrap"><SortHeader label="Symbol" sort="symbol" filters={filters} /></th>
+              <th className="px-3 py-3 font-semibold whitespace-nowrap"><SortHeader label="Side" sort="side" filters={filters} /></th>
+              <th className="px-3 py-3 font-semibold whitespace-nowrap"><SortHeader label="Shares" sort="shares" filters={filters} /></th>
+              <th className="px-3 py-3 font-semibold whitespace-nowrap"><SortHeader label="Execs" sort="execs" filters={filters} /></th>
+              <th className="px-3 py-3 font-semibold whitespace-nowrap"><SortHeader label="Entry" sort="entry" filters={filters} /></th>
+              <th className="px-3 py-3 font-semibold whitespace-nowrap"><SortHeader label="Exit" sort="exit" filters={filters} /></th>
+              <th className="px-3 py-3 font-semibold whitespace-nowrap"><SortHeader label="Per Share" sort="perShare" filters={filters} /></th>
+              <th className="px-3 py-3 font-semibold whitespace-nowrap"><SortHeader label="P&L" sort="pnl" filters={filters} /></th>
             </tr>
           </thead>
           <tbody>
@@ -492,23 +492,34 @@ export default async function TradesPage({
                 <RowLink
                   key={t.id}
                   href={`/trades/${t.id}?returnTo=${encodeURIComponent(currentHref)}`}
-                  className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface)] cursor-pointer"
+                  className="border-b border-[var(--hairline)] last:border-0 hover:bg-[var(--surface)] cursor-pointer"
                 >
-                  <td className="px-3 py-2 whitespace-nowrap">{fmtDate(t.entryAt)}</td>
-                  <td className="px-3 py-2 font-medium">{t.symbol}</td>
-                  <td className="px-3 py-2 text-[var(--muted)] capitalize">{t.side}</td>
-                  <td className="px-3 py-2 tabular-nums">{t.quantity.toLocaleString()}</td>
-                  <td className="px-3 py-2 tabular-nums">{t.execs}</td>
-                  <td className="px-3 py-2 tabular-nums">{fmtPrice(t.avgEntryPrice)}</td>
-                  <td className="px-3 py-2 tabular-nums">{fmtPrice(t.avgExitPrice)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{fmtDate(t.entryAt)}</td>
+                  <td className="px-3 py-3 font-medium">
+                    {t.entryAt == null ? (
+                      t.symbol
+                    ) : (
+                      <Link
+                        href={`/trades/review?date=${etDateString(t.entryAt)}&symbol=${t.symbol}&returnTo=${encodeURIComponent(currentHref)}`}
+                        className="hover:text-[var(--blue)] hover:underline"
+                      >
+                        {t.symbol}
+                      </Link>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 text-[var(--muted)] capitalize">{t.side}</td>
+                  <td className="px-3 py-3 tabular-nums">{t.quantity.toLocaleString()}</td>
+                  <td className="px-3 py-3 tabular-nums">{t.execs}</td>
+                  <td className="px-3 py-3 tabular-nums">{fmtPrice(t.avgEntryPrice)}</td>
+                  <td className="px-3 py-3 tabular-nums">{fmtPrice(t.avgExitPrice)}</td>
                   <td
-                    className="px-3 py-2 tabular-nums"
+                    className="px-3 py-3 tabular-nums"
                     style={{ color: perSharePos ? "var(--green)" : "var(--red)" }}
                   >
                     {t.perShare == null ? "—" : fmtMoney(t.perShare)}
                   </td>
                   <td
-                    className="px-3 py-2 tabular-nums"
+                    className="px-3 py-3 tabular-nums"
                     style={{ color: pos ? "var(--green)" : "var(--red)" }}
                   >
                     {net == null ? "—" : fmtMoney(net)}

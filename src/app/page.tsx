@@ -136,17 +136,20 @@ export default async function Home() {
   ];
 
   return (
-    <div className="max-w-4xl space-y-8">
+    <div className="max-w-4xl space-y-10">
       {trades.length === 0 ? (
         <p className="text-sm text-[var(--muted)]">
           No trades yet — import a statement to get started.
         </p>
       ) : (
         <>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <section className="space-y-2">
-              <h2 className="text-xl font-semibold tracking-tight">This week</h2>
-              <div className="grid grid-cols-5 gap-1.5">
+              <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--muted)]">
+                Dashboard
+              </div>
+              <h2 className="text-2xl font-semibold tracking-tight">This week</h2>
+              <div className="grid grid-cols-5 border-y border-[var(--hairline)]">
                 {weekDates.map((d) => {
                   const agg = byDate.get(d);
                   const { wd, day } = dayLabel(d);
@@ -154,10 +157,9 @@ export default async function Home() {
                   const pos = agg ? agg.pnl >= 0 : false;
                   const cell = (
                     <div
-                      className="rounded-md border p-3 h-24 flex flex-col"
+                      className="flex h-28 flex-col border-t-2 border-transparent px-0.5 py-4"
                       style={{
-                        borderColor: today ? "#58a6ff" : "var(--border)",
-                        background: "var(--surface)",
+                        borderTopColor: today ? "#58a6ff" : "transparent",
                       }}
                     >
                       <span className="text-sm font-semibold text-[var(--muted)]">{wd} {day}</span>
@@ -182,15 +184,15 @@ export default async function Home() {
               </div>
             </section>
 
-            <section className="grid grid-cols-5 gap-1.5">
+            <section className="grid grid-cols-5 gap-6 pb-6">
               {stats.map((s) => (
                 <div
                   key={s.label}
-                  className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-3 h-24 flex flex-col"
+                  className="space-y-2"
                 >
-                  <div className="text-sm font-semibold text-[var(--muted)]">{s.label}</div>
+                  <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">{s.label}</div>
                   <div
-                    className="mt-auto text-base font-semibold tabular-nums"
+                    className="font-mono text-lg tabular-nums"
                     style={s.color ? { color: s.color } : undefined}
                   >
                     {s.value}
@@ -207,7 +209,7 @@ export default async function Home() {
               <h2 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wide">Recent trades</h2>
               <Link href="/trades" className="text-xs text-[#58a6ff] hover:underline">All trades →</Link>
             </div>
-            <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
+            <div className="overflow-x-auto border-y border-[var(--hairline)]">
               <table className="w-full text-sm">
                 <tbody>
                   {recent.map((t) => {
@@ -217,7 +219,7 @@ export default async function Home() {
                       <RowLink
                         key={t.id}
                         href={`/trades/${t.id}`}
-                        className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface)] cursor-pointer"
+                        className="border-b border-[var(--hairline)] last:border-0 hover:bg-[var(--surface)] cursor-pointer"
                       >
                         <td className="px-3 py-2 whitespace-nowrap text-[var(--muted)]">{fmtDate(t.entryAt)}</td>
                         <td className="px-3 py-2 font-medium">{t.symbol}</td>

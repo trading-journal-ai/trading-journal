@@ -175,11 +175,11 @@ function emptyState() {
 }
 
 function ViewToggle({ active, monthHref, yearHref }: { active: "month" | "year"; monthHref: string; yearHref: string }) {
-  const base = "flex h-10 items-center rounded-md px-3 text-sm font-semibold border";
-  const on = "bg-[var(--surface)] border-[#58a6ff] text-[var(--foreground)]";
-  const off = "border-[var(--border)] text-[var(--muted)] hover:border-[#58a6ff]";
+  const base = "flex h-8 min-w-20 items-center justify-center rounded px-3 text-sm font-semibold transition-colors";
+  const on = "bg-[var(--surface-2)] text-[var(--foreground)]";
+  const off = "text-[var(--muted)] hover:text-[var(--foreground)]";
   return (
-    <div className="flex gap-2">
+    <div className="inline-flex h-10 items-center rounded-md border border-[var(--border)] p-1">
       <Link href={monthHref} className={`${base} ${active === "month" ? on : off}`}>Month</Link>
       <Link href={yearHref} className={`${base} ${active === "year" ? on : off}`}>Year</Link>
     </div>
@@ -257,17 +257,17 @@ function MonthView({
           ))}
         </div>
 
-        <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+        <div className="overflow-hidden rounded-lg border border-[var(--hairline)] bg-[var(--background)]">
           {weeks.map((week, weekIndex) => (
             <div
               key={weekIndex}
-              className="grid min-h-36 grid-cols-[repeat(5,minmax(0,1fr))_minmax(150px,0.8fr)] border-b border-[var(--border)] last:border-b-0"
+              className="grid min-h-36 grid-cols-[repeat(5,minmax(0,1fr))_minmax(150px,0.8fr)] border-b border-[var(--hairline)] last:border-b-0"
             >
               {week.days.map((day) => {
                 const pos = day.agg ? day.agg.pnl >= 0 : false;
                 const content = (
                   <div
-                    className={`flex h-full min-h-36 flex-col border-r border-[var(--border)] p-4 ${
+                    className={`flex h-full min-h-36 flex-col border-r border-[var(--hairline)] p-4 ${
                       day.inMonth ? "" : "opacity-30"
                     }`}
                   >
@@ -344,7 +344,7 @@ function MiniMonth({
   return (
     <Link
       href={calendarHref({ ...params, m: ym, view: undefined, y: undefined })}
-      className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[#58a6ff]"
+      className="block rounded-lg border border-[var(--hairline)] bg-[var(--background)] p-5 hover:border-[#58a6ff]"
     >
       <div className="mb-4 flex items-baseline justify-between">
         <span className="text-lg font-semibold">{monthShortFmt.format(new Date(Date.UTC(year, month - 1, 1)))}</span>
@@ -369,7 +369,7 @@ function MiniMonth({
               key={i}
               className="aspect-square rounded-md flex items-center justify-center text-base font-semibold text-[var(--muted)]"
               style={{
-                backgroundColor: agg ? (pos ? "rgba(38, 166, 65, 0.12)" : "rgba(232, 64, 64, 0.12)") : undefined,
+                backgroundColor: agg ? (pos ? "color-mix(in oklch, var(--green) 13%, transparent)" : "color-mix(in oklch, var(--red) 13%, transparent)") : undefined,
                 color: agg ? (pos ? "var(--green)" : "var(--red)") : undefined,
               }}
               title={agg ? `${ym}-${String(day).padStart(2, "0")}: ${fmtMoney(agg.pnl)}` : undefined}

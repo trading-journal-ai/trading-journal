@@ -4,9 +4,9 @@ import { db, schema } from "@/lib/db";
 import { fmtMoney } from "@/lib/format";
 import { netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
-import MonthPicker from "@/components/MonthPicker";
 import RecapNote from "@/components/RecapNote";
 import TradeJournalNote from "@/components/TradeJournalNote";
+import { decodeJournalTags, journalLabelTone } from "@/lib/journalLabels";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +24,9 @@ type JournalTrade = typeof schema.trades.$inferSelect & {
   notes: {
     id: number;
     text: string;
-    emotionalState: string | null;
+    primaryLabel: string | null;
+    processTags: string[];
+    emotionTags: string[];
   }[];
 };
 
@@ -60,6 +62,23 @@ type JournalMonth = {
   pnl: number;
   trades: number;
   noteCount: number;
+};
+
+type ArchiveMonth = {
+  key: string;
+  label: string;
+  active: boolean;
+  weeks: {
+    key: string;
+    label: string;
+    rangeLabel: string;
+    active: boolean;
+  }[];
+};
+
+type JournalArchive = {
+  months: ArchiveMonth[];
+  years: string[];
 };
 
 function validDate(value: string | undefined): string | undefined {
@@ -167,7 +186,7 @@ function dateYear(date: string): string {
 
 function weekRangeLabel(weekStart: string): string {
   const weekEnd = isoAddDays(weekStart, 4);
-  return `${dateLabelNoYear(weekStart)} to ${dateLabelNoYear(weekEnd)}, ${dateYear(weekEnd)}`;
+  return `${dateLabelNoYear(weekStart)} - ${dateLabelNoYear(weekEnd)}, ${dateYear(weekEnd)}`;
 }
 
 function dayOnlyLabel(date: string): string {
@@ -196,10 +215,21 @@ function weekLabel(weekStart: string): string {
   return `Week ${Math.floor(daysFromFirstWeek / 7) + 1}`;
 }
 
-function profitColor(value: number): string {
-  if (value > 0) return "var(--green)";
-  if (value < 0) return "var(--red)";
-  return "var(--muted)";
+function pnlClass(value: number): string {
+  if (value > 0) return "text-[var(--green)]";
+  if (value < 0) return "text-[var(--red)]";
+  return "text-[var(--muted)]";
+}
+
+function labelToneClass(value: string | null | undefined): string {
+  const tone = journalLabelTone(value);
+  if (tone === "positive") return "border-[var(--green)] text-[var(--green)]";
+  if (tone === "negative") return "border-[var(--red)] text-[var(--red)]";
+  return "border-[var(--border)] text-[var(--muted)]";
+}
+
+function pluralize(count: number, singular: string): string {
+  return `${count} ${count === 1 ? singular : `${singular}s`}`;
 }
 
 function formatPercent(value: number): string {
@@ -221,8 +251,75 @@ function dayProfitFactor(trades: JournalTrade[]): string {
   return (grossWin / grossLoss).toFixed(2);
 }
 
+function metricLineValues(trades: JournalTrade[], pnl: number) {
+  return {
+    trades: pluralize(trades.length, "trade"),
+    winRate: `${dayAccuracy(trades)} win`,
+    profitFactor: `PF ${dayProfitFactor(trades)}`,
+    pnl: fmtMoney(pnl),
+  };
+}
+
+function MetricLine({ trades, pnl }: { trades: JournalTrade[]; pnl: number }) {
+  const values = metricLineValues(trades, pnl);
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[13px] text-[var(--muted)]">
+      <span>{values.trades}</span>
+      <span aria-hidden="true">·</span>
+      <span>{values.winRate}</span>
+      <span aria-hidden="true">·</span>
+      <span>{values.profitFactor}</span>
+      <span aria-hidden="true">·</span>
+      <span className={pnlClass(pnl)}>{values.pnl}</span>
+    </div>
+  );
+}
+
+function monthStart(monthKey: string): string {
+  return `${monthKey}-01`;
+}
+
+function sidebarWeekRangeLabel(weekStart: string, monthKey: string): string {
+  const start = weekStart < monthStart(monthKey) ? monthStart(monthKey) : weekStart;
+  const endOfWeek = isoAddDays(weekStart, 4);
+  const endOfMonth = lastDayOfMonth(monthStart(monthKey));
+  const end = endOfWeek > endOfMonth ? endOfMonth : endOfWeek;
+  const compactFmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+  });
+  const format = (date: string) => {
+    const [year, month, day] = date.split("-").map(Number);
+    return compactFmt.format(new Date(Date.UTC(year, month - 1, day)));
+  };
+  return `${format(start)}-${format(end).replace(/^[A-Za-z]{3} /, "")}`;
+}
+
+function monthWeeks(monthKey: string, activeWeekKey: string): ArchiveMonth["weeks"] {
+  const lastDay = lastDayOfMonth(monthStart(monthKey));
+  let weekStart = weekKeyFor(monthStart(monthKey));
+  const weeks: ArchiveMonth["weeks"] = [];
+
+  while (weekStart <= lastDay) {
+    const weekEnd = isoAddDays(weekStart, 4);
+    const intersectsMonth = weekEnd >= monthStart(monthKey) && weekStart <= lastDay;
+    if (intersectsMonth) {
+      weeks.push({
+        key: weekStart,
+        label: weekLabel(weekStart),
+        rangeLabel: sidebarWeekRangeLabel(weekStart, monthKey),
+        active: weekStart === activeWeekKey,
+      });
+    }
+    weekStart = isoAddDays(weekStart, 7);
+  }
+
+  return weeks;
+}
+
 function tradeNoteText(note: typeof schema.journalEntries.$inferSelect): string {
-  return note.lessons || note.thesis || note.whatWentWell || note.whatWentWrong || "";
+  return note.lessons || note.thesis || "";
 }
 
 /** Scoped recap notes (day/week/month) keyed by `${scope}:${scopeKey}`. */
@@ -276,7 +373,9 @@ async function loadJournalTrades(filters: JournalFilters): Promise<JournalTrade[
     notes.push({
       id: note.id,
       text: text || "No note text.",
-      emotionalState: note.emotionalState,
+      primaryLabel: note.emotionalState,
+      processTags: decodeJournalTags(note.whatWentWell),
+      emotionTags: decodeJournalTags(note.whatWentWrong),
     });
     notesByTrade.set(note.tradeId, notes);
   }
@@ -284,6 +383,45 @@ async function loadJournalTrades(filters: JournalFilters): Promise<JournalTrade[
   return rows
     .map((trade) => ({ ...trade, pnl: netPnl(trade), notes: notesByTrade.get(trade.id) ?? [] }))
     .sort((a, b) => (a.entryAt ?? 0) - (b.entryAt ?? 0));
+}
+
+async function loadJournalArchive(filters: JournalFilters): Promise<JournalArchive> {
+  const selectedRange = dateRangeFor(filters);
+  const selectedDate = selectedRange?.from ?? currentEtDate();
+  const selectedMonthKey = selectedDate.slice(0, 7);
+  const selectedWeekKey = weekKeyFor(selectedDate);
+
+  const rows = await db
+    .select({ entryAt: schema.trades.entryAt })
+    .from(schema.trades)
+    .limit(10000);
+
+  const monthKeys = new Set<string>([selectedMonthKey]);
+  const yearKeys = new Set<string>();
+
+  for (const row of rows) {
+    if (row.entryAt == null) continue;
+    const date = etDateString(row.entryAt);
+    const year = date.slice(0, 4);
+    if (year === selectedMonthKey.slice(0, 4)) {
+      monthKeys.add(date.slice(0, 7));
+    } else {
+      yearKeys.add(year);
+    }
+  }
+
+  const months = [...monthKeys]
+    .sort((a, b) => b.localeCompare(a))
+    .map((key) => ({
+      key,
+      label: monthLabel(key).replace(/ \d{4}$/, ""),
+      active: key === selectedMonthKey,
+      weeks: key === selectedMonthKey ? monthWeeks(key, selectedWeekKey) : [],
+    }));
+
+  const years = [...yearKeys].sort((a, b) => b.localeCompare(a));
+
+  return { months, years };
 }
 
 function buildDailySymbolSummary(trades: JournalTrade[]): DailySymbolSummary[] {
@@ -306,6 +444,118 @@ function buildDailySymbolSummary(trades: JournalTrade[]): DailySymbolSummary[] {
   }
 
   return [...bySymbol.values()].sort((a, b) => b.pnl - a.pnl);
+}
+
+function DailyTickerRail({ day, returnTo }: { day: JournalDay; returnTo: string }) {
+  const rows = buildDailySymbolSummary(day.trades);
+
+  if (rows.length === 0) {
+    return (
+      <aside className="mt-1 w-[85%] md:mt-10">
+        <div className="font-mono text-[11px] text-[var(--muted)]">No trades</div>
+      </aside>
+    );
+  }
+
+  return (
+    <aside className="mt-1 w-[85%] md:mt-10">
+      <div className="space-y-0.5">
+        {rows.map((row) => (
+          <Link
+            key={row.symbol}
+            href={`/trades/review?date=${day.date}&symbol=${row.symbol}&returnTo=${encodeURIComponent(returnTo)}`}
+            className="grid grid-cols-[1fr_auto] items-baseline gap-3 leading-4"
+          >
+            <span className="font-mono text-[11px] text-[var(--foreground)]">
+              {row.symbol}
+            </span>
+            <span
+              className={`whitespace-nowrap font-mono text-[11px] tabular-nums ${pnlClass(
+                row.pnl,
+              )}`}
+            >
+              {fmtMoney(row.pnl)}
+            </span>
+          </Link>
+        ))}
+      </div>
+      <div className="mt-2 space-y-0.5 pt-1">
+        <div className="mb-1.5 border-t border-[var(--border)]" />
+        <div className="grid grid-cols-[1fr_auto] items-baseline gap-3 font-mono text-[11px] leading-4">
+          <span className="text-[var(--muted)]">Acc</span>
+          <span className="tabular-nums text-[var(--foreground)]">
+            {dayAccuracy(day.trades)}
+          </span>
+        </div>
+        <div className="grid grid-cols-[1fr_auto] items-baseline gap-3 font-mono text-[11px] leading-4">
+          <span className="text-[var(--muted)]">PF</span>
+          <span className="tabular-nums text-[var(--foreground)]">
+            {dayProfitFactor(day.trades)}
+          </span>
+        </div>
+        <div className="grid grid-cols-[1fr_auto] items-baseline gap-3 font-mono text-[11px] leading-4">
+          <span className="text-[var(--muted)]">P&L</span>
+          <span className={`tabular-nums ${pnlClass(day.pnl)}`}>
+            {fmtMoney(day.pnl)}
+          </span>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function TagPill({ label }: { label: string }) {
+  return (
+    <span className="rounded-full border border-[var(--border)] px-2 py-0.5 font-mono text-[11px] text-[var(--muted)]">
+      {label}
+    </span>
+  );
+}
+
+function TradeNoteBlock({
+  trade,
+  note,
+  returnTo,
+}: {
+  trade: JournalTrade;
+  note: JournalTrade["notes"][number];
+  returnTo: string;
+}) {
+  return (
+    <article className="border-l border-[var(--border)] pl-5">
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="text-[15px] font-semibold text-[var(--foreground)]">
+          {trade.symbol}
+        </span>
+        {note.primaryLabel ? (
+          <span
+            className={`rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] ${labelToneClass(
+              note.primaryLabel,
+            )}`}
+          >
+            {note.primaryLabel}
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-1.5">
+        <TradeJournalNote
+          noteId={note.id}
+          tradeId={trade.id}
+          symbol={trade.symbol}
+          text={note.text}
+          primaryLabel={note.primaryLabel}
+          processTags={note.processTags}
+          emotionTags={note.emotionTags}
+        />
+      </div>
+      <Link
+        href={`/trades/${trade.id}?returnTo=${encodeURIComponent(returnTo)}`}
+        className="mt-3 inline-flex font-mono text-[12px] text-[var(--blue)] hover:underline"
+      >
+        View trade -&gt;
+      </Link>
+    </article>
+  );
 }
 
 function groupJournal(trades: JournalTrade[], filters: JournalFilters): JournalMonth[] {
@@ -370,36 +620,374 @@ function groupJournal(trades: JournalTrade[], filters: JournalFilters): JournalM
     }));
 }
 
-function FilterBar({ filters }: { filters: JournalFilters }) {
+function CurrentShortcuts({ filters }: { filters: JournalFilters }) {
   const activePreset: DatePreset = filters.date ? "custom" : filters.preset;
   const presetBase = { date: undefined, from: undefined, to: undefined };
   const buttonClass = (preset: DatePreset) =>
-    `inline-flex h-10 items-center rounded-md border px-3 text-sm font-semibold transition-colors ${
+    `inline-flex h-8 min-w-16 items-center justify-center rounded px-3 text-sm font-semibold transition-colors ${
       activePreset === preset
-        ? "border-[var(--blue)] bg-[var(--surface)] text-[var(--foreground)]"
-        : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+        ? "bg-[var(--surface-2)] text-[var(--foreground)]"
+        : "text-[var(--muted)] hover:text-[var(--foreground)]"
     }`;
-  const selectedDate = dateRangeFor(filters)?.from ?? currentEtDate();
 
   return (
-    <form action="/journal" className="space-y-3">
-      <input type="hidden" name="preset" value={activePreset} />
-      <div className="relative space-y-2">
-        <span className="block text-sm font-semibold text-[var(--muted)]">Date range</span>
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <div className="flex flex-wrap gap-2">
-            <Link href={filterHref(filters, { ...presetBase, preset: "today" })} className={buttonClass("today")}>Today</Link>
-            <Link href={filterHref(filters, { ...presetBase, preset: "week" })} className={buttonClass("week")}>Week</Link>
-            <Link href={filterHref(filters, { ...presetBase, preset: "month" })} className={buttonClass("month")}>Month</Link>
+    <nav aria-label="Current journal shortcuts" className="inline-flex h-10 items-center rounded-md border border-[var(--border)] p-1">
+      <Link href={filterHref(filters, { ...presetBase, preset: "today" })} className={buttonClass("today")}>Today</Link>
+      <Link href={filterHref(filters, { ...presetBase, preset: "week" })} className={buttonClass("week")}>This week</Link>
+      <Link href={filterHref(filters, { ...presetBase, preset: "month" })} className={buttonClass("month")}>This month</Link>
+    </nav>
+  );
+}
+
+function JournalSidebar({
+  archive,
+  filters,
+}: {
+  archive: JournalArchive;
+  filters: JournalFilters;
+}) {
+  return (
+    <aside className="md:sticky md:top-24 md:self-start md:pt-56">
+      <div className="space-y-4 font-mono text-[12px] text-[var(--muted)]">
+        {archive.months.map((month) => (
+          <div key={month.key}>
+            <Link
+              href={filterHref(filters, {
+                date: undefined,
+                preset: "month",
+                from: monthStart(month.key),
+                to: undefined,
+              })}
+              className={`block ${
+                month.active
+                  ? "text-[var(--foreground)]"
+                  : "hover:text-[var(--foreground)]"
+              }`}
+            >
+              {month.label}
+            </Link>
+            {month.active && month.weeks.length > 0 ? (
+              <div className="mt-3 space-y-2 pl-3">
+                {month.weeks.map((week) => (
+                  <Link
+                    key={week.key}
+                    href={filterHref(filters, {
+                      date: undefined,
+                      preset: "week",
+                      from: week.key,
+                      to: undefined,
+                    })}
+                    className={`inline-grid grid-cols-[54px_auto] gap-8 text-[11px] leading-5 ${
+                      week.active
+                        ? "text-[var(--green)]"
+                        : "hover:text-[var(--foreground)]"
+                    }`}
+                  >
+                    <span>{week.label}</span>
+                    <span>{week.rangeLabel}</span>
+                  </Link>
+                ))}
+              </div>
+            ) : null}
           </div>
-          <div className="flex flex-wrap gap-2">
-            <MonthPicker selectedDate={selectedDate} />
-            <Link href="/journal" className="inline-flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm text-[var(--muted)] hover:border-[var(--blue)] hover:text-[var(--foreground)]">Clear</Link>
+        ))}
+        {archive.years.map((year) => (
+          <Link
+            key={year}
+            href={filterHref(filters, {
+              date: undefined,
+              preset: "month",
+              from: `${year}-01-01`,
+              to: undefined,
+            })}
+            className="block hover:text-[var(--foreground)]"
+          >
+            {year}
+          </Link>
+        ))}
+      </div>
+    </aside>
+  );
+}
+
+function tradesForWeek(week: JournalWeek): JournalTrade[] {
+  return week.days.flatMap((day) => day.trades);
+}
+
+function tradesForMonth(month: JournalMonth): JournalTrade[] {
+  return month.weeks.flatMap(tradesForWeek);
+}
+
+const placeholders = {
+  day: "Add a daily note: market read, plan, execution, emotions, what worked, what to fix tomorrow.",
+  week: "Add a short weekly recap: did I keep red days small, what repeated, what to focus on next week.",
+  month: "Add a light monthly recap: themes, bigger-picture progress, drawdown context, what carries into next month.",
+};
+
+function DayEntry({
+  day,
+  recaps,
+  returnTo,
+}: {
+  day: JournalDay;
+  recaps: Map<string, string>;
+  returnTo: string;
+}) {
+  const tradesWithNotes = day.trades.filter((trade) => trade.notes.length > 0);
+
+  return (
+    <section className="grid grid-cols-[8px_minmax(0,1fr)] gap-x-4">
+      <span
+        className={`mt-2.5 size-2 rounded-full ${
+          day.pnl >= 0 ? "bg-[var(--green)]" : "bg-[var(--red)]"
+        }`}
+      />
+      <div className="grid gap-7 md:grid-cols-[minmax(0,760px)_122px] md:gap-8">
+        <div className="max-w-[760px]">
+          <div className="flex items-baseline gap-3">
+            <h3 className="text-[24px] font-semibold leading-none tracking-[-0.01em] text-[#e6edf3]">
+              {weekdayLabel(day.date)}
+            </h3>
+            <span className="font-mono text-sm text-[var(--muted)]">
+              {dayOnlyLabel(day.date)}
+            </span>
           </div>
+          <div className="mt-3">
+            <MetricLine trades={day.trades} pnl={day.pnl} />
+          </div>
+          <div className="mt-4 max-w-3xl text-[15.5px] font-light leading-7 text-[var(--foreground)]">
+            <RecapNote
+              scope="day"
+              scopeKey={day.date}
+              text={recaps.get(`day:${day.date}`) ?? ""}
+              placeholder={placeholders.day}
+            />
+          </div>
+          {tradesWithNotes.length > 0 ? (
+            <div className="mt-5 space-y-6">
+              {tradesWithNotes.map((trade) =>
+                trade.notes.map((note) => (
+                  <TradeNoteBlock
+                    key={note.id}
+                    trade={trade}
+                    note={note}
+                    returnTo={returnTo}
+                  />
+                )),
+              )}
+            </div>
+          ) : (
+            <div className="mt-5 flex flex-wrap gap-2">
+              <TagPill label="No trade notes yet" />
+            </div>
+          )}
         </div>
+        <DailyTickerRail day={day} returnTo={returnTo} />
+      </div>
+    </section>
+  );
+}
+
+function WeekSection({
+  week,
+  recaps,
+  returnTo,
+}: {
+  week: JournalWeek;
+  recaps: Map<string, string>;
+  returnTo: string;
+}) {
+  const trades = tradesForWeek(week);
+
+  return (
+    <section className="border-t border-[var(--border)] pt-10">
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+        <h2 className="text-3xl font-semibold leading-none tracking-[-0.02em] text-[#e6edf3]">
+          {week.label}
+        </h2>
+        <span className="font-mono text-sm text-[var(--muted)]">
+          {week.rangeLabel}
+        </span>
+      </div>
+      <div className="mt-3">
+        <MetricLine trades={trades} pnl={week.pnl} />
+      </div>
+      <div className="mt-4 max-w-none text-[16px] font-light leading-7 text-[var(--foreground)]">
+        <RecapNote
+          scope="week"
+          scopeKey={week.key}
+          text={recaps.get(`week:${week.key}`) ?? ""}
+          placeholder={placeholders.week}
+        />
+      </div>
+      <div className="mt-9 space-y-12">
+        {week.days.map((day) => (
+          <DayEntry
+            key={day.date}
+            day={day}
+            recaps={recaps}
+            returnTo={returnTo}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MonthView({
+  month,
+  recaps,
+  returnTo,
+}: {
+  month: JournalMonth;
+  recaps: Map<string, string>;
+  returnTo: string;
+}) {
+  const trades = tradesForMonth(month);
+
+  return (
+    <article>
+      <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.38em] text-[var(--muted)]">
+        THE JOURNAL
+        <span className="px-3">·</span>
+        {month.key.slice(0, 4)}
+      </div>
+      <div className="mt-5">
+        <h1 className="text-5xl font-semibold leading-none tracking-[-0.03em] text-[#e6edf3]">
+          {month.label}
+        </h1>
+      </div>
+      <div className="mt-4">
+        <MetricLine trades={trades} pnl={month.pnl} />
+      </div>
+      <div className="mt-8 max-w-4xl text-[18px] font-light leading-8 text-[var(--foreground)]">
+        <RecapNote
+          scope="month"
+          scopeKey={month.key}
+          text={recaps.get(`month:${month.key}`) ?? ""}
+          placeholder={placeholders.month}
+        />
       </div>
 
-    </form>
+      <div className="mt-12 space-y-14">
+        {month.weeks.map((week) => (
+          <WeekSection
+            key={week.key}
+            week={week}
+            recaps={recaps}
+            returnTo={returnTo}
+          />
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function WeekView({
+  week,
+  recaps,
+  returnTo,
+}: {
+  week: JournalWeek;
+  recaps: Map<string, string>;
+  returnTo: string;
+}) {
+  const trades = tradesForWeek(week);
+
+  return (
+    <article>
+      <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.38em] text-[var(--muted)]">
+        THE JOURNAL
+        <span className="px-3">·</span>
+        {week.label.toUpperCase().replace(" ", " 0")}
+      </div>
+      <div className="mt-5 flex flex-wrap items-baseline gap-x-5 gap-y-3">
+        <h1 className="text-5xl font-semibold leading-none tracking-[-0.03em] text-[#e6edf3]">
+          {week.label}
+        </h1>
+        <p className="font-mono text-base text-[var(--muted)]">
+          {week.rangeLabel}
+        </p>
+      </div>
+      <div className="mt-4">
+        <MetricLine trades={trades} pnl={week.pnl} />
+      </div>
+      <div className="mt-8 max-w-4xl text-[18px] font-light leading-8 text-[var(--foreground)]">
+        <RecapNote
+          scope="week"
+          scopeKey={week.key}
+          text={recaps.get(`week:${week.key}`) ?? ""}
+          placeholder={placeholders.week}
+        />
+      </div>
+      <div className="mt-10 border-t border-[var(--border)]" />
+      <div className="relative mt-8 space-y-12">
+        {week.days.map((day) => (
+          <DayEntry
+            key={day.date}
+            day={day}
+            recaps={recaps}
+            returnTo={returnTo}
+          />
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function DayView({
+  day,
+  recaps,
+  returnTo,
+}: {
+  day: JournalDay;
+  recaps: Map<string, string>;
+  returnTo: string;
+}) {
+  return (
+    <article>
+      <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.38em] text-[var(--muted)]">
+        THE JOURNAL
+        <span className="px-3">·</span>
+        TODAY
+      </div>
+      <div className="mt-5 flex flex-wrap items-baseline gap-x-5 gap-y-3">
+        <h1 className="text-5xl font-semibold leading-none tracking-[-0.03em] text-[#e6edf3]">
+          {weekdayLabel(day.date)}
+        </h1>
+        <p className="font-mono text-base text-[var(--muted)]">
+          {dayOnlyLabel(day.date)}, {dateYear(day.date)}
+        </p>
+      </div>
+      <div className="mt-4">
+        <MetricLine trades={day.trades} pnl={day.pnl} />
+      </div>
+      <div className="mt-10 grid gap-7 md:grid-cols-[minmax(0,760px)_122px] md:gap-8">
+        <div className="max-w-[760px]">
+          <div className="max-w-4xl text-[18px] font-light leading-8 text-[var(--foreground)]">
+            <RecapNote
+              scope="day"
+              scopeKey={day.date}
+              text={recaps.get(`day:${day.date}`) ?? ""}
+              placeholder={placeholders.day}
+            />
+          </div>
+          <div className="mt-6 space-y-6">
+            {day.trades.filter((trade) => trade.notes.length > 0).map((trade) =>
+              trade.notes.map((note) => (
+                <TradeNoteBlock
+                  key={note.id}
+                  trade={trade}
+                  note={note}
+                  returnTo={returnTo}
+                />
+              )),
+            )}
+          </div>
+        </div>
+        <DailyTickerRail day={day} returnTo={returnTo} />
+      </div>
+    </article>
   );
 }
 
@@ -415,191 +1003,52 @@ export default async function JournalPage({
 }) {
   const filters = parseSearchParams(await searchParams);
   const returnTo = filterHref(filters, {});
-  const [trades, recaps] = await Promise.all([
+  const [trades, recaps, archive] = await Promise.all([
     loadJournalTrades(filters),
     loadRecaps(),
+    loadJournalArchive(filters),
   ]);
   const months = groupJournal(trades, filters);
-  const isWeekView = !filters.date && filters.preset === "week";
-  const emptyDayDate = months.length === 0 && (filters.date || filters.preset === "today")
-    ? dateRangeFor(filters)?.from
-    : undefined;
+  const activePreset = filters.date ? "today" : filters.preset;
+  const selectedRange = dateRangeFor(filters);
+  const selectedDate = selectedRange?.from ?? currentEtDate();
+  const allWeeks = months.flatMap((month) => month.weeks);
+  const allDays = allWeeks.flatMap((week) => week.days);
+  const selectedWeek = allWeeks[0];
+  const selectedDay =
+    allDays[0] ??
+    (activePreset === "today"
+      ? { date: selectedDate, trades: [], pnl: 0, noteCount: 0 }
+      : undefined);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <FilterBar filters={filters} />
-
-      <section className="space-y-4 pt-6">
-        {emptyDayDate ? (
-          <div className="space-y-6">
-            <div className="space-y-3 border-b border-[var(--border)] pb-6">
-              <h2 className="text-2xl font-semibold tracking-tight">
-                {weekdayLabel(emptyDayDate)}
-                {" "}
-                <span className="align-baseline text-2xl font-semibold text-[var(--foreground)]">
-                  {dayOnlyLabel(emptyDayDate)}
-                </span>
-              </h2>
-              <RecapNote
-                scope="day"
-                scopeKey={emptyDayDate}
-                text={recaps.get(`day:${emptyDayDate}`) ?? ""}
-                placeholder="Add a daily note: market read, plan, execution, emotions, what worked, what to fix tomorrow."
-              />
+    <div className="mx-auto grid max-w-7xl gap-10 px-4 pb-24 pt-8 md:grid-cols-[190px_minmax(0,1fr)] lg:gap-14">
+      <JournalSidebar archive={archive} filters={filters} />
+      <main className="min-w-0 w-full max-w-[860px]">
+        <CurrentShortcuts filters={filters} />
+        <section className="mt-10">
+          {activePreset === "today" && selectedDay ? (
+            <DayView day={selectedDay} recaps={recaps} returnTo={returnTo} />
+          ) : activePreset === "week" && selectedWeek ? (
+            <WeekView week={selectedWeek} recaps={recaps} returnTo={returnTo} />
+          ) : months.length > 0 ? (
+            <div className="space-y-20">
+              {months.map((month) => (
+                <MonthView
+                  key={month.key}
+                  month={month}
+                  recaps={recaps}
+                  returnTo={returnTo}
+                />
+              ))}
             </div>
-            <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_max-content] md:gap-x-20">
-              <div className="space-y-4">
-                <p className="text-sm font-semibold text-[var(--muted)]">
-                  No trades for this day.
-                </p>
-              </div>
-
-              <aside className="w-max min-w-36 max-w-full justify-self-end self-start rounded bg-[var(--surface)] px-4 py-3 text-xs">
-                <div className="font-semibold text-[var(--muted)]">No trades</div>
-                <div className="mx-auto mt-3 w-max space-y-1 whitespace-nowrap pt-2 text-center font-semibold">
-                  <div className="grid grid-cols-[max-content_max-content] items-center justify-center gap-x-3">
-                    <span className="text-[var(--muted)]">Accuracy</span>
-                    <span className="tabular-nums">—</span>
-                  </div>
-                  <div className="grid grid-cols-[max-content_max-content] items-center justify-center gap-x-3">
-                    <span className="text-[var(--muted)]">Profit factor</span>
-                    <span className="tabular-nums">—</span>
-                  </div>
-                  <div className="grid grid-cols-[max-content_max-content] items-center justify-center gap-x-3">
-                    <span className="text-[var(--muted)]">P&L</span>
-                    <span className="tabular-nums" style={{ color: profitColor(0) }}>
-                      {fmtMoney(0)}
-                    </span>
-                  </div>
-                </div>
-              </aside>
+          ) : (
+            <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-8 text-center text-sm text-[var(--muted)]">
+              No trades match this journal view yet.
             </div>
-          </div>
-        ) : months.length === 0 ? (
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-8 text-center text-sm text-[var(--muted)]">
-            No trade notes match these filters yet. Add a note from a trade detail page to see it roll up here.
-          </div>
-        ) : (
-          months.map((month) => (
-            <article key={month.key} className="space-y-9">
-              {!isWeekView && (
-                <div className="space-y-3 border-b border-[var(--border)] pb-6">
-                  <h2 className="text-2xl font-semibold tracking-tight">{month.label} · Month Review</h2>
-                  <RecapNote
-                    scope="month"
-                    scopeKey={month.key}
-                    text={recaps.get(`month:${month.key}`) ?? ""}
-                    placeholder="Add a light monthly recap: themes, bigger-picture progress, drawdown context, what carries into next month."
-                  />
-                </div>
-              )}
-
-              <div className="space-y-10">
-                {month.weeks.map((week) => (
-                  <section key={week.key} className="space-y-5">
-                    <div className="space-y-2">
-                      <h3 className={`${isWeekView ? "text-2xl" : "text-xl"} font-semibold`}>
-                        {week.label}
-                        {" - "}
-                        <span className={`align-baseline ${isWeekView ? "text-2xl" : "text-xl"} font-semibold text-[var(--foreground)]`}>
-                          {week.rangeLabel}
-                        </span>
-                      </h3>
-                      <RecapNote
-                        scope="week"
-                        scopeKey={week.key}
-                        text={recaps.get(`week:${week.key}`) ?? ""}
-                        placeholder="Add a short weekly recap: did I keep red days small, what repeated, what to focus on next week."
-                      />
-                    </div>
-
-                    <div className="space-y-8">
-                      {week.days.map((day) => (
-                        <div key={day.date} className="border-t border-[var(--border)] pt-6">
-                          <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_max-content] md:gap-x-20">
-                            <div className="space-y-4">
-                              <div>
-                                <div className="space-y-1">
-                                  <h4 className="text-xl font-semibold">
-                                    {weekdayLabel(day.date)}
-                                    {" "}
-                                    <span className="align-baseline text-xl font-semibold text-[var(--foreground)]">
-                                      {dayOnlyLabel(day.date)}
-                                    </span>
-                                  </h4>
-                                </div>
-                                <div className="mt-2">
-                                  <RecapNote
-                                    scope="day"
-                                    scopeKey={day.date}
-                                    text={recaps.get(`day:${day.date}`) ?? ""}
-                                    placeholder="Add a daily note: market read, plan, execution, emotions, what worked, what to fix tomorrow."
-                                  />
-                                </div>
-                              </div>
-
-                              <div className="space-y-6 pt-4">
-                                {day.trades.filter((trade) => trade.notes.length > 0).map((trade) => (
-                                  <div key={trade.id} className="space-y-2">
-                                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                                      <h5 className="text-lg font-semibold">{trade.symbol}</h5>
-                                      <Link href={`/trades/${trade.id}?returnTo=${encodeURIComponent(returnTo)}`} className="text-sm font-semibold text-[var(--foreground)] hover:underline">
-                                        Link to trade
-                                      </Link>
-                                    </div>
-                                    {trade.notes.map((note) => (
-                                      <TradeJournalNote
-                                        key={note.id}
-                                        noteId={note.id}
-                                        tradeId={trade.id}
-                                        text={note.text}
-                                        emotionalState={note.emotionalState}
-                                      />
-                                    ))}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            <aside className="w-max min-w-36 max-w-full justify-self-end self-start rounded bg-[var(--surface)] px-4 py-3 text-xs">
-                              <div className="space-y-2">
-                                {buildDailySymbolSummary(day.trades).map((row) => (
-                                  <div key={row.symbol} className="grid grid-cols-[max-content_1fr] items-center gap-x-4 whitespace-nowrap">
-                                    <span className="font-semibold text-[var(--foreground)]">{row.symbol}</span>
-                                    <span className="justify-self-end font-semibold tabular-nums" style={{ color: profitColor(row.pnl) }}>
-                                      {fmtMoney(row.pnl)}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                              <div className="mx-auto mt-3 w-max space-y-1 whitespace-nowrap pt-2 text-center font-semibold">
-                                <div className="grid grid-cols-[max-content_max-content] items-center justify-center gap-x-3">
-                                  <span className="text-[var(--muted)]">Accuracy</span>
-                                  <span className="tabular-nums">{dayAccuracy(day.trades)}</span>
-                                </div>
-                                <div className="grid grid-cols-[max-content_max-content] items-center justify-center gap-x-3">
-                                  <span className="text-[var(--muted)]">Profit factor</span>
-                                  <span className="tabular-nums">{dayProfitFactor(day.trades)}</span>
-                                </div>
-                                <div className="grid grid-cols-[max-content_max-content] items-center justify-center gap-x-3">
-                                  <span className="text-[var(--muted)]">P&L</span>
-                                  <span className="tabular-nums" style={{ color: profitColor(day.pnl) }}>
-                                    {fmtMoney(day.pnl)}
-                                  </span>
-                                </div>
-                              </div>
-                            </aside>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                ))}
-              </div>
-            </article>
-          ))
-        )}
-      </section>
+          )}
+        </section>
+      </main>
     </div>
   );
 }
