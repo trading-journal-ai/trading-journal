@@ -146,9 +146,10 @@ Generate a synthetic demo database:
 npm run demo:db -- data/tradingjournaldemo.db
 ```
 
-The demo database uses fake trading activity and journal notes. It is intended
-for screenshots, hosted demos, and contributor onboarding; do not commit real
-broker exports or a personal `data/journal.db`.
+The demo database uses fake `SIMxx` symbols, synthetic trading activity, and
+synthetic journal notes. It is intended for screenshots, hosted demos, and
+contributor onboarding; do not commit real broker exports or a personal
+`data/journal.db`.
 
 ## Hosting A Demo
 

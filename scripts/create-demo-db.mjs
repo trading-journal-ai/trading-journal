@@ -5,23 +5,23 @@ import Database from "better-sqlite3";
 const outputPath = resolve(process.argv[2] ?? "data/tradingjournaldemo.db");
 
 const symbols = [
-  "ADIL",
-  "CCTG",
-  "DSY",
-  "EDHL",
-  "FJET",
-  "GELS",
-  "GLXG",
-  "HKIT",
-  "INHD",
-  "JZXN",
-  "LASE",
-  "NPT",
-  "NVDL",
-  "PPCB",
-  "RUBI",
-  "XOS",
-  "ZJYL",
+  "SIM01",
+  "SIM02",
+  "SIM03",
+  "SIM04",
+  "SIM05",
+  "SIM06",
+  "SIM07",
+  "SIM08",
+  "SIM09",
+  "SIM10",
+  "SIM11",
+  "SIM12",
+  "SIM13",
+  "SIM14",
+  "SIM15",
+  "SIM16",
+  "SIM17",
 ];
 
 const tagNames = [
@@ -65,88 +65,88 @@ const tradeNoteTemplates = [
 
 const dayNotes = [
   "Clean open. Waited for the first pullback instead of chasing the spike, took profits into strength, and kept the afternoon quiet.",
-  "Choppy session. Good reads early, but the middle of the day created a few unnecessary trades. Need to stay patient after the first two setups.",
+  "Choppy session, but risk stayed contained. Good reads early and a few small scratches kept the day from drifting off plan.",
   "Green day with better discipline. Small winners added up because the losses were contained and entries were closer to support.",
-  "Red day. One oversized name erased a lot of good work. Keep red days small and stop after the second avoidable mistake.",
+  "Modest red patch in the middle of the day, handled well. Stopped pressing, reset, and finished with better-quality trades.",
   "Focused session. The best trades came from waiting for volume and trend alignment instead of forcing continuation.",
 ];
 
 const monthNotes = {
-  "2026-02": "February was a baseline month for the demo account: selective entries, small size, and a focus on learning the workflow.",
-  "2026-03": "March introduced more active momentum names. The big lesson was to separate valid continuation from late chasing.",
-  "2026-04": "April improved consistency. Smaller losses and cleaner notes made the review process more useful.",
-  "2026-05": "May was uneven. Accuracy stayed acceptable, but a handful of large losers overwhelmed the smaller wins.",
-  "2026-06": "June recap test: solid week 1, kept red days small. Focus next: avoid overtrading the afternoon chop.",
+  "2026-02": "February was a steady baseline month for the paper account: selective entries, small size, and a focus on building the review workflow.",
+  "2026-03": "March introduced more active momentum names while keeping risk controlled. The best trades came from waiting for confirmation.",
+  "2026-04": "April improved consistency. Smaller losses, cleaner notes, and more patient entries made the review process more useful.",
+  "2026-05": "May was a constructive growth month. A few trades needed review, but the overall process stayed disciplined and profitable.",
+  "2026-06": "June recap test: strong paper-trading progress, green overall, and good evidence that patient entries plus small losses can compound.",
 };
 
 const namedDayPlans = {
   "2026-06-01": [
-    ["JZXN", 0.02, "Good trade"],
-    ["NVDL", 12.98, "Good trade"],
-    ["ZJYL", 6.97, "Needs review"],
-    ["FJET", 2.46, "Good trade"],
-    ["ABTS", 0.95, "Needs review"],
-    ["DBGI", 0.26, "Good trade"],
-    ["CTNT", 0.22, "Good trade"],
-    ["CXDO", 0.18, "Needs review"],
+    ["SIM01", 0.02, "Good trade"],
+    ["SIM02", 12.98, "Good trade"],
+    ["SIM03", 6.97, "Needs review"],
+    ["SIM04", 2.46, "Good trade"],
+    ["SIM05", 0.95, "Needs review"],
+    ["SIM06", 0.26, "Good trade"],
+    ["SIM07", 0.22, "Good trade"],
+    ["SIM08", 0.18, "Needs review"],
   ],
   "2026-06-02": [
-    ["XOS", 40.72, "Best setup"],
-    ["NVDL", 11.31, "Good trade"],
-    ["GXAI", 7.75, "Good trade"],
-    ["ASTC", 6.49, "Good trade"],
-    ["YMAT", 4.35, "Good trade"],
-    ["RKTO", -0.02, "Needs review"],
-    ["LASE", -0.28, "Needs review"],
+    ["SIM09", 40.72, "Best setup"],
+    ["SIM02", 11.31, "Good trade"],
+    ["SIM10", 7.75, "Good trade"],
+    ["SIM11", 6.49, "Good trade"],
+    ["SIM12", 4.35, "Good trade"],
+    ["SIM13", -0.02, "Needs review"],
+    ["SIM14", -0.28, "Needs review"],
   ],
   "2026-06-04": [
-    ["STI", 58.91, "Best setup"],
-    ["VERU", 33.35, "Good trade"],
-    ["LASE", 17.29, "Good trade"],
-    ["QNT", 10.54, "Good trade"],
-    ["BGMS", 5.67, "Good trade"],
-    ["FOXX", 5.51, "Good trade"],
-    ["INIO", 1.79, "Good trade"],
-    ["PPCB", -98.46, "Rule break"],
-    ["GLXG", -76.21, "Revenge trade"],
+    ["SIM15", 58.91, "Best setup"],
+    ["SIM16", 33.35, "Good trade"],
+    ["SIM14", 17.29, "Good trade"],
+    ["SIM17", 10.54, "Good trade"],
+    ["SIM01", 5.67, "Good trade"],
+    ["SIM02", 5.51, "Good trade"],
+    ["SIM03", 1.79, "Good trade"],
+    ["SIM04", -18.46, "Needs review"],
+    ["SIM05", -12.21, "Needs review"],
   ],
   "2026-06-08": [
-    ["NPT", 15.44, "Best setup"],
-    ["INHD", 14.71, "Good trade"],
-    ["SUNE", 8.36, "Good trade"],
-    ["BYAH", 2.91, "Needs review"],
-    ["PN", 0.9, "Good trade"],
+    ["SIM06", 15.44, "Best setup"],
+    ["SIM07", 14.71, "Good trade"],
+    ["SIM08", 8.36, "Good trade"],
+    ["SIM09", 2.91, "Needs review"],
+    ["SIM10", 0.9, "Good trade"],
   ],
   "2026-06-09": [
-    ["PAVS", 23.84, "Good trade"],
-    ["XELB", 15.54, "Good trade"],
-    ["AZI", 11.9, "Good trade"],
-    ["EPSM", -1.75, "Needs review"],
-    ["QTEX", -10.42, "Chased"],
-    ["UK", -12.47, "Chased"],
-    ["AHMA", -29.98, "Rule break"],
-    ["CCTG", -117.6, "Revenge trade"],
+    ["SIM11", 23.84, "Good trade"],
+    ["SIM12", 15.54, "Good trade"],
+    ["SIM13", 11.9, "Good trade"],
+    ["SIM14", -1.75, "Needs review"],
+    ["SIM15", -4.42, "Needs review"],
+    ["SIM16", -5.47, "Needs review"],
+    ["SIM17", -8.98, "Rule break"],
+    ["SIM01", -18.6, "Needs review"],
   ],
   "2026-06-10": [
-    ["DSY", 15.04, "Good trade"],
-    ["BATL", 3.88, "Good trade"],
-    ["VSME", 1.85, "Good trade"],
-    ["FLD", 1.33, "Good trade"],
-    ["CHOW", 0.11, "Needs review"],
+    ["SIM02", 15.04, "Good trade"],
+    ["SIM03", 3.88, "Good trade"],
+    ["SIM04", 1.85, "Good trade"],
+    ["SIM05", 1.33, "Good trade"],
+    ["SIM06", 0.11, "Needs review"],
   ],
   "2026-06-11": [
-    ["ADIL", 14.65, "Good trade"],
-    ["LASE", -0.3, "Needs review"],
-    ["GELS", -1.02, "Needs review"],
-    ["EDHL", -52.65, "Rule break"],
-    ["PPCB", -157.77, "Rule break"],
-    ["GLXG", -287.26, "Rule break"],
+    ["SIM07", 14.65, "Good trade"],
+    ["SIM08", -0.3, "Needs review"],
+    ["SIM09", -1.02, "Needs review"],
+    ["SIM10", -8.65, "Needs review"],
+    ["SIM11", -15.77, "Rule break"],
+    ["SIM12", -22.26, "Rule break"],
   ],
   "2026-06-12": [
-    ["TXMD", 21.3, "Good trade"],
-    ["RILY", 18.44, "Good trade"],
-    ["BBAI", 12.06, "Good trade"],
-    ["NUZE", 6.3, "Good trade"],
+    ["SIM13", 21.3, "Good trade"],
+    ["SIM14", 18.44, "Good trade"],
+    ["SIM15", 12.06, "Good trade"],
+    ["SIM16", 6.3, "Good trade"],
   ],
 };
 
@@ -484,9 +484,11 @@ function buildPlansForDate(date) {
     let symbol = pick(symbols);
     while (used.has(symbol)) symbol = pick(symbols);
     used.add(symbol);
-    const positive = random() > 0.42;
-    const pnl = positive ? round(rand(1.2, 72), 2) : round(-rand(0.8, 135), 2);
-    const label = positive ? (random() > 0.7 ? "Good trade" : "Needs review") : pick(["Needs review", "Rule break", "Chased"]);
+    const positive = random() > 0.28;
+    const pnl = positive ? round(rand(6, 95), 2) : round(-rand(1.5, 32), 2);
+    const label = positive
+      ? (random() > 0.72 ? "Best setup" : "Good trade")
+      : pick(["Needs review", "Needs review", "Rule break"]);
     plans.push([symbol, pnl, label]);
   }
   return plans;
