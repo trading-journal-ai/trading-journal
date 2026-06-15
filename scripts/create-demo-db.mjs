@@ -494,7 +494,7 @@ function buildPlansForDate(date) {
 
 function seed(db) {
   const stmts = buildInsertStatements(db);
-  const accountId = Number(stmts.account.run("Live Account").lastInsertRowid);
+  const accountId = Number(stmts.account.run("Paper Trading").lastInsertRowid);
   const batch = stmts.batch.run(accountId, "executions", "demo_seed", "tradingjournaldemo.seed", 0, easternEpoch("2026-06-14", 18, 0));
   const batchId = Number(batch.lastInsertRowid);
   const tagIds = new Map();
