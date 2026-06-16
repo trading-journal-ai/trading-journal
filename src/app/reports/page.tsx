@@ -578,7 +578,8 @@ function StatCell({ stat }: { stat: Stat }) {
         {countValue ? (
           <span className="inline-flex items-baseline gap-2">
             <span style={{ color: valueColor }}>{countValue[1]}</span>
-            <span className="text-sm font-semibold text-[var(--muted)]">{countValue[2]}</span>
+            <span className="text-sm font-semibold text-[var(--muted)]">/</span>
+            <span className="text-sm font-semibold text-[var(--foreground)]">{countValue[2]}</span>
           </span>
         ) : (
           <span style={{ color: valueColor }}>{stat.value}</span>
