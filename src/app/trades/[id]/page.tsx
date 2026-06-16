@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getActiveAccount } from "@/lib/accountScope";
 import { getCandles } from "@/lib/candles";
+import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
 import TradeChart from "@/components/TradeChart";
 import TradeJournalNote from "@/components/TradeJournalNote";
 import TradeNoteComposer from "@/components/TradeNoteComposer";
 import ReviewHeader from "@/components/ReviewHeader";
 import { fmtDate, fmtMoney, fmtPrice } from "@/lib/format";
 import { decodeJournalTags } from "@/lib/journalLabels";
-import { etDateString } from "@/lib/time";
+import { etDateString, etDayRange } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,16 @@ const timeFmt = new Intl.DateTimeFormat("en-US", {
   hour12: false,
 });
 const fmtTime = (t: number) => timeFmt.format(new Date(t * 1000));
+const shortDateFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  month: "short",
+  day: "numeric",
+});
+
+function shortDateLabel(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  return shortDateFmt.format(new Date(Date.UTC(year, month - 1, day)));
+}
 
 function journalNoteBody(note: typeof schema.journalEntries.$inferSelect): string {
   return note.lessons || note.thesis || "No note text.";
@@ -68,6 +79,29 @@ export default async function TradeDetailPage({
 
   const lastAt = trade.exitAt ?? execs.at(-1)?.executedAt ?? trade.entryAt ?? 0;
   const firstAt = trade.entryAt ?? execs[0]?.executedAt ?? lastAt;
+  const tradeDate = trade.entryAt == null ? undefined : etDateString(trade.entryAt);
+  let tradeOrdinal = 1;
+
+  if (tradeDate) {
+    const { start, end } = etDayRange(tradeDate);
+    const sameDaySymbolTrades = (
+      await db
+        .select({ id: schema.trades.id, entryAt: schema.trades.entryAt })
+        .from(schema.trades)
+        .where(
+          and(
+            eq(schema.trades.accountId, activeAccount.id),
+            eq(schema.trades.symbol, trade.symbol),
+            gte(schema.trades.entryAt, start),
+            lte(schema.trades.entryAt, end),
+          ),
+        )
+        .orderBy(asc(schema.trades.entryAt))
+    ).filter((row) => row.entryAt != null && etDateString(row.entryAt) === tradeDate);
+    const index = sameDaySymbolTrades.findIndex((row) => row.id === trade.id);
+    tradeOrdinal = index >= 0 ? index + 1 : 1;
+  }
+
   const pad = 20 * 60; // 20 minutes either side
   const { candles, error } = await getCandles(trade.symbol, firstAt - pad, lastAt + pad);
 
@@ -98,14 +132,26 @@ export default async function TradeDetailPage({
       className: perShareClass,
     },
   ];
+  const originCrumb = originCrumbFromHref(backHref, "/trades");
+  const sectionCrumbs = originCrumb.label === "Trades" ? [] : [{ label: "Trades", href: "/trades" }];
+  const tickerScope =
+    tradeDate == null
+      ? []
+      : [
+          {
+            label: `${trade.symbol} · ${shortDateLabel(tradeDate)}`,
+            href: `/trades/review?date=${tradeDate}&symbol=${trade.symbol}&returnTo=${encodeURIComponent(originCrumb.href ?? "/trades")}`,
+          },
+        ];
 
   return (
     <div className="mx-auto max-w-[1180px]">
-      <div className="mb-12">
-        <Link href={backHref} className="inline-flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]">
-          Back
-        </Link>
-      </div>
+      <Breadcrumbs
+        back={originCrumb}
+        items={[...sectionCrumbs, ...tickerScope]}
+        current={`Trade ${tradeOrdinal}`}
+        className="mb-12"
+      />
 
       <div className="mb-7">
         <ReviewHeader
@@ -154,69 +200,55 @@ export default async function TradeDetailPage({
           )}
         </div>
 
-        <aside className="space-y-4">
-          <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-            Trade Note
-          </h2>
-
-          {notes.length > 0 ? (
-            <div className="space-y-6">
-              {notes.map((note) => {
-                return (
-                  <TradeJournalNote
-                    key={note.id}
-                    noteId={note.id}
-                    tradeId={trade.id}
-                    symbol={trade.symbol}
-                    text={journalNoteBody(note)}
-                    primaryLabel={note.emotionalState}
-                    processTags={decodeJournalTags(note.whatWentWell)}
-                    emotionTags={decodeJournalTags(note.whatWentWrong)}
-                    showHeader
-                    showFormHeader
-                  />
-                );
-              })}
-            </div>
-          ) : (
-            <TradeNoteComposer tradeId={trade.id} symbol={trade.symbol} />
-          )}
-        </aside>
-      </section>
-
-      <section className="max-w-[760px]">
-        <h2 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wide mb-2">
-          Executions
-        </h2>
-        <div className="overflow-x-auto border-y border-[var(--hairline)]">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--hairline)] text-left font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
-                {["Time (ET)", "Side", "Shares", "Price", "Effect"].map((c) => (
-                  <th key={c} className="px-3 py-3 font-semibold">
-                    {c}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
+        <aside className="space-y-8">
+          <section aria-label="Executions" className="border-b border-[var(--hairline)] pb-6">
+            <div className="grid grid-cols-4 gap-x-2 gap-y-2 font-mono text-[12px]">
+              <div className="pb-1 text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Time</div>
+              <div className="pb-1 text-center text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Side</div>
+              <div className="pb-1 text-center text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Shares</div>
+              <div className="pb-1 text-right text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Price</div>
               {execs.map((e) => (
-                <tr key={e.id}>
-                  <td className="px-3 py-2 tabular-nums">{fmtTime(e.executedAt)}</td>
-                  <td
-                    className="px-3 py-2"
-                    style={{ color: e.side === "buy" ? "var(--green)" : "var(--red)" }}
-                  >
-                    {e.side.toUpperCase()}
-                  </td>
-                  <td className="px-3 py-2 tabular-nums">{e.quantity.toLocaleString()}</td>
-                  <td className="px-3 py-2 tabular-nums">{fmtPrice(e.price)}</td>
-                  <td className="px-3 py-2 text-[var(--muted)]">{e.posEffect ?? "—"}</td>
-                </tr>
+                <div key={e.id} className="contents">
+                  <div className="tabular-nums text-[var(--foreground)]">{fmtTime(e.executedAt).slice(0, 5)}</div>
+                  <div className="text-center" style={{ color: e.side === "buy" ? "var(--green)" : "var(--red)" }}>
+                    {e.side.toUpperCase().slice(0, 1)}
+                  </div>
+                  <div className="text-center tabular-nums text-[var(--foreground)]">{e.quantity.toLocaleString()}</div>
+                  <div className="text-right tabular-nums text-[var(--foreground)]">{fmtPrice(e.price)}</div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
+              Trade Note
+            </h2>
+
+            {notes.length > 0 ? (
+              <div className="space-y-6">
+                {notes.map((note) => {
+                  return (
+                    <TradeJournalNote
+                      key={note.id}
+                      noteId={note.id}
+                      tradeId={trade.id}
+                      symbol={trade.symbol}
+                      text={journalNoteBody(note)}
+                      primaryLabel={note.emotionalState}
+                      processTags={decodeJournalTags(note.whatWentWell)}
+                      emotionTags={decodeJournalTags(note.whatWentWrong)}
+                      showHeader
+                      showFormHeader
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <TradeNoteComposer tradeId={trade.id} symbol={trade.symbol} />
+            )}
+          </section>
+        </aside>
       </section>
     </div>
   );

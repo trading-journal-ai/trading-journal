@@ -179,13 +179,11 @@ function StatsTable({ rows }: { rows: MockStat[][] }) {
 function HybridTreatment() {
   return (
     <TreatmentShell kicker="Treatment C" title="Paired diagnostic scan">
-      <div>
+      <div className="grid gap-[2px] overflow-hidden rounded bg-black p-[2px]">
         {pairedStatGroups.map((group, groupIndex) => (
           <PairedStatGroup
             key={groupIndex}
             rows={group}
-            isFirst={groupIndex === 0}
-            isLast={groupIndex === pairedStatGroups.length - 1}
           />
         ))}
       </div>
@@ -193,24 +191,18 @@ function HybridTreatment() {
   );
 }
 
-function PairedStatGroup({ rows, isFirst, isLast }: { rows: MockStat[][]; isFirst: boolean; isLast: boolean }) {
+function PairedStatGroup({ rows }: { rows: MockStat[][] }) {
   return (
-    <div className={isFirst ? "border-t border-[var(--hairline)]" : ""}>
+    <div className="grid gap-[2px]">
       {rows.map((row, rowIndex) => (
         <div
           key={rowIndex}
-          className={`grid md:grid-cols-2 ${
-            isLast && rowIndex === rows.length - 1 ? "" : "border-b border-[var(--hairline)]"
-          }`}
+          className="grid gap-[2px] md:grid-cols-2"
         >
-          {row.map((stat, statIndex) => (
+          {row.map((stat) => (
             <div
               key={stat.label}
-              className={`min-h-14 py-3 ${
-                statIndex === 0
-                  ? "pl-12 pr-12 md:border-r md:border-[var(--hairline)]"
-                  : "pl-12 pr-12"
-              }`}
+              className="flex min-h-14 items-center bg-[#14171a] px-12 py-3"
             >
               <StatCell stat={stat} compact />
             </div>

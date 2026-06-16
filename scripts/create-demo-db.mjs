@@ -1,4 +1,4 @@
-import { mkdirSync, unlinkSync } from "node:fs";
+import { existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import Database from "better-sqlite3";
 
@@ -35,41 +35,28 @@ const tagNames = [
   "Needs review",
 ];
 
-const tradeNoteTemplates = [
-  {
-    label: "Good trade",
-    tags: ["Followed plan", "Patient", "Let winner work", "Calm"],
-    text: "Waited for confirmation instead of chasing the first spike. Entry was clean, risk was defined, and partials came into strength.",
-  },
-  {
-    label: "Best setup",
-    tags: ["Followed plan", "Focused", "Sized correctly", "Confident"],
-    text: "Textbook setup with volume, structure, and a clean reclaim. This is the version of the trade to repeat.",
-  },
-  {
-    label: "Needs review",
-    tags: ["Focused", "Took profits early"],
-    text: "The idea was valid, but I exited before the move had time to develop. Review whether the stop placement gave the trade enough room.",
-  },
-  {
-    label: "Rule break",
-    tags: ["Oversized", "Moved stop", "Frustrated"],
-    text: "Position size got ahead of the setup and the stop moved after entry. This is exactly the type of trade the journal should catch.",
-  },
-  {
-    label: "Revenge trade",
-    tags: ["Added to loser", "Forced trade", "Tilted"],
-    text: "Took the next entry to make back the prior loss instead of waiting for a fresh setup. The loss was avoidable.",
-  },
-];
-
-const dayNotes = [
-  "Clean open. Waited for the first pullback instead of chasing the spike, took profits into strength, and kept the afternoon quiet.",
-  "Choppy session, but risk stayed contained. Good reads early and a few small scratches kept the day from drifting off plan.",
-  "Green day with better discipline. Small winners added up because the losses were contained and entries were closer to support.",
-  "Modest red patch in the middle of the day, handled well. Stopped pressing, reset, and finished with better-quality trades.",
-  "Focused session. The best trades came from waiting for volume and trend alignment instead of forcing continuation.",
-];
+const tradeNoteTemplates = {
+  best: [
+    "Best execution of the day. Waited for the pullback, entered close to support, and let the move work before taking profit.",
+    "Cleanest setup on the sheet. Volume confirmed the move and the entry gave enough room to sit through the first shake.",
+    "This was the trade to model. The idea was simple, risk was clear, and the exit came into strength instead of panic.",
+  ],
+  good: [
+    "Good trade. Took the setup without chasing and kept the exit process controlled.",
+    "Solid execution. The entry was not perfect, but the trade stayed inside the plan and the loss risk was contained early.",
+    "Useful winner. The move was not huge, but patience and clean sizing made the trade worth taking.",
+  ],
+  review: [
+    "Needs review. The setup had a reason, but the entry was late enough that risk expanded quickly.",
+    "Review this one for timing. The trade was close to working, but the entry did not leave much room for normal chop.",
+    "Not a disaster, but not clean. Worth checking whether the trade was based on structure or just momentum.",
+  ],
+  mistake: [
+    "Process mistake. Size was too large for the quality of the setup, and the loss should have been smaller.",
+    "Bad trade to study. The entry came after the easy move and the stop was not respected quickly enough.",
+    "This is the one to reduce next time. The idea may have been valid, but the execution turned a normal loss into a bigger one.",
+  ],
+};
 
 const monthNotes = {
   "2026-02": "February was a steady baseline month for the paper account: selective entries, small size, and a focus on building the review workflow.",
@@ -77,77 +64,6 @@ const monthNotes = {
   "2026-04": "April improved consistency. Smaller losses, cleaner notes, and more patient entries made the review process more useful.",
   "2026-05": "May was a constructive growth month. A few trades needed review, but the overall process stayed disciplined and profitable.",
   "2026-06": "June recap test: strong paper-trading progress, green overall, and good evidence that patient entries plus small losses can compound.",
-};
-
-const namedDayPlans = {
-  "2026-06-01": [
-    ["SIM01", 0.02, "Good trade"],
-    ["SIM02", 12.98, "Good trade"],
-    ["SIM03", 6.97, "Needs review"],
-    ["SIM04", 2.46, "Good trade"],
-    ["SIM05", 0.95, "Needs review"],
-    ["SIM06", 0.26, "Good trade"],
-    ["SIM07", 0.22, "Good trade"],
-    ["SIM08", 0.18, "Needs review"],
-  ],
-  "2026-06-02": [
-    ["SIM09", 40.72, "Best setup"],
-    ["SIM02", 11.31, "Good trade"],
-    ["SIM10", 7.75, "Good trade"],
-    ["SIM11", 6.49, "Good trade"],
-    ["SIM12", 4.35, "Good trade"],
-    ["SIM13", -0.02, "Needs review"],
-    ["SIM14", -0.28, "Needs review"],
-  ],
-  "2026-06-04": [
-    ["SIM15", 58.91, "Best setup"],
-    ["SIM16", 33.35, "Good trade"],
-    ["SIM14", 17.29, "Good trade"],
-    ["SIM17", 10.54, "Good trade"],
-    ["SIM01", 5.67, "Good trade"],
-    ["SIM02", 5.51, "Good trade"],
-    ["SIM03", 1.79, "Good trade"],
-    ["SIM04", -18.46, "Needs review"],
-    ["SIM05", -12.21, "Needs review"],
-  ],
-  "2026-06-08": [
-    ["SIM06", 15.44, "Best setup"],
-    ["SIM07", 14.71, "Good trade"],
-    ["SIM08", 8.36, "Good trade"],
-    ["SIM09", 2.91, "Needs review"],
-    ["SIM10", 0.9, "Good trade"],
-  ],
-  "2026-06-09": [
-    ["SIM11", 23.84, "Good trade"],
-    ["SIM12", 15.54, "Good trade"],
-    ["SIM13", 11.9, "Good trade"],
-    ["SIM14", -1.75, "Needs review"],
-    ["SIM15", -4.42, "Needs review"],
-    ["SIM16", -5.47, "Needs review"],
-    ["SIM17", -8.98, "Rule break"],
-    ["SIM01", -18.6, "Needs review"],
-  ],
-  "2026-06-10": [
-    ["SIM02", 15.04, "Good trade"],
-    ["SIM03", 3.88, "Good trade"],
-    ["SIM04", 1.85, "Good trade"],
-    ["SIM05", 1.33, "Good trade"],
-    ["SIM06", 0.11, "Needs review"],
-  ],
-  "2026-06-11": [
-    ["SIM07", 14.65, "Good trade"],
-    ["SIM08", -0.3, "Needs review"],
-    ["SIM09", -1.02, "Needs review"],
-    ["SIM10", -8.65, "Needs review"],
-    ["SIM11", -15.77, "Rule break"],
-    ["SIM12", -22.26, "Rule break"],
-  ],
-  "2026-06-12": [
-    ["SIM13", 21.3, "Good trade"],
-    ["SIM14", 18.44, "Good trade"],
-    ["SIM15", 12.06, "Good trade"],
-    ["SIM16", 6.3, "Good trade"],
-  ],
 };
 
 function seededRandom(seed) {
@@ -352,146 +268,507 @@ function buildInsertStatements(db) {
   };
 }
 
-function createCandles(stmts, symbol, date, tradePlans) {
-  let price = rand(1.4, 9.5);
-  const impulses = tradePlans.map((plan) => ({
-    center: Math.max(20, Math.min(360, plan.minute)),
-    strength: plan.pnl >= 0 ? rand(0.03, 0.09) : -rand(0.03, 0.09),
-  }));
-
-  for (let minute = 0; minute <= 390; minute += 1) {
-    const t = easternEpoch(date, 9, 30 + minute);
-    const open = price;
-    let drift = rand(-0.018, 0.018);
-    for (const impulse of impulses) {
-      const distance = Math.abs(minute - impulse.center);
-      if (distance < 12) {
-        drift += impulse.strength * (1 - distance / 12);
-      }
-    }
-    const close = Math.max(0.2, open + drift);
-    const high = Math.max(open, close) + rand(0.005, 0.06);
-    const low = Math.max(0.1, Math.min(open, close) - rand(0.005, 0.06));
-    const nearTrade = impulses.some((impulse) => Math.abs(minute - impulse.center) < 10);
-    const volume = Math.round(rand(900, 6000) * (nearTrade ? rand(4, 16) : 1));
-    stmts.candle.run(symbol, t, round(open), round(high), round(low), round(close), volume);
-    price = close;
-  }
-}
-
 function round(value, decimals = 4) {
   return Number(value.toFixed(decimals));
 }
 
-function createTrade(stmts, accountId, batchId, tagIds, date, plan, sequence) {
-  const [symbol, targetPnl, label] = plan;
-  const minute = randInt(18, 340);
-  const entryAt = easternEpoch(date, 9, 30 + minute, randInt(0, 40));
-  const holdSeconds = randInt(25, 24 * 60);
-  const exitAt = entryAt + holdSeconds;
-  const quantity = targetPnl > 20 ? pick([200, 300, 500, 800, 1000]) : pick([10, 50, 100, 200, 300]);
-  const side = random() > 0.18 ? "long" : "short";
-  const entry = round(rand(1.3, 12), 4);
-  const perShareMove = targetPnl / quantity;
-  const exit = side === "long" ? round(entry + perShareMove, 4) : round(entry - perShareMove, 4);
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function splitQuantity(quantity) {
+  if (quantity < 100 || random() < 0.45) return [quantity];
+  const first = Math.max(1, Math.round(quantity * rand(0.35, 0.7)));
+  return [first, quantity - first].filter((qty) => qty > 0);
+}
+
+function weightedAverage(parts) {
+  const quantity = parts.reduce((sum, part) => sum + part.quantity, 0);
+  if (quantity === 0) return 0;
+  return round(parts.reduce((sum, part) => sum + part.quantity * part.price, 0) / quantity, 4);
+}
+
+function median(values) {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
+}
+
+function splitTemplateSessions(rows) {
+  const sessions = [];
+  let current = [];
+  let lastSymbol = "";
+  let lastTime = 0;
+
+  for (const row of rows) {
+    const gap = row.t - lastTime;
+    if (row.symbol !== lastSymbol || gap > 20 * 60 || gap < 0) {
+      if (current.length >= 180) sessions.push(current);
+      current = [];
+    }
+    current.push(row);
+    lastSymbol = row.symbol;
+    lastTime = row.t;
+  }
+
+  if (current.length >= 180) sessions.push(current);
+  return sessions;
+}
+
+function createFallbackSession(seedOffset) {
+  const candles = [];
+  let price = rand(1.6, 8.8);
+  const trend = rand(-0.00035, 0.00055) + seedOffset * 0.00003;
+  const firstSpike = randInt(35, 95);
+  const secondSpike = randInt(145, 255);
+
+  for (let index = 0; index <= 390; index += 1) {
+    const open = price;
+    const wave = Math.sin(index / rand(18, 32)) * rand(0.0003, 0.0018);
+    const firstImpulse = Math.max(0, 1 - Math.abs(index - firstSpike) / 26) * rand(0.0015, 0.0055);
+    const secondImpulse = Math.max(0, 1 - Math.abs(index - secondSpike) / 34) * rand(-0.0045, 0.005);
+    const drift = trend + wave + firstImpulse + secondImpulse + rand(-0.0028, 0.0028);
+    const close = Math.max(0.2, open * (1 + drift));
+    const wick = Math.max(0.008, Math.abs(close - open) * rand(0.25, 0.95) + rand(0.002, 0.035));
+    const high = Math.max(open, close) + wick;
+    const low = Math.max(0.1, Math.min(open, close) - wick);
+    const nearImpulse = Math.abs(index - firstSpike) < 22 || Math.abs(index - secondSpike) < 28;
+    const vol = Math.round(rand(600, 4200) * (nearImpulse ? rand(4, 18) : rand(0.4, 1.8)));
+    candles.push({ t: index, o: round(open), h: round(high), l: round(low), c: round(close), vol });
+    price = close;
+  }
+
+  return candles;
+}
+
+function loadTemplateSessions() {
+  const templatePath = resolve(process.env.DEMO_TEMPLATE_DB ?? "data/journal.db");
+  if (!existsSync(templatePath)) {
+    return Array.from({ length: 8 }, (_, index) => createFallbackSession(index));
+  }
+
+  try {
+    const source = new Database(templatePath, { readonly: true, fileMustExist: true });
+    const rows = source
+      .prepare(`
+        SELECT symbol, t, o, h, l, c, vol
+        FROM candles
+        WHERE timeframe = '1m'
+        ORDER BY symbol, t
+      `)
+      .all();
+    source.close();
+
+    const sessions = splitTemplateSessions(rows).filter((session) => session.length >= 240);
+    if (sessions.length > 0) return sessions;
+  } catch {
+    // Fall back to generated sessions when the local private DB is not present.
+  }
+
+  return Array.from({ length: 8 }, (_, index) => createFallbackSession(index));
+}
+
+function transformedPrice(value, anchor, base, amplitude, index) {
+  const safeValue = Math.max(0.01, value);
+  const safeAnchor = Math.max(0.01, anchor);
+  const ratio = safeValue / safeAnchor;
+  const drift = 1 + index * rand(-0.00002, 0.000025);
+  return Math.max(0.18, base * ratio ** amplitude * drift);
+}
+
+function buildDemoCandles(template, date) {
+  const sessionLength = Math.min(391, template.length);
+  const maxStart = Math.max(0, template.length - sessionLength);
+  const start = maxStart > 0 ? randInt(0, maxStart) : 0;
+  const source = template.slice(start, start + sessionLength);
+  const anchor = source[0]?.c || source[0]?.o || 1;
+  const base = rand(1.35, 9.4);
+  const amplitude = rand(0.55, 0.95);
+  const sourceVolumes = source.map((candle) => Math.max(0, Number(candle.vol) || 0));
+  const sourceMedianVolume = Math.max(1, median(sourceVolumes));
+  const volumeBase = rand(1_200, 7_500);
+
+  return source.map((candle, index) => {
+    const open = transformedPrice(candle.o, anchor, base, amplitude, index);
+    const close = transformedPrice(candle.c, anchor, base, amplitude, index);
+    const highRaw = transformedPrice(candle.h, anchor, base, amplitude, index);
+    const lowRaw = transformedPrice(candle.l, anchor, base, amplitude, index);
+    const high = Math.max(open, close, highRaw) + rand(0.001, 0.018);
+    const low = Math.max(0.05, Math.min(open, close, lowRaw) - rand(0.001, 0.018));
+    const relativeVol = clamp((Number(candle.vol) || 0) / sourceMedianVolume, 0.08, 18);
+    const volume = Math.round(volumeBase * relativeVol * rand(0.72, 1.28));
+
+    return {
+      t: easternEpoch(date, 9, 30 + index),
+      o: round(open),
+      h: round(high),
+      l: round(low),
+      c: round(close),
+      vol: volume,
+    };
+  });
+}
+
+function insertCandles(stmts, symbol, candles) {
+  for (const candle of candles) {
+    stmts.candle.run(symbol, candle.t, candle.o, candle.h, candle.l, candle.c, candle.vol);
+  }
+}
+
+function planLabel(win, standout = false) {
+  if (win) return standout || random() > 0.72 ? "Best setup" : "Good trade";
+  return pick(["Needs review", "Needs review", "Rule break", "Revenge trade"]);
+}
+
+function chooseRedDays(dates) {
+  const target = Math.round(dates.length * 0.2);
+  const weekdayCounts = new Map();
+  const selectedWeeks = new Set();
+  const selected = new Set();
+  const candidates = [...dates].sort(() => random() - 0.5);
+
+  for (const date of candidates) {
+    if (selected.size >= target) break;
+    const day = weekday(date);
+    const week = weekStart(date);
+    const dayCount = weekdayCounts.get(day) ?? 0;
+    const previousDate = addDays(date, -1);
+    const nextDate = addDays(date, 1);
+
+    if (dayCount >= Math.ceil(target / 5) + 1) continue;
+    if (selectedWeeks.has(week) && selected.size < target - 2) continue;
+    if (selected.has(previousDate) || selected.has(nextDate)) continue;
+
+    selected.add(date);
+    selectedWeeks.add(week);
+    weekdayCounts.set(day, dayCount + 1);
+  }
+
+  for (const date of candidates) {
+    if (selected.size >= target) break;
+    selected.add(date);
+  }
+
+  return selected;
+}
+
+function buildPlansForDate(date, index, redDay) {
+  const count = randInt(2, 7);
+  const winCount = clamp(Math.round(count * (redDay ? 0.36 : 0.65)), 1, count - (redDay ? 1 : 0));
+  const outcomes = Array.from({ length: count }, (_, tradeIndex) => tradeIndex < winCount);
+  outcomes.sort(() => random() - 0.5);
+
+  const daySymbols = [];
+  const uniqueCount = Math.max(1, Math.min(count, randInt(Math.ceil(count / 2), count)));
+  const start = (index * 3) % symbols.length;
+  for (let i = 0; i < uniqueCount; i += 1) {
+    daySymbols.push(symbols[(start + i * 2) % symbols.length]);
+  }
+
+  return outcomes.map((win, tradeIndex) => ({
+    symbol: daySymbols[tradeIndex % daySymbols.length],
+    win,
+    label: planLabel(win, tradeIndex === 0 && !redDay),
+    redDay,
+  }));
+}
+
+function chooseTradeWindow(candles, desiredWin, usedWindows) {
+  const maxEntry = Math.max(35, candles.length - 35);
+  const candidates = [];
+  const targetScore = desiredWin ? rand(0.008, 0.035) : rand(0.004, 0.022);
+
+  for (let entryIndex = 18; entryIndex <= maxEntry; entryIndex += 1) {
+    for (let hold = 3; hold <= 28; hold += 1) {
+      const exitIndex = Math.min(candles.length - 6, entryIndex + hold);
+      if (exitIndex <= entryIndex) continue;
+
+      const overlaps = usedWindows.some(([start, end]) => entryIndex <= end + 3 && exitIndex >= start - 3);
+      if (overlaps) continue;
+
+      const entry = candles[entryIndex].c;
+      const exit = candles[exitIndex].c;
+      const change = exit - entry;
+      const directional = desiredWin ? change > 0 : change < 0;
+      if (!directional) continue;
+
+      const move = Math.abs(change);
+      const minMove = Math.max(0.008, entry * 0.0025);
+      if (move < minMove) continue;
+      const moveScore = move / entry;
+      if (moveScore > 0.12) continue;
+
+      candidates.push({
+        entryIndex,
+        exitIndex,
+        score: Math.abs(moveScore - targetScore) + random() * 0.002,
+      });
+    }
+  }
+
+  if (candidates.length > 0) {
+    candidates.sort((a, b) => a.score - b.score);
+    const chosen = pick(candidates.slice(0, Math.min(16, candidates.length)));
+    usedWindows.push([chosen.entryIndex, chosen.exitIndex]);
+    return { entryIndex: chosen.entryIndex, exitIndex: chosen.exitIndex };
+  }
+
+  const fallbackEntry = randInt(20, Math.max(21, candles.length - 45));
+  const fallbackExit = Math.min(candles.length - 5, fallbackEntry + randInt(5, 22));
+  usedWindows.push([fallbackEntry, fallbackExit]);
+  return { entryIndex: fallbackEntry, exitIndex: fallbackExit };
+}
+
+function priceInCandle(candle, preferred, nudge = 0) {
+  const span = Math.max(0.004, candle.h - candle.l);
+  return round(clamp(preferred + nudge, candle.l + span * 0.08, candle.h - span * 0.08), 4);
+}
+
+function buildExecutionParts(candles, index, totalQuantity, preferredPrice, direction) {
+  const partials = splitQuantity(totalQuantity);
+  return partials.map((quantity, partialIndex) => {
+    const candle = candles[Math.min(candles.length - 1, index + partialIndex)];
+    const nudge = direction * rand(0, Math.max(0.002, (candle.h - candle.l) * 0.12));
+    return {
+      quantity,
+      price: priceInCandle(candle, preferredPrice, nudge),
+      executedAt: candle.t + 7 + partialIndex * 8 + randInt(0, 8),
+      candle,
+    };
+  });
+}
+
+function createTradeFromCandles(stmts, accountId, batchId, tagIds, date, plan, candles, usedWindows, sequence) {
+  const { entryIndex, exitIndex } = chooseTradeWindow(candles, plan.win, usedWindows);
+  const entryCandle = candles[entryIndex];
+  const exitCandle = candles[exitIndex];
+  const side = "long";
+  const quantity = plan.win
+    ? pick(plan.redDay ? [50, 100, 150, 200] : [100, 150, 200, 300, 500])
+    : pick(plan.redDay ? [200, 300, 400, 500, 700] : [25, 50, 75, 100, 150]);
+  const entryPreferred = entryCandle.c;
+  const exitPreferred = exitCandle.c;
+  const entryParts = buildExecutionParts(candles, entryIndex, quantity, entryPreferred, -0.35);
+  const exitParts = buildExecutionParts(candles, exitIndex, quantity, exitPreferred, plan.win ? 0.35 : -0.35);
+  const avgEntry = weightedAverage(entryParts);
+  const avgExit = weightedAverage(exitParts);
+  let actualPnl = (avgExit - avgEntry) * quantity;
+
+  if ((plan.win && actualPnl <= 0) || (!plan.win && actualPnl >= 0)) {
+    const adjustedExit = avgEntry + Math.max(0.01, avgEntry * 0.004) * (plan.win ? 1 : -1);
+    exitParts.forEach((part) => {
+      part.price = priceInCandle(part.candle, adjustedExit);
+    });
+    actualPnl = (weightedAverage(exitParts) - avgEntry) * quantity;
+  }
+
+  const finalAvgExit = weightedAverage(exitParts);
+  const entryAt = entryParts[0].executedAt;
+  const exitAt = exitParts.at(-1).executedAt;
+  const perShareRisk = Math.max(0.02, Math.abs(finalAvgExit - avgEntry));
+  const stopLoss = avgEntry - perShareRisk * 0.85;
+  const target = avgEntry + perShareRisk * 1.65;
   const createdAt = entryAt - randInt(60, 240);
   const tradeInfo = stmts.trade.run(
     accountId,
-    symbol,
+    plan.symbol,
     side,
     quantity,
-    entry,
+    avgEntry,
     entryAt,
-    exit,
+    finalAvgExit,
     exitAt,
     0,
-    round(entry - Math.abs(perShareMove) * 1.7, 4),
-    round(entry + Math.abs(perShareMove) * 2.4, 4),
+    round(stopLoss),
+    round(target),
     pick(tagNames),
     "closed",
     createdAt,
     exitAt,
   );
   const tradeId = Number(tradeInfo.lastInsertRowid);
-  const openingSide = side === "long" ? "buy" : "sell";
-  const closingSide = side === "long" ? "sell" : "buy";
-  const entryPartials = random() > 0.7 ? [Math.floor(quantity / 2), quantity - Math.floor(quantity / 2)] : [quantity];
-  const exitPartials = random() > 0.45 ? [Math.floor(quantity / 2), quantity - Math.floor(quantity / 2)] : [quantity];
+  const openingSide = "buy";
+  const closingSide = "sell";
 
-  entryPartials.forEach((qty, index) => {
+  entryParts.forEach((part, index) => {
     stmts.execution.run(
       accountId,
-      symbol,
+      plan.symbol,
       openingSide,
-      qty,
-      round(entry + rand(-0.006, 0.006), 4),
-      entryAt + index * 5,
+      part.quantity,
+      part.price,
+      part.executedAt,
       0,
       "DEMO",
       "TO OPEN",
       tradeId,
       batchId,
-      `demo|${date}|${symbol}|${sequence}|open|${index}`,
+      `demo|${date}|${plan.symbol}|${sequence}|open|${index}`,
     );
   });
 
-  exitPartials.forEach((qty, index) => {
+  exitParts.forEach((part, index) => {
     stmts.execution.run(
       accountId,
-      symbol,
+      plan.symbol,
       closingSide,
-      qty,
-      round(exit + rand(-0.006, 0.006), 4),
-      exitAt + index * 6,
+      part.quantity,
+      part.price,
+      part.executedAt,
       0,
       "DEMO",
       "TO CLOSE",
       tradeId,
       batchId,
-      `demo|${date}|${symbol}|${sequence}|close|${index}`,
+      `demo|${date}|${plan.symbol}|${sequence}|close|${index}`,
     );
   });
 
   const tagId = tagIds.get(pick(tagNames));
   if (tagId) stmts.tradeTag.run(tradeId, tagId);
 
-  if (random() > 0.58 || Object.hasOwn(namedDayPlans, date)) {
-    const template = tradeNoteTemplates.find((item) => item.label === label) ?? pick(tradeNoteTemplates);
-    stmts.journal.run(
-      accountId,
-      tradeId,
-      "trade",
-      date,
-      template.text,
-      JSON.stringify(template.tags),
-      null,
-      "Use this note to connect the chart, the execution, and the daily journal review.",
-      template.label === "Good trade" || template.label === "Best setup" ? 1 : 0,
-      template.label,
-      exitAt + 60,
-    );
-  }
-
-  return { symbol, minute, pnl: targetPnl };
+  return {
+    tradeId,
+    symbol: plan.symbol,
+    pnl: round(actualPnl, 2),
+    quantity,
+    entryAt,
+    exitAt,
+    label: plan.label,
+    redDay: plan.redDay,
+  };
 }
 
-function buildPlansForDate(date) {
-  if (namedDayPlans[date]) return namedDayPlans[date];
-  const count = randInt(5, 12);
-  const used = new Set();
-  const plans = [];
-  for (let index = 0; index < count; index += 1) {
-    let symbol = pick(symbols);
-    while (used.has(symbol)) symbol = pick(symbols);
-    used.add(symbol);
-    const positive = random() > 0.28;
-    const pnl = positive ? round(rand(6, 95), 2) : round(-rand(1.5, 32), 2);
-    const label = positive
-      ? (random() > 0.72 ? "Best setup" : "Good trade")
-      : pick(["Needs review", "Needs review", "Rule break"]);
-    plans.push([symbol, pnl, label]);
+function daySummary(results) {
+  const pnl = round(results.reduce((sum, result) => sum + result.pnl, 0), 2);
+  const winners = results.filter((result) => result.pnl > 0).sort((a, b) => b.pnl - a.pnl);
+  const losers = results.filter((result) => result.pnl < 0).sort((a, b) => a.pnl - b.pnl);
+  const accuracy = results.length === 0 ? 0 : Math.round((winners.length / results.length) * 100);
+  return { pnl, winners, losers, accuracy };
+}
+
+function dailyReviewText(results) {
+  const summary = daySummary(results);
+  const best = summary.winners[0];
+  const worst = summary.losers[0];
+
+  if (summary.pnl > 0 && summary.accuracy >= 60) {
+    return pick([
+      `${summary.accuracy}% accuracy and green on the day. The best trade was ${best?.symbol ?? "the morning setup"}; the main takeaway is that patient entries kept the losses small enough for the winners to matter.`,
+      `Good day overall. A few trades were not perfect, but the larger winners did the work and the smaller scratches kept the session controlled.`,
+      `Strong session. The read was clearest when volume expanded with the trend, and the day stayed green because the weaker attempts were cut quickly.`,
+    ]);
   }
-  return plans;
+
+  if (summary.pnl > 0) {
+    return pick([
+      `Green day, but it took some work. ${best?.symbol ?? "The best setup"} carried the session while a couple of entries still need review for timing.`,
+      `Finished green despite some chop. The important part is that the red trades stayed manageable and did not turn into a bigger emotional reset.`,
+      `Positive result with mixed execution. Worth reviewing the weaker entries, but the day still showed good restraint after the first few trades.`,
+    ]);
+  }
+
+  if (summary.pnl < 0) {
+    return pick([
+      `Red day. The loss stayed contained, but ${worst?.symbol ?? "the biggest loser"} needs a closer look because the entry did not leave enough room for normal volatility.`,
+      `Small red day and a useful review session. The best response was stopping the damage instead of pressing for a full recovery.`,
+      `The market was choppy and the entries were not clean enough. Main focus tomorrow is waiting for confirmation and keeping size smaller until the setup is obvious.`,
+    ]);
+  }
+
+  return "Flat day. Nothing dramatic, which is useful in its own way: stay patient, review the entries, and keep the next session simple.";
+}
+
+function tradeNoteFor(result, role) {
+  if (role === "best") {
+    return {
+      label: "Best setup",
+      tags: ["Followed plan", "Patient", "Let winner work", "Confident"],
+      text: pick(tradeNoteTemplates.best),
+      lesson: "Repeat this setup when volume, structure, and risk line up.",
+    };
+  }
+
+  if (role === "good") {
+    return {
+      label: "Good trade",
+      tags: ["Followed plan", "Focused", "Sized correctly"],
+      text: pick(tradeNoteTemplates.good),
+      lesson: "Keep this as a reference for clean execution without overcomplicating the read.",
+    };
+  }
+
+  if (result.pnl < -75 || result.redDay) {
+    return {
+      label: "Rule break",
+      tags: ["Oversized", "Moved stop", "Frustrated"],
+      text: pick(tradeNoteTemplates.mistake),
+      lesson: "The goal is not avoiding losses; it is keeping normal losses from expanding.",
+    };
+  }
+
+  return {
+    label: "Needs review",
+    tags: ["Focused", "Took profits early"],
+    text: pick(tradeNoteTemplates.review),
+    lesson: "Check whether the setup quality justified the entry and share size.",
+  };
+}
+
+function writeTradeNote(stmts, accountId, date, result, role) {
+  const note = tradeNoteFor(result, role);
+  stmts.journal.run(
+    accountId,
+    result.tradeId,
+    "trade",
+    date,
+    note.text,
+    JSON.stringify(note.tags),
+    null,
+    note.lesson,
+    note.label === "Good trade" || note.label === "Best setup" ? 1 : 0,
+    note.label,
+    result.exitAt + 60,
+  );
+}
+
+function writeDayJournal(stmts, accountId, date, results) {
+  const summary = daySummary(results);
+  const best = summary.winners[0];
+  const worst = summary.losers[0];
+  const selected = [];
+
+  if (best) selected.push({ result: best, role: "best" });
+  if (summary.winners[1] && summary.pnl > 0) selected.push({ result: summary.winners[1], role: "good" });
+  if (worst) selected.push({ result: worst, role: "review" });
+  if (summary.pnl < 0 && summary.losers[1]) selected.push({ result: summary.losers[1], role: "review" });
+
+  const uniqueSelected = [];
+  const seen = new Set();
+  for (const item of selected) {
+    if (seen.has(item.result.tradeId)) continue;
+    seen.add(item.result.tradeId);
+    uniqueSelected.push(item);
+  }
+
+  const maxTradeNotes = results.length <= 2 ? 1 : summary.pnl < 0 && results.length >= 5 ? 3 : 2;
+  uniqueSelected.slice(0, maxTradeNotes).forEach((item) => {
+    writeTradeNote(stmts, accountId, date, item.result, item.role);
+  });
+
+  stmts.journal.run(
+    accountId,
+    null,
+    "day",
+    date,
+    dailyReviewText(results),
+    best ? `${best.symbol} was the cleanest trade and gave the day its best lift.` : null,
+    worst ? `${worst.symbol} was the trade to review first.` : null,
+    "Daily review: identify the best repeatable setup, the worst avoidable loss, and the emotional state behind the decisions.",
+    summary.pnl >= 0 && summary.accuracy >= 50 ? 1 : 0,
+    summary.pnl >= 0 ? "Calm" : "Frustrated",
+    easternEpoch(date, 16, 10),
+  );
 }
 
 function seed(db) {
@@ -499,6 +776,7 @@ function seed(db) {
   const accountId = Number(stmts.account.run("Paper Trading").lastInsertRowid);
   const batch = stmts.batch.run(accountId, "executions", "demo_seed", "tradingjournaldemo.seed", 0, easternEpoch("2026-06-14", 18, 0));
   const batchId = Number(batch.lastInsertRowid);
+  const templateSessions = loadTemplateSessions();
   const tagIds = new Map();
 
   for (const name of tagNames) {
@@ -515,25 +793,34 @@ function seed(db) {
   ];
 
   let sequence = 1;
-  const candlePlans = new Map();
-  const tradeCountByDate = new Map();
+  let candleGroupCount = 0;
+  const redDays = chooseRedDays(dates);
 
-  for (const date of dates) {
-    const plans = buildPlansForDate(date);
-    tradeCountByDate.set(date, plans.length);
+  for (const [dateIndex, date] of dates.entries()) {
+    const plans = buildPlansForDate(date, dateIndex, redDays.has(date));
+    const plansBySymbol = new Map();
+    const dayResults = [];
     for (const plan of plans) {
-      const tradePlan = createTrade(stmts, accountId, batchId, tagIds, date, plan, sequence);
-      const key = `${date}|${tradePlan.symbol}`;
-      const list = candlePlans.get(key) ?? [];
-      list.push(tradePlan);
-      candlePlans.set(key, list);
-      sequence += 1;
+      const list = plansBySymbol.get(plan.symbol) ?? [];
+      list.push(plan);
+      plansBySymbol.set(plan.symbol, list);
     }
-  }
 
-  for (const [key, plans] of candlePlans.entries()) {
-    const [date, symbol] = key.split("|");
-    createCandles(stmts, symbol, date, plans);
+    for (const [symbol, symbolPlans] of plansBySymbol.entries()) {
+      const template = pick(templateSessions);
+      const candles = buildDemoCandles(template, date);
+      const usedWindows = [];
+      insertCandles(stmts, symbol, candles);
+      candleGroupCount += 1;
+
+      for (const plan of symbolPlans) {
+        const result = createTradeFromCandles(stmts, accountId, batchId, tagIds, date, plan, candles, usedWindows, sequence);
+        dayResults.push(result);
+        sequence += 1;
+      }
+    }
+
+    writeDayJournal(stmts, accountId, date, dayResults);
   }
 
   for (const [month, text] of Object.entries(monthNotes)) {
@@ -554,22 +841,6 @@ function seed(db) {
 
   const seenWeeks = new Set();
   for (const date of dates) {
-    if (random() > 0.55 || date.startsWith("2026-06")) {
-      stmts.journal.run(
-        accountId,
-        null,
-        "day",
-        date,
-        pick(dayNotes),
-        null,
-        null,
-        "Daily review: market read, execution quality, emotional state, and what to carry into the next session.",
-        random() > 0.35 ? 1 : 0,
-        null,
-        easternEpoch(date, 16, 10),
-      );
-    }
-
     const start = weekStart(date);
     if (!seenWeeks.has(start)) {
       seenWeeks.add(start);
@@ -589,7 +860,7 @@ function seed(db) {
     }
   }
 
-  stmts.batch.run(accountId, "candles", "demo_seed", "tradingjournaldemo.seed", candlePlans.size, easternEpoch("2026-06-14", 18, 1));
+  stmts.batch.run(accountId, "candles", "demo_seed", "tradingjournaldemo.seed", candleGroupCount, easternEpoch("2026-06-14", 18, 1));
 }
 
 mkdirSync(dirname(outputPath), { recursive: true });
@@ -618,6 +889,55 @@ const counts = db
       (SELECT count(*) FROM journal_entries) AS notes
   `)
   .get();
+const validation = db
+  .prepare(`
+    WITH trade_pnl AS (
+      SELECT
+        id,
+        date(entry_at, 'unixepoch') AS day,
+        CASE
+          WHEN side = 'long' THEN (avg_exit_price - avg_entry_price) * quantity - fees
+          ELSE (avg_entry_price - avg_exit_price) * quantity - fees
+        END AS pnl
+      FROM trades
+      WHERE status = 'closed'
+    ),
+    day_pnl AS (
+      SELECT day, sum(pnl) AS pnl
+      FROM trade_pnl
+      GROUP BY day
+    )
+    SELECT
+      round(sum(trade_pnl.pnl), 2) AS pnl,
+      round(100.0 * sum(CASE WHEN trade_pnl.pnl > 0 THEN 1 ELSE 0 END) / count(*), 1) AS accuracy,
+      (SELECT count(*) FROM day_pnl WHERE pnl > 0) AS green_days,
+      (SELECT count(*) FROM day_pnl) AS days,
+      (SELECT count(*) FROM trades WHERE side <> 'long') AS short_trades,
+      (
+        SELECT count(*)
+        FROM (
+          SELECT
+            t.id,
+            min(CASE WHEN e.side = 'buy' THEN e.executed_at END) AS first_buy,
+            min(CASE WHEN e.side = 'sell' THEN e.executed_at END) AS first_sell
+          FROM trades t
+          JOIN executions e ON e.trade_id = t.id
+          GROUP BY t.id
+        )
+        WHERE first_buy IS NULL OR first_sell IS NULL OR first_buy > first_sell
+      ) AS backward_trades,
+      (
+        SELECT count(*)
+        FROM executions e
+        JOIN candles c
+          ON c.symbol = e.symbol
+         AND c.timeframe = '1m'
+         AND c.t = cast(e.executed_at / 60 AS integer) * 60
+        WHERE e.price < c.l OR e.price > c.h
+      ) AS bad_fills
+    FROM trade_pnl
+  `)
+  .get();
 db.close();
 
 console.log(`Created ${outputPath}`);
@@ -625,3 +945,9 @@ console.log(`Trades: ${counts.trades}`);
 console.log(`Executions: ${counts.executions}`);
 console.log(`Candles: ${counts.candles}`);
 console.log(`Journal entries: ${counts.notes}`);
+console.log(`P&L: $${validation.pnl}`);
+console.log(`Accuracy: ${validation.accuracy}%`);
+console.log(`Green days: ${validation.green_days}/${validation.days}`);
+console.log(`Short trades: ${validation.short_trades}`);
+console.log(`Trades with sell before buy: ${validation.backward_trades}`);
+console.log(`Execution prices outside candle ranges: ${validation.bad_fills}`);

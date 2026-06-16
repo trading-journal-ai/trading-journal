@@ -4,11 +4,16 @@ import { db, schema } from "@/lib/db";
 import { netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
 import ArchiveSidebar, { type ArchiveSidebarMonth } from "@/components/ArchiveSidebar";
+import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
+import RecapNote from "@/components/RecapNote";
 import TickerReviewRail from "@/components/TickerReviewRail";
 
-export const dynamic = "force-dynamic";
-
-export type ReviewPreset = "today" | "week" | "month";
+export type JournalReviewPreset = "today" | "week" | "month";
+export type JournalReviewSearchParams = {
+  date?: string;
+  preset?: string;
+  from?: string;
+};
 
 type TradeRow = typeof schema.trades.$inferSelect;
 type ExecutionRow = typeof schema.executions.$inferSelect;
@@ -35,7 +40,6 @@ type ReviewDay = ReviewSummary & {
   date: string;
   label: string;
   displayDate: string;
-  journalHref: string;
 };
 
 type PnlPoint = {
@@ -57,7 +61,7 @@ type ReviewWeek = ReviewSummary & {
 };
 
 type ReviewRange = ReviewSummary & {
-  preset: ReviewPreset;
+  preset: JournalReviewPreset;
   anchor: string;
   title: string;
   eyebrow: string;
@@ -138,6 +142,44 @@ function validDate(value: string | undefined): string | undefined {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
 }
 
+export function parseJournalReviewSearchParams(params: JournalReviewSearchParams): {
+  preset: JournalReviewPreset;
+  date?: string;
+  from?: string;
+} {
+  const presetOptions = new Set<JournalReviewPreset>(["today", "week", "month"]);
+  const date = validDate(params.date);
+  return {
+    preset: date
+      ? "today"
+      : presetOptions.has(params.preset as JournalReviewPreset)
+        ? (params.preset as JournalReviewPreset)
+        : "month",
+    date,
+    from: validDate(params.from),
+  };
+}
+
+export function journalReviewHref(
+  basePath: string,
+  {
+    preset,
+    date,
+    from,
+  }: {
+    preset: JournalReviewPreset;
+    date?: string;
+    from?: string;
+  },
+) {
+  const params = new URLSearchParams();
+  if (preset !== "month") params.set("preset", preset);
+  if (date) params.set("date", date);
+  if (from) params.set("from", from);
+  const query = params.toString();
+  return query ? `${basePath}?${query}` : basePath;
+}
+
 function isoAddDays(date: string, days: number): string {
   const [year, month, day] = date.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
@@ -182,7 +224,7 @@ function archiveWeekRangeLabel(weekStart: string, monthKey: string): string {
   return `${Number(start.slice(-2))}-${Number(end.slice(-2))}`;
 }
 
-function archiveWeeks(monthKey: string, activeWeekKey?: string): ArchiveSidebarMonth["weeks"] {
+function archiveWeeks(monthKey: string, activeWeekKey: string | undefined, basePath: string): ArchiveSidebarMonth["weeks"] {
   const monthStart = `${monthKey}-01`;
   const monthEnd = lastDayOfMonth(monthStart);
   let weekStart = weekStartFor(monthStart);
@@ -197,7 +239,7 @@ function archiveWeeks(monthKey: string, activeWeekKey?: string): ArchiveSidebarM
         label: archiveWeekLabel(monthKey, weekStart),
         rangeLabel: archiveWeekRangeLabel(weekStart, monthKey),
         active: weekStart === activeWeekKey,
-        href: reviewHref({ preset: "week", from: weekStart }),
+        href: journalReviewHref(basePath, { preset: "week", from: weekStart }),
       });
     }
     weekStart = isoAddDays(weekStart, 7);
@@ -264,7 +306,7 @@ async function latestTradeDate(accountId: number): Promise<string | undefined> {
   return latest?.entryAt == null ? undefined : etDateString(latest.entryAt);
 }
 
-function rangeForPreset(preset: ReviewPreset, anchor: string): { from: string; to: string } {
+function rangeForPreset(preset: JournalReviewPreset, anchor: string): { from: string; to: string } {
   if (preset === "today") return { from: anchor, to: anchor };
   if (preset === "week") {
     const weekStart = weekStartFor(anchor);
@@ -314,7 +356,6 @@ function buildDayData(date: string, trades: TradeRow[], executions: ExecutionRow
       date,
       label: dayFmt.format(utcDate(date)),
       displayDate: dateFmt.format(utcDate(date)),
-      journalHref: `/journal?preset=today&from=${date}`,
       ...summary,
     },
     tickerRows: [...tickers.values()].sort((a, b) => b.pnl - a.pnl),
@@ -328,7 +369,7 @@ async function loadReviewRange({
   from,
   accountId,
 }: {
-  preset: ReviewPreset;
+  preset: JournalReviewPreset;
   date?: string;
   from?: string;
   accountId: number;
@@ -362,7 +403,7 @@ async function loadReviewRange({
           : preset === "week"
             ? monthWeekLabel(range.from)
             : dayFmt.format(utcDate(anchor)),
-      eyebrow: "Trades Review",
+      eyebrow: "Trade Journal",
       displayDate:
         preset === "month"
           ? monthFmt.format(utcDate(range.from))
@@ -428,7 +469,7 @@ async function loadReviewRange({
         : preset === "week"
           ? `${monthWeekLabel(range.from)}`
           : firstDay?.label ?? dayFmt.format(utcDate(anchor)),
-    eyebrow: "Trades Review",
+    eyebrow: "Trade Journal",
     displayDate:
       preset === "month"
         ? monthFmt.format(utcDate(range.from))
@@ -440,7 +481,7 @@ async function loadReviewRange({
   };
 }
 
-async function loadReviewArchive(anchor: string, accountId: number): Promise<ReviewArchive> {
+async function loadReviewArchive(anchor: string, accountId: number, basePath: string): Promise<ReviewArchive> {
   const selectedMonthKey = anchor.slice(0, 7);
   const selectedWeekKey = weekStartFor(anchor);
   const rows = await db
@@ -469,17 +510,42 @@ async function loadReviewArchive(anchor: string, accountId: number): Promise<Rev
       key,
       label: monthFmt.format(utcDate(`${key}-01`)).replace(/\s+\d{4}$/, ""),
       active: key === selectedMonthKey,
-      href: reviewHref({ preset: "month", from: `${key}-01` }),
-      weeks: key === selectedMonthKey ? archiveWeeks(key, selectedWeekKey) : [],
+      href: journalReviewHref(basePath, { preset: "month", from: `${key}-01` }),
+      weeks: key === selectedMonthKey ? archiveWeeks(key, selectedWeekKey, basePath) : [],
     }));
 
   const years = [...yearKeys].sort((a, b) => b.localeCompare(a)).map((year) => ({
     key: year,
     label: year,
-    href: reviewHref({ preset: "month", from: `${year}-01-01` }),
+    href: journalReviewHref(basePath, { preset: "month", from: `${year}-01-01` }),
   }));
 
   return { months, years };
+}
+
+async function loadDayRecaps(accountId: number, dates: string[]): Promise<Map<string, string>> {
+  if (dates.length === 0) return new Map();
+
+  const rows = await db
+    .select({
+      scopeKey: schema.journalEntries.scopeKey,
+      thesis: schema.journalEntries.thesis,
+      lessons: schema.journalEntries.lessons,
+    })
+    .from(schema.journalEntries)
+    .where(
+      and(
+        eq(schema.journalEntries.accountId, accountId),
+        eq(schema.journalEntries.scope, "day"),
+        inArray(schema.journalEntries.scopeKey, dates),
+      ),
+    );
+
+  const recaps = new Map<string, string>();
+  rows.forEach((row) => {
+    if (row.scopeKey) recaps.set(row.scopeKey, row.lessons ?? row.thesis ?? "");
+  });
+  return recaps;
 }
 
 function MetricLine({ summary }: { summary: ReviewSummary }) {
@@ -628,10 +694,12 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
 
 function DayReviewSection({
   data,
+  recaps,
   returnTo,
   showDivider = true,
 }: {
   data: ReviewData;
+  recaps: Map<string, string>;
   returnTo: string;
   showDivider?: boolean;
 }) {
@@ -656,6 +724,15 @@ function DayReviewSection({
             <MetricLine summary={day} />
           </div>
 
+          <div className="mb-6 max-w-[665px] text-[15px] leading-6 text-[var(--body)]">
+            <RecapNote
+              scope="day"
+              scopeKey={day.date}
+              text={recaps.get(day.date) ?? ""}
+              placeholder="Add a daily recap: market read, execution quality, emotions, what worked, and what to tighten next session."
+            />
+          </div>
+
           <div className="grid max-w-[665px] gap-6 lg:grid-cols-[minmax(0,1fr)_200px] lg:items-start">
             <RunningPnlChart day={day} pnlPoints={pnlPoints} />
             <TickerReviewRail
@@ -668,12 +745,6 @@ function DayReviewSection({
               profitFactor={day.profitFactor}
               pnl={day.pnl}
             />
-          </div>
-
-          <div className="mt-5">
-            <Link href={day.journalHref} className="font-mono text-[12px] text-[var(--blue)] hover:underline">
-              View day note
-            </Link>
           </div>
         </div>
       </div>
@@ -702,7 +773,36 @@ function RangeHeader({ range }: { range: ReviewRange }) {
   );
 }
 
-function WeekSection({ week, returnTo }: { week: ReviewWeek; returnTo: string }) {
+function CurrentShortcuts({
+  activePreset,
+  basePath,
+}: {
+  activePreset: JournalReviewPreset;
+  basePath: string;
+}) {
+  const buttonClass = (preset: JournalReviewPreset) =>
+    `inline-flex h-8 min-w-16 items-center justify-center rounded px-3 text-sm font-semibold transition-colors ${
+      activePreset === preset
+        ? "bg-[var(--surface-2)] text-[var(--foreground)]"
+        : "text-[var(--muted)] hover:text-[var(--foreground)]"
+    }`;
+
+  return (
+    <nav aria-label="Current journal shortcuts" className="inline-flex h-10 items-center rounded-md border border-[var(--border)] p-1">
+      <Link href={journalReviewHref(basePath, { preset: "today" })} className={buttonClass("today")}>
+        Today
+      </Link>
+      <Link href={journalReviewHref(basePath, { preset: "week" })} className={buttonClass("week")}>
+        This week
+      </Link>
+      <Link href={journalReviewHref(basePath, { preset: "month" })} className={buttonClass("month")}>
+        This month
+      </Link>
+    </nav>
+  );
+}
+
+function WeekSection({ week, recaps, returnTo }: { week: ReviewWeek; recaps: Map<string, string>; returnTo: string }) {
   return (
     <section className="space-y-8 border-t border-[var(--hairline)] pt-8">
       <div className="space-y-3">
@@ -720,6 +820,7 @@ function WeekSection({ week, returnTo }: { week: ReviewWeek; returnTo: string })
           <DayReviewSection
             key={dayData.day.date}
             data={dayData}
+            recaps={recaps}
             returnTo={returnTo}
             showDivider={index > 0}
           />
@@ -729,29 +830,10 @@ function WeekSection({ week, returnTo }: { week: ReviewWeek; returnTo: string })
   );
 }
 
-function reviewHref({
-  preset,
-  date,
-  from,
-}: {
-  preset: ReviewPreset;
-  date?: string;
-  from?: string;
-}) {
-  const params = new URLSearchParams();
-  params.set("preset", preset);
-  params.set("view", "review");
-  params.set("sort", "date");
-  params.set("dir", "desc");
-  if (date) params.set("date", date);
-  if (from) params.set("from", from);
-  return `/trades?${params.toString()}`;
-}
-
 function TradeReviewSidebar({ archive }: { archive: ReviewArchive }) {
   return (
     <ArchiveSidebar
-      ariaLabel="Trade review archive"
+      ariaLabel="Journal archive"
       months={archive.months}
       years={archive.years}
       offsetClassName="md:pt-[5.75rem]"
@@ -764,44 +846,47 @@ function EmptyReviewState() {
     <section className="border-t border-[var(--hairline)] pt-8">
       <p className="max-w-[460px] text-sm leading-6 text-[var(--body)]">
         No trades for this account in the selected period yet. Import trades or switch accounts to
-        review activity here.
+        review the journal here.
       </p>
     </section>
   );
 }
 
-export default async function TradeReview({
+export default async function TradeJournalReview({
   preset = "month",
   date,
   from,
-  returnTo = "/trades",
+  basePath = "/journal",
+  returnTo,
   backHref,
   accountId,
 }: {
-  preset?: ReviewPreset;
+  preset?: JournalReviewPreset;
   date?: string;
   from?: string;
+  basePath?: string;
   returnTo?: string;
   backHref?: string;
   accountId: number;
 }) {
   const range = await loadReviewRange({ preset, date, from, accountId });
-  const archive = await loadReviewArchive(range.anchor, accountId);
+  const [archive, recaps] = await Promise.all([
+    loadReviewArchive(range.anchor, accountId, basePath),
+    loadDayRecaps(accountId, range.days.map((day) => day.day.date)),
+  ]);
+  const currentHref = returnTo ?? journalReviewHref(basePath, { preset, date, from });
+  const breadcrumbBack = backHref
+    ? originCrumbFromHref(backHref, basePath)
+    : { label: "Journal", href: basePath };
 
   return (
     <div className="mx-auto w-full max-w-[905px] pb-24">
-      {backHref ? (
-        <Link
-          href={backHref}
-          className="inline-flex h-9 items-center rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
-        >
-          Back
-        </Link>
-      ) : null}
+      <Breadcrumbs back={breadcrumbBack} current={range.title} className="mb-10" />
 
       <div className="grid gap-8 md:grid-cols-[180px_minmax(0,665px)] xl:grid-cols-[200px_minmax(0,665px)] xl:gap-10">
         <TradeReviewSidebar archive={archive} />
         <div className="min-w-0 space-y-8">
+          <CurrentShortcuts activePreset={preset} basePath={basePath} />
           <RangeHeader range={range} />
 
           {range.trades === 0 ? (
@@ -809,7 +894,7 @@ export default async function TradeReview({
           ) : preset === "month" ? (
             <div className="space-y-14">
               {range.weeks.map((week) => (
-                <WeekSection key={week.key} week={week} returnTo={returnTo} />
+                <WeekSection key={week.key} week={week} recaps={recaps} returnTo={currentHref} />
               ))}
             </div>
           ) : preset === "week" ? (
@@ -818,13 +903,14 @@ export default async function TradeReview({
                 <DayReviewSection
                   key={dayData.day.date}
                   data={dayData}
-                  returnTo={returnTo}
+                  recaps={recaps}
+                  returnTo={currentHref}
                   showDivider={index > 0}
                 />
               ))}
             </div>
           ) : (
-            <DayReviewSection data={range.days[0]} returnTo={returnTo} />
+            <DayReviewSection data={range.days[0]} recaps={recaps} returnTo={currentHref} />
           )}
 
           {range.trades > 0 ? (

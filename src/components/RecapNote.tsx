@@ -16,6 +16,9 @@ export default function RecapNote({
 }) {
   const [editing, setEditing] = useState(false);
   const [state, formAction, pending] = useActionState(upsertScopedNoteAction, null);
+  const titleBreak = placeholder.indexOf(":");
+  const emptyTitle = titleBreak === -1 ? `Add a ${scope} recap` : placeholder.slice(0, titleBreak).trim();
+  const emptyHelper = titleBreak === -1 ? placeholder : placeholder.slice(titleBreak + 1).trim();
 
   useEffect(() => {
     // Collapse back to view mode once the save action resolves.
@@ -34,7 +37,14 @@ export default function RecapNote({
         {text ? (
           <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">{text}</p>
         ) : (
-          <p className="text-sm leading-6 text-[var(--muted)] italic">{placeholder}</p>
+          <div className="rounded-md border border-dashed border-[var(--border)] px-4 py-5 transition-colors hover:border-[var(--blue)]">
+            <p className="font-mono text-[13px] font-semibold text-[var(--blue)]">
+              + {emptyTitle}
+            </p>
+            <p className="mt-3 max-w-[34rem] text-sm leading-6 text-[var(--muted)]">
+              {emptyHelper}
+            </p>
+          </div>
         )}
       </button>
     );

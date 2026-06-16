@@ -5,7 +5,7 @@ import { getActiveAccount } from "@/lib/accountScope";
 import { fmtMoney } from "@/lib/format";
 import { grossPnl, netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange, MARKET_TZ, timeZoneParts } from "@/lib/time";
-import MonthPicker from "@/components/MonthPicker";
+import ReportRangeFilter from "@/components/ReportRangeFilter";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,6 @@ type ReportFilters = {
   side?: "long" | "short";
   tag?: string;
   account?: string;
-  chart: "cumulative" | "daily";
 };
 
 type ReportTrade = typeof schema.trades.$inferSelect & {
@@ -53,7 +52,6 @@ function parseSearchParams(params: {
   side?: string;
   tag?: string;
   account?: string;
-  chart?: string;
 }): ReportFilters {
   const presetOptions = new Set<DatePreset>(["all", "today", "week", "month", "year", "custom"]);
   return {
@@ -65,7 +63,6 @@ function parseSearchParams(params: {
     side: params.side === "long" || params.side === "short" ? params.side : undefined,
     tag: params.tag || undefined,
     account: params.account || undefined,
-    chart: params.chart === "daily" ? "daily" : "cumulative",
   };
 }
 
@@ -112,6 +109,34 @@ function dateLabel(date: string): string {
   return dateLabelFmt.format(new Date(Date.UTC(year, month - 1, day)));
 }
 
+function ordinalDay(day: number): string {
+  const mod100 = day % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${day}th`;
+  if (day % 10 === 1) return `${day}st`;
+  if (day % 10 === 2) return `${day}nd`;
+  if (day % 10 === 3) return `${day}rd`;
+  return `${day}th`;
+}
+
+function monthDayLabel(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  const monthName = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "long" }).format(
+    new Date(Date.UTC(year, month - 1, day)),
+  );
+  return `${monthName} ${ordinalDay(day)}`;
+}
+
+function rangeDateLabel(date: string): string {
+  return `${monthDayLabel(date)}, ${date.slice(0, 4)}`;
+}
+
+function dateRangeLabel(from: string, to: string): string {
+  const fromYear = from.slice(0, 4);
+  const toYear = to.slice(0, 4);
+  if (fromYear === toYear) return `${monthDayLabel(from)} to ${monthDayLabel(to)}, ${toYear}`;
+  return `${rangeDateLabel(from)} to ${rangeDateLabel(to)}`;
+}
+
 function monthLabel(date: string): string {
   const [year, month] = date.split("-").map(Number);
   return monthLabelFmt.format(new Date(Date.UTC(year, month - 1, 1)));
@@ -146,7 +171,7 @@ function reportRangeLabel(filters: ReportFilters): string {
   if (range.from === range.to) return dateLabel(range.from);
   if (filters.preset === "month") return monthLabel(range.from);
   if (filters.preset === "year") return range.from.slice(0, 4);
-  return `${dateLabel(range.from)} to ${dateLabel(range.to)}`;
+  return dateRangeLabel(range.from, range.to);
 }
 
 function filterHref(filters: ReportFilters, updates: Partial<ReportFilters>) {
@@ -160,7 +185,6 @@ function filterHref(filters: ReportFilters, updates: Partial<ReportFilters>) {
   if (next.side) params.set("side", next.side);
   if (next.tag) params.set("tag", next.tag);
   if (next.account) params.set("account", next.account);
-  if (next.chart !== "cumulative") params.set("chart", next.chart);
   const query = params.toString();
   return query ? `/reports?${query}` : "/reports";
 }
@@ -366,12 +390,18 @@ function buildDayBuckets(trades: ReportTrade[]): Bucket[] {
 }
 
 function buildHourBuckets(trades: ReportTrade[]): Bucket[] {
-  const buckets = Array.from({ length: 16 }, (_, i) => ({ label: `${String(i + 4).padStart(2, "0")}:00`, count: 0, pnl: 0 }));
+  const firstHour = 7;
+  const lastHour = 19;
+  const buckets = Array.from({ length: lastHour - firstHour + 1 }, (_, i) => ({
+    label: `${String(i + firstHour).padStart(2, "0")}:00`,
+    count: 0,
+    pnl: 0,
+  }));
   for (const trade of trades) {
     if (trade.entryAt == null) continue;
     const parts = timeZoneParts(trade.entryAt * 1000, MARKET_TZ);
-    if (parts.hour < 4 || parts.hour > 19) continue;
-    addToBucket(buckets[parts.hour - 4], trade);
+    if (parts.hour < firstHour || parts.hour > lastHour) continue;
+    addToBucket(buckets[parts.hour - firstHour], trade);
   }
   return buckets;
 }
@@ -429,12 +459,13 @@ function FilterBar({ filters, tagOptions }: { filters: ReportFilters; tagOptions
         ? "bg-[var(--surface-2)] text-[var(--foreground)]"
         : "text-[var(--muted)] hover:text-[var(--foreground)]"
     }`;
-  const selectedDate = dateRangeFor(filters)?.from ?? currentEtDate();
 
   return (
     <form action="/reports" className="space-y-4">
       <input type="hidden" name="preset" value={activePreset} />
-      <input type="hidden" name="chart" value={filters.chart} />
+      {filters.date && <input type="hidden" name="date" value={filters.date} />}
+      {filters.from && <input type="hidden" name="from" value={filters.from} />}
+      {filters.to && <input type="hidden" name="to" value={filters.to} />}
       <div className="relative mb-4 space-y-2">
         <span className="block text-sm font-semibold text-[var(--muted)]">Date range</span>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
@@ -445,8 +476,7 @@ function FilterBar({ filters, tagOptions }: { filters: ReportFilters; tagOptions
             <Link href={filterHref(filters, { ...presetBase, preset: "year" })} className={presetButtonClass("year")}>Year</Link>
           </div>
           <div className="flex flex-wrap gap-2">
-            <MonthPicker selectedDate={selectedDate} />
-            <Link href="/reports" className="flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm text-[var(--muted)] hover:border-[#58a6ff]">Clear</Link>
+            <ReportRangeFilter from={filters.from} to={filters.to} clearHref="/reports" />
           </div>
         </div>
       </div>
@@ -479,67 +509,114 @@ function FilterBar({ filters, tagOptions }: { filters: ReportFilters; tagOptions
   );
 }
 
-const summaryStatLabels = [
-  "Total Gain/Loss",
-  "Win Rate",
-  "Profit Factor",
-  "Payoff Ratio",
-  "Average Trade Gain/Loss",
-  "Average Per-share Gain/Loss",
+const pairedStatLabels = [
+  [
+    ["Total Gain/Loss", "Average Daily Gain/Loss"],
+    ["Average Trade Gain/Loss", "Average Per-share Gain/Loss"],
+    ["Profit Factor", "Payoff Ratio"],
+  ],
+  [
+    ["Number of Winning Trades", "Number of Losing Trades"],
+    ["Average Winning Trade", "Average Losing Trade"],
+    ["Largest Gain", "Largest Loss"],
+    ["Max Consecutive Wins", "Max Consecutive Losses"],
+    ["Average Hold Time (winning trades)", "Average Hold Time (losing trades)"],
+    ["High Winning Per-share", "Worst Losing Per-share"],
+    ["Average Winning Per-share", "Average Losing Per-share"],
+  ],
+  [
+    ["Average Share Size", "Median Share Size"],
+    ["Average Daily Volume", "Number of Scratch Trades"],
+  ],
 ];
 
 function findStat(sections: StatSection[], label: string) {
   return sections.flatMap((section) => section.stats).find((stat) => stat.label === label);
 }
 
-function StatsGrid({ sections, rangeLabel }: { sections: StatSection[]; rangeLabel: string }) {
-  const summaryStats = summaryStatLabels
-    .map((label) => findStat(sections, label))
-    .filter((stat): stat is Stat => Boolean(stat));
-  const detailStats = sections.flatMap((section) =>
-    section.stats.filter((stat) => !summaryStatLabels.includes(stat.label)),
-  );
-  const stats = [...summaryStats, ...detailStats];
+const signedStatLabels = new Set([
+  "Total Gain/Loss",
+  "Average Daily Gain/Loss",
+  "Average Trade Gain/Loss",
+  "Average Per-share Gain/Loss",
+]);
+
+const greenStatLabels = new Set([
+  "Number of Winning Trades",
+  "Average Winning Trade",
+  "Largest Gain",
+  "High Winning Per-share",
+  "Average Winning Per-share",
+]);
+
+const redStatLabels = new Set([
+  "Number of Losing Trades",
+  "Average Losing Trade",
+  "Largest Loss",
+  "Worst Losing Per-share",
+  "Average Losing Per-share",
+]);
+
+function statValueColor(stat: Stat) {
+  if (stat.value.trim() === "-") return undefined;
+  if (greenStatLabels.has(stat.label)) return "var(--green)";
+  if (redStatLabels.has(stat.label)) return "var(--red)";
+  if (!signedStatLabels.has(stat.label)) return undefined;
+  if (stat.value.trim().startsWith("-")) return "var(--red)";
+  if (stat.value !== "-" && !stat.value.startsWith("$0.00")) return "var(--green)";
+  return undefined;
+}
+
+function StatCell({ stat }: { stat: Stat }) {
+  const valueColor = statValueColor(stat);
+  const countValue = stat.value.match(/^(\d+)\s+\(([^)]+)\)$/);
 
   return (
-    <section className="pt-6">
+    <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+      <div className="text-sm font-medium leading-snug text-[var(--body)]">{stat.label}</div>
+      <div className="whitespace-nowrap text-right font-mono text-sm font-semibold tabular-nums text-[var(--foreground)]">
+        {countValue ? (
+          <span className="inline-flex items-baseline gap-2">
+            <span style={{ color: valueColor }}>{countValue[1]}</span>
+            <span className="text-sm font-semibold text-[var(--muted)]">{countValue[2]}</span>
+          </span>
+        ) : (
+          <span style={{ color: valueColor }}>{stat.value}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatsGrid({ sections }: { sections: StatSection[] }) {
+  const groups = pairedStatLabels
+    .map((group) =>
+      group
+        .map((row) => row.map((label) => findStat(sections, label)).filter((stat): stat is Stat => Boolean(stat)))
+        .filter((row) => row.length > 0),
+    )
+    .filter((group) => group.length > 0);
+
+  return (
+    <section>
       <h2 className="mb-8 text-xl font-semibold tracking-tight text-[var(--foreground)]">
         Stats
-        {rangeLabel !== "All dates" && <span className="text-[var(--muted)]"> · {rangeLabel}</span>}
       </h2>
 
-      <div className="border-y border-[var(--hairline)] px-4 md:px-6">
-        {Array.from({ length: Math.ceil(stats.length / 3) }, (_, rowIndex) => {
-          const rowStats = stats.slice(rowIndex * 3, rowIndex * 3 + 3);
-          const isLastRow = rowIndex === Math.ceil(stats.length / 3) - 1;
-          const isSummaryRow = rowIndex < 2;
-          return (
-            <div
-              key={rowIndex}
-              className={`grid gap-x-16 md:grid-cols-3 ${isLastRow ? "" : "border-b border-[var(--hairline)]"}`}
-            >
-              {rowStats.map((stat) => {
-                return (
-                  <div
-                    key={stat.label}
-                    className={`grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-5 ${
-                      isSummaryRow ? "min-h-[5.25rem] py-5" : "min-h-14 py-4"
-                    }`}
-                  >
-                    <div className="text-sm font-normal leading-snug text-[var(--body)]">{stat.label}</div>
-                    <div
-                      className={`whitespace-nowrap font-mono font-semibold tabular-nums text-[var(--foreground)] ${
-                        isSummaryRow ? "text-lg" : "text-base"
-                      }`}
-                    >
-                      {stat.value}
-                    </div>
+      <div className="grid gap-[2px] overflow-hidden rounded-[2px] bg-black p-[2px]">
+        {groups.map((group, groupIndex) => (
+          <div key={groupIndex} className="grid gap-[2px]">
+            {group.map((row, rowIndex) => (
+              <div key={rowIndex} className="grid gap-[2px] md:grid-cols-2">
+                {row.map((stat) => (
+                  <div key={stat.label} className="flex min-h-14 items-center bg-[#14171a] px-12 py-3">
+                    <StatCell stat={stat} />
                   </div>
-                );
-              })}
-            </div>
-          );
-        })}
+                ))}
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -555,8 +632,11 @@ function CountChart({ title, buckets }: { title: string; buckets: Bucket[] }) {
         {buckets.map((bucket) => (
           <div key={bucket.label} className="grid grid-cols-[64px_1fr_56px] items-center gap-3 text-sm">
             <div className="text-[var(--muted)]">{bucket.label}</div>
-            <div className="h-2 rounded bg-[var(--surface-2)]">
-              <div className="h-2 rounded bg-[var(--green)]" style={{ width: `${Math.max(2, (bucket.count / max) * 100)}%` }} />
+            <div className="h-2 bg-[#14171a]" style={{ borderRadius: 2 }}>
+              <div
+                className="h-2 bg-[var(--green)]"
+                style={{ width: `${Math.max(2, (bucket.count / max) * 100)}%`, borderRadius: 2 }}
+              />
             </div>
             <div className="text-right tabular-nums text-[var(--muted)]">{bucket.count}</div>
           </div>
@@ -578,12 +658,22 @@ function PnlChart({ title, buckets }: { title: string; buckets: Bucket[] }) {
           return (
             <div key={bucket.label} className="grid grid-cols-[64px_1fr_80px] items-center gap-3 text-sm">
               <div className="text-[var(--muted)]">{bucket.label}</div>
-              <div className="grid h-2 grid-cols-2 rounded bg-[var(--surface-2)]">
+              <div className="grid h-2 grid-cols-2 bg-[#14171a]" style={{ borderRadius: 2 }}>
                 <div className="flex justify-end">
-                  {!pos && <div className="h-2 rounded bg-[var(--red)]" style={{ width: `${Math.max(2, (Math.abs(bucket.pnl) / maxAbs) * 100)}%` }} />}
+                  {!pos && (
+                    <div
+                      className="h-2 bg-[var(--red)]"
+                      style={{ width: `${Math.max(2, (Math.abs(bucket.pnl) / maxAbs) * 100)}%`, borderRadius: 2 }}
+                    />
+                  )}
                 </div>
                 <div>
-                  {pos && <div className="h-2 rounded bg-[var(--green)]" style={{ width: `${Math.max(2, (bucket.pnl / maxAbs) * 100)}%` }} />}
+                  {pos && (
+                    <div
+                      className="h-2 bg-[var(--green)]"
+                      style={{ width: `${Math.max(2, (bucket.pnl / maxAbs) * 100)}%`, borderRadius: 2 }}
+                    />
+                  )}
                 </div>
               </div>
               <div
@@ -600,66 +690,36 @@ function PnlChart({ title, buckets }: { title: string; buckets: Bucket[] }) {
   );
 }
 
-function DailyPnlBars({ points }: { points: { date: string; pnl: number }[] }) {
-  const maxAbs = Math.max(1, ...points.map((point) => Math.abs(point.pnl)));
-  const ticks = points.length <= 8 ? points : points.filter((_, index) => index === 0 || index === points.length - 1 || index % Math.ceil(points.length / 4) === 0);
-
-  return (
-    <>
-      {points.length === 0 ? (
-        <div className="flex h-64 items-center justify-center text-sm text-[var(--muted)]">No closed trades in range.</div>
-      ) : (
-        <div className="h-64">
-          <div className="grid h-52 items-stretch gap-1" style={{ gridTemplateColumns: `repeat(${points.length}, minmax(3px, 1fr))` }}>
-            {points.map((point) => {
-              const pos = point.pnl >= 0;
-              return (
-                <div key={point.date} className="grid grid-rows-2">
-                  <div className="flex items-end">
-                    {pos && (
-                      <div
-                        className="w-full rounded-t bg-[var(--green)]"
-                        style={{ height: `${Math.max(2, (point.pnl / maxAbs) * 100)}%` }}
-                        title={`${point.date}: ${fmtMoney(point.pnl)}`}
-                      />
-                    )}
-                  </div>
-                  <div className="flex items-start border-t border-[var(--muted)]/40">
-                    {!pos && (
-                      <div
-                        className="w-full rounded-b bg-[var(--red)]"
-                        style={{ height: `${Math.max(2, (Math.abs(point.pnl) / maxAbs) * 100)}%` }}
-                        title={`${point.date}: ${fmtMoney(point.pnl)}`}
-                      />
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-3 flex justify-between text-xs text-[var(--muted)]">
-            {ticks.map((point) => <span key={point.date}>{point.date.slice(5)}</span>)}
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
 function CumulativePnlLine({ points }: { points: { date: string; cumulative: number }[] }) {
-  const width = 520;
-  const height = 220;
-  const pad = 20;
+  const width = 560;
+  const height = 240;
+  const padTop = 18;
+  const padRight = 18;
+  const padBottom = 26;
+  const padLeft = 64;
   const values = points.map((point) => point.cumulative);
-  const min = Math.min(0, ...values);
-  const max = Math.max(0, ...values);
+  const rawMin = Math.min(0, ...values);
+  const rawMax = Math.max(0, ...values);
+  const rawSpan = rawMax - rawMin || 1;
+  const stepBase = 10 ** Math.floor(Math.log10(rawSpan / 5));
+  const stepRatio = rawSpan / 5 / stepBase;
+  const step = (stepRatio <= 1 ? 1 : stepRatio <= 2 ? 2 : stepRatio <= 5 ? 5 : 10) * stepBase;
+  const min = Math.floor(rawMin / step) * step;
+  const max = Math.ceil(rawMax / step) * step;
   const span = max - min || 1;
+  const yTicks = Array.from({ length: Math.round((max - min) / step) + 1 }, (_, index) => min + index * step);
+  const axisMoney = (value: number) => {
+    const sign = value < 0 ? "-" : "";
+    return `${sign}$${Math.abs(Math.round(value)).toLocaleString()}`;
+  };
+  const plotWidth = width - padLeft - padRight;
+  const plotHeight = height - padTop - padBottom;
+  const yFor = (value: number) => padTop + ((max - value) / span) * plotHeight;
   const path = points.map((point, index) => {
-    const x = pad + (points.length === 1 ? 0 : (index / (points.length - 1)) * (width - pad * 2));
-    const y = pad + ((max - point.cumulative) / span) * (height - pad * 2);
+    const x = padLeft + (points.length === 1 ? 0 : (index / (points.length - 1)) * plotWidth);
+    const y = yFor(point.cumulative);
     return `${index === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
   }).join(" ");
-  const zeroY = pad + ((max - 0) / span) * (height - pad * 2);
   const ticks = points.length <= 8 ? points : points.filter((_, index) => index === 0 || index === points.length - 1 || index % Math.ceil(points.length / 4) === 0);
   const final = values.at(-1) ?? 0;
 
@@ -677,8 +737,34 @@ function CumulativePnlLine({ points }: { points: { date: string; cumulative: num
         <div className="flex h-64 items-center justify-center text-sm text-[var(--muted)]">No closed trades in range.</div>
       ) : (
         <div>
-          <svg viewBox={`0 0 ${width} ${height}`} className="h-64 w-full" role="img" aria-label="Cumulative P&L">
-            <line x1={pad} x2={width - pad} y1={zeroY} y2={zeroY} stroke="var(--muted)" strokeOpacity="0.35" />
+          <svg viewBox={`0 0 ${width} ${height}`} className="h-64 w-full" role="img" aria-label="P&L over selected range">
+            {yTicks.map((tick) => {
+              const y = yFor(tick);
+              return (
+                <g key={tick}>
+                  <text
+                    x={0}
+                    y={y}
+                    dy="0.35em"
+                    fill="var(--muted)"
+                    fontFamily="var(--font-mono)"
+                    fontSize="12"
+                    fontWeight="400"
+                    textAnchor="start"
+                  >
+                    {axisMoney(tick)}
+                  </text>
+                  <line
+                    x1={padLeft}
+                    x2={width - padRight}
+                    y1={y}
+                    y2={y}
+                    stroke="var(--muted)"
+                    strokeOpacity={tick === 0 ? "0.55" : "0.28"}
+                  />
+                </g>
+              );
+            })}
             <path d={path} fill="none" stroke={final >= 0 ? "var(--green)" : "var(--red)"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <div className="mt-3 flex justify-between text-xs text-[var(--muted)]">
@@ -690,26 +776,88 @@ function CumulativePnlLine({ points }: { points: { date: string; cumulative: num
   );
 }
 
-function PnlModule({ filters, points }: { filters: ReportFilters; points: { date: string; pnl: number; cumulative: number }[] }) {
-  const chartButtonClass = (chart: ReportFilters["chart"]) =>
-    `inline-flex h-9 items-center justify-center rounded-md border px-3 text-sm font-semibold transition-colors ${
-      filters.chart === chart
-        ? "border-[#58a6ff] bg-[#58a6ff]/10 text-[var(--foreground)]"
-        : "border-[var(--border)] text-[var(--muted)] hover:border-[#58a6ff] hover:text-[var(--foreground)]"
-    }`;
+const performanceSnapshotLabels = [
+  { source: "Profit Factor", label: "Profit Factor" },
+  { source: "Win Rate", label: "Win Rate" },
+  { source: "Number of Winning Trades", label: "Winning Trades" },
+  { source: "Number of Losing Trades", label: "Losing Trades" },
+  { source: "Largest Gain", label: "Largest Gain" },
+  { source: "Largest Loss", label: "Largest Loss" },
+];
+
+function PerformanceSnapshot({ sections }: { sections: StatSection[] }) {
+  const stats = performanceSnapshotLabels
+    .map(({ source, label }) => {
+      const stat = findStat(sections, source);
+      return stat ? { ...stat, label } : null;
+    })
+    .filter((stat): stat is Stat => Boolean(stat));
+  const valueColor = (label: string) => {
+    if (label === "Win Rate" || label === "Winning Trades" || label === "Largest Gain") return "var(--green)";
+    if (label === "Losing Trades" || label === "Largest Loss") return "var(--red)";
+    return undefined;
+  };
 
   return (
-    <section className="border-t border-[var(--hairline)] pt-4">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">
-          {filters.chart === "daily" ? "Daily P&L" : "Cumulative P&L"}
-        </h2>
-        <div className="flex gap-2">
-          <Link href={filterHref(filters, { chart: "cumulative" })} className={chartButtonClass("cumulative")}>Cumulative</Link>
-          <Link href={filterHref(filters, { chart: "daily" })} className={chartButtonClass("daily")}>Daily</Link>
-        </div>
+    <div className="flex h-full flex-col">
+      <h3 className="mb-4 font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">At a glance</h3>
+      <div className="grid flex-1 auto-rows-fr grid-cols-2 gap-[2px] overflow-hidden rounded-[2px] bg-black p-[2px]">
+        {stats.map((stat) => {
+          const countValue = stat.value.match(/^(\d+)\s+\(([^)]+)\)$/);
+          return (
+            <div key={stat.label} className="flex min-h-24 flex-col justify-center bg-[#14171a] px-4 py-4">
+              <div className="text-xs font-medium leading-snug text-[var(--muted)]">{stat.label}</div>
+              <div className="mt-3 font-mono text-xl font-semibold leading-none tabular-nums text-[var(--foreground)]">
+                {countValue ? (
+                  <span className="inline-flex items-baseline gap-2">
+                    <span style={{ color: valueColor(stat.label) }}>{countValue[1]}</span>
+                    <span className="text-xs font-medium text-[var(--muted)]">{countValue[2]}</span>
+                  </span>
+                ) : (
+                  <span style={{ color: valueColor(stat.label) }}>{stat.value}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
-      {filters.chart === "daily" ? <DailyPnlBars points={points} /> : <CumulativePnlLine points={points} />}
+    </div>
+  );
+}
+
+function PnlModule({
+  points,
+  rangeLabel,
+  sections,
+}: {
+  points: { date: string; pnl: number; cumulative: number }[];
+  rangeLabel: string;
+  sections: StatSection[];
+}) {
+  return (
+    <section>
+      <h2 className="mb-8 flex flex-wrap items-baseline gap-x-4 gap-y-2">
+        <span className="text-5xl font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
+          Performance
+        </span>
+        {" "}
+        {rangeLabel !== "All dates" ? (
+          <span className="font-mono text-base text-[var(--muted)]">{rangeLabel}</span>
+        ) : null}
+      </h2>
+      <div className="grid items-stretch gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex h-full flex-col">
+          <h3 className="mb-4 font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">
+            Cumulative P&L
+          </h3>
+          <div className="flex-1 overflow-hidden rounded-[2px] bg-black p-[2px]">
+            <div className="h-full bg-[#14171a] px-6 py-5">
+              <CumulativePnlLine points={points} />
+            </div>
+          </div>
+        </div>
+        <PerformanceSnapshot sections={sections} />
+      </div>
     </section>
   );
 }
@@ -726,7 +874,6 @@ export default async function ReportsPage({
     side?: string;
     tag?: string;
     account?: string;
-    chart?: string;
   }>;
 }) {
   const filters = parseSearchParams(await searchParams);
@@ -744,24 +891,25 @@ export default async function ReportsPage({
     <div className="mx-auto max-w-6xl">
       <FilterBar filters={filters} tagOptions={tagOptions} />
 
-      <div className="mt-6">
-        <StatsGrid sections={statSections} rangeLabel={rangeLabel} />
+      <div className="mt-10">
+        <PnlModule points={dailyPnl} rangeLabel={rangeLabel} sections={statSections} />
       </div>
 
       <div className="mt-16">
-        <PnlModule filters={filters} points={dailyPnl} />
+        <StatsGrid sections={statSections} />
       </div>
 
       <div className="mt-24">
+        <h2 className="mb-8 text-xl font-semibold tracking-tight text-[var(--foreground)]">Breakdowns</h2>
         <div className="grid gap-x-24 gap-y-16 md:grid-cols-2">
+          <CountChart title="Trade Distribution by Duration" buckets={durationBuckets} />
+          <PnlChart title="Performance by Duration" buckets={durationBuckets} />
           <CountChart title="Trade Distribution by Day of Week" buckets={dayBuckets} />
           <PnlChart title="Performance by Day of Week" buckets={dayBuckets} />
           <CountChart title="Trade Distribution by Hour of Day" buckets={hourBuckets} />
           <PnlChart title="Performance by Hour of Day" buckets={hourBuckets} />
           <CountChart title="Trade Distribution by Month" buckets={monthBuckets} />
           <PnlChart title="Performance by Month" buckets={monthBuckets} />
-          <CountChart title="Trade Distribution by Duration" buckets={durationBuckets} />
-          <PnlChart title="Performance by Duration" buckets={durationBuckets} />
         </div>
       </div>
     </div>
