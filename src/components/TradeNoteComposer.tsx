@@ -18,12 +18,15 @@ export default function TradeNoteComposer({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="block w-full text-left"
+        className="block w-full rounded-md border border-dashed border-[var(--border)] px-4 py-5 text-left transition-colors hover:border-[var(--blue)]"
         title="Click to add a trade note"
       >
-        <p className="text-sm leading-6 text-[var(--muted)] italic">
-          Add a trade note: setup quality, execution, rules followed or broken,
-          emotions, and what to remember next time.
+        <p className="font-mono text-[13px] font-semibold text-[var(--blue)]">
+          + Add a trade note
+        </p>
+        <p className="mt-3 max-w-[28rem] text-sm leading-6 text-[var(--muted)]">
+          Setup quality, execution, rules followed or broken, emotions, and what
+          to remember next time.
         </p>
       </button>
     );

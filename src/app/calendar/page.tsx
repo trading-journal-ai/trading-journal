@@ -6,6 +6,7 @@ import { getActiveAccount } from "@/lib/accountScope";
 import { netPnl } from "@/lib/pnl";
 import { etDateString } from "@/lib/time";
 import { fmtMoney } from "@/lib/format";
+import Breadcrumbs from "@/components/Breadcrumbs";
 import CalendarRangeFilter from "@/components/CalendarRangeFilter";
 
 export const dynamic = "force-dynamic";
@@ -220,6 +221,11 @@ function MonthView({
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
+      <Breadcrumbs
+        back={{ label: "Calendar", href: "/calendar" }}
+        current={monthFmt.format(new Date(Date.UTC(year, month - 1, 1)))}
+      />
+
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <ViewToggle
@@ -397,6 +403,8 @@ function YearView({
 }) {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
+      <Breadcrumbs back={{ label: "Calendar", href: "/calendar" }} current={String(year)} />
+
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <ViewToggle

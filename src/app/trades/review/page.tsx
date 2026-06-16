@@ -3,9 +3,9 @@ import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getActiveAccount } from "@/lib/accountScope";
 import { getCandles } from "@/lib/candles";
+import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
 import TradeChart from "@/components/TradeChart";
 import ReviewHeader from "@/components/ReviewHeader";
-import TickerReviewRail from "@/components/TickerReviewRail";
 import { fmtDate, fmtMoney, fmtPrice } from "@/lib/format";
 import { netPnl } from "@/lib/pnl";
 import { etDayRange, etDateString } from "@/lib/time";
@@ -32,6 +32,16 @@ const timeFmt = new Intl.DateTimeFormat("en-US", {
   hour12: false,
 });
 const fmtTime = (t: number) => timeFmt.format(new Date(t * 1000));
+const shortDateFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  month: "short",
+  day: "numeric",
+});
+
+function shortDateLabel(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  return shortDateFmt.format(new Date(Date.UTC(year, month - 1, day)));
+}
 
 function validDate(value: string | undefined): string | undefined {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
@@ -115,6 +125,84 @@ function buildTradeCycles(executions: ExecutionRow[]): TradeCycle[] {
   return cycles;
 }
 
+function tradeReviewHref(date: string, symbol: string, backHref: string): string {
+  return `/trades/review?date=${date}&symbol=${symbol}&returnTo=${encodeURIComponent(backHref)}`;
+}
+
+function TradeCycleRail({
+  cycles,
+  date,
+  symbol,
+  backHref,
+}: {
+  cycles: TradeCycle[];
+  date: string;
+  symbol: string;
+  backHref: string;
+}) {
+  const returnTo = tradeReviewHref(date, symbol, backHref);
+
+  return (
+    <aside className="w-full lg:w-[260px] lg:justify-self-end">
+      <section className="h-auto px-1 py-1 lg:h-[480px]">
+        <div className="h-full space-y-5 overflow-y-auto pr-1 pt-1">
+          {cycles.length > 0 ? (
+            cycles.map((cycle, index) => (
+              <article
+                key={cycle.id}
+                className="border-b border-[var(--hairline)] pb-5 font-mono text-[12px] last:border-b-0"
+              >
+                <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-3 gap-y-1">
+                  <h2 className="text-[13px] font-semibold text-[var(--foreground)]">Trade {index + 1}</h2>
+                  <span className={`justify-self-end text-right text-[13px] font-semibold tabular-nums ${pnlClass(cycle.pnl)}`}>
+                    {cycle.pnl == null ? "Open" : fmtMoney(cycle.pnl)}
+                  </span>
+                  <div className="col-span-2 text-[var(--muted)]">
+                    {cycle.executions.length} fills · {cycle.sharesTraded.toLocaleString()} shares
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-4 gap-x-2 gap-y-1.5">
+                  <div className="pb-0.5 text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Time</div>
+                  <div className="pb-0.5 text-center text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Side</div>
+                  <div className="pb-0.5 text-center text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Shares</div>
+                  <div className="pb-0.5 text-right text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Price</div>
+                  {cycle.executions.map((execution) => (
+                    <div key={execution.id} className="contents">
+                      <div className="tabular-nums text-[var(--foreground)]">{fmtTime(execution.executedAt).slice(0, 5)}</div>
+                      <div className="text-center" style={{ color: execution.side.toLowerCase() === "buy" ? "var(--green)" : "var(--red)" }}>
+                        {execution.side.toUpperCase().slice(0, 1)}
+                      </div>
+                      <div className="text-center tabular-nums text-[var(--foreground)]">{execution.quantity.toLocaleString()}</div>
+                      <div className="text-right tabular-nums text-[var(--foreground)]">{fmtPrice(execution.price)}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4">
+                  {cycle.tradeIds.length > 0 ? (
+                    <div className="flex flex-wrap gap-x-2 gap-y-1">
+                      {cycle.tradeIds.map((tradeId, tradeIndex) => (
+                        <Link
+                          key={tradeId}
+                          href={`/trades/${tradeId}?returnTo=${encodeURIComponent(returnTo)}`}
+                          className="text-[var(--blue)] hover:underline"
+                        >
+                          {cycle.tradeIds.length === 1 ? "View trade ->" : `Trade ${tradeIndex + 1} ->`}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </article>
+            ))
+          ) : (
+            <div className="py-1 font-mono text-[13px] text-[var(--muted)]">No trade cycles</div>
+          )}
+        </div>
+      </section>
+    </aside>
+  );
+}
+
 export default async function TickerDayReviewPage({
   searchParams,
 }: {
@@ -129,9 +217,7 @@ export default async function TickerDayReviewPage({
   if (!symbol || !date) {
     return (
       <div className="mx-auto max-w-[860px] space-y-6">
-        <Link href={backHref} className="inline-flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]">
-          Back
-        </Link>
+        <Breadcrumbs back={originCrumbFromHref(backHref, "/trades")} current="Ticker review" />
         <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-8 text-center text-sm text-[var(--muted)]">
           Select a ticker and date to review its trades for the day.
         </div>
@@ -160,21 +246,6 @@ export default async function TickerDayReviewPage({
           .orderBy(asc(schema.executions.executedAt))
       : [];
 
-  const tradeNotes =
-    tradeIds.length > 0
-      ? await db
-          .select()
-          .from(schema.journalEntries)
-          .where(inArray(schema.journalEntries.tradeId, tradeIds))
-          .orderBy(asc(schema.journalEntries.createdAt))
-      : [];
-  const noteByTradeId = new Map<number, typeof schema.journalEntries.$inferSelect>();
-  tradeNotes.forEach((note) => {
-    if (note.tradeId != null) {
-      noteByTradeId.set(note.tradeId, note);
-    }
-  });
-
   const firstAt = execs[0]?.executedAt ?? trades[0]?.entryAt ?? start;
   const lastAt = execs.at(-1)?.executedAt ?? trades.at(-1)?.exitAt ?? firstAt;
   const pad = 20 * 60;
@@ -186,29 +257,6 @@ export default async function TickerDayReviewPage({
   const losses = trades.filter((trade) => (netPnl(trade) ?? 0) < 0).length;
   const counted = wins + losses;
   const tradeCycles = buildTradeCycles(execs);
-  const dayPnls = dayTrades.map((trade) => netPnl(trade) ?? 0);
-  const dayWins = dayPnls.filter((pnl) => pnl > 0);
-  const dayLosses = dayPnls.filter((pnl) => pnl < 0);
-  const dayCounted = dayWins.length + dayLosses.length;
-  const dayGrossWins = dayWins.reduce((sum, pnl) => sum + pnl, 0);
-  const dayGrossLosses = Math.abs(dayLosses.reduce((sum, pnl) => sum + pnl, 0));
-  const dayTotalPnl = dayPnls.reduce((sum, pnl) => sum + pnl, 0);
-  const dayTickerMap = new Map<string, { symbol: string; pnl: number }>();
-
-  dayTrades.forEach((trade) => {
-    const current = dayTickerMap.get(trade.symbol) ?? { symbol: trade.symbol, pnl: 0 };
-    current.pnl += netPnl(trade) ?? 0;
-    dayTickerMap.set(trade.symbol, current);
-  });
-
-  const tickerRows = [...dayTickerMap.values()]
-    .sort((a, b) => b.pnl - a.pnl)
-    .map((row) => ({
-      symbol: row.symbol,
-      pnl: row.pnl,
-      active: row.symbol === symbol,
-      href: `/trades/review?date=${date}&symbol=${row.symbol}&returnTo=${encodeURIComponent(backHref)}`,
-    }));
 
   const summaryStats = [
     { label: `${trades.length.toLocaleString()} trades` },
@@ -217,14 +265,17 @@ export default async function TickerDayReviewPage({
     { label: counted === 0 ? "— win" : `${Math.round((wins / counted) * 100)}% win` },
     { label: `P&L ${fmtMoney(totalPnl)}`, className: pnlClass(totalPnl) },
   ];
+  const originCrumb = originCrumbFromHref(backHref, "/trades");
+  const sectionCrumbs = originCrumb.label === "Trades" ? [] : [{ label: "Trades", href: "/trades" }];
 
   return (
     <div className="mx-auto max-w-[1280px]">
-      <div className="mb-12">
-        <Link href={backHref} className="inline-flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]">
-          Back
-        </Link>
-      </div>
+      <Breadcrumbs
+        back={originCrumb}
+        items={sectionCrumbs}
+        current={`${symbol} · ${shortDateLabel(date)}`}
+        className="mb-12"
+      />
 
       <div className="mb-7">
         <ReviewHeader
@@ -235,7 +286,7 @@ export default async function TickerDayReviewPage({
         />
       </div>
 
-      <section className="mb-8 grid gap-8 border-t border-[var(--hairline)] pt-7 lg:grid-cols-[minmax(0,1fr)_200px] lg:items-start">
+      <section className="mb-8 grid gap-8 border-t border-[var(--hairline)] pt-7 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
         <div className="min-w-0">
           {error ? (
             <div className="rounded-lg border border-[var(--red)]/40 bg-[var(--red)]/10 px-4 py-3 text-sm text-[var(--red)]">
@@ -253,92 +304,7 @@ export default async function TickerDayReviewPage({
             />
           )}
         </div>
-
-        <TickerReviewRail
-          rows={tickerRows}
-          accuracy={dayCounted === 0 ? null : Math.round((dayWins.length / dayCounted) * 100)}
-          profitFactor={dayGrossLosses === 0 ? null : dayGrossWins / dayGrossLosses}
-          pnl={dayTotalPnl}
-          className="w-full lg:w-[200px] lg:justify-self-end"
-        />
-      </section>
-
-      <section className="max-w-[820px]">
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-          Trade Cycles
-        </h2>
-        <div className="border-y border-[var(--hairline)]">
-          {tradeCycles.length > 0 ? (
-            <div className="divide-y divide-[var(--hairline)]">
-              {tradeCycles.map((cycle, index) => (
-                <article key={cycle.id} className="py-5">
-                  {(() => {
-                    const cycleNotes = cycle.tradeIds
-                      .map((tradeId) => ({ tradeId, note: noteByTradeId.get(tradeId) }))
-                      .filter((item): item is { tradeId: number; note: typeof schema.journalEntries.$inferSelect } => item.note != null);
-
-                    return (
-                      <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
-                        <div>
-                          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-                            <h3 className="text-base font-semibold text-[var(--foreground)]">
-                              Trade {index + 1}
-                            </h3>
-                            {cycleNotes.length > 0 ? (
-                              <div className="flex flex-wrap items-center gap-3">
-                                {cycleNotes.map(({ tradeId }, noteIndex) => (
-                                  <Link
-                                    key={tradeId}
-                                    href={`/trades/${tradeId}?returnTo=${encodeURIComponent(`/trades/review?date=${date}&symbol=${symbol}&returnTo=${encodeURIComponent(backHref)}`)}`}
-                                    className="font-mono text-[12px] text-[var(--blue)] hover:underline"
-                                  >
-                                    {cycleNotes.length === 1 ? "Trade note" : `Trade note ${noteIndex + 1}`}
-                                  </Link>
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
-                          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[12px] text-[var(--muted)]">
-                            <span className="tabular-nums">{cycle.executions.length} fills</span>
-                            <span className="text-[var(--faint)]">·</span>
-                            <span className="tabular-nums">{cycle.sharesTraded.toLocaleString()} shares</span>
-                            <span className="text-[var(--faint)]">·</span>
-                            <span className={`tabular-nums ${pnlClass(cycle.pnl)}`}>
-                              {cycle.pnl == null ? "Open" : fmtMoney(cycle.pnl)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  <div className="grid gap-y-2 font-mono text-[12px] sm:grid-cols-[1fr_72px_84px_92px_1fr]">
-                    <div className="hidden pb-1 uppercase tracking-[0.24em] text-[var(--muted)] sm:block">Time (ET)</div>
-                    <div className="hidden pb-1 uppercase tracking-[0.24em] text-[var(--muted)] sm:block">Side</div>
-                    <div className="hidden pb-1 uppercase tracking-[0.24em] text-[var(--muted)] sm:block">Shares</div>
-                    <div className="hidden pb-1 uppercase tracking-[0.24em] text-[var(--muted)] sm:block">Price</div>
-                    <div className="hidden pb-1 uppercase tracking-[0.24em] text-[var(--muted)] sm:block">Effect</div>
-                    {cycle.executions.map((execution) => (
-                      <div key={execution.id} className="contents">
-                        <div className="tabular-nums text-[var(--foreground)]">{fmtTime(execution.executedAt)}</div>
-                        <div style={{ color: execution.side.toLowerCase() === "buy" ? "var(--green)" : "var(--red)" }}>
-                          {execution.side.toUpperCase()}
-                        </div>
-                        <div className="tabular-nums text-[var(--foreground)]">{execution.quantity.toLocaleString()}</div>
-                        <div className="tabular-nums text-[var(--foreground)]">{fmtPrice(execution.price)}</div>
-                        <div className="text-[var(--muted)]">{execution.posEffect ?? "—"}</div>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="px-3 py-6 text-center text-sm text-[var(--muted)]">
-              No executions found.
-            </div>
-          )}
-        </div>
+        <TradeCycleRail cycles={tradeCycles} date={date} symbol={symbol} backHref={backHref} />
       </section>
     </div>
   );

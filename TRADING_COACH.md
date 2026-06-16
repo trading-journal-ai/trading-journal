@@ -483,6 +483,87 @@ The coach should not:
 
 ## Suggested Implementation Phases
 
+### Backlog: Find Your Levels Trade Review Coach Prompt
+
+The user supplied a draft prompt artifact, `fyl_trade_review_coach.md`, for a
+future AI trade review feature. Capture it as the first concrete coaching prompt
+direction.
+
+Full source prompt: `docs/prompts/fyl_trade_review_coach.md`.
+
+Intent:
+
+- Build a post-trade review coach based on the Find Your Levels framework.
+- Focus the first version on entry quality, not whether the trade made money.
+- Review completed trades only.
+- Treat the trader's marked levels as the source of truth.
+- Speak in the trader's framework vocabulary: trapped buyers/sellers, overhead
+  supply, frontside/backside, role flip, vote count, buying support instead of
+  chasing breakouts, structural invalidation.
+
+Required input shape:
+
+- Session identity: ticker, date, catalyst, float, daily 200 EMA context, and
+  any pre-trade notes.
+- User-marked levels: price, support/resistance type, source, timeframe, and
+  color.
+- Broker trade records: direction, entry/exit price, entry/exit time, shares,
+  planned stop, and planned setup.
+- Chart data: 1m and 5m execution candles plus daily/weekly context.
+- Indicator data where available: volume, VWAP, EMA 9/20, daily 200 EMA, MACD,
+  MACD signal, and MACD histogram.
+- Journal context: daily note, trade notes, labels, process tags, and emotion
+  tags.
+
+Review rubric:
+
+- Phase and scene: identify Phase 1 first-pullback/catalyst move versus Phase 2
+  post-first-move setup.
+- Entry quality: decide whether the entry was a dip into support/structure or a
+  chase into open space or supply.
+- Vote count: volume, daily 200 EMA, VWAP, EMA 9/20, and MACD when available.
+- Risk: whether invalidation was definable before entry and whether the stop was
+  structural instead of pain-based.
+- Exit: brief note only; the grade remains entry-first.
+- Grade: A+, B/acceptable, Forced, or Mistake.
+- Closing question: who was trapped here, and was the trader on the right side
+  of them?
+
+Expected output:
+
+- Structured per-trade review.
+- Concise session synthesis.
+- The repeated pattern or leak across the session.
+- Best entry to repeat, based on process rather than P&L.
+- One specific fix for the next session.
+- Rehab checks for the rebuild phase: size consistency and whether marginal
+  chases slipped in.
+
+Guardrails from the prompt:
+
+- Never grade on P&L alone.
+- Never invent or override the trader's levels.
+- Never penalize early Phase 1 trades for thin intraday levels when the move is
+  too young to have built them.
+- Never ask for or assume Level 2 / Time & Sales data.
+- Never recommend live trades, predict price, or give alerts.
+- Never use indicators as standalone signals.
+- Avoid generic encouragement; every line should reference the session.
+
+Implementation to-do:
+
+- Add a user-editable playbook/levels model before enabling serious coaching.
+- Decide whether levels are manually entered, imported from screenshots, or
+  drawn on the chart.
+- Add indicator generation or import for EMA 9/20, daily 200 EMA, VWAP, MACD,
+  and volume context.
+- Build a normalized AI input payload for a single ticker/day session.
+- Add a daily "AI Review" surface first; trade-level review can come later.
+- Store AI reviews separately from user-authored journal notes.
+- Create a small eval set of known trades to test whether the coach grades
+  process over outcome.
+- Prototype the prompt against demo data before wiring it into production UI.
+
 ### Phase 1: Design The Coach Playbook
 
 - Create the initial playbook structure.

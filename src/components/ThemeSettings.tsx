@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Theme = "dark" | "light";
 
@@ -12,10 +12,13 @@ function getInitialTheme(): Theme {
 export default function ThemeSettings() {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
   function updateTheme(nextTheme: Theme) {
     setTheme(nextTheme);
-    document.documentElement.dataset.theme = nextTheme;
-    localStorage.setItem("theme", nextTheme);
   }
 
   return (
