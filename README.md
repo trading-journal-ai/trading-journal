@@ -1,16 +1,26 @@
 # Trading Journal
 
-A local-first trading journal for importing broker executions, reviewing trades
-with candlestick charts, tracking performance, and writing lightweight journal
-notes that roll up from trade to day to week to month.
+A local-first trading journal built around the review habit first: write the
+recap, see the day in context, and drill into the trade evidence only when it
+matters.
 
-This project is early, but the core direction is clear: make trade review fast,
+Instead of starting with a dense trade table, the app treats trading review more
+like a chronological note journal. Days, weeks, and months become the structure.
+Imported executions, P&L charts, and reports sit beside your notes so the story
+of each trading day is easier to review and document.
+
+The goal is to make journaling feel low-friction. Start with a daily recap, add
+trade notes when a specific trade deserves attention, and come back later to a
+human-readable record of what happened instead of a grid of data you have to
+sort through again.
+
+The project is early, but the core direction is clear: make reflection fast,
 private, and useful without depending on a hosted journaling subscription.
 
 ## Vision
 
-Most trading journals are good at tables and reports, but the real review loop is
-more human:
+Most trading journals are good at tables and reports. That matters, but the real
+review loop is more human:
 
 - What setup did I take?
 - Did the chart actually support the entry?
@@ -18,9 +28,36 @@ more human:
 - Did I hold winners long enough?
 - Was this a process problem, an emotional problem, or just normal variance?
 
-Trading Journal is designed around that loop. It combines imported executions,
-per-trade charts, reports, a P&L calendar, and a text-first journal so the
-numbers and the reflection live together.
+Trading Journal is designed around that loop. The journal is the center of the
+product, not an afterthought. You can scan a month like a notebook, read daily
+recaps chronologically, see the trades that shaped the day, and then drill into a
+ticker or individual trade when you need the chart, executions, or trade note.
+
+The goal is to reduce friction between "what happened?" and "what did I learn?"
+The numbers, charts, and trade log are still there, but they support the journal
+instead of replacing it.
+
+## Review Flow
+
+The primary workflow is intentionally simple:
+
+1. Import executions from a broker CSV so the trade data, P&L, charts, and
+   calendar context are created automatically.
+2. Open the journal and review the day in chronological context.
+3. Write a daily recap that captures the market read, execution quality,
+   emotions, and lessons from the session.
+4. Use the daily P&L chart and ticker list to see what shaped the day.
+5. Drill into a ticker review when you want to inspect the trades behind a
+   symbol.
+6. Open a single trade when the chart, executions, or setup deserves a specific
+   trade note.
+7. Save that trade note back into the journal, nested under the same day, so the
+   recap and supporting trade evidence stay connected.
+8. Zoom back out to the week or month so one red day does not dominate the
+   bigger story.
+
+That structure keeps the journal lightweight and readable while still making the
+underlying data available when it is useful.
 
 ## Current Features
 
@@ -28,15 +65,17 @@ numbers and the reflection live together.
 - **Execution matching** into round-trip trades.
 - **Local SQLite storage** with Drizzle migrations.
 - **Automatic candle fetching** through Massive for OHLCV data.
-- **Trade detail charts** with candlesticks and entry/exit markers.
-- **Trades table** with symbol/tag/side/account filters, sorting, pagination,
-  and per-share value.
-- **Calendar views** for monthly and yearly P&L review.
-- **Reports** with stats, cumulative/daily P&L, and distribution charts.
-- **Dashboard** with weekly P&L, win rate, profit factor, payoff ratio, average
-  trade, and recent trades.
-- **Journal** with month/week/day structure, daily trade recaps, and trade notes
-  that link back to the trade chart.
+- **Journal-first review** with month/week/day chronology, daily recaps, and
+  trade notes that link back to the chart.
+- **Ticker review** for quickly drilling into all trades for a symbol on a given
+  day.
+- **Trade detail charts** with candlesticks, volume, entry/exit markers, and
+  trade notes.
+- **Trade log** with sorting, pagination, and per-share value for deeper data
+  inspection.
+- **Calendar views** for monthly and yearly P&L context.
+- **Reports** with cumulative P&L, stats, at-a-glance metrics, and distribution
+  charts.
 - **Light/dark theme toggle**.
 
 See [FEATURES.md](FEATURES.md), [DESIGN.md](DESIGN.md), and
@@ -211,6 +250,20 @@ Known assumptions:
 - Re-importing the same file is intended to be safe; duplicate executions are
   skipped.
 
+Important import roadmap:
+
+- Broker CSV exports are not standardized. Lightspeed, CenterPoint, Cobra,
+  TradeZero, Ocean One, DAS Trader, and other brokers may all use different
+  column names, timestamp formats, side labels, fee fields, and row structures.
+- The long-term importer should use broker-specific adapters that normalize each
+  CSV into a shared execution/fill shape before grouping fills into trades.
+- A generic column-mapping import could help support unknown broker exports, but
+  broker-specific sample files are still needed to test real-world edge cases.
+- Real broker samples should be anonymized before sharing. Useful test files can
+  replace account numbers, symbols, and personally identifying fields while
+  preserving the original columns, row order, timestamps, quantities, prices,
+  fees, and partial-fill behavior.
+
 ## Project Docs
 
 - [DESIGN.md](DESIGN.md) - product design, architecture, data model, and phases.
@@ -224,13 +277,17 @@ Near-term:
 
 - Add public-safe demo data and a seed command.
 - Harden import previews and error states.
+- Design broker CSV adapter support and collect anonymized sample exports from
+  Lightspeed, CenterPoint, Ocean One, DAS Trader, and other active trading
+  platforms.
 - Improve trade chart pan/zoom and volume context.
 - Generalize journal notes beyond trade-level entries.
 - Add backup/export guidance for SQLite data.
 
 Later:
 
-- DAS Trader CSV import.
+- Broker-specific CSV imports beyond ThinkorSwim.
+- Generic CSV column mapping for unsupported brokers.
 - Manual candle CSV fallback.
 - Settings for timezone, fees, and defaults.
 - Search across journal notes.
