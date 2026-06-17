@@ -13,6 +13,7 @@ export default async function Home({
     date?: string;
     preset?: string;
     from?: string;
+    month?: string;
   }>;
 }) {
   const filters = parseJournalReviewSearchParams(await searchParams);

@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
 import ArchiveSidebar, { type ArchiveSidebarMonth } from "@/components/ArchiveSidebar";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
+import InlineImportPrompt from "@/components/InlineImportPrompt";
 import RecapNote from "@/components/RecapNote";
 import TickerReviewRail from "@/components/TickerReviewRail";
 
@@ -13,6 +14,7 @@ export type JournalReviewSearchParams = {
   date?: string;
   preset?: string;
   from?: string;
+  month?: string;
 };
 
 type TradeRow = typeof schema.trades.$inferSelect;
@@ -97,9 +99,9 @@ const monthFmt = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
-const shortDateFmt = new Intl.DateTimeFormat("en-US", {
+const monthDayFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
-  month: "short",
+  month: "long",
   day: "numeric",
 });
 
@@ -118,8 +120,8 @@ function utcDate(date: string): Date {
 function formatMoney(value: number) {
   const sign = value > 0 ? "+" : value < 0 ? "-" : "";
   return `${sign}$${Math.abs(value).toLocaleString("en-US", {
-    maximumFractionDigits: Math.abs(value) >= 100 ? 0 : 2,
-    minimumFractionDigits: Math.abs(value) >= 100 ? 0 : 2,
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
   })}`;
 }
 
@@ -142,10 +144,15 @@ function validDate(value: string | undefined): string | undefined {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
 }
 
+function validMonth(value: string | undefined): string | undefined {
+  return value && /^\d{4}-\d{2}$/.test(value) ? value : undefined;
+}
+
 export function parseJournalReviewSearchParams(params: JournalReviewSearchParams): {
   preset: JournalReviewPreset;
   date?: string;
   from?: string;
+  month?: string;
 } {
   const presetOptions = new Set<JournalReviewPreset>(["today", "week", "month"]);
   const date = validDate(params.date);
@@ -157,6 +164,7 @@ export function parseJournalReviewSearchParams(params: JournalReviewSearchParams
         : "month",
     date,
     from: validDate(params.from),
+    month: validMonth(params.month),
   };
 }
 
@@ -166,16 +174,19 @@ export function journalReviewHref(
     preset,
     date,
     from,
+    month,
   }: {
     preset: JournalReviewPreset;
     date?: string;
     from?: string;
+    month?: string;
   },
 ) {
   const params = new URLSearchParams();
   if (preset !== "month") params.set("preset", preset);
   if (date) params.set("date", date);
   if (from) params.set("from", from);
+  if (month) params.set("month", month);
   const query = params.toString();
   return query ? `${basePath}?${query}` : basePath;
 }
@@ -199,15 +210,10 @@ function lastDayOfMonth(date: string): string {
   return `${date.slice(0, 7)}-${String(day).padStart(2, "0")}`;
 }
 
-function monthWeekLabel(weekStart: string): string {
-  const day = Number(weekStart.slice(8, 10));
-  return `Week ${Math.floor((day - 1) / 7) + 1}`;
-}
-
 function weekRangeLabel(weekStart: string): string {
   const weekEnd = isoAddDays(weekStart, 4);
   const year = weekEnd.slice(0, 4);
-  return `${shortDateFmt.format(utcDate(weekStart))} - ${shortDateFmt.format(utcDate(weekEnd))}, ${year}`;
+  return `${monthDayFmt.format(utcDate(weekStart))} - ${monthDayFmt.format(utcDate(weekEnd))} ${year}`;
 }
 
 function archiveWeekLabel(monthKey: string, weekStart: string): string {
@@ -222,6 +228,10 @@ function archiveWeekRangeLabel(weekStart: string, monthKey: string): string {
   const endOfMonth = lastDayOfMonth(`${monthKey}-01`);
   const end = endOfWeek > endOfMonth ? endOfMonth : endOfWeek;
   return `${Number(start.slice(-2))}-${Number(end.slice(-2))}`;
+}
+
+function journalWeekSectionId(weekKey: string): string {
+  return `journal-week-${weekKey}`;
 }
 
 function archiveWeeks(monthKey: string, activeWeekKey: string | undefined, basePath: string): ArchiveSidebarMonth["weeks"] {
@@ -239,7 +249,8 @@ function archiveWeeks(monthKey: string, activeWeekKey: string | undefined, baseP
         label: archiveWeekLabel(monthKey, weekStart),
         rangeLabel: archiveWeekRangeLabel(weekStart, monthKey),
         active: weekStart === activeWeekKey,
-        href: journalReviewHref(basePath, { preset: "week", from: weekStart }),
+        href: journalReviewHref(basePath, { preset: "week", from: weekStart, month: monthKey }),
+        sectionId: journalWeekSectionId(weekStart),
       });
     }
     weekStart = isoAddDays(weekStart, 7);
@@ -293,17 +304,8 @@ function summarizeDays(days: ReviewData[]): ReviewSummary {
   };
 }
 
-async function latestTradeDate(accountId: number): Promise<string | undefined> {
-  const latest = (
-    await db
-      .select({ entryAt: schema.trades.entryAt })
-      .from(schema.trades)
-      .where(eq(schema.trades.accountId, accountId))
-      .orderBy(desc(schema.trades.entryAt))
-      .limit(1)
-  )[0];
-
-  return latest?.entryAt == null ? undefined : etDateString(latest.entryAt);
+function currentEtDate(): string {
+  return etDateString(Math.floor(Date.now() / 1000));
 }
 
 function rangeForPreset(preset: JournalReviewPreset, anchor: string): { from: string; to: string } {
@@ -367,16 +369,19 @@ async function loadReviewRange({
   preset,
   date,
   from,
+  month,
   accountId,
 }: {
   preset: JournalReviewPreset;
   date?: string;
   from?: string;
+  month?: string;
   accountId: number;
 }): Promise<ReviewRange> {
   const explicitDate = validDate(date);
-  const anchor = explicitDate ?? validDate(from) ?? (await latestTradeDate(accountId)) ?? etDateString(Date.now() / 1000);
+  const anchor = explicitDate ?? validDate(from) ?? currentEtDate();
   const range = rangeForPreset(preset, anchor);
+  const selectedMonthKey = month ?? range.from.slice(0, 7);
   const { start } = etDayRange(range.from);
   const { end } = etDayRange(range.to);
   const trades = (
@@ -401,7 +406,7 @@ async function loadReviewRange({
         preset === "month"
           ? monthFmt.format(utcDate(range.from))
           : preset === "week"
-            ? monthWeekLabel(range.from)
+            ? archiveWeekLabel(selectedMonthKey, range.from)
             : dayFmt.format(utcDate(anchor)),
       eyebrow: "Trade Journal",
       displayDate:
@@ -451,7 +456,7 @@ async function loadReviewRange({
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, weekDays]) => ({
       key,
-      label: monthWeekLabel(key),
+      label: archiveWeekLabel(preset === "month" ? range.from.slice(0, 7) : selectedMonthKey, key),
       displayDate: weekRangeLabel(key),
       days: weekDays,
       ...summarizeDays(weekDays),
@@ -467,7 +472,7 @@ async function loadReviewRange({
       preset === "month"
         ? monthFmt.format(utcDate(range.from))
         : preset === "week"
-          ? `${monthWeekLabel(range.from)}`
+          ? archiveWeekLabel(selectedMonthKey, range.from)
           : firstDay?.label ?? dayFmt.format(utcDate(anchor)),
     eyebrow: "Trade Journal",
     displayDate:
@@ -481,8 +486,8 @@ async function loadReviewRange({
   };
 }
 
-async function loadReviewArchive(anchor: string, accountId: number, basePath: string): Promise<ReviewArchive> {
-  const selectedMonthKey = anchor.slice(0, 7);
+async function loadReviewArchive(anchor: string, accountId: number, basePath: string, month?: string): Promise<ReviewArchive> {
+  const selectedMonthKey = month ?? anchor.slice(0, 7);
   const selectedWeekKey = weekStartFor(anchor);
   const rows = await db
     .select({ entryAt: schema.trades.entryAt })
@@ -602,16 +607,16 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
   const negativeClipId = `pnlNegativeClip-${day.date}`;
 
   return (
-    <section className="flex h-[380px] flex-col rounded-md bg-[#14171a] px-4 py-4">
+    <section className="flex h-[380px] flex-col rounded-[6px] bg-[#1a2432] px-4 py-4">
       <div className="mb-1 flex items-center justify-between gap-4">
         <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-          Running P&L
+          Daily P&L
         </h2>
         <span className={`font-mono text-sm font-semibold tabular-nums ${pnlClass(day.pnl)}`}>
           {formatMoney(day.pnl)}
         </span>
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="min-h-0 flex-1" role="img" aria-label="Running P&L by time of day">
+      <svg viewBox={`0 0 ${width} ${height}`} className="min-h-0 flex-1" role="img" aria-label="Daily P&L by time of day">
         <defs>
           <linearGradient id={positiveFillId} x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="var(--green)" stopOpacity="0.36" />
@@ -634,9 +639,9 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
             <text
               x={pad.left - 10}
               y={y(tick) + 5}
-              fill="var(--muted)"
+              fill="var(--body)"
               fontFamily="var(--font-mono)"
-              fontSize="13"
+              fontSize="20"
               fontWeight="500"
               textAnchor="end"
             >
@@ -678,9 +683,9 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
             key={`${index}-${pnlPoints[index].time}`}
             x={x(index)}
             y={height - 16}
-            fill="var(--muted)"
+            fill="var(--body)"
             fontFamily="var(--font-mono)"
-            fontSize="13"
+            fontSize="20"
             fontWeight="500"
             textAnchor="middle"
           >
@@ -696,17 +701,17 @@ function DayReviewSection({
   data,
   recaps,
   returnTo,
-  showDivider = true,
+  showMetrics = true,
 }: {
   data: ReviewData;
   recaps: Map<string, string>;
   returnTo: string;
-  showDivider?: boolean;
+  showMetrics?: boolean;
 }) {
   const { day, tickerRows, pnlPoints } = data;
 
   return (
-    <section className={showDivider ? "border-t border-[var(--hairline)] pt-7" : ""}>
+    <section>
       <div className="grid grid-cols-[8px_minmax(0,1fr)] gap-x-4">
         <span
           className={`mt-2.5 size-2 rounded-full ${
@@ -717,11 +722,11 @@ function DayReviewSection({
           <div className="mb-6 space-y-3">
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
               <h2 className="text-[24px] font-semibold leading-none tracking-[-0.01em] text-[var(--foreground)]">
-                {day.label}
+                {monthDayFmt.format(utcDate(day.date))}
               </h2>
-              <span className="font-mono text-sm text-[var(--muted)]">{shortDateFmt.format(utcDate(day.date))}</span>
+              <span className="font-mono text-sm text-[var(--muted)]">{day.label}</span>
             </div>
-            <MetricLine summary={day} />
+            {showMetrics ? <MetricLine summary={day} /> : null}
           </div>
 
           <div className="mb-6 max-w-[665px] text-[15px] leading-6 text-[var(--body)]">
@@ -752,25 +757,39 @@ function DayReviewSection({
   );
 }
 
-function RangeHeader({ range }: { range: ReviewRange }) {
+function WeekHeader({
+  label,
+  displayDate,
+}: {
+  label: string;
+  displayDate: string;
+}) {
   return (
-    <div className="space-y-4">
-      <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--muted)]">
-        {range.eyebrow}
-      </div>
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-          <h1 className="text-5xl font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
-            {range.title}
-          </h1>
-          {range.preset !== "month" ? (
-            <span className="font-mono text-base text-[var(--muted)]">{range.displayDate}</span>
-          ) : null}
-        </div>
-        <MetricLine summary={range} />
-      </div>
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-sm font-semibold text-[var(--muted)]">
+      <h2 className="text-sm font-semibold leading-none">
+        {label}
+      </h2>
+      <span aria-hidden="true" className="text-[var(--faint)]">·</span>
+      <span>{displayDate}</span>
     </div>
   );
+}
+
+function ScopeHeader({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-4">
+      {children}
+      <div className="h-px bg-[var(--hairline)]" />
+    </div>
+  );
+}
+
+function todayDisplayDate(range: ReviewRange): string {
+  return (range.days[0]?.day.displayDate ?? range.displayDate).replace(",", "");
 }
 
 function CurrentShortcuts({
@@ -802,27 +821,28 @@ function CurrentShortcuts({
   );
 }
 
-function WeekSection({ week, recaps, returnTo }: { week: ReviewWeek; recaps: Map<string, string>; returnTo: string }) {
+function WeekSection({
+  week,
+  recaps,
+  returnTo,
+}: {
+  week: ReviewWeek;
+  recaps: Map<string, string>;
+  returnTo: string;
+}) {
   return (
-    <section className="space-y-8 border-t border-[var(--hairline)] pt-8">
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-          <h2 className="text-[28px] font-semibold leading-none tracking-[-0.02em] text-[var(--foreground)]">
-            {week.label}
-          </h2>
-          <span className="font-mono text-sm text-[var(--muted)]">{week.displayDate}</span>
-        </div>
-        <MetricLine summary={week} />
-      </div>
+    <section id={journalWeekSectionId(week.key)} className="scroll-mt-28 space-y-8">
+      <ScopeHeader>
+        <WeekHeader label={week.label} displayDate={week.displayDate} />
+      </ScopeHeader>
 
       <div className="space-y-12">
-        {week.days.map((dayData, index) => (
+        {week.days.map((dayData) => (
           <DayReviewSection
             key={dayData.day.date}
             data={dayData}
             recaps={recaps}
             returnTo={returnTo}
-            showDivider={index > 0}
           />
         ))}
       </div>
@@ -830,24 +850,31 @@ function WeekSection({ week, recaps, returnTo }: { week: ReviewWeek; recaps: Map
   );
 }
 
-function TradeReviewSidebar({ archive }: { archive: ReviewArchive }) {
+function TradeReviewSidebar({
+  archive,
+  enableWeekScrollSpy = false,
+}: {
+  archive: ReviewArchive;
+  enableWeekScrollSpy?: boolean;
+}) {
   return (
     <ArchiveSidebar
       ariaLabel="Journal archive"
       months={archive.months}
       years={archive.years}
       offsetClassName="md:pt-[5.75rem]"
+      enableWeekScrollSpy={enableWeekScrollSpy}
     />
   );
 }
 
 function EmptyReviewState() {
   return (
-    <section className="border-t border-[var(--hairline)] pt-8">
+    <section className="space-y-3">
       <p className="max-w-[460px] text-sm leading-6 text-[var(--body)]">
-        No trades for this account in the selected period yet. Import trades or switch accounts to
-        review the journal here.
+        No trades for this account in the selected period yet.
       </p>
+      <InlineImportPrompt />
     </section>
   );
 }
@@ -856,6 +883,7 @@ export default async function TradeJournalReview({
   preset = "month",
   date,
   from,
+  month,
   basePath = "/journal",
   returnTo,
   backHref,
@@ -864,30 +892,44 @@ export default async function TradeJournalReview({
   preset?: JournalReviewPreset;
   date?: string;
   from?: string;
+  month?: string;
   basePath?: string;
   returnTo?: string;
   backHref?: string;
   accountId: number;
 }) {
-  const range = await loadReviewRange({ preset, date, from, accountId });
+  const range = await loadReviewRange({ preset, date, from, month, accountId });
   const [archive, recaps] = await Promise.all([
-    loadReviewArchive(range.anchor, accountId, basePath),
+    loadReviewArchive(range.anchor, accountId, basePath, month),
     loadDayRecaps(accountId, range.days.map((day) => day.day.date)),
   ]);
-  const currentHref = returnTo ?? journalReviewHref(basePath, { preset, date, from });
+  const currentHref = returnTo ?? journalReviewHref(basePath, { preset, date, from, month });
   const breadcrumbBack = backHref
     ? originCrumbFromHref(backHref, basePath)
     : { label: "Journal", href: basePath };
 
   return (
     <div className="mx-auto w-full max-w-[905px] pb-24">
-      <Breadcrumbs back={breadcrumbBack} current={range.title} className="mb-10" />
+      <Breadcrumbs
+        back={breadcrumbBack}
+        current={preset === "today" && !backHref ? undefined : range.title}
+        className="mb-10"
+      />
 
       <div className="grid gap-8 md:grid-cols-[180px_minmax(0,665px)] xl:grid-cols-[200px_minmax(0,665px)] xl:gap-10">
-        <TradeReviewSidebar archive={archive} />
+        <TradeReviewSidebar archive={archive} enableWeekScrollSpy={preset === "month"} />
         <div className="min-w-0 space-y-8">
           <CurrentShortcuts activePreset={preset} basePath={basePath} />
-          <RangeHeader range={range} />
+          {preset === "week" ? (
+            <ScopeHeader>
+              <WeekHeader label={range.title} displayDate={range.displayDate} />
+            </ScopeHeader>
+          ) : null}
+          {preset === "today" ? (
+            <ScopeHeader>
+              <WeekHeader label="Today" displayDate={todayDisplayDate(range)} />
+            </ScopeHeader>
+          ) : null}
 
           {range.trades === 0 ? (
             <EmptyReviewState />
@@ -898,14 +940,13 @@ export default async function TradeJournalReview({
               ))}
             </div>
           ) : preset === "week" ? (
-            <div className="space-y-12 border-t border-[var(--hairline)] pt-8">
-              {range.days.map((dayData, index) => (
+            <div className="space-y-12">
+              {range.days.map((dayData) => (
                 <DayReviewSection
                   key={dayData.day.date}
                   data={dayData}
                   recaps={recaps}
                   returnTo={currentHref}
-                  showDivider={index > 0}
                 />
               ))}
             </div>
@@ -914,7 +955,7 @@ export default async function TradeJournalReview({
           )}
 
           {range.trades > 0 ? (
-            <section className="border-t border-[var(--hairline)] pt-6">
+            <section className="pt-2">
               <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
                 AI Review
               </h2>

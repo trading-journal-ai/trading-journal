@@ -5,7 +5,6 @@ import { getActiveAccount } from "@/lib/accountScope";
 import { fmtDate, fmtMoney, fmtPrice } from "@/lib/format";
 import { grossPnl, netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
-import Breadcrumbs from "@/components/Breadcrumbs";
 import MonthPicker from "@/components/MonthPicker";
 import { RowLink } from "./RowLink";
 
@@ -315,7 +314,7 @@ function SortHeader({
       className="inline-flex items-center gap-1 hover:text-[var(--foreground)]"
     >
       {label}
-      <span className="text-[10px]">{active && filters.dir === "asc" ? "▲" : "▼"}</span>
+      <span className="text-[5px] leading-none">{active && filters.dir === "asc" ? "▲" : "▼"}</span>
     </Link>
   );
 }
@@ -360,8 +359,6 @@ export default async function TradesPage({
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
-      <Breadcrumbs back={{ label: "Trades", href: "/trades" }} current={summary.title} />
-
       <form action="/trades" className="space-y-4">
         <input type="hidden" name="sort" value={filters.sort} />
         <input type="hidden" name="dir" value={filters.dir} />
@@ -454,9 +451,9 @@ export default async function TradesPage({
         <span className="text-sm font-semibold text-[var(--muted)]">{summary.detail}</span>
       </div>
 
-      <div className="overflow-x-auto border-y border-[var(--hairline)]">
-        <table className="w-full text-sm">
-          <thead>
+      <div className="overflow-x-auto border-y border-[var(--hairline)] bg-[#1a2432]">
+        <table className="w-full bg-[#1a2432] text-sm">
+          <thead style={{ backgroundColor: "var(--background)" }}>
             <tr className="border-b border-[var(--hairline)] text-left font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               <th className="px-3 py-3 font-semibold whitespace-nowrap"><SortHeader label="Date" sort="date" filters={filters} /></th>
               <th className="px-3 py-3 font-semibold whitespace-nowrap"><SortHeader label="Symbol" sort="symbol" filters={filters} /></th>

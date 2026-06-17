@@ -266,14 +266,17 @@ export default async function TickerDayReviewPage({
     { label: `P&L ${fmtMoney(totalPnl)}`, className: pnlClass(totalPnl) },
   ];
   const originCrumb = originCrumbFromHref(backHref, "/trades");
-  const sectionCrumbs = originCrumb.label === "Trades" ? [] : [{ label: "Trades", href: "/trades" }];
+  const isJournalOrigin = originCrumb.label === "Journal";
+  const isCalendarOrigin = originCrumb.label === "Calendar";
+  const sectionCrumbs = originCrumb.label === "Trades" || isJournalOrigin || isCalendarOrigin ? [] : [{ label: "Trades", href: "/trades" }];
+  const breadcrumbCurrent = isJournalOrigin || isCalendarOrigin ? symbol : `${symbol} · ${shortDateLabel(date)}`;
 
   return (
     <div className="mx-auto max-w-[1280px]">
       <Breadcrumbs
         back={originCrumb}
         items={sectionCrumbs}
-        current={`${symbol} · ${shortDateLabel(date)}`}
+        current={breadcrumbCurrent}
         className="mb-12"
       />
 
@@ -289,7 +292,7 @@ export default async function TickerDayReviewPage({
       <section className="mb-8 grid gap-8 border-t border-[var(--hairline)] pt-7 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
         <div className="min-w-0">
           {error ? (
-            <div className="rounded-lg border border-[var(--red)]/40 bg-[var(--red)]/10 px-4 py-3 text-sm text-[var(--red)]">
+            <div className="rounded-[6px] border border-[var(--red)]/40 bg-[var(--red)]/10 px-4 py-3 text-sm text-[var(--red)]">
               Couldn&apos;t load candles: {error}
             </div>
           ) : (

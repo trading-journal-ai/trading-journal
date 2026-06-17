@@ -6,9 +6,8 @@ export default function ImportPage() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Import</h1>
         <p className="text-sm text-[var(--muted)] mt-1">
-          Upload a <strong>ThinkorSwim Account Statement</strong> CSV. Fills are
-          parsed from the <em>Account Trade History</em> section, deduped, and
-          grouped into trades. Re-importing the same statement is safe.
+          Upload a CSV file. Fills are parsed, deduped, and grouped into trades.
+          Re-importing the same file is safe.
         </p>
       </div>
       <ImportForm />

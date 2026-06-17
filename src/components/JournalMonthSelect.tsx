@@ -119,7 +119,7 @@ export default function JournalMonthSelect({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-20 mt-2 w-72 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl">
+        <div className="absolute right-0 top-full z-20 mt-2 w-72 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl">
           <div className="mb-3 flex items-center justify-between gap-2">
             <button
               type="button"

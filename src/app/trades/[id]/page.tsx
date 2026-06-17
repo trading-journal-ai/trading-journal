@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
@@ -133,13 +132,15 @@ export default async function TradeDetailPage({
     },
   ];
   const originCrumb = originCrumbFromHref(backHref, "/trades");
-  const sectionCrumbs = originCrumb.label === "Trades" ? [] : [{ label: "Trades", href: "/trades" }];
+  const isJournalOrigin = originCrumb.label === "Journal";
+  const isCalendarOrigin = originCrumb.label === "Calendar";
+  const sectionCrumbs = originCrumb.label === "Trades" || isJournalOrigin || isCalendarOrigin ? [] : [{ label: "Trades", href: "/trades" }];
   const tickerScope =
     tradeDate == null
       ? []
       : [
           {
-            label: `${trade.symbol} · ${shortDateLabel(tradeDate)}`,
+            label: isJournalOrigin || isCalendarOrigin ? trade.symbol : `${trade.symbol} · ${shortDateLabel(tradeDate)}`,
             href: `/trades/review?date=${tradeDate}&symbol=${trade.symbol}&returnTo=${encodeURIComponent(originCrumb.href ?? "/trades")}`,
           },
         ];
@@ -168,23 +169,13 @@ export default async function TradeDetailPage({
           }
           date={fmtDate(trade.entryAt)}
           metrics={summaryStats}
-          action={
-            trade.entryAt ? (
-              <Link
-                href={`/trades/review?date=${etDateString(trade.entryAt)}&symbol=${trade.symbol}&returnTo=${encodeURIComponent(`/trades/${trade.id}?returnTo=${encodeURIComponent(backHref)}`)}`}
-                className="font-mono text-[12px] font-medium text-[var(--blue)] hover:underline"
-              >
-                Ticker day review
-              </Link>
-            ) : null
-          }
         />
       </div>
 
       <section className="mb-6 grid gap-10 border-t border-[var(--hairline)] pt-7 lg:grid-cols-[minmax(0,760px)_minmax(280px,380px)] lg:items-start">
         <div className="min-w-0">
           {error ? (
-            <div className="rounded-lg border border-[var(--red)]/40 bg-[var(--red)]/10 px-4 py-3 text-sm text-[var(--red)]">
+            <div className="rounded-[6px] border border-[var(--red)]/40 bg-[var(--red)]/10 px-4 py-3 text-sm text-[var(--red)]">
               Couldn&apos;t load candles: {error}
             </div>
           ) : (

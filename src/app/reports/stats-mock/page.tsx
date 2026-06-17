@@ -126,7 +126,7 @@ function LedgerTreatment() {
   const stats = [...keyStats, ...detailStats];
   return (
     <TreatmentShell kicker="Treatment A" title="Ledger card">
-      <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+      <div className="overflow-hidden rounded-[6px] border border-[var(--border)] bg-[var(--surface)]">
         {chunk(stats, 3).map((row, rowIndex) => (
           <div key={rowIndex} className="grid border-b border-[var(--border)] last:border-b-0 md:grid-cols-3">
             {row.map((stat, statIndex) => (
@@ -157,7 +157,7 @@ function FlatMatrixTreatment() {
 
 function StatsTable({ rows }: { rows: MockStat[][] }) {
   return (
-    <div className="overflow-hidden rounded bg-[#040c17] ring-1 ring-[var(--border)]">
+    <div className="overflow-hidden rounded-[6px] bg-[#1a2432] ring-1 ring-[var(--border)]">
       {rows.map((row, rowIndex) => (
         <div key={rowIndex} className="grid border-b border-[var(--border)] last:border-b-0 md:grid-cols-3">
           {Array.from({ length: 3 }, (_, statIndex) => row[statIndex]).map((stat, statIndex) => (
@@ -202,7 +202,7 @@ function PairedStatGroup({ rows }: { rows: MockStat[][] }) {
           {row.map((stat) => (
             <div
               key={stat.label}
-              className="flex min-h-14 items-center bg-[#14171a] px-12 py-3"
+              className="flex min-h-14 items-center bg-[#1a2432] px-12 py-3"
             >
               <StatCell stat={stat} compact />
             </div>
