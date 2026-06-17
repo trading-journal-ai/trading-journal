@@ -18,6 +18,7 @@ import ImportForm from "@/components/ImportForm";
 import NavLinks from "@/components/NavLinks";
 import SettingsLink from "@/components/SettingsLink";
 import { getActiveAccount, listAccounts } from "@/lib/accountScope";
+import { canImportData } from "@/lib/demoMode";
 
 export const metadata: Metadata = {
   title: "Trading Journal",
@@ -31,6 +32,7 @@ export default async function RootLayout({
 }>) {
   const accounts = await listAccounts();
   const activeAccount = await getActiveAccount(accounts);
+  const showImport = canImportData();
 
   return (
     <html
@@ -53,7 +55,7 @@ export default async function RootLayout({
           <NavLinks />
           <div className="ml-auto flex items-start gap-3">
             <AccountSelector accounts={accounts} activeAccountId={activeAccount.id} />
-            <ImportForm />
+            {showImport ? <ImportForm /> : null}
             <SettingsLink />
           </div>
         </header>

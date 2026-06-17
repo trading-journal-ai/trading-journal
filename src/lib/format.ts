@@ -22,5 +22,8 @@ export function fmtPrice(value: number | null): string {
 /** Signed dollar amount, 2 decimals. */
 export function fmtMoney(value: number): string {
   const sign = value < 0 ? "-" : "";
-  return `${sign}$${Math.abs(value).toFixed(2)}`;
+  return `${sign}$${Math.abs(value).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }

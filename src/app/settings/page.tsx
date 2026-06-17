@@ -1,9 +1,11 @@
 import AccountSettings from "@/components/AccountSettings";
+import DevResetImports from "@/components/DevResetImports";
 import ThemeSettings from "@/components/ThemeSettings";
 import { listAccounts } from "@/lib/accountScope";
 
 export default async function SettingsPage() {
   const accounts = await listAccounts();
+  const showDevReset = process.env.NODE_ENV !== "production";
 
   return (
     <div className="mx-auto max-w-3xl space-y-12">
@@ -56,6 +58,7 @@ export default async function SettingsPage() {
             Export database backup
           </button>
         </div>
+        {showDevReset && <DevResetImports />}
       </section>
     </div>
   );

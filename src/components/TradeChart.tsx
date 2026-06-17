@@ -109,6 +109,11 @@ function candleIndexForMarker(candles: ChartCandle[], t: number): number {
   return best;
 }
 
+function markerDisplayPrice(candle: ChartCandle | undefined, price: number): number {
+  if (!candle) return price;
+  return clamp(price, candle.l, candle.h);
+}
+
 export default function TradeChart({
   candles,
   markers,
@@ -461,8 +466,11 @@ export default function TradeChart({
         {markerEntries.map(({ marker: m, index: i, candleIndex }) => {
           if (candleIndex < activeViewport.start || candleIndex > activeViewport.end) return null;
 
+          const candle = candles[candleIndex];
           const mx = x(candleIndex);
-          const my = y(m.price);
+          // Summary imports can collapse several fills into one synthetic marker.
+          // Keep the marker visually anchored to the candle that owns its minute.
+          const my = y(markerDisplayPrice(candle, m.price));
           const s = 5;
           const buy = m.side === "buy";
           const pts = buy

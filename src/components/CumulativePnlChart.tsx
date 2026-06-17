@@ -11,7 +11,10 @@ const PAD = { top: 14, right: 16, bottom: 26, left: 52 };
 
 function money(v: number): string {
   const s = v < 0 ? "-" : "";
-  return `${s}$${Math.abs(v).toFixed(2)}`;
+  return `${s}$${Math.abs(v).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 function Chart({ series, period }: { series: PnlSeries; period: string }) {
