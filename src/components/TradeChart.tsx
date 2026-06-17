@@ -263,7 +263,7 @@ export default function TradeChart({
 
   if (candles.length === 0) {
     return (
-      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-sm text-[var(--muted)]">
+      <div className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-sm text-[var(--muted)]">
         No candle data available for this trade&apos;s window.
       </div>
     );
@@ -352,8 +352,8 @@ export default function TradeChart({
 
   const shellClass =
     variant === "review"
-      ? "overflow-hidden rounded-md bg-[#14171a]"
-      : "overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]";
+      ? "overflow-hidden rounded-[6px] bg-[#1a2432]"
+      : "overflow-hidden rounded-[6px] border border-[var(--border)] bg-[var(--surface)]";
 
   return (
     <div className={shellClass}>

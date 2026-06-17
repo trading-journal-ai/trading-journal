@@ -6,12 +6,16 @@ import { getActiveAccount } from "@/lib/accountScope";
 import { netPnl } from "@/lib/pnl";
 import { etDateString } from "@/lib/time";
 import { fmtMoney } from "@/lib/format";
-import Breadcrumbs from "@/components/Breadcrumbs";
 import CalendarRangeFilter from "@/components/CalendarRangeFilter";
 
 export const dynamic = "force-dynamic";
 
-type DayAgg = { pnl: number; trades: number };
+type DayAgg = {
+  pnl: number;
+  trades: number;
+  wins: number;
+  losses: number;
+};
 type CalendarSearch = {
   m?: string;
   y?: string;
@@ -103,7 +107,15 @@ type Workweek = {
   days: WorkweekDay[];
   pnl: number;
   trades: number;
+  wins: number;
+  losses: number;
 };
+
+function formatAccuracy(wins: number, losses: number): string {
+  const counted = wins + losses;
+  if (counted === 0) return "—";
+  return `${Math.round((wins / counted) * 100)}%`;
+}
 
 function workweeksForMonth(year: number, month: number, byDate: Map<string, DayAgg>): Workweek[] {
   const first = new Date(Date.UTC(year, month - 1, 1));
@@ -116,6 +128,8 @@ function workweeksForMonth(year: number, month: number, byDate: Map<string, DayA
     const days: WorkweekDay[] = [];
     let pnl = 0;
     let trades = 0;
+    let wins = 0;
+    let losses = 0;
 
     for (let i = 0; i < 5; i += 1) {
       const dayDate = addUtcDays(cursor, i);
@@ -125,11 +139,13 @@ function workweeksForMonth(year: number, month: number, byDate: Map<string, DayA
       if (agg) {
         pnl += agg.pnl;
         trades += agg.trades;
+        wins += agg.wins;
+        losses += agg.losses;
       }
       days.push({ date, day: dayDate.getUTCDate(), inMonth, agg });
     }
 
-    if (days.some((d) => d.inMonth)) weeks.push({ days, pnl, trades });
+    if (days.some((d) => d.inMonth)) weeks.push({ days, pnl, trades, wins, losses });
     cursor = addUtcDays(cursor, 7);
   }
 
@@ -156,9 +172,14 @@ async function dailyAgg(accountId: number): Promise<{ byDate: Map<string, DayAgg
     const date = etDateString(t.entryAt);
     periods.add(date.slice(0, 7));
     const pnl = netPnl(t) ?? 0;
-    const cur = byDate.get(date) ?? { pnl: 0, trades: 0 };
+    const cur = byDate.get(date) ?? { pnl: 0, trades: 0, wins: 0, losses: 0 };
     cur.pnl += pnl;
     cur.trades += 1;
+    if (pnl > 0) {
+      cur.wins += 1;
+    } else if (pnl < 0) {
+      cur.losses += 1;
+    }
     byDate.set(date, cur);
   }
   return { byDate, periods };
@@ -213,6 +234,13 @@ function MonthView({
 }) {
   const [year, month] = ym.split("-").map(Number);
   const weeks = workweeksForMonth(year, month, byDate);
+  const currentCalendarHref = calendarHref(params);
+  const tradeDates = weeks
+    .flatMap((week) => week.days)
+    .filter((day) => day.inMonth && day.agg && day.agg.trades > 0)
+    .map((day) => day.date);
+  const firstTradeDate = tradeDates[0];
+  const lastTradeDate = tradeDates[tradeDates.length - 1];
 
   let monthPnl = 0;
   for (const week of weeks) {
@@ -221,11 +249,6 @@ function MonthView({
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <Breadcrumbs
-        back={{ label: "Calendar", href: "/calendar" }}
-        current={monthFmt.format(new Date(Date.UTC(year, month - 1, 1)))}
-      />
-
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <ViewToggle
@@ -246,78 +269,98 @@ function MonthView({
         />
       </div>
 
-      <div className="flex items-baseline justify-between gap-3 pt-6">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {monthFmt.format(new Date(Date.UTC(year, month - 1, 1)))}
-        </h1>
-        <div className="flex items-baseline gap-1.5 text-right text-[15px] font-semibold">
-          <span className="text-[var(--muted)]">Monthly P&L</span>
-          <span className="tabular-nums" style={{ color: monthPnl >= 0 ? "var(--green)" : "var(--red)" }}>
-            {fmtMoney(monthPnl)}
-          </span>
+      <div className="grid grid-cols-6 pt-6">
+        <div className="col-span-6 flex items-baseline justify-between gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {monthFmt.format(new Date(Date.UTC(year, month - 1, 1)))}
+          </h1>
+          <div className="flex items-baseline gap-1.5 text-right text-[15px] font-normal">
+            <span className="text-[var(--muted)]">Monthly P&L</span>
+            <span className="font-semibold tabular-nums" style={{ color: monthPnl >= 0 ? "var(--green)" : "var(--red)" }}>
+              {fmtMoney(monthPnl)}
+            </span>
+          </div>
         </div>
       </div>
 
       <div>
-        <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_minmax(150px,0.8fr)] px-1 pb-1">
-          {[...WORKDAYS, "Total"].map((d) => (
-            <div key={d} className="px-4 text-left text-sm font-semibold text-[var(--muted)]">
+        <div className="grid grid-cols-6 px-1 pb-1">
+          {[...WORKDAYS, ""].map((d, index) => (
+            <div key={`${d}-${index}`} className="px-4 text-left text-sm font-semibold text-[var(--muted)]">
               {d}
             </div>
           ))}
         </div>
 
-        <div className="grid overflow-hidden rounded-lg bg-black gap-[2px] grid-cols-[repeat(5,minmax(0,1fr))_minmax(150px,0.8fr)]">
+        <div className="grid grid-cols-6 overflow-hidden rounded-[6px] bg-black gap-[2px]">
           {weeks.map((week, weekIndex) => (
             <Fragment key={weekIndex}>
               {week.days.map((day) => {
                 const pos = day.agg ? day.agg.pnl >= 0 : false;
+                const isNoTradeDayInActiveSpan =
+                  day.inMonth &&
+                  !day.agg &&
+                  firstTradeDate != null &&
+                  lastTradeDate != null &&
+                  day.date >= firstTradeDate &&
+                  day.date <= lastTradeDate;
                 const content = (
                   <div
-                    className={`flex h-full min-h-36 flex-col bg-[#14171a] p-4 ${
+                    className={`flex h-full min-h-36 flex-col bg-[#1a2432] p-4 ${
                       day.inMonth ? "" : "opacity-30"
                     }`}
                   >
                     <span className="text-base font-semibold leading-none text-[var(--foreground)]">
                       {day.day}
                     </span>
-                    <span className="mt-auto">
-                      <span
-                        className="block text-lg font-semibold tabular-nums"
-                        style={{ color: day.agg ? (pos ? "var(--green)" : "var(--red)") : "var(--muted)" }}
-                      >
-                        {day.agg ? fmtMoney(day.agg.pnl) : "$0.00"}
+                    {(day.agg || isNoTradeDayInActiveSpan) && (
+                      <span className="mt-auto">
+                        {day.agg && (
+                          <span
+                            className="block text-lg font-semibold tabular-nums"
+                            style={{ color: pos ? "var(--green)" : "var(--red)" }}
+                          >
+                            {fmtMoney(day.agg.pnl)}
+                          </span>
+                        )}
+                        <span className="block text-sm font-normal text-[var(--muted)]">
+                          {day.agg?.trades ?? 0} {day.agg?.trades === 1 ? "trade" : "trades"}
+                        </span>
                       </span>
-                      <span className="block text-base font-semibold text-[var(--muted)]">
-                        {day.agg?.trades ?? 0} {day.agg?.trades === 1 ? "trade" : "trades"}
-                      </span>
-                    </span>
+                    )}
                   </div>
                 );
                 return day.agg ? (
-                  <Link key={day.date} href={`/trades?date=${day.date}`} className="block bg-[#14171a]">
+                  <Link
+                    key={day.date}
+                    href={`/journal?date=${day.date}&returnTo=${encodeURIComponent(currentCalendarHref)}`}
+                    className="block bg-[#1a2432]"
+                  >
                     {content}
                   </Link>
                 ) : (
-                  <div key={day.date} className="bg-[#14171a]">{content}</div>
+                  <div key={day.date} className="bg-[#1a2432]">{content}</div>
                 );
               })}
 
-              <div className="flex min-h-36 flex-col bg-[#14171a] p-4">
-                <span className="text-base font-semibold leading-none text-[var(--foreground)]">
+              <div className="flex min-h-36 flex-col bg-[#1a2432] p-4">
+                <span className="text-sm font-semibold leading-none text-[var(--foreground)]">
                   Week {weekIndex + 1}
                 </span>
-                <span className="mt-auto">
-                  <span
-                    className="block text-lg font-semibold tabular-nums"
-                    style={{ color: week.trades ? (week.pnl >= 0 ? "var(--green)" : "var(--red)") : "var(--muted)" }}
-                  >
-                    {fmtMoney(week.pnl)}
+                {week.trades > 0 && (
+                  <span className="mt-auto">
+                    <span
+                      className="block text-lg font-semibold tabular-nums"
+                      style={{ color: week.pnl >= 0 ? "var(--green)" : "var(--red)" }}
+                      aria-label={`Total P&L ${fmtMoney(week.pnl)}`}
+                    >
+                      {fmtMoney(week.pnl)}
+                    </span>
+                    <span className="block text-sm font-normal text-[var(--muted)]">
+                      {formatAccuracy(week.wins, week.losses)} accuracy
+                    </span>
                   </span>
-                  <span className="block text-base font-semibold text-[var(--muted)]">
-                    {week.trades} {week.trades === 1 ? "trade" : "trades"}
-                  </span>
-                </span>
+                )}
               </div>
             </Fragment>
           ))}
@@ -351,7 +394,7 @@ function MiniMonth({
   return (
     <Link
       href={calendarHref({ ...params, m: ym, view: undefined, y: undefined })}
-      className="block rounded-lg bg-[#14171a] p-5 ring-1 ring-transparent transition-shadow hover:ring-[#58a6ff]"
+      className="block rounded-[6px] bg-[#1a2432] p-5 ring-1 ring-transparent transition-shadow hover:ring-[#58a6ff]"
     >
       <div className="mb-4 flex items-baseline justify-between">
         <span className="text-lg font-semibold">{monthShortFmt.format(new Date(Date.UTC(year, month - 1, 1)))}</span>
@@ -403,8 +446,6 @@ function YearView({
 }) {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <Breadcrumbs back={{ label: "Calendar", href: "/calendar" }} current={String(year)} />
-
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <ViewToggle

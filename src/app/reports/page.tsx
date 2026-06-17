@@ -589,6 +589,16 @@ function StatCell({ stat }: { stat: Stat }) {
   );
 }
 
+function gridCornerClass(index: number, total: number, columns: number) {
+  const lastRowStart = total - columns;
+  const classes: string[] = [];
+  if (index === 0) classes.push("rounded-tl-md");
+  if (index === columns - 1) classes.push("rounded-tr-md");
+  if (index === lastRowStart) classes.push("rounded-bl-md");
+  if (index === total - 1) classes.push("rounded-br-md");
+  return classes.join(" ");
+}
+
 function StatsGrid({ sections }: { sections: StatSection[] }) {
   const groups = pairedStatLabels
     .map((group) =>
@@ -597,27 +607,34 @@ function StatsGrid({ sections }: { sections: StatSection[] }) {
         .filter((row) => row.length > 0),
     )
     .filter((group) => group.length > 0);
+  const rows = groups.flat();
+  const cells = rows.flat();
 
   return (
     <section>
-      <h2 className="mb-8 text-xl font-semibold tracking-tight text-[var(--foreground)]">
+      <h2 className="mb-4 font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">
         Stats
       </h2>
 
-      <div className="grid gap-[2px] overflow-hidden rounded-[2px] bg-black p-[2px]">
-        {groups.map((group, groupIndex) => (
-          <div key={groupIndex} className="grid gap-[2px]">
-            {group.map((row, rowIndex) => (
-              <div key={rowIndex} className="grid gap-[2px] md:grid-cols-2">
-                {row.map((stat) => (
-                  <div key={stat.label} className="flex min-h-14 items-center bg-[#14171a] px-12 py-3">
+      <div className="grid gap-[2px] overflow-hidden rounded-md bg-black p-[2px]">
+        {rows.map((row, rowIndex) => {
+          const precedingCells = rows.slice(0, rowIndex).reduce((sum, current) => sum + current.length, 0);
+          return (
+            <div key={row.map((stat) => stat.label).join("-")} className="grid gap-[2px] md:grid-cols-2">
+              {row.map((stat, cellIndex) => {
+                const cellPosition = precedingCells + cellIndex;
+                return (
+                  <div
+                    key={stat.label}
+                    className={`flex min-h-14 items-center bg-[#1a2432] px-12 py-3 ${gridCornerClass(cellPosition, cells.length, 2)}`}
+                  >
                     <StatCell stat={stat} />
                   </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        ))}
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -628,20 +645,23 @@ function CountChart({ title, buckets }: { title: string; buckets: Bucket[] }) {
   return (
     <section>
       <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">{title}</h2>
-      <div className="mb-4 mt-4 border-t border-[var(--hairline)]" />
-      <div className="space-y-2">
-        {buckets.map((bucket) => (
-          <div key={bucket.label} className="grid grid-cols-[64px_1fr_56px] items-center gap-3 text-sm">
-            <div className="text-[var(--muted)]">{bucket.label}</div>
-            <div className="h-2 bg-[#14171a]" style={{ borderRadius: 2 }}>
-              <div
-                className="h-2 bg-[var(--green)]"
-                style={{ width: `${Math.max(2, (bucket.count / max) * 100)}%`, borderRadius: 2 }}
-              />
-            </div>
-            <div className="text-right tabular-nums text-[var(--muted)]">{bucket.count}</div>
-          </div>
-        ))}
+      <div className="mt-4 rounded-[6px] bg-[#1a2432]">
+        <div className="space-y-4 px-4 py-4">
+          {buckets.map((bucket) => {
+            const width = bucket.count > 0 ? `${Math.max(2, (bucket.count / max) * 100)}%` : "0%";
+            return (
+              <div key={bucket.label} className="space-y-2">
+                <div className="flex items-baseline justify-between gap-4 text-sm tabular-nums">
+                  <div className="font-medium text-[var(--foreground)]">{bucket.label}</div>
+                  <div className="text-right font-semibold text-[var(--foreground)]">{bucket.count.toLocaleString()}</div>
+                </div>
+                <div className="h-2 bg-[#323b46]" style={{ borderRadius: 2 }}>
+                  <div className="h-2 bg-[var(--green)]" style={{ width, borderRadius: 2 }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </section>
   );
@@ -652,40 +672,28 @@ function PnlChart({ title, buckets }: { title: string; buckets: Bucket[] }) {
   return (
     <section>
       <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">{title}</h2>
-      <div className="mb-4 mt-4 border-t border-[var(--hairline)]" />
-      <div className="space-y-2">
-        {buckets.map((bucket) => {
-          const pos = bucket.pnl >= 0;
-          return (
-            <div key={bucket.label} className="grid grid-cols-[64px_1fr_80px] items-center gap-3 text-sm">
-              <div className="text-[var(--muted)]">{bucket.label}</div>
-              <div className="grid h-2 grid-cols-2 bg-[#14171a]" style={{ borderRadius: 2 }}>
-                <div className="flex justify-end">
-                  {!pos && (
-                    <div
-                      className="h-2 bg-[var(--red)]"
-                      style={{ width: `${Math.max(2, (Math.abs(bucket.pnl) / maxAbs) * 100)}%`, borderRadius: 2 }}
-                    />
-                  )}
+      <div className="mt-4 rounded-[6px] bg-[#1a2432]">
+        <div className="space-y-4 px-4 py-4">
+          {buckets.map((bucket) => {
+            const width = bucket.pnl !== 0 ? `${Math.max(2, (Math.abs(bucket.pnl) / maxAbs) * 100)}%` : "0%";
+            return (
+              <div key={bucket.label} className="space-y-2">
+                <div className="flex items-baseline justify-between gap-4 text-sm tabular-nums">
+                  <div className="font-medium text-[var(--foreground)]">{bucket.label}</div>
+                  <div className="text-right font-semibold text-[var(--foreground)]">{fmtMoney(bucket.pnl)}</div>
                 </div>
-                <div>
-                  {pos && (
-                    <div
-                      className="h-2 bg-[var(--green)]"
-                      style={{ width: `${Math.max(2, (bucket.pnl / maxAbs) * 100)}%`, borderRadius: 2 }}
-                    />
-                  )}
+                <div className="grid h-2 grid-cols-2 bg-[#323b46]" style={{ borderRadius: 2 }}>
+                  <div className="flex justify-end">
+                    {bucket.pnl < 0 && <div className="h-2 bg-[var(--red)]" style={{ width, borderRadius: 2 }} />}
+                  </div>
+                  <div>
+                    {bucket.pnl > 0 && <div className="h-2 bg-[var(--green)]" style={{ width, borderRadius: 2 }} />}
+                  </div>
                 </div>
               </div>
-              <div
-                className="text-right tabular-nums text-[var(--foreground)]"
-                style={{ color: bucket.pnl > 0 ? "var(--green)" : bucket.pnl < 0 ? "var(--red)" : undefined }}
-              >
-                {fmtMoney(bucket.pnl)}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </section>
   );
@@ -696,7 +704,7 @@ function CumulativePnlLine({ points }: { points: { date: string; cumulative: num
   const height = 240;
   const padTop = 18;
   const padRight = 18;
-  const padBottom = 26;
+  const padBottom = 36;
   const padLeft = 64;
   const values = points.map((point) => point.cumulative);
   const rawMin = Math.min(0, ...values);
@@ -716,12 +724,24 @@ function CumulativePnlLine({ points }: { points: { date: string; cumulative: num
   const plotWidth = width - padLeft - padRight;
   const plotHeight = height - padTop - padBottom;
   const yFor = (value: number) => padTop + ((max - value) / span) * plotHeight;
-  const path = points.map((point, index) => {
+  const linePoints = points.map((point, index) => {
     const x = padLeft + (points.length === 1 ? 0 : (index / (points.length - 1)) * plotWidth);
     const y = yFor(point.cumulative);
-    return `${index === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const path = linePoints.map((point, index) => {
+    return `${index === 0 ? "M" : "L"} ${point.replace(",", " ")}`;
   }).join(" ");
-  const ticks = points.length <= 8 ? points : points.filter((_, index) => index === 0 || index === points.length - 1 || index % Math.ceil(points.length / 4) === 0);
+  const area = `${padLeft},${yFor(0)} ${linePoints.join(" ")} ${padLeft + plotWidth},${yFor(0)}`;
+  const zeroY = yFor(0);
+  const positiveFillId = "reportsCumulativePnlPositiveFill";
+  const negativeFillId = "reportsCumulativePnlNegativeFill";
+  const positiveClipId = "reportsCumulativePnlPositiveClip";
+  const negativeClipId = "reportsCumulativePnlNegativeClip";
+  const ticks = points
+    .map((point, index) => ({ point, index }))
+    .filter(({ index }) => points.length <= 8 || index === 0 || index === points.length - 1 || index % Math.ceil(points.length / 4) === 0);
+  const tickX = (index: number) => padLeft + (points.length === 1 ? 0 : (index / (points.length - 1)) * plotWidth);
   const final = values.at(-1) ?? 0;
 
   return (
@@ -739,6 +759,22 @@ function CumulativePnlLine({ points }: { points: { date: string; cumulative: num
       ) : (
         <div>
           <svg viewBox={`0 0 ${width} ${height}`} className="h-64 w-full" role="img" aria-label="P&L over selected range">
+            <defs>
+              <linearGradient id={positiveFillId} x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="var(--green)" stopOpacity="0.36" />
+                <stop offset="100%" stopColor="var(--green)" stopOpacity="0.08" />
+              </linearGradient>
+              <linearGradient id={negativeFillId} x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="var(--red)" stopOpacity="0.08" />
+                <stop offset="100%" stopColor="var(--red)" stopOpacity="0.36" />
+              </linearGradient>
+              <clipPath id={positiveClipId}>
+                <rect x={padLeft} y={padTop} width={plotWidth} height={Math.max(0, zeroY - padTop)} />
+              </clipPath>
+              <clipPath id={negativeClipId}>
+                <rect x={padLeft} y={zeroY} width={plotWidth} height={Math.max(0, height - padBottom - zeroY)} />
+              </clipPath>
+            </defs>
             {yTicks.map((tick) => {
               const y = yFor(tick);
               return (
@@ -766,11 +802,44 @@ function CumulativePnlLine({ points }: { points: { date: string; cumulative: num
                 </g>
               );
             })}
-            <path d={path} fill="none" stroke={final >= 0 ? "var(--green)" : "var(--red)"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            <polygon points={area} fill={`url(#${positiveFillId})`} clipPath={`url(#${positiveClipId})`} />
+            <polygon points={area} fill={`url(#${negativeFillId})`} clipPath={`url(#${negativeClipId})`} />
+            <path
+              d={path}
+              fill="none"
+              stroke="var(--green)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              clipPath={`url(#${positiveClipId})`}
+            />
+            <path
+              d={path}
+              fill="none"
+              stroke="var(--red)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              clipPath={`url(#${negativeClipId})`}
+            />
+            {ticks.map(({ point, index }, tickIndex) => {
+              const x = tickX(index);
+              return (
+                <text
+                  key={point.date}
+                  x={x}
+                  y={height - 6}
+                  fill="var(--muted)"
+                  fontFamily="var(--font-mono)"
+                  fontSize="12"
+                  fontWeight="400"
+                  textAnchor={tickIndex === 0 ? "start" : tickIndex === ticks.length - 1 ? "end" : "middle"}
+                >
+                  {point.date.slice(5)}
+                </text>
+              );
+            })}
           </svg>
-          <div className="mt-3 flex justify-between text-xs text-[var(--muted)]">
-            {ticks.map((point) => <span key={point.date}>{point.date.slice(5)}</span>)}
-          </div>
         </div>
       )}
     </>
@@ -802,11 +871,14 @@ function PerformanceSnapshot({ sections }: { sections: StatSection[] }) {
   return (
     <div className="flex h-full flex-col">
       <h3 className="mb-4 font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">At a glance</h3>
-      <div className="grid flex-1 auto-rows-fr grid-cols-2 gap-[2px] overflow-hidden rounded-[2px] bg-black p-[2px]">
-        {stats.map((stat) => {
+      <div className="grid flex-1 auto-rows-fr grid-cols-2 gap-[2px] overflow-hidden rounded-md bg-black p-[2px]">
+        {stats.map((stat, index) => {
           const countValue = stat.value.match(/^(\d+)\s+\(([^)]+)\)$/);
           return (
-            <div key={stat.label} className="flex min-h-24 flex-col justify-center bg-[#14171a] px-4 py-4">
+            <div
+              key={stat.label}
+              className={`flex min-h-24 flex-col justify-center bg-[#1a2432] px-4 py-4 ${gridCornerClass(index, stats.length, 2)}`}
+            >
               <div className="text-xs font-medium leading-snug text-[var(--muted)]">{stat.label}</div>
               <div className="mt-3 font-mono text-xl font-semibold leading-none tabular-nums text-[var(--foreground)]">
                 {countValue ? (
@@ -851,8 +923,8 @@ function PnlModule({
           <h3 className="mb-4 font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">
             Cumulative P&L
           </h3>
-          <div className="flex-1 overflow-hidden rounded-[2px] bg-black p-[2px]">
-            <div className="h-full bg-[#14171a] px-6 py-5">
+          <div className="flex-1 overflow-hidden rounded-md bg-black p-[2px]">
+            <div className="h-full rounded-md bg-[#1a2432] py-5 pl-0 pr-6">
               <CumulativePnlLine points={points} />
             </div>
           </div>
@@ -901,7 +973,6 @@ export default async function ReportsPage({
       </div>
 
       <div className="mt-24">
-        <h2 className="mb-8 text-xl font-semibold tracking-tight text-[var(--foreground)]">Breakdowns</h2>
         <div className="grid gap-x-24 gap-y-16 md:grid-cols-2">
           <CountChart title="Trade Distribution by Duration" buckets={durationBuckets} />
           <PnlChart title="Performance by Duration" buckets={durationBuckets} />

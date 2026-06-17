@@ -39,7 +39,7 @@ export default function ImportForm() {
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={pending}
-          className="rounded-md bg-[#58a6ff] px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+          className="cursor-pointer rounded-md bg-[#58a6ff] px-4 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending ? "Importing…" : "Import"}
         </button>

@@ -10,8 +10,8 @@ export type TickerReviewRailRow = {
 function formatMoney(value: number) {
   const sign = value > 0 ? "+" : value < 0 ? "-" : "";
   return `${sign}$${Math.abs(value).toLocaleString("en-US", {
-    maximumFractionDigits: Math.abs(value) >= 100 ? 0 : 2,
-    minimumFractionDigits: Math.abs(value) >= 100 ? 0 : 2,
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
   })}`;
 }
 
@@ -49,14 +49,16 @@ export default function TickerReviewRail({
                 key={row.symbol}
                 href={row.href}
                 aria-current={row.active ? "page" : undefined}
-                className={`grid grid-cols-[42px_1fr] items-baseline gap-2 rounded-sm py-1 font-mono text-[13px] transition-colors hover:bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--blue)] ${
+                className={`group relative block rounded-sm focus:outline-none focus:ring-2 focus:ring-[var(--blue)] before:absolute before:inset-x-0 before:inset-y-0 before:rounded-sm before:bg-[var(--surface)] before:opacity-0 before:transition-opacity hover:before:opacity-100 focus:before:opacity-100 ${
                   row.active ? "text-[var(--foreground)]" : ""
                 }`}
               >
-                <span className={row.active ? "font-semibold text-[var(--foreground)]" : "text-[var(--foreground)]"}>
-                  {row.symbol}
+                <span className="relative z-10 grid grid-cols-[42px_1fr] items-baseline gap-2 px-3 py-1 font-mono text-[13px]">
+                  <span className={row.active ? "font-semibold text-[var(--foreground)]" : "text-[var(--foreground)]"}>
+                    {row.symbol}
+                  </span>
+                  <span className={`text-right tabular-nums ${pnlClass(row.pnl)}`}>{formatMoney(row.pnl)}</span>
                 </span>
-                <span className={`text-right tabular-nums ${pnlClass(row.pnl)}`}>{formatMoney(row.pnl)}</span>
               </Link>
             ))
           ) : (

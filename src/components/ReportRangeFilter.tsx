@@ -120,7 +120,7 @@ export default function ReportRangeFilter({
       </div>
 
       {open && (
-        <div className="absolute left-0 top-full z-20 mt-2 w-[calc(100vw-2rem)] max-w-xl rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl md:w-[520px]">
+        <div className="absolute left-0 top-full z-20 mt-2 w-[calc(100vw-2rem)] max-w-xl rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl md:w-[520px]">
           <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
             <label className="space-y-1">
               <span className="block text-sm font-semibold text-[var(--muted)]">From</span>
