@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { isDemoReadOnly } from "@/lib/demoMode";
 import { netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
 import ArchiveSidebar, { type ArchiveSidebarMonth } from "@/components/ArchiveSidebar";
@@ -578,7 +579,7 @@ function MetricLine({ summary }: { summary: ReviewSummary }) {
 function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoint[] }) {
   const width = 940;
   const height = 440;
-  const pad = { top: 24, right: 26, bottom: 58, left: 70 };
+  const pad = { top: 24, right: 26, bottom: 58, left: 128 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const values = pnlPoints.map((point) => point.value);
@@ -869,12 +870,14 @@ function TradeReviewSidebar({
 }
 
 function EmptyReviewState() {
+  const readOnly = isDemoReadOnly();
+
   return (
     <section className="space-y-3">
       <p className="max-w-[460px] text-sm leading-6 text-[var(--body)]">
         No trades for this account in the selected period yet.
       </p>
-      <InlineImportPrompt />
+      <InlineImportPrompt readOnly={readOnly} />
     </section>
   );
 }

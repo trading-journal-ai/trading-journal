@@ -3,8 +3,16 @@
 import { useState } from "react";
 import ImportForm from "@/components/ImportForm";
 
-export default function InlineImportPrompt() {
+export default function InlineImportPrompt({ readOnly = false }: { readOnly?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
+
+  if (readOnly) {
+    return (
+      <p className="max-w-[460px] text-sm leading-6 text-[var(--body)]">
+        This hosted demo is read-only and uses simulated paper-trading data.
+      </p>
+    );
+  }
 
   if (!isOpen) {
     return (

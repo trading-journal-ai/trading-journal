@@ -3,6 +3,7 @@ import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getActiveAccount } from "@/lib/accountScope";
 import { getCandles } from "@/lib/candles";
+import { fallbackCandlesFromExecutions } from "@/lib/candles/fallback";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
 import TradeChart from "@/components/TradeChart";
 import TradeJournalNote from "@/components/TradeJournalNote";
@@ -102,7 +103,10 @@ export default async function TradeDetailPage({
   }
 
   const pad = 20 * 60; // 20 minutes either side
-  const { candles, error } = await getCandles(trade.symbol, firstAt - pad, lastAt + pad);
+  const candleFrom = firstAt - pad;
+  const candleTo = lastAt + pad;
+  const { candles, error } = await getCandles(trade.symbol, candleFrom, candleTo);
+  const chartCandles = candles.length > 0 ? candles : fallbackCandlesFromExecutions(execs, candleFrom, candleTo);
 
   const dir = trade.side === "long" ? 1 : -1;
   const gross =
@@ -174,13 +178,9 @@ export default async function TradeDetailPage({
 
       <section className="mb-6 grid gap-10 border-t border-[var(--hairline)] pt-7 lg:grid-cols-[minmax(0,760px)_minmax(280px,380px)] lg:items-start">
         <div className="min-w-0">
-          {error ? (
-            <div className="rounded-[6px] border border-[var(--red)]/40 bg-[var(--red)]/10 px-4 py-3 text-sm text-[var(--red)]">
-              Couldn&apos;t load candles: {error}
-            </div>
-          ) : (
+          {chartCandles.length > 0 ? (
             <TradeChart
-              candles={candles}
+              candles={chartCandles}
               markers={execs.map((e) => ({
                 t: e.executedAt,
                 price: e.price,
@@ -188,6 +188,12 @@ export default async function TradeDetailPage({
               }))}
               variant="review"
             />
+          ) : error ? (
+            <div className="rounded-[6px] border border-[var(--red)]/40 bg-[var(--red)]/10 px-4 py-3 text-sm text-[var(--red)]">
+              Candle data is unavailable for this trade.
+            </div>
+          ) : (
+            <TradeChart candles={[]} markers={[]} variant="review" />
           )}
         </div>
 

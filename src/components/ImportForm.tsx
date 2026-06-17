@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useActionState, useRef } from "react";
-import { importTosAction, type ImportState } from "@/app/import/actions";
+import { importCsvAction, type ImportState } from "@/app/import/actions";
 
 export default function ImportForm() {
   const [state, formAction, pending] = useActionState<ImportState, FormData>(
-    importTosAction,
+    importCsvAction,
     null,
   );
   const inputRef = useRef<HTMLInputElement>(null);
@@ -21,6 +21,8 @@ export default function ImportForm() {
       ? state.summary.insertedFrom
       : `${state.summary.insertedFrom} to ${state.summary.insertedTo}`
     : null;
+  const sourceLabel =
+    state?.ok && state.summary.source === "das_csv" ? "DAS" : "ThinkorSwim";
 
   return (
     <div className="space-y-2">
@@ -57,7 +59,7 @@ export default function ImportForm() {
             {state.summary.inserted > 0 ? "Imported" : "No new executions"}
           </span>{" "}
           <span className="text-[var(--foreground)]">
-            {state.summary.inserted} executions · {state.summary.trades} trades
+            {sourceLabel} · {state.summary.inserted} executions · {state.summary.trades} trades
             {state.summary.duplicates > 0 && ` · ${state.summary.duplicates} dupes skipped`}
             {parsedRange && ` · parsed ${parsedRange}`}
             {insertedRange && ` · added ${insertedRange}`}

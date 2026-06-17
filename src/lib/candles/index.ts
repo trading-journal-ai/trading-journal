@@ -6,6 +6,7 @@
  */
 import { and, eq, gte, lte } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { canFetchRemoteCandles } from "@/lib/demoMode";
 import { MARKET_TZ, zonedDateTimeToUtcMs } from "@/lib/time";
 import { fetchMassiveDay, type Candle } from "./massive";
 
@@ -71,24 +72,7 @@ async function ensureDayCached(symbol: string, date: string): Promise<void> {
     .onConflictDoNothing();
 }
 
-/**
- * Return cached 1-min candles for `symbol` within [from, to] (epoch seconds),
- * fetching any uncached market days first. Errors are swallowed to a degraded
- * empty result so a chart can render "no data" rather than crash.
- */
-export async function getCandles(
-  symbol: string,
-  from: number,
-  to: number,
-): Promise<{ candles: Candle[]; error?: string }> {
-  try {
-    for (const date of etDatesBetween(from, to)) {
-      await ensureDayCached(symbol, date);
-    }
-  } catch (e) {
-    return { candles: [], error: e instanceof Error ? e.message : "Candle fetch failed." };
-  }
-
+async function readCachedCandles(symbol: string, from: number, to: number): Promise<Candle[]> {
   const rows = await db
     .select()
     .from(schema.candles)
@@ -102,7 +86,30 @@ export async function getCandles(
     )
     .orderBy(schema.candles.t);
 
-  return {
-    candles: rows.map((r) => ({ t: r.t, o: r.o, h: r.h, l: r.l, c: r.c, vol: r.vol })),
-  };
+  return rows.map((r) => ({ t: r.t, o: r.o, h: r.h, l: r.l, c: r.c, vol: r.vol }));
+}
+
+/**
+ * Return cached 1-min candles for `symbol` within [from, to] (epoch seconds),
+ * fetching any uncached market days first. Errors are swallowed to a degraded
+ * empty result so a chart can render "no data" rather than crash.
+ */
+export async function getCandles(
+  symbol: string,
+  from: number,
+  to: number,
+): Promise<{ candles: Candle[]; error?: string }> {
+  if (!canFetchRemoteCandles()) {
+    return { candles: await readCachedCandles(symbol, from, to) };
+  }
+
+  try {
+    for (const date of etDatesBetween(from, to)) {
+      await ensureDayCached(symbol, date);
+    }
+  } catch (e) {
+    return { candles: [], error: e instanceof Error ? e.message : "Candle fetch failed." };
+  }
+
+  return { candles: await readCachedCandles(symbol, from, to) };
 }

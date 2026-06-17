@@ -61,7 +61,8 @@ underlying data available when it is useful.
 
 ## Current Features
 
-- **ThinkorSwim CSV import** for Account Statement exports.
+- **CSV import** for ThinkorSwim Account Statement exports and DAS
+  trade-summary exports.
 - **Execution matching** into round-trip trades.
 - **Local SQLite storage** with Drizzle migrations.
 - **Automatic candle fetching** through Massive for OHLCV data.
@@ -85,7 +86,7 @@ See [FEATURES.md](FEATURES.md), [DESIGN.md](DESIGN.md), and
 
 The app uses broker executions as the source of truth.
 
-1. Export a ThinkorSwim Account Statement CSV.
+1. Export a supported broker CSV.
 2. Import the CSV into the app.
 3. The importer parses fills and groups them into trades.
 4. The app fetches one-minute OHLCV candles for each traded symbol/date.
@@ -239,14 +240,24 @@ be fetched once.
 
 ## Import Notes
 
-The current importer is focused on ThinkorSwim Account Statement CSVs. The
-parser expects the statement sections exported by ThinkorSwim, especially
-`Account Trade History`.
+The current importer supports:
+
+- ThinkorSwim Account Statement CSVs, especially the `Account Trade History`
+  section.
+- DAS-style trade-summary CSVs with `Open Datetime`, `Close Datetime`,
+  `Symbol`, `Side`, `Volume`, `Entry Price`, and `Exit Price` columns.
 
 Known assumptions:
 
 - `Exec Time` is interpreted as Pacific time and mapped to Eastern market time.
 - `Net Price` is used for fill price.
+- DAS `Open Datetime` and `Close Datetime` values are interpreted as Eastern
+  market time.
+- DAS trade-summary rows are already grouped trades, so the importer creates a
+  synthetic open/close execution pair for each row.
+- DAS trade-summary `Volume` is treated as round-trip volume. A closed
+  500-share long trade exported as buy 500 / sell 500 is imported as a
+  500-share trade, not 1,000 shares.
 - Re-importing the same file is intended to be safe; duplicate executions are
   skipped.
 
@@ -286,7 +297,7 @@ Near-term:
 
 Later:
 
-- Broker-specific CSV imports beyond ThinkorSwim.
+- Broker-specific CSV imports beyond ThinkorSwim and DAS.
 - Generic CSV column mapping for unsupported brokers.
 - Manual candle CSV fallback.
 - Settings for timezone, fees, and defaults.

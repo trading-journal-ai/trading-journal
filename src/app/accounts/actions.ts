@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db, schema } from "@/lib/db";
 import { getActiveAccount, setActiveAccount } from "@/lib/accountScope";
@@ -87,6 +87,43 @@ export async function deleteAccountAction(formData: FormData) {
     const remaining = await db.select().from(schema.accounts).orderBy(schema.accounts.id).limit(1);
     if (remaining[0]) await setActiveAccount(remaining[0].id);
   }
+
+  revalidateAccountViews();
+}
+
+export async function resetActiveAccountImportsAction() {
+  if (process.env.NODE_ENV === "production") return;
+
+  const account = await getActiveAccount();
+  const trades = await db
+    .select({ id: schema.trades.id })
+    .from(schema.trades)
+    .where(eq(schema.trades.accountId, account.id));
+  const tradeIds = trades.map((trade) => trade.id);
+
+  await db.transaction(async (tx) => {
+    if (tradeIds.length > 0) {
+      await tx
+        .delete(schema.tradeTags)
+        .where(inArray(schema.tradeTags.tradeId, tradeIds));
+      await tx
+        .delete(schema.attachments)
+        .where(inArray(schema.attachments.tradeId, tradeIds));
+      await tx
+        .delete(schema.journalEntries)
+        .where(inArray(schema.journalEntries.tradeId, tradeIds));
+    }
+
+    await tx
+      .delete(schema.executions)
+      .where(eq(schema.executions.accountId, account.id));
+    await tx
+      .delete(schema.trades)
+      .where(eq(schema.trades.accountId, account.id));
+    await tx
+      .delete(schema.importBatches)
+      .where(eq(schema.importBatches.accountId, account.id));
+  });
 
   revalidateAccountViews();
 }

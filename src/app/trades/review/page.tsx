@@ -3,6 +3,7 @@ import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getActiveAccount } from "@/lib/accountScope";
 import { getCandles } from "@/lib/candles";
+import { fallbackCandlesFromExecutions } from "@/lib/candles/fallback";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
 import TradeChart from "@/components/TradeChart";
 import ReviewHeader from "@/components/ReviewHeader";
@@ -249,7 +250,10 @@ export default async function TickerDayReviewPage({
   const firstAt = execs[0]?.executedAt ?? trades[0]?.entryAt ?? start;
   const lastAt = execs.at(-1)?.executedAt ?? trades.at(-1)?.exitAt ?? firstAt;
   const pad = 20 * 60;
-  const { candles, error } = await getCandles(symbol, firstAt - pad, lastAt + pad);
+  const candleFrom = firstAt - pad;
+  const candleTo = lastAt + pad;
+  const { candles, error } = await getCandles(symbol, candleFrom, candleTo);
+  const chartCandles = candles.length > 0 ? candles : fallbackCandlesFromExecutions(execs, candleFrom, candleTo);
 
   const totalPnl = trades.reduce((sum, trade) => sum + (netPnl(trade) ?? 0), 0);
   const totalShares = trades.reduce((sum, trade) => sum + Math.abs(trade.quantity), 0);
@@ -291,13 +295,9 @@ export default async function TickerDayReviewPage({
 
       <section className="mb-8 grid gap-8 border-t border-[var(--hairline)] pt-7 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
         <div className="min-w-0">
-          {error ? (
-            <div className="rounded-[6px] border border-[var(--red)]/40 bg-[var(--red)]/10 px-4 py-3 text-sm text-[var(--red)]">
-              Couldn&apos;t load candles: {error}
-            </div>
-          ) : (
+          {chartCandles.length > 0 ? (
             <TradeChart
-              candles={candles}
+              candles={chartCandles}
               markers={execs.map((execution) => ({
                 t: execution.executedAt,
                 price: execution.price,
@@ -305,6 +305,12 @@ export default async function TickerDayReviewPage({
               }))}
               variant="review"
             />
+          ) : error ? (
+            <div className="rounded-[6px] border border-[var(--red)]/40 bg-[var(--red)]/10 px-4 py-3 text-sm text-[var(--red)]">
+              Candle data is unavailable for this ticker.
+            </div>
+          ) : (
+            <TradeChart candles={[]} markers={[]} variant="review" />
           )}
         </div>
         <TradeCycleRail cycles={tradeCycles} date={date} symbol={symbol} backHref={backHref} />
