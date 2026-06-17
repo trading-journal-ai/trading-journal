@@ -17,7 +17,14 @@
 - ✅ **Auto-fetch candles** (Massive) for parsed symbols → local cache. *(Phase 3)*
 - ✅ Import preview / confirm + dedupe (row-hash); import history.
 - ✅ Manual add / edit / delete of executions & trades.
-- 🔜 **DAS Trader** CSV import (2 formats) as a second source.
+- 🔜 **Broker CSV adapter system**: normalize broker-specific CSV exports into a
+  shared fill/execution shape before trade grouping. Target sample sets include
+  Lightspeed, CenterPoint, Ocean One, DAS Trader, Cobra, TradeZero, and other
+  active trading platforms.
+- 🔜 Generic CSV column mapping for unsupported broker exports.
+- 🔜 Collect anonymized broker sample files for importer testing. Samples should
+  preserve columns, row structure, timestamps, quantities, prices, fees, and
+  partial-fill behavior while removing account numbers and identifying data.
 - 🔜 Manual candle CSV (TradingView/ToS) fallback for missed symbols.
 - ⛔ Automated execution sync / broker API; cloud sync.
 
