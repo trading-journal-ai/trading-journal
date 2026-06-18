@@ -16,6 +16,8 @@ const colors =
         bold: "\x1b[1m",
         dim: "\x1b[2m",
         green: "\x1b[32m",
+        cyan: "\x1b[36m",
+        blue: "\x1b[34m",
         yellow: "\x1b[33m",
         red: "\x1b[31m",
         reset: "\x1b[0m",
@@ -24,6 +26,8 @@ const colors =
         bold: "",
         dim: "",
         green: "",
+        cyan: "",
+        blue: "",
         yellow: "",
         red: "",
         reset: "",
@@ -49,6 +53,10 @@ function heading(text) {
   console.log(`${colors.bold}${text}${colors.reset}`);
 }
 
+function section(text) {
+  console.log(`${colors.blue}${colors.bold}${text}${colors.reset}`);
+}
+
 function detail(text) {
   console.log(`${colors.dim}${text}${colors.reset}`);
 }
@@ -63,6 +71,10 @@ function warn(text) {
 
 function divider() {
   detail("------------------------------------------------------------");
+}
+
+function rule() {
+  console.log(`${colors.dim}******************************${colors.reset}`);
 }
 
 function quietStep(label, fn) {
@@ -107,7 +119,8 @@ function secretQuestion(prompt) {
       }
     };
 
-    rl.question(prompt, (answer) => {
+    output.write(prompt);
+    rl.question("", (answer) => {
       value = answer;
       rl._writeToOutput = originalWrite;
       rl.close();
@@ -169,14 +182,17 @@ function ensureDataDir(dbPath) {
 }
 
 async function setupLocal() {
-  heading("Step 2 of 3: Set up your journal");
+  rule();
+  rule();
+  console.log("");
+  section("Step 2 of 3: Set up your journal");
   detail("Press Enter to accept the default answer in brackets.");
   console.log("");
 
   heading("Choose a starting point");
-  console.log("1. Demo data with sample trades and notes");
+  console.log(`${colors.bold}1.${colors.reset} Install Trading Journal using demo data with sample trades and notes`);
   detail("   Best for previewing the app before using personal data.");
-  console.log("2. Empty local journal");
+  console.log(`${colors.bold}2.${colors.reset} Install Trading Journal to use your own data`);
   detail("   Best when you are ready to import your own broker CSV.");
   console.log("");
 
@@ -185,17 +201,19 @@ async function setupLocal() {
   const modeAnswer = await question("Choose a mode [1]: ");
   const useDemo = !/^2|n(o)?$/i.test(modeAnswer);
   const dbPath = useDemo ? DEMO_DB : LOCAL_DB;
-  console.log(useDemo ? "Demo mode selected." : "Empty local journal selected.");
+  console.log("");
+  success(useDemo ? "Demo mode selected." : "Local data mode selected.");
 
   console.log("");
   divider();
   heading("Chart data");
   console.log("Massive provides candle data for charts.");
-  console.log("Use the free Massive plan: https://www.massive.com/");
+  console.log("Get your free Massive key at https://www.massive.com/");
   detail("You can skip this now. The app will still run, but uncached charts will not fetch candles.");
+  console.log("");
   const keyPrompt = defaultKey
-    ? "Massive API key already found. Press Enter to keep it, or paste a new key: "
-    : "Paste a Massive API key, or press Enter to skip charts for now: ";
+    ? "Massive API key already found. Press Enter to keep it, or enter a new key: "
+    : "Enter your Massive API key, or press Enter to skip this: ";
   const keyAnswer = await secretQuestion(keyPrompt);
   const massiveKey = keyAnswer || defaultKey || "";
 
