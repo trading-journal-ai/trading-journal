@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest",
+    "setup:local": "node scripts/setup-local.mjs",
+    "reset:local": "node scripts/setup-local.mjs --reset-demo",
     "demo:db": "node scripts/create-demo-db.mjs",
     "demo:candles": "node scripts/cache-demo-candles.mjs",
     "demo:notes": "node scripts/seed-demo-journal-notes.mjs",

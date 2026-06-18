@@ -119,49 +119,53 @@ been cached will not be able to fetch new candle rows.
 
 [Massive](https://www.massive.com/) provides the market data API used by this
 project. The app uses their one-minute aggregate stock bars to draw the
-candlestick charts behind ticker reviews and trade details. Massive has
-free/basic API access for trying the API, with rate limits; check their
-[pricing page](https://www.massive.com/pricing) for the current plan limits.
+candlestick charts behind ticker reviews and trade details. The Massive free
+plan is enough to run the app locally; you do not need a paid plan just to try
+the journal.
 
 ## Setup
 
-There are two ways to run the app:
+There are two ways to run the app locally:
 
 1. **Demo mode** - use the included demo dataset with trades and seeded notes.
    This is best for previewing the app before importing personal data.
 2. **Live/local mode** - create your own private local journal and import your
    own broker CSV.
 
-Both modes run locally on your machine.
-
-### Before You Start
-
-Install the app dependencies:
+Both modes run on your machine and store data in a local SQLite database inside
+this project folder.
 
 ```bash
-npm install
+./install-trading-journal.sh
 ```
 
-Create a local environment file:
+That one command:
 
-```bash
-cp .env.example .env.local
-```
+- Installs the project dependencies with `npm install`.
+- Asks whether you want to start with the included demo data or an empty local
+  journal.
+- Asks for a Massive API key, saves it to `.env.local`, and checks whether the
+  key works. The key is hidden while you paste it.
+- Creates the local SQLite database.
+- Starts the app at [http://localhost:3000](http://localhost:3000).
 
-Optional but recommended: add a Massive API key to `.env.local`:
+The script does not install anything globally. Everything it creates stays in
+this folder.
 
-```bash
-MASSIVE_API_KEY=your_key_here
-```
+### Massive API Key
 
-[Massive](https://www.massive.com/) is used for candlestick chart data. You can
-skip this at first, but charts need candle data to show real one-minute price
-movement. The free Massive plan is enough to get the app working locally; you do
-not need a paid plan just to test the journal.
+Charts need candle data. To enable charts, create a free account at
+[Massive](https://www.massive.com/), copy your API key, and paste it when the
+installer asks for it.
 
-### Mode 1: Demo Mode
+The installer writes the key into `.env.local`, which is gitignored and should
+stay on your machine. If you skip the key at first, the app still runs, but
+charts that have not already been cached will not be able to fetch new candle
+rows.
 
-Use this if you just want to see the app working.
+### Demo Mode
+
+Choose demo mode if you just want to see the app working.
 
 The repo includes a demo dataset with trades and seeded journal notes for
 previewing, testing, and giving feedback. The demo trade CSV lives here:
@@ -170,56 +174,23 @@ previewing, testing, and giving feedback. The demo trade CSV lives here:
 samples/das-paper-trades-2026-demo.csv
 ```
 
-Run these commands:
+Demo mode creates `data/tradingjournaldemo.db`, imports the demo CSV, and adds
+demo journal notes: one daily recap per active trading day, plus trade notes for
+the best winner and worst loser when available.
+
+If you want to reset the local demo data later:
 
 ```bash
-DB_PATH=data/tradingjournaldemo.db npm run db:migrate
-npm run demo:paper
-DB_PATH=data/tradingjournaldemo.db npm run dev
+npm run reset:local
 ```
 
-Then open:
+### Live/Local Mode
 
-[http://localhost:3000](http://localhost:3000)
+Choose live/local mode when you are ready to import your own trades.
 
-What this does:
-
-- Creates a local demo database at `data/tradingjournaldemo.db`.
-- Imports the included demo trade CSV.
-- Adds demo journal notes: one daily recap per active trading day, plus trade
-  notes for the best winner and worst loser when available.
-
-If you added a Massive API key, you can also pre-load candlestick data:
-
-```bash
-npm run demo:candles -- --db data/tradingjournaldemo.db
-```
-
-That step can take a while because it fetches one symbol/day pair at a time and
-respects API rate limits. Once candles are cached in SQLite, the app does not
-need to refetch them for the same symbol/date.
-
-### Mode 2: Live/Local Mode
-
-Use this when you are ready to import your own trades.
-
-Create your private local database:
-
-```bash
-npm run db:migrate
-```
-
-Start the development server:
-
-```bash
-npm run dev
-```
-
-Open:
-
-[http://localhost:3000](http://localhost:3000)
-
-From there, use the Import button in the app and upload your broker CSV.
+The installer creates `data/journal.db` and starts the app with an empty
+journal. From there, use the Import button in the app and upload your broker
+CSV.
 
 The importer was originally built around ThinkorSwim/Schwab account statement
 exports, especially the `Account Trade History` section. It also supports
@@ -236,10 +207,52 @@ For non-technical users: the important part is that you do not have to redesign
 the app for each broker, but you may need help teaching the importer how to read
 your broker's CSV.
 
+### Manual Setup
+
+The installer is the recommended path. If you prefer to run each step yourself:
+
+```bash
+npm install
+cp .env.example .env.local
+```
+
+Add your Massive key to `.env.local` if you have one:
+
+```bash
+MASSIVE_API_KEY=your_key_here
+```
+
+For demo data:
+
+```bash
+DB_PATH=data/tradingjournaldemo.db npm run db:migrate
+npm run demo:paper
+DB_PATH=data/tradingjournaldemo.db npm run dev
+```
+
+For an empty local journal:
+
+```bash
+npm run db:migrate
+npm run dev
+```
+
+If you added a Massive API key, you can also pre-load candlestick data:
+
+```bash
+npm run demo:candles -- --db data/tradingjournaldemo.db
+```
+
+That step can take a while because it fetches one symbol/day pair at a time and
+respects API rate limits. Once candles are cached in SQLite, the app does not
+need to refetch them for the same symbol/date.
+
 ## Useful Scripts
 
 ```bash
 npm run dev          # Start the local Next.js dev server
+npm run setup:local  # Interactive local setup for demo or empty journal mode
+npm run reset:local  # Reset the included local demo dataset
 npm run build        # Build the app
 npm run start        # Start the production build
 npm run lint         # Run ESLint
