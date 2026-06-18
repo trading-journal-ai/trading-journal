@@ -90,41 +90,29 @@ function secretQuestion(prompt) {
   if (!input.isTTY || !output.isTTY) return question(prompt);
 
   return new Promise((resolveQuestion) => {
-    output.write(prompt);
-    readline.emitKeypressEvents(input);
-    input.setRawMode(true);
     let value = "";
+    const rl = readline.createInterface({
+      input,
+      output,
+      terminal: true,
+    });
 
-    function cleanup() {
-      input.setRawMode(false);
-      input.off("keypress", onKeypress);
-      output.write("\n");
-    }
+    const originalWrite = rl._writeToOutput;
+    rl._writeToOutput = function writeMasked(text) {
+      if (text.includes("\r\n") || text.includes("\n")) {
+        originalWrite.call(rl, text);
+      } else {
+        const masked = text.replace(/[^\r\n]/g, "*");
+        originalWrite.call(rl, masked);
+      }
+    };
 
-    function onKeypress(str, key) {
-      if (key?.name === "return") {
-        cleanup();
-        resolveQuestion(value.trim());
-        return;
-      }
-      if (key?.name === "escape" || (key?.ctrl && key.name === "c")) {
-        cleanup();
-        process.exit(1);
-      }
-      if (key?.name === "backspace") {
-        if (value.length > 0) {
-          value = value.slice(0, -1);
-          output.write("\b \b");
-        }
-        return;
-      }
-      if (str && !key?.ctrl && !key?.meta) {
-        value += str;
-        output.write("*");
-      }
-    }
-
-    input.on("keypress", onKeypress);
+    rl.question(prompt, (answer) => {
+      value = answer;
+      rl._writeToOutput = originalWrite;
+      rl.close();
+      resolveQuestion(value.trim());
+    });
   });
 }
 
@@ -257,13 +245,15 @@ function resetDemo() {
   success("\nReset local demo data in data/tradingjournaldemo.db.");
 }
 
-try {
+async function main() {
   if (process.argv.includes("--reset-demo")) {
     resetDemo();
-  } else {
-    await setupLocal();
+    return;
   }
-} catch (error) {
+  await setupLocal();
+}
+
+main().catch((error) => {
   console.error(`\nSetup failed: ${error.message}`);
   process.exit(1);
-}
+});
