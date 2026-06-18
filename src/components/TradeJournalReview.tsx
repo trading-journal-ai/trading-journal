@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { isDemoReadOnly } from "@/lib/demoMode";
@@ -793,35 +792,6 @@ function todayDisplayDate(range: ReviewRange): string {
   return (range.days[0]?.day.displayDate ?? range.displayDate).replace(",", "");
 }
 
-function CurrentShortcuts({
-  activePreset,
-  basePath,
-}: {
-  activePreset: JournalReviewPreset;
-  basePath: string;
-}) {
-  const buttonClass = (preset: JournalReviewPreset) =>
-    `inline-flex h-8 min-w-16 items-center justify-center rounded px-3 text-sm font-semibold transition-colors ${
-      activePreset === preset
-        ? "bg-[var(--surface-2)] text-[var(--foreground)]"
-        : "text-[var(--muted)] hover:text-[var(--foreground)]"
-    }`;
-
-  return (
-    <nav aria-label="Current journal shortcuts" className="inline-flex h-10 items-center rounded-md border border-[var(--border)] p-1">
-      <Link href={journalReviewHref(basePath, { preset: "today" })} className={buttonClass("today")}>
-        Today
-      </Link>
-      <Link href={journalReviewHref(basePath, { preset: "week" })} className={buttonClass("week")}>
-        This week
-      </Link>
-      <Link href={journalReviewHref(basePath, { preset: "month" })} className={buttonClass("month")}>
-        This month
-      </Link>
-    </nav>
-  );
-}
-
 function WeekSection({
   week,
   recaps,
@@ -923,7 +893,6 @@ export default async function TradeJournalReview({
       <div className="grid gap-8 md:grid-cols-[180px_minmax(0,665px)] xl:grid-cols-[200px_minmax(0,665px)] xl:gap-10">
         <TradeReviewSidebar archive={archive} enableWeekScrollSpy={preset === "month"} />
         <div className="min-w-0 space-y-8">
-          <CurrentShortcuts activePreset={preset} basePath={basePath} />
           {preset === "week" ? (
             <ScopeHeader>
               <WeekHeader label={range.title} displayDate={range.displayDate} />
