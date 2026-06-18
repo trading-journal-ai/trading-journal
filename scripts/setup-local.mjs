@@ -10,15 +10,69 @@ const DEMO_DB = "data/tradingjournaldemo.db";
 const LOCAL_DB = "data/journal.db";
 const ENV_PATH = ".env.local";
 const MASSIVE_TEST_URL = "https://api.massive.com/v3/reference/tickers/AAPL";
+const colors =
+  output.isTTY
+    ? {
+        bold: "\x1b[1m",
+        dim: "\x1b[2m",
+        green: "\x1b[32m",
+        yellow: "\x1b[33m",
+        red: "\x1b[31m",
+        reset: "\x1b[0m",
+      }
+    : {
+        bold: "",
+        dim: "",
+        green: "",
+        yellow: "",
+        red: "",
+        reset: "",
+      };
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
-    stdio: "inherit",
+    stdio: options.quiet ? "pipe" : "inherit",
+    encoding: "utf8",
     env: { ...process.env, ...options.env },
   });
   if (result.error) throw result.error;
   if (result.status !== 0) {
+    if (options.quiet) {
+      const outputText = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
+      if (outputText) console.error(outputText);
+    }
     throw new Error(`${command} ${args.join(" ")} exited with status ${result.status}`);
+  }
+}
+
+function heading(text) {
+  console.log(`${colors.bold}${text}${colors.reset}`);
+}
+
+function detail(text) {
+  console.log(`${colors.dim}${text}${colors.reset}`);
+}
+
+function success(text) {
+  console.log(`${colors.green}${text}${colors.reset}`);
+}
+
+function warn(text) {
+  console.log(`${colors.yellow}${text}${colors.reset}`);
+}
+
+function divider() {
+  detail("------------------------------------------------------------");
+}
+
+function quietStep(label, fn) {
+  output.write(`${colors.dim}${label}...${colors.reset}`);
+  try {
+    fn();
+    console.log(` ${colors.green}done${colors.reset}`);
+  } catch (error) {
+    console.log(` ${colors.red}failed${colors.reset}`);
+    throw error;
   }
 }
 
@@ -127,17 +181,30 @@ function ensureDataDir(dbPath) {
 }
 
 async function setupLocal() {
-  console.log("\nTrading Journal local setup");
-  console.log("This installs project dependencies and sets up a local database inside this folder.");
-  console.log("It does not install anything globally.\n");
+  heading("Step 2 of 3: Set up your journal");
+  detail("Press Enter to accept the default answer in brackets.");
+  console.log("");
+
+  heading("Choose a starting point");
+  console.log("1. Demo data with sample trades and notes");
+  detail("   Best for previewing the app before using personal data.");
+  console.log("2. Empty local journal");
+  detail("   Best when you are ready to import your own broker CSV.");
+  console.log("");
 
   const existingEnv = parseEnvFile(ENV_PATH);
   const defaultKey = existingEnv.get("MASSIVE_API_KEY")?.trim();
-  const useDemoAnswer = await question("Use the included demo data with sample notes? [Y/n] ");
-  const useDemo = !/^n(o)?$/i.test(useDemoAnswer);
+  const modeAnswer = await question("Choose a mode [1]: ");
+  const useDemo = !/^2|n(o)?$/i.test(modeAnswer);
   const dbPath = useDemo ? DEMO_DB : LOCAL_DB;
+  console.log(useDemo ? "Demo mode selected." : "Empty local journal selected.");
 
-  console.log("\nMassive provides the candle data for charts. The free plan is enough for local testing.");
+  console.log("");
+  divider();
+  heading("Chart data");
+  console.log("Massive provides candle data for charts.");
+  console.log("Use the free Massive plan: https://www.massive.com/");
+  detail("You can skip this now. The app will still run, but uncached charts will not fetch candles.");
   const keyPrompt = defaultKey
     ? "Massive API key already found. Press Enter to keep it, or paste a new key: "
     : "Paste a Massive API key, or press Enter to skip charts for now: ";
@@ -148,34 +215,46 @@ async function setupLocal() {
     output.write("Testing Massive key... ");
     const result = await testMassiveKey(massiveKey);
     if (result.ok) {
-      console.log("ok");
+      success("ok");
     } else {
-      console.log("could not confirm");
-      console.log(`Massive key was saved, but the test request failed: ${result.message}`);
+      warn("could not confirm");
+      detail(`Massive key was saved, but the test request failed: ${result.message}`);
     }
   }
 
   ensureDataDir(dbPath);
   writeLocalEnv({ dbPath, massiveKey });
-  console.log(`\nSaved local settings to ${ENV_PATH}`);
-  console.log(`Using SQLite database: ${dbPath}\n`);
+  console.log("");
+  divider();
+  heading("Local database");
+  detail(`Settings: ${ENV_PATH}`);
+  detail(`Database: ${dbPath}`);
 
-  run("npm", ["run", "db:migrate"], { env: { DB_PATH: dbPath } });
+  quietStep("Applying database migrations", () => {
+    run("npm", ["run", "--silent", "db:migrate"], { env: { DB_PATH: dbPath }, quiet: true });
+  });
 
   if (useDemo) {
-    run("npm", ["run", "demo:paper"]);
-    console.log("\nDemo trades and journal notes are ready.");
+    quietStep("Loading demo trades and notes", () => {
+      run("npm", ["run", "--silent", "demo:paper"], { quiet: true });
+    });
+    success("\nDemo trades and journal notes are ready.");
   } else {
-    console.log("\nEmpty local journal is ready. Use Import in the app when you have a broker CSV.");
+    success("\nEmpty local journal is ready.");
+    detail("Use Import in the app when you have a broker CSV.");
   }
 }
 
 function resetDemo() {
   ensureDataDir(DEMO_DB);
   writeLocalEnv({ dbPath: DEMO_DB, massiveKey: parseEnvFile(ENV_PATH).get("MASSIVE_API_KEY") ?? "" });
-  run("npm", ["run", "db:migrate"], { env: { DB_PATH: DEMO_DB } });
-  run("npm", ["run", "demo:paper"]);
-  console.log("\nReset local demo data in data/tradingjournaldemo.db.");
+  quietStep("Applying database migrations", () => {
+    run("npm", ["run", "--silent", "db:migrate"], { env: { DB_PATH: DEMO_DB }, quiet: true });
+  });
+  quietStep("Loading demo trades and notes", () => {
+    run("npm", ["run", "--silent", "demo:paper"], { quiet: true });
+  });
+  success("\nReset local demo data in data/tradingjournaldemo.db.");
 }
 
 try {
