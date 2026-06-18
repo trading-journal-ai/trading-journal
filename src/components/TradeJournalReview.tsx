@@ -901,11 +901,12 @@ export default async function TradeJournalReview({
   backHref?: string;
   accountId: number;
 }) {
-  const range = await loadReviewRange({ preset, date, from, month, accountId });
-  const [archive, recaps] = await Promise.all([
-    loadReviewArchive(range.anchor, accountId, basePath, month),
-    loadDayRecaps(accountId, range.days.map((day) => day.day.date)),
+  const archiveAnchor = validDate(date) ?? validDate(from) ?? currentEtDate();
+  const [range, archive] = await Promise.all([
+    loadReviewRange({ preset, date, from, month, accountId }),
+    loadReviewArchive(archiveAnchor, accountId, basePath, month),
   ]);
+  const recaps = await loadDayRecaps(accountId, range.days.map((day) => day.day.date));
   const currentHref = returnTo ?? journalReviewHref(basePath, { preset, date, from, month });
   const breadcrumbBack = backHref
     ? originCrumbFromHref(backHref, basePath)
