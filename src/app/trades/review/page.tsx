@@ -158,9 +158,6 @@ function TradeCycleRail({
                   <span className={`justify-self-end text-right text-[13px] font-semibold tabular-nums ${pnlClass(cycle.pnl)}`}>
                     {cycle.pnl == null ? "Open" : fmtMoney(cycle.pnl)}
                   </span>
-                  <div className="col-span-2 text-[var(--muted)]">
-                    {cycle.executions.length} fills · {cycle.sharesTraded.toLocaleString()} shares
-                  </div>
                 </div>
                 <div className="mt-4 grid grid-cols-4 gap-x-2 gap-y-1.5">
                   <div className="pb-0.5 text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Time</div>
@@ -257,15 +254,17 @@ export default async function TickerDayReviewPage({
 
   const totalPnl = trades.reduce((sum, trade) => sum + (netPnl(trade) ?? 0), 0);
   const totalShares = trades.reduce((sum, trade) => sum + Math.abs(trade.quantity), 0);
-  const wins = trades.filter((trade) => (netPnl(trade) ?? 0) > 0).length;
-  const losses = trades.filter((trade) => (netPnl(trade) ?? 0) < 0).length;
+  const tradePnls = trades.map((trade) => netPnl(trade) ?? 0);
+  const wins = tradePnls.filter((pnl) => pnl > 0).length;
+  const losses = tradePnls.filter((pnl) => pnl < 0).length;
   const counted = wins + losses;
   const tradeCycles = buildTradeCycles(execs);
+  const tradeLabel = trades.length === 1 ? "trade" : "trades";
+  const shareLabel = totalShares === 1 ? "share" : "shares";
 
   const summaryStats = [
-    { label: `${trades.length.toLocaleString()} trades` },
-    { label: `${execs.length.toLocaleString()} fills` },
-    { label: `${totalShares.toLocaleString()} shares` },
+    { label: `${trades.length.toLocaleString()} ${tradeLabel}` },
+    { label: `${totalShares.toLocaleString()} ${shareLabel}` },
     { label: counted === 0 ? "— win" : `${Math.round((wins / counted) * 100)}% win` },
     { label: `P&L ${fmtMoney(totalPnl)}`, className: pnlClass(totalPnl) },
   ];
@@ -284,7 +283,7 @@ export default async function TickerDayReviewPage({
         className="mb-12"
       />
 
-      <div className="mb-7">
+      <div className="mb-0">
         <ReviewHeader
           eyebrow="Ticker Review"
           title={symbol}
@@ -293,7 +292,7 @@ export default async function TickerDayReviewPage({
         />
       </div>
 
-      <section className="mb-8 grid gap-8 border-t border-[var(--hairline)] pt-7 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
+      <section className="mb-8 grid gap-8 pt-5 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
         <div className="min-w-0">
           {chartCandles.length > 0 ? (
             <TradeChart

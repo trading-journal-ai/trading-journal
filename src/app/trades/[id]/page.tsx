@@ -121,19 +121,10 @@ export default async function TradeDetailPage({
     net == null ? "" : net >= 0 ? "text-[var(--green)]" : "text-[var(--red)]";
   const perShareClass =
     perShare == null ? "" : perShare >= 0 ? "text-[var(--green)]" : "text-[var(--red)]";
-  const summaryStats = [
-    { label: "1 trade" },
-    { label: `${execs.length.toLocaleString()} fills` },
-    { label: `${trade.quantity.toLocaleString()} ${Math.abs(trade.quantity) === 1 ? "share" : "shares"}` },
-    { label: `${trade.exitAt ? holdingPeriod(firstAt, trade.exitAt) : "open"} held` },
-    {
-      label: `P&L ${net == null ? "—" : fmtMoney(net)}`,
-      className: pnlClass,
-    },
-    {
-      label: `Per share ${perShare == null ? "—" : fmtMoney(perShare)}`,
-      className: perShareClass,
-    },
+  const executionStats = [
+    { label: "P&L", value: net == null ? "—" : fmtMoney(net), className: pnlClass },
+    { label: "Per share", value: perShare == null ? "—" : fmtMoney(perShare), className: perShareClass },
+    { label: "Held", value: trade.exitAt ? holdingPeriod(firstAt, trade.exitAt) : "Open" },
   ];
   const originCrumb = originCrumbFromHref(backHref, "/trades");
   const isJournalOrigin = originCrumb.label === "Journal";
@@ -158,7 +149,7 @@ export default async function TradeDetailPage({
         className="mb-12"
       />
 
-      <div className="mb-7">
+      <div className="mb-0">
         <ReviewHeader
           eyebrow="Trade Detail"
           title={
@@ -172,11 +163,10 @@ export default async function TradeDetailPage({
             </>
           }
           date={fmtDate(trade.entryAt)}
-          metrics={summaryStats}
         />
       </div>
 
-      <section className="mb-6 grid gap-10 border-t border-[var(--hairline)] pt-7 lg:grid-cols-[minmax(0,760px)_minmax(280px,380px)] lg:items-start">
+      <section className="mb-6 grid gap-10 pt-5 lg:grid-cols-[minmax(0,760px)_minmax(280px,380px)] lg:items-start">
         <div className="min-w-0">
           {chartCandles.length > 0 ? (
             <TradeChart
@@ -198,7 +188,17 @@ export default async function TradeDetailPage({
         </div>
 
         <aside className="space-y-8">
-          <section aria-label="Executions" className="border-b border-[var(--hairline)] pb-6">
+          <section aria-label="Executions">
+            <div className="mb-5 flex w-full items-center justify-between gap-x-6 border-b border-[var(--hairline)] pb-5 font-mono text-[13px] font-medium text-[var(--muted)]">
+              {executionStats.map((stat) => (
+                <div key={stat.label} className="inline-flex items-baseline gap-x-2 whitespace-nowrap">
+                  <span>{stat.label}</span>
+                  <span className={`tabular-nums ${stat.className ?? "text-[var(--foreground)]"}`}>
+                    {stat.value}
+                  </span>
+                </div>
+              ))}
+            </div>
             <div className="grid grid-cols-4 gap-x-2 gap-y-2 font-mono text-[12px]">
               <div className="pb-1 text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Time</div>
               <div className="pb-1 text-center text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Side</div>
