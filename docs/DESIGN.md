@@ -355,7 +355,7 @@ how it feeds this project:
   price in range. **Result: 91/91 PASS** (see §9). Configurable TZ, price
   tolerance, rate-limit delay.
 - **`scripts/test-massive-candles.mjs`** — single-symbol probe.
-- **`trade_chart (10)-prototype.html`** — prototype wired to the dev server.
+- **`docs/prototypes/trade_chart (10)-prototype.html`** — prototype wired to the dev server.
 - Run: put `MASSIVE_API_KEY=…` in `.env.local`, then
   `node scripts/dev-chart-server.mjs` → http://127.0.0.1:4173/.
 

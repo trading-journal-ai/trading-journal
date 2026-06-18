@@ -14,7 +14,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Static design references kept for product/design review, not app source.
     "samples/**",
-    "DESIGN_SYSTEM_ONE_SHEET.html",
+    "docs/DESIGN_SYSTEM_ONE_SHEET.html",
   ]),
 ]);
 

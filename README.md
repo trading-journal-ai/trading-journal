@@ -79,8 +79,8 @@ underlying data available when it is useful.
   charts.
 - **Light/dark theme toggle**.
 
-See [FEATURES.md](FEATURES.md), [DESIGN.md](DESIGN.md), and
-[JOURNAL_DESIGN.md](JOURNAL_DESIGN.md) for deeper product notes.
+See [FEATURES.md](docs/FEATURES.md), [DESIGN.md](docs/DESIGN.md), and
+[JOURNAL_DESIGN.md](docs/JOURNAL_DESIGN.md) for deeper product notes.
 
 ## How It Works
 
@@ -266,6 +266,10 @@ Local private data is gitignored:
 Real broker exports should not be committed. They can contain account numbers,
 trade history, symbols, timestamps, and other private information.
 
+This app is designed as a local-first personal tool. If you run it locally, your
+trade data and notes stay on your machine unless you choose to upload, host,
+share, or commit them somewhere else.
+
 ## Demo Data
 
 The main setup instructions above are the recommended demo path. A few details:
@@ -388,9 +392,9 @@ Important import roadmap:
 
 ## Project Docs
 
-- [DESIGN.md](DESIGN.md) - product design, architecture, data model, and phases.
-- [FEATURES.md](FEATURES.md) - feature inventory and scope.
-- [JOURNAL_DESIGN.md](JOURNAL_DESIGN.md) - journal model, note hierarchy, and
+- [DESIGN.md](docs/DESIGN.md) - product design, architecture, data model, and phases.
+- [FEATURES.md](docs/FEATURES.md) - feature inventory and scope.
+- [JOURNAL_DESIGN.md](docs/JOURNAL_DESIGN.md) - journal model, note hierarchy, and
   review philosophy.
 
 ## Roadmap
@@ -416,5 +420,14 @@ Later:
 
 ## License
 
-No license has been selected yet. Add a license before opening the repository to
-outside contributors.
+MIT License. See [LICENSE](LICENSE).
+
+## Use & Responsibility
+
+Use this project freely: download it, fork it, modify it, run it locally, or use
+it as a starting point for your own trading journal.
+
+This software is provided as-is. It is a journaling and review tool, not
+financial advice, trade recommendations, risk management advice, tax advice, or
+brokerage software. Verify your own data, protect your own broker exports, and
+use it at your own risk.
