@@ -12,6 +12,7 @@
     "demo:candles": "node scripts/cache-demo-candles.mjs",
     "demo:notes": "node scripts/seed-demo-journal-notes.mjs",
     "demo:normalize-das": "node scripts/normalize-das-demo-csv.mjs",
+    "demo:paper": "node scripts/rebuild-demo-paper-db.mjs && node scripts/seed-demo-journal-notes.mjs --month all",
     "demo:paper-db": "node scripts/rebuild-demo-paper-db.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
