@@ -89,14 +89,28 @@
 - 🔜 Gross/Net + $ / % / R view modes across all reports.
 - ⛔ Premium-style scores (SQN, K-Ratio, "Probability of Random Chance").
 
-## 7. Dashboard  *(screenshot 4)*
+## 7. Export & Portability
+- 🔜 **Export Trades CSV**: portable trade/execution data for spreadsheets or
+  another trading journal. This should include trade identity, dates, symbols,
+  side, shares, entry/exit, P&L, fees when available, and enough IDs to reconnect
+  notes if needed. Chart candles should not be included by default.
+- 🔜 **Export Journal Notes**: separate human-readable and/or structured export
+  for daily recaps, trade notes, labels, and process/emotion tags. Markdown is
+  useful for reading; JSON is better for restoring or migrating.
+- 🔜 **Full SQLite Backup**: complete local-first backup/restore path for power
+  users. This should preserve trades, executions, notes, tags, cached candles,
+  accounts/settings, and any future AI reviews.
+- 🔜 Clear import/restore guidance so users understand the difference between
+  moving trade data, preserving journal writing, and backing up the full app.
+
+## 8. Dashboard  *(screenshot 4)*
 - 🔜 **Deferred for MVP** — Reports + Calendar cover the home-screen need for now.
   When built, start **compact** (Cumulative P&L, Win %, Profit factor, Total/Avg
   trade P&L, # trades, **Open trades** list) — not ~40 widgets.
 - 🔜 **Edit Layout** / customizable widget grid; 30/60/90-day range; more widgets.
 - ⛔ "Instrument ATR / RVOL / opening gap / day type" widgets (heavy data needs).
 
-## 8. Cross-cutting / system
+## 9. Cross-cutting / system
 - ✅ Local-first **SQLite**; data stays on disk (`data/journal.db`).
 - ✅ Dark UI; top nav (Calendar / Trades / Journal / Reports / Account / Import / Settings).
 - ✅ Global filter bar (symbol / tags / side / duration / date) shared across views.
@@ -106,7 +120,6 @@
   backup/export DB).
 - 🔜 Tag management split into trade classification, trade setup, and
   emotion/process tags.
-- 🔜 Backup/restore (copy the SQLite file; export/import).
 - ⛔ Auth / login / multi-user / RLS; community / "people"; billing.
 
 ---
