@@ -105,6 +105,11 @@ const monthDayFmt = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
 });
 
+const monthNameFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  month: "long",
+});
+
 const timeFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/New_York",
   hour: "numeric",
@@ -130,10 +135,6 @@ function pnlClass(value: number | null | undefined) {
   if (value > 0) return "text-[var(--green)]";
   if (value < 0) return "text-[var(--red)]";
   return "text-[var(--muted)]";
-}
-
-function formatProfitFactor(value: number | null): string {
-  return value == null || !Number.isFinite(value) ? "-" : value.toFixed(2);
 }
 
 function formatTime(epochSeconds: number): string {
@@ -212,8 +213,20 @@ function lastDayOfMonth(date: string): string {
 
 function weekRangeLabel(weekStart: string): string {
   const weekEnd = isoAddDays(weekStart, 4);
-  const year = weekEnd.slice(0, 4);
-  return `${monthDayFmt.format(utcDate(weekStart))} - ${monthDayFmt.format(utcDate(weekEnd))} ${year}`;
+  const start = utcDate(weekStart);
+  const end = utcDate(weekEnd);
+  const startYear = start.getUTCFullYear();
+  const endYear = end.getUTCFullYear();
+
+  if (startYear === endYear && start.getUTCMonth() === end.getUTCMonth()) {
+    return `${monthNameFmt.format(start)} ${start.getUTCDate()} - ${end.getUTCDate()} ${endYear}`;
+  }
+
+  if (startYear === endYear) {
+    return `${monthDayFmt.format(start)} - ${monthDayFmt.format(end)} ${endYear}`;
+  }
+
+  return `${monthDayFmt.format(start)} ${startYear} - ${monthDayFmt.format(end)} ${endYear}`;
 }
 
 function archiveWeekLabel(monthKey: string, weekStart: string): string {
@@ -234,6 +247,10 @@ function journalWeekSectionId(weekKey: string): string {
   return `journal-week-${weekKey}`;
 }
 
+function journalWeekSectionHref(basePath: string, monthKey: string, weekKey: string): string {
+  return `${journalReviewHref(basePath, { preset: "month", from: `${monthKey}-01` })}#${journalWeekSectionId(weekKey)}`;
+}
+
 function archiveWeeks(monthKey: string, activeWeekKey: string | undefined, basePath: string): ArchiveSidebarMonth["weeks"] {
   const monthStart = `${monthKey}-01`;
   const monthEnd = lastDayOfMonth(monthStart);
@@ -249,7 +266,7 @@ function archiveWeeks(monthKey: string, activeWeekKey: string | undefined, baseP
         label: archiveWeekLabel(monthKey, weekStart),
         rangeLabel: archiveWeekRangeLabel(weekStart, monthKey),
         active: weekStart === activeWeekKey,
-        href: journalReviewHref(basePath, { preset: "week", from: weekStart, month: monthKey }),
+        href: journalWeekSectionHref(basePath, monthKey, weekStart),
         sectionId: journalWeekSectionId(weekStart),
       });
     }
@@ -553,28 +570,6 @@ async function loadDayRecaps(accountId: number, dates: string[]): Promise<Map<st
   return recaps;
 }
 
-function MetricLine({ summary }: { summary: ReviewSummary }) {
-  const stats = [
-    { label: null, value: `${summary.trades.toLocaleString()} trades` },
-    { label: null, value: summary.accuracy == null ? "- win" : `${summary.accuracy}% win` },
-    { label: "PF", value: formatProfitFactor(summary.profitFactor) },
-    { label: "P&L", value: formatMoney(summary.pnl), className: pnlClass(summary.pnl) },
-  ];
-
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[13px] font-medium text-[var(--muted)]">
-      {stats.map((stat, index) => (
-        <span key={`${stat.label ?? "metric"}-${stat.value}`} className="flex items-center gap-x-3">
-          {index > 0 ? <span className="text-[var(--faint)]">·</span> : null}
-          <span className={`tabular-nums ${stat.className ?? ""}`}>
-            {stat.label ? `${stat.label} ${stat.value}` : stat.value}
-          </span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
 function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoint[] }) {
   const width = 940;
   const height = 440;
@@ -701,12 +696,10 @@ function DayReviewSection({
   data,
   recaps,
   returnTo,
-  showMetrics = true,
 }: {
   data: ReviewData;
   recaps: Map<string, string>;
   returnTo: string;
-  showMetrics?: boolean;
 }) {
   const { day, tickerRows, pnlPoints } = data;
 
@@ -719,14 +712,13 @@ function DayReviewSection({
           }`}
         />
         <div className="min-w-0">
-          <div className="mb-6 space-y-3">
+          <div className="mb-4">
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
               <h2 className="text-[24px] font-semibold leading-none tracking-[-0.01em] text-[var(--foreground)]">
                 {monthDayFmt.format(utcDate(day.date))}
               </h2>
               <span className="font-mono text-sm text-[var(--muted)]">{day.label}</span>
             </div>
-            {showMetrics ? <MetricLine summary={day} /> : null}
           </div>
 
           <div className="mb-6 max-w-[665px] text-[15px] leading-6 text-[var(--body)]">
@@ -802,7 +794,7 @@ function WeekSection({
   returnTo: string;
 }) {
   return (
-    <section id={journalWeekSectionId(week.key)} className="scroll-mt-28 space-y-8">
+    <section id={journalWeekSectionId(week.key)} className="scroll-mt-8 space-y-8">
       <ScopeHeader>
         <WeekHeader label={week.label} displayDate={week.displayDate} />
       </ScopeHeader>
@@ -889,11 +881,13 @@ export default async function TradeJournalReview({
 
   return (
     <div className="mx-auto w-full max-w-[905px] pb-24">
-      <Breadcrumbs
-        back={breadcrumbBack}
-        current={preset === "today" && !backHref ? undefined : range.title}
-        className="mb-10"
-      />
+      {backHref ? (
+        <Breadcrumbs
+          back={breadcrumbBack}
+          current={range.title}
+          className="mb-10"
+        />
+      ) : null}
 
       <div className="grid gap-8 md:grid-cols-[180px_minmax(0,665px)] xl:grid-cols-[200px_minmax(0,665px)] xl:gap-10">
         <TradeReviewSidebar
@@ -902,7 +896,7 @@ export default async function TradeJournalReview({
           todayActive={preset === "today"}
           enableWeekScrollSpy={preset === "month"}
         />
-        <div className="min-w-0 space-y-8">
+        <div className="mt-8 min-w-0 space-y-8">
           {preset === "week" ? (
             <ScopeHeader>
               <WeekHeader label={range.title} displayDate={range.displayDate} />

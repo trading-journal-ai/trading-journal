@@ -27,11 +27,6 @@ const axisTextStyle = {
   fontVariantNumeric: "tabular-nums",
   fontWeight: 500,
 } as const;
-const chartLabelStyle = {
-  ...axisTextStyle,
-  fontWeight: 600,
-  letterSpacing: "0.16em",
-} as const;
 
 const timeFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/New_York",
@@ -60,6 +55,41 @@ const DEFAULT_MOTION: MotionSettings = {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function nicePriceStep(rawStep: number): number {
+  if (!Number.isFinite(rawStep) || rawStep <= 0) return 1;
+
+  const magnitude = 10 ** Math.floor(Math.log10(rawStep));
+  const fraction = rawStep / magnitude;
+  let niceFraction = 10;
+
+  if (fraction <= 1.2) niceFraction = 1;
+  else if (fraction <= 2.5) niceFraction = 2;
+  else if (fraction <= 6) niceFraction = 5;
+
+  return niceFraction * magnitude;
+}
+
+function buildPriceAxis(min: number, max: number): { min: number; max: number; ticks: number[]; step: number } {
+  const span = max - min || Math.max(Math.abs(max), 1);
+  const step = nicePriceStep(span / 6);
+  const axisMin = Math.floor(min / step) * step;
+  const axisMax = Math.ceil(max / step) * step;
+  const ticks: number[] = [];
+
+  for (let value = axisMin; value <= axisMax + step * 0.5; value += step) {
+    ticks.push(Number(value.toFixed(8)));
+  }
+
+  return { min: axisMin, max: axisMax, ticks, step };
+}
+
+function formatPriceTick(price: number, step: number): string {
+  if (step >= 1) return price.toFixed(2);
+  if (step >= 0.01) return price.toFixed(2);
+  if (step >= 0.001) return price.toFixed(3);
+  return price.toFixed(4);
 }
 
 function clampViewport(start: number, end: number, candleCount: number, key: string): Viewport {
@@ -107,11 +137,6 @@ function candleIndexForMarker(candles: ChartCandle[], t: number): number {
     }
   }
   return best;
-}
-
-function markerDisplayPrice(candle: ChartCandle | undefined, price: number): number {
-  if (!candle) return price;
-  return clamp(price, candle.l, candle.h);
 }
 
 export default function TradeChart({
@@ -299,6 +324,9 @@ export default function TradeChart({
   const span = pMax - pMin || 1;
   pMin -= span * 0.04;
   pMax += span * 0.04;
+  const priceAxis = buildPriceAxis(pMin, pMax);
+  pMin = priceAxis.min;
+  pMax = priceAxis.max;
 
   const x = (i: number) => PAD.left + (i - activeViewport.start + 0.5) * cw;
   const y = (p: number) => PAD.top + ((pMax - p) / (pMax - pMin)) * plotH;
@@ -307,7 +335,7 @@ export default function TradeChart({
   const bodyW = Math.max(1, cw * 0.6);
   const volumeW = Math.max(1, cw * 0.72);
 
-  const priceTicks = Array.from({ length: 5 }, (_, i) => pMin + ((pMax - pMin) * i) / 4);
+  const priceTicks = priceAxis.ticks;
   const timeTickIdx = Array.from(
     new Set(
       Array.from({ length: 5 }, (_, i) =>
@@ -390,10 +418,10 @@ export default function TradeChart({
               x={W - PAD.right + 5}
               y={y(p) + 3.5}
               fill="var(--muted)"
-              fontSize={11}
+              fontSize={12}
               style={axisTextStyle}
             >
-              {p.toFixed(p < 10 ? 4 : 2).replace(/\.?0+$/, "")}
+              {formatPriceTick(p, priceAxis.step)}
             </text>
           </g>
         ))}
@@ -405,7 +433,7 @@ export default function TradeChart({
             x={x(idx)}
             y={H - 8}
             fill="var(--muted)"
-            fontSize={11}
+            fontSize={12}
             style={axisTextStyle}
             textAnchor="middle"
           >
@@ -414,17 +442,6 @@ export default function TradeChart({
         ))}
 
         {/* volume */}
-        {volumeMax > 0 && (
-          <text
-            x={W - PAD.right + 5}
-            y={volumeTop + 10}
-            fill="var(--muted)"
-            fontSize={10.5}
-            style={chartLabelStyle}
-          >
-            VOL
-          </text>
-        )}
         {visibleEntries.map(({ candle: c, index: i }) => {
           const up = c.c >= c.o;
           const color = up ? "var(--green)" : "var(--red)";
@@ -466,11 +483,8 @@ export default function TradeChart({
         {markerEntries.map(({ marker: m, index: i, candleIndex }) => {
           if (candleIndex < activeViewport.start || candleIndex > activeViewport.end) return null;
 
-          const candle = candles[candleIndex];
           const mx = x(candleIndex);
-          // Summary imports can collapse several fills into one synthetic marker.
-          // Keep the marker visually anchored to the candle that owns its minute.
-          const my = y(markerDisplayPrice(candle, m.price));
+          const my = y(m.price);
           const s = 5;
           const buy = m.side === "buy";
           const pts = buy
