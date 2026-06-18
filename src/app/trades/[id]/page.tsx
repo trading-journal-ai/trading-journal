@@ -5,7 +5,7 @@ import { getActiveAccount } from "@/lib/accountScope";
 import { getCandles } from "@/lib/candles";
 import { fallbackCandlesFromExecutions } from "@/lib/candles/fallback";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
-import TradeChart from "@/components/TradeChart";
+import LightweightTradeChart from "@/components/LightweightTradeChart";
 import TradeJournalNote from "@/components/TradeJournalNote";
 import TradeNoteComposer from "@/components/TradeNoteComposer";
 import ReviewHeader from "@/components/ReviewHeader";
@@ -23,17 +23,6 @@ const timeFmt = new Intl.DateTimeFormat("en-US", {
   hour12: false,
 });
 const fmtTime = (t: number) => timeFmt.format(new Date(t * 1000));
-const shortDateFmt = new Intl.DateTimeFormat("en-US", {
-  timeZone: "UTC",
-  month: "short",
-  day: "numeric",
-});
-
-function shortDateLabel(date: string): string {
-  const [year, month, day] = date.split("-").map(Number);
-  return shortDateFmt.format(new Date(Date.UTC(year, month - 1, day)));
-}
-
 function journalNoteBody(note: typeof schema.journalEntries.$inferSelect): string {
   return note.lessons || note.thesis || "No note text.";
 }
@@ -135,7 +124,7 @@ export default async function TradeDetailPage({
       ? []
       : [
           {
-            label: isJournalOrigin || isCalendarOrigin ? trade.symbol : `${trade.symbol} · ${shortDateLabel(tradeDate)}`,
+            label: trade.symbol,
             href: `/trades/review?date=${tradeDate}&symbol=${trade.symbol}&returnTo=${encodeURIComponent(originCrumb.href ?? "/trades")}`,
           },
         ];
@@ -169,21 +158,20 @@ export default async function TradeDetailPage({
       <section className="mb-6 grid gap-10 pt-5 lg:grid-cols-[minmax(0,760px)_minmax(280px,380px)] lg:items-start">
         <div className="min-w-0">
           {chartCandles.length > 0 ? (
-            <TradeChart
+            <LightweightTradeChart
               candles={chartCandles}
               markers={execs.map((e) => ({
                 t: e.executedAt,
                 price: e.price,
                 side: e.side as "buy" | "sell",
               }))}
-              variant="review"
             />
           ) : error ? (
             <div className="rounded-[6px] border border-[var(--red)]/40 bg-[var(--red)]/10 px-4 py-3 text-sm text-[var(--red)]">
               Candle data is unavailable for this trade.
             </div>
           ) : (
-            <TradeChart candles={[]} markers={[]} variant="review" />
+            <LightweightTradeChart candles={[]} markers={[]} />
           )}
         </div>
 

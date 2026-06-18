@@ -23,10 +23,10 @@ export function originCrumbFromHref(href: string | undefined, fallback = "/trade
   let origin = isSafeInternalHref(href) ? href : fallback;
 
   for (let depth = 0; depth < 4; depth += 1) {
-    const query = origin.split("?")[1];
-    if (!query) break;
+    const queryStart = origin.indexOf("?");
+    if (queryStart < 0) break;
 
-    const nested = new URLSearchParams(query).get("returnTo") ?? undefined;
+    const nested = new URLSearchParams(origin.slice(queryStart + 1)).get("returnTo") ?? undefined;
     if (!isSafeInternalHref(nested)) break;
     origin = nested;
   }
