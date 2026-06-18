@@ -7,6 +7,7 @@ if [[ -t 1 ]]; then
   BOLD="$(printf '\033[1m')"
   DIM="$(printf '\033[2m')"
   GREEN="$(printf '\033[32m')"
+  CYAN="$(printf '\033[36m')"
   BLUE="$(printf '\033[34m')"
   RED="$(printf '\033[31m')"
   RESET="$(printf '\033[0m')"
@@ -14,6 +15,7 @@ else
   BOLD=""
   DIM=""
   GREEN=""
+  CYAN=""
   BLUE=""
   RED=""
   RESET=""
@@ -21,11 +23,25 @@ fi
 
 LOG_FILE=".install-trading-journal.log"
 
+banner() {
+  echo "${CYAN}******************************************************************************${RESET}"
+  echo "${CYAN}******************************************************************************${RESET}"
+  echo "${CYAN}**${RESET}"
+  echo "${CYAN}**${RESET}  ${BOLD}Trading Journal${RESET}"
+  echo "${CYAN}**${RESET}"
+  echo "${CYAN}**${RESET}  A local-first trading journal built around the review habit first:"
+  echo "${CYAN}**${RESET}  write the recap, see the day in context, and drill into the trade"
+  echo "${CYAN}**${RESET}  evidence only when it matters."
+  echo "${CYAN}**${RESET}"
+  echo "${CYAN}******************************************************************************${RESET}"
+  echo "${CYAN}******************************************************************************${RESET}"
+}
+
 run_quiet() {
   local label="$1"
   shift
 
-  printf "%s" "${DIM}${label}...${RESET}"
+  printf "%s" "${BOLD}${label}${RESET}${DIM}...${RESET}"
   if "$@" >"$LOG_FILE" 2>&1; then
     printf " %s\n" "${GREEN}done${RESET}"
   else
@@ -39,25 +55,28 @@ run_quiet() {
   fi
 }
 
-echo "${BOLD}Trading Journal${RESET}"
-echo "${DIM}Local installer${RESET}"
+banner
 echo
-echo "This installs project dependencies and sets up a local database inside this folder."
+echo "This installs project dependencies."
+echo "It sets up a local database inside this folder."
 echo "It does not install anything globally."
 echo "You can safely rerun this installer later."
 echo
+echo "${DIM}******************************${RESET}"
+echo "${DIM}******************************${RESET}"
+echo
 
 if ! command -v npm >/dev/null 2>&1; then
-  echo "npm was not found. Install Node.js 20 or newer first, then run this script again."
+  echo "${RED}npm was not found.${RESET} Install Node.js 20 or newer first, then run this script again."
   exit 1
 fi
 
 run_quiet "Step 1 of 3: Installing dependencies" npm install --no-audit --fund=false
 
 echo
-echo "${BLUE}Setup${RESET}"
+echo "${BLUE}${BOLD}Setup${RESET}"
 npm run --silent setup:local
 
 echo
-echo "${GREEN}Step 3 of 3: Starting Trading Journal locally${RESET}"
+echo "${GREEN}${BOLD}Step 3 of 3: Starting Trading Journal locally${RESET}"
 npm run dev
