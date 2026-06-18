@@ -125,7 +125,18 @@ free/basic API access for trying the API, with rate limits; check their
 
 ## Setup
 
-Install dependencies:
+There are two ways to run the app:
+
+1. **Demo mode** - use the included demo dataset with trades and seeded notes.
+   This is best for previewing the app before importing personal data.
+2. **Live/local mode** - create your own private local journal and import your
+   own broker CSV.
+
+Both modes run locally on your machine.
+
+### Before You Start
+
+Install the app dependencies:
 
 ```bash
 npm install
@@ -137,25 +148,29 @@ Create a local environment file:
 cp .env.example .env.local
 ```
 
-Set your Massive API key in `.env.local`:
+Optional but recommended: add a Massive API key to `.env.local`:
 
 ```bash
 MASSIVE_API_KEY=your_key_here
 ```
 
-### Try The Demo Data
+[Massive](https://www.massive.com/) is used for candlestick chart data. You can
+skip this at first, but charts need candle data to show real one-minute price
+movement. The free Massive plan is enough to get the app working locally; you do
+not need a paid plan just to test the journal.
 
-This is the easiest way to see the app working without using your own trading
-history. The repo includes a demo dataset with trades and seeded journal notes
-specifically for previewing, testing, and giving feedback on the app.
+### Mode 1: Demo Mode
 
-The repo includes a public-safe DAS paper-trading CSV at:
+Use this if you just want to see the app working.
+
+The repo includes a demo dataset with trades and seeded journal notes for
+previewing, testing, and giving feedback. The demo trade CSV lives here:
 
 ```text
 samples/das-paper-trades-2026-demo.csv
 ```
 
-Run:
+Run these commands:
 
 ```bash
 DB_PATH=data/tradingjournaldemo.db npm run db:migrate
@@ -167,12 +182,14 @@ Then open:
 
 [http://localhost:3000](http://localhost:3000)
 
-This creates a local `data/tradingjournaldemo.db`, imports the demo trades, and
-seeds demo journal content: one daily recap per active trading day, plus trade
-notes for the best winner and worst loser when available.
+What this does:
 
-If you added a Massive API key, you can also hydrate candlestick data for the
-demo database:
+- Creates a local demo database at `data/tradingjournaldemo.db`.
+- Imports the included demo trade CSV.
+- Adds demo journal notes: one daily recap per active trading day, plus trade
+  notes for the best winner and worst loser when available.
+
+If you added a Massive API key, you can also pre-load candlestick data:
 
 ```bash
 npm run demo:candles -- --db data/tradingjournaldemo.db
@@ -182,9 +199,11 @@ That step can take a while because it fetches one symbol/day pair at a time and
 respects API rate limits. Once candles are cached in SQLite, the app does not
 need to refetch them for the same symbol/date.
 
-### Use Your Own Local Journal
+### Mode 2: Live/Local Mode
 
-For your private journal, use the default local database:
+Use this when you are ready to import your own trades.
+
+Create your private local database:
 
 ```bash
 npm run db:migrate
@@ -200,15 +219,22 @@ Open:
 
 [http://localhost:3000](http://localhost:3000)
 
-From there, import a broker CSV through the app. The importer was originally
-set up around ThinkorSwim/Schwab account statement exports, especially the
-`Account Trade History` section. It also supports DAS-style trade-summary CSVs.
+From there, use the Import button in the app and upload your broker CSV.
 
-If you use another broker, the CSV structure may be different. The long-term
-plan is broker-specific adapters: each adapter normalizes that broker's CSV into
-the shared execution shape the app understands. For now, adding a new broker
-usually means collecting an anonymized sample export and building a parser for
-that format.
+The importer was originally built around ThinkorSwim/Schwab account statement
+exports, especially the `Account Trade History` section. It also supports
+DAS-style trade-summary CSVs.
+
+If you use another broker, the CSV may not work immediately. Broker exports are
+not standardized: each broker can use different column names, timestamps, side
+labels, fees, and trade grouping. In that case, the best path is to use Codex or
+another coding assistant with an anonymized sample CSV to add a broker-specific
+import adapter. The adapter's job is to translate that broker's CSV into the
+shared trade/execution format the app already understands.
+
+For non-technical users: the important part is that you do not have to redesign
+the app for each broker, but you may need help teaching the importer how to read
+your broker's CSV.
 
 ## Useful Scripts
 
