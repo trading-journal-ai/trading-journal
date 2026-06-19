@@ -152,6 +152,68 @@ That one command:
 The script does not install anything globally. Everything it creates stays in
 this folder.
 
+## Running the App
+
+After the installer finishes, the app starts automatically. To use the journal,
+leave that terminal window open and open the local URL it prints, usually
+[http://localhost:3000](http://localhost:3000).
+
+### Start it
+
+If you come back later, open this project folder in your terminal and run:
+
+```bash
+npm run dev
+```
+
+This launches the local app. Leave the terminal window open while you use the
+journal. You will see log messages scroll by; that is normal.
+
+### Stop it
+
+Click the terminal window and press **Ctrl + C**. On Mac, that is the Control
+key, not Command. The app shuts down and you get your prompt back. You can close
+the terminal after that.
+
+### Restart it
+
+Press **Ctrl + C** to stop the app, then run `npm run dev` again. You can also
+close the terminal, open a new one in this project folder, and run
+`npm run dev`.
+
+### Your data is safe
+
+The journal stores everything in a SQLite database file on your computer.
+Stopping and starting the app never deletes your entries. Your data lives on
+disk, not in the running terminal process.
+
+### Troubleshooting
+
+If the browser does not open automatically, go to
+[http://localhost:3000](http://localhost:3000) manually. If Next.js says it is
+using a different port, use the URL printed in the terminal instead.
+
+If you see a "port already in use" message, a previous copy may still be
+running. On Mac or Linux, this frees the default port:
+
+```bash
+lsof -ti:3000 | xargs kill -9
+```
+
+On Windows, find the process ID:
+
+```bash
+netstat -ano | findstr :3000
+```
+
+Then stop it, replacing `<that-number>` with the PID from the last column:
+
+```bash
+taskkill /PID <that-number> /F
+```
+
+Once the port is free, run `npm run dev` again.
+
 ### Massive API Key
 
 Charts need candle data. To enable charts, create a free account at

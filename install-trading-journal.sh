@@ -24,24 +24,20 @@ fi
 LOG_FILE=".install-trading-journal.log"
 
 banner() {
-  echo "${CYAN}******************************************************************************${RESET}"
-  echo "${CYAN}******************************************************************************${RESET}"
-  echo "${CYAN}**${RESET}"
-  echo "${CYAN}**${RESET}  ${BOLD}Trading Journal${RESET}"
-  echo "${CYAN}**${RESET}"
-  echo "${CYAN}**${RESET}  A local-first trading journal built around the review habit first:"
-  echo "${CYAN}**${RESET}  write the recap, see the day in context, and drill into the trade"
-  echo "${CYAN}**${RESET}  evidence only when it matters."
-  echo "${CYAN}**${RESET}"
-  echo "${CYAN}******************************************************************************${RESET}"
-  echo "${CYAN}******************************************************************************${RESET}"
+  echo "${CYAN}------------------------------------------------------------${RESET}"
+  echo "  ${CYAN}■${RESET}  ${CYAN}${BOLD}Trading Journal${RESET} ${DIM}installer${RESET}"
+  echo
+  echo "     ${DIM}A local-first trading journal built around the review habit first:${RESET}"
+  echo "     ${DIM}write the recap, see the day in context, and drill into the trade${RESET}"
+  echo "     ${DIM}evidence only when it matters.${RESET}"
+  echo "${CYAN}------------------------------------------------------------${RESET}"
 }
 
 run_quiet() {
   local label="$1"
   shift
 
-  printf "%s" "${BOLD}${label}${RESET}${DIM}...${RESET}"
+  printf "%s" "${CYAN}${BOLD}${label}${RESET}${DIM}...${RESET}"
   if "$@" >"$LOG_FILE" 2>&1; then
     printf " %s\n" "${GREEN}done${RESET}"
   else
@@ -57,11 +53,11 @@ run_quiet() {
 
 banner
 echo
-echo "This installs project dependencies."
-echo "It sets up a local database inside this folder."
-echo "You can safely rerun this installer later."
+echo "  Installs project dependencies"
+echo "  Sets up a local database inside this folder"
+echo "  Safe to rerun later"
 echo
-echo "${DIM}------------------------------------------------------------${RESET}"
+echo "${CYAN}------------------------------------------------------------${RESET}"
 echo
 
 if ! command -v npm >/dev/null 2>&1; then
@@ -76,8 +72,12 @@ echo "${BLUE}${BOLD}Setup${RESET}"
 npm run --silent setup:local
 
 echo
-echo "${GREEN}${BOLD}Step 3 of 3: Starting Trading Journal locally${RESET}"
+echo "${CYAN}${BOLD}Step 3 of 3: Starting Trading Journal locally${RESET}"
 echo "Local app: ${BLUE}http://localhost:3000${RESET}"
 echo "${DIM}If port 3000 is already in use, Next.js will print the available localhost URL below.${RESET}"
+echo
+echo "${BOLD}Start and stop${RESET}"
+echo "  To stop the app: press ${CYAN}Ctrl+C${RESET} in this terminal."
+echo "  To start it again later: run ${CYAN}npm run dev${RESET} from this folder."
 echo
 npm run dev
