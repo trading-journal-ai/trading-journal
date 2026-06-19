@@ -40,12 +40,26 @@ banner() {
 run_quiet() {
   local label="$1"
   shift
+  local status_label="${INDENT}${CYAN}${BOLD}${label}${RESET}${DIM}...${RESET}"
 
-  printf "%s" "${INDENT}${CYAN}${BOLD}${label}${RESET}${DIM}...${RESET}"
-  if "$@" >"$LOG_FILE" 2>&1; then
-    printf " %s\n" "${GREEN}done${RESET}"
+  if [[ -t 1 ]]; then
+    printf "%s\n\n" "$status_label"
   else
-    printf " %s\n\n" "${RED}failed${RESET}"
+    printf "%s" "$status_label"
+  fi
+
+  if "$@" >"$LOG_FILE" 2>&1; then
+    if [[ -t 1 ]]; then
+      printf "\033[2A\r%s %s\033[K\033[2B" "$status_label" "${GREEN}done${RESET}"
+    else
+      printf " %s\n" "${GREEN}done${RESET}"
+    fi
+  else
+    if [[ -t 1 ]]; then
+      printf "\033[2A\r%s %s\033[K\033[2B\n\n" "$status_label" "${RED}failed${RESET}"
+    else
+      printf " %s\n\n" "${RED}failed${RESET}"
+    fi
     echo "The install command failed. Last log lines:"
     echo
     tail -n 80 "$LOG_FILE"
@@ -73,10 +87,9 @@ npm run --silent setup:local
 
 echo
 echo "${INDENT}${CYAN}${BOLD}Step 3 of 3: Starting Trading Journal locally${RESET}"
-echo "${INDENT}Local app: ${BLUE}http://localhost:3000${RESET}"
 echo
 echo "${INDENT}${BOLD}Start and stop${RESET}"
 echo "${INDENT}To stop the app: press ${CYAN}Ctrl+C${RESET} in this terminal."
-echo "${INDENT}To start it again later: run ${CYAN}npm run dev${RESET} from this folder."
+echo "${INDENT}To start it again later: run ${CYAN}npm run --silent dev${RESET} from this folder."
 echo
-npm run dev
+npm run --silent dev

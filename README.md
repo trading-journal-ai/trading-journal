@@ -171,7 +171,7 @@ leave that terminal window open and open the local URL it prints, usually
 If you come back later, open this project folder in your terminal and run:
 
 ```bash
-npm run dev
+npm run --silent dev
 ```
 
 This launches the local app. Leave the terminal window open while you use the
@@ -185,9 +185,9 @@ the terminal after that.
 
 ### Restart it
 
-Press **Ctrl + C** to stop the app, then run `npm run dev` again. You can also
+Press **Ctrl + C** to stop the app, then run `npm run --silent dev` again. You can also
 close the terminal, open a new one in this project folder, and run
-`npm run dev`.
+`npm run --silent dev`.
 
 ### Your data is safe
 
@@ -220,7 +220,7 @@ Then stop it, replacing `<that-number>` with the PID from the last column:
 taskkill /PID <that-number> /F
 ```
 
-Once the port is free, run `npm run dev` again.
+Once the port is free, run `npm run --silent dev` again.
 
 ### Massive API Key
 
@@ -297,14 +297,14 @@ For demo data:
 ```bash
 DB_PATH=data/tradingjournaldemo.db npm run db:migrate
 npm run demo:paper
-DB_PATH=data/tradingjournaldemo.db npm run dev
+DB_PATH=data/tradingjournaldemo.db npm run --silent dev
 ```
 
 For an empty local journal:
 
 ```bash
 npm run db:migrate
-npm run dev
+npm run --silent dev
 ```
 
 If you added a Massive API key, you can also pre-load candlestick data:
@@ -320,7 +320,7 @@ need to refetch them for the same symbol/date.
 ## Useful Scripts
 
 ```bash
-npm run dev          # Start the local Next.js dev server
+npm run --silent dev # Start the local Next.js dev server
 npm run setup:local  # Interactive local setup for demo or empty journal mode
 npm run reset:local  # Reset the included local demo dataset
 npm run build        # Build the app
