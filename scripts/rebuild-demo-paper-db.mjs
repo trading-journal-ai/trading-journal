@@ -8,7 +8,7 @@ import Database from "better-sqlite3";
 const MARKET_TZ = "America/New_York";
 const DEFAULTS = {
   db: "data/tradingjournaldemo.db",
-  csv: "samples/das-paper-trades-2026-demo.csv",
+  csv: "samples/demo-trades-and-notes.csv",
   account: "Paper Account",
 };
 
@@ -33,7 +33,7 @@ function parseArgs(argv) {
 function usage() {
   console.log(`
 Usage:
-  node scripts/rebuild-demo-paper-db.mjs --db data/tradingjournaldemo.db --csv samples/das-paper-trades-2026-demo.csv
+  node scripts/rebuild-demo-paper-db.mjs --db data/tradingjournaldemo.db --csv samples/demo-trades-and-notes.csv
 
 Replaces demo trade/import data from a DAS trade-summary CSV while preserving
 cached candle rows in the database.

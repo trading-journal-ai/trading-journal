@@ -115,11 +115,17 @@ the terminal, usually [http://localhost:3000](http://localhost:3000).
 
 ## Demo Data
 
-The repo includes a demo dataset with sample trades and seeded notes:
+The repo includes a demo dataset with augmented sample trades and placeholder
+journal notes:
 
 ```text
-samples/das-paper-trades-2026-demo.csv
+samples/demo-trades-and-notes.csv
 ```
+
+The demo data is meant for previewing and testing the app. It is realistic
+enough to exercise the journal, charts, calendar, reports, and trade-review
+flows, but it is not intended to be a perfect trading record or a model trading
+system.
 
 To reset the local demo database:
 
@@ -127,9 +133,9 @@ To reset the local demo database:
 npm run reset:local
 ```
 
-Demo mode creates a local SQLite database, imports the sample CSV, and adds demo
-journal notes: one daily recap per active trading day, plus trade notes for the
-best winner and worst loser when available.
+Demo mode creates a local SQLite database, imports the sample CSV, and adds
+placeholder journal notes: one daily recap per active trading day, plus trade
+notes for the best winner and worst loser when available.
 
 ## Importing Your Own Data
 

@@ -7,7 +7,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { parseCsvRows } from "./csv";
 
 const TOS_SAMPLE = "data/samples/2026-03-04-AccountStatement.csv";
-const DAS_SAMPLE = "samples/das-paper-trades-2026-demo.csv";
+const DEMO_SAMPLE = "samples/demo-trades-and-notes.csv";
 const HAS_TOS_SAMPLE = readOptional(TOS_SAMPLE) != null;
 
 function readOptional(path: string): string | null {
@@ -23,7 +23,7 @@ describe("broker CSV imports", () => {
   let db: typeof import("@/lib/db").db;
   let schema: typeof import("@/lib/db/schema");
   let tosCsv: string | null;
-  let dasCsv: string;
+  let demoCsv: string;
 
   beforeAll(async () => {
     const dir = mkdtempSync(join(tmpdir(), "tj-"));
@@ -36,7 +36,7 @@ describe("broker CSV imports", () => {
     }
     raw.close();
     tosCsv = readOptional(TOS_SAMPLE);
-    dasCsv = readFileSync(DAS_SAMPLE, "utf8");
+    demoCsv = readFileSync(DEMO_SAMPLE, "utf8");
     mod = await import("./persist");
     ({ db } = await import("@/lib/db"));
     schema = await import("@/lib/db/schema");
@@ -58,7 +58,7 @@ describe("broker CSV imports", () => {
   });
 
   it("inserts DAS trade summaries as open/close executions, then is idempotent", async () => {
-    const first = await mod.importBrokerCsv(dasCsv, "das-paper-trades-2026-demo.csv", 1);
+    const first = await mod.importBrokerCsv(demoCsv, "demo-trades-and-notes.csv", 1);
     expect(first.source).toBe("das_csv");
     expect(first.parsed).toBe(2414);
     expect(first.inserted).toBe(2414);
@@ -67,7 +67,7 @@ describe("broker CSV imports", () => {
     expect(first.parsedFrom).toBe("2026-01-05");
     expect(first.parsedTo).toBe("2026-06-16");
 
-    const [headers, ...rows] = parseCsvRows(dasCsv);
+    const [headers, ...rows] = parseCsvRows(demoCsv);
     const grossPnlIndex = headers.indexOf("Gross P&L");
     const csvPnl = rows.reduce((sum, row) => sum + Number(row[grossPnlIndex] || 0), 0);
     const imported = await db
@@ -96,7 +96,7 @@ describe("broker CSV imports", () => {
       .get();
     expect(firstTrade?.count ?? 0).toBeGreaterThan(0);
 
-    const second = await mod.importBrokerCsv(dasCsv, "das-paper-trades-2026-demo.csv", 1);
+    const second = await mod.importBrokerCsv(demoCsv, "demo-trades-and-notes.csv", 1);
     expect(second.source).toBe("das_csv");
     expect(second.inserted).toBe(0);
     expect(second.duplicates).toBe(2414);
