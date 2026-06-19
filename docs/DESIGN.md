@@ -412,11 +412,6 @@ how it feeds this project:
   single-user, no-auth** design. Cleaner to start clean than to untangle it — we
   build a **fresh `trading-journal` app** from scratch (Phase 0).
 
-### Not related (ruled out)
-- `~/Working/trading-learning-app` (GitHub: `justin-carlson/trading-learning-app`)
-  — an *educational* app (trading patterns, risk calculator, L2 simulator). No
-  chart/journal code. Cloned locally only for evaluation.
-
 ### Source repo
 - Current working repo: `github.com/trading-journal-ai/trading-journal`.
 - Public domain: `https://trading-journal.ai`.

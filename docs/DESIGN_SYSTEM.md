@@ -18,7 +18,7 @@ spacing, and a single hairline do the work.
 
 - [Material Design type scale](https://m2.material.io/design/typography/the-type-system.html#type-scale)
   for the idea of named type roles.
-- `/Users/justin/Downloads/App primitives.html`
+- A local design primitives exploration file
   for design-system primitives and Deep-theme exploration.
 - `samples/Journal Design/`
   for journal, dashboard, calendar, and reports visual explorations.
@@ -493,7 +493,7 @@ token names, visual values, and component intent into the real Next.js app.
 | --- | --- |
 | Product design doc | [DESIGN.md](DESIGN.md) |
 | Journal feature design | [JOURNAL_DESIGN.md](JOURNAL_DESIGN.md) |
-| Design primitives exploration | `/Users/justin/Downloads/App primitives.html` |
+| Design primitives exploration | Local design primitives exploration file |
 | Journal mockups | `samples/Journal Design/` |
 | App tokens | `src/app/globals.css` |
 | Main app shell | `src/app/layout.tsx` |
