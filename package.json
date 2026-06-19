@@ -6,7 +6,7 @@
   "homepage": "https://trading-journal.ai",
   "repository": {
     "type": "git",
-    "url": "https://github.com/justin-carlson/trading-journal.git"
+    "url": "https://github.com/trading-journal-ai/trading-journal.git"
   },
   "license": "MIT",
   "scripts": {

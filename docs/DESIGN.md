@@ -418,7 +418,7 @@ how it feeds this project:
   chart/journal code. Cloned locally only for evaluation.
 
 ### Source repo
-- Current working repo: `github.com/justin-carlson/trading-journal`.
+- Current working repo: `github.com/trading-journal-ai/trading-journal`.
 - Public domain: `https://trading-journal.ai`.
 - Community direction: keep the history intact and transfer the repo to a
   dedicated GitHub organization when the project is ready for broader
