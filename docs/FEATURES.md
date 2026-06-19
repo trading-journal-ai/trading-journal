@@ -83,6 +83,8 @@
 - 🔜 Daily note / day snapshot (market regime, how I traded).
 - 🔜 AI trade-review coach: daily-first review using the Find Your Levels prompt
   rubric, user-marked levels, chart data, trade records, and journal notes.
+- 🔜 AI daily coach recap: summarize what worked, what did not work, what can
+  improve, and one focused next-session checklist item.
 
 ## 5. Calendar  *(screenshot 3)*
 - ✅ **Monthly P&L calendar**, days color-coded by net P&L.

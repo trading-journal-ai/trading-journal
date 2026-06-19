@@ -346,6 +346,44 @@ Possible sections:
 - What the notes say.
 - One focus for next session.
 
+### Daily Coach Recap Framework
+
+The daily AI review should feel like a practical end-of-day coaching recap, not
+a generic report. A useful first version can use a simple reflection framework:
+
+- What's working well.
+- What's not working.
+- What can improve.
+- What to focus on next session.
+
+This gives the trader a short, repeatable checklist after the session. The goal
+is to connect data, notes, charts, and process into a clear next-day plan.
+
+Suggested output:
+
+- **What worked:** the strongest process behaviors, best decision quality, clean
+  entries, controlled losses, patience, sizing discipline, or valid holds.
+- **What did not work:** the main leak, rule break, emotional pattern, oversized
+  trade, chase, early exit, overtrade, or avoidable damage.
+- **What can improve:** one or two concrete improvements tied to the trader's
+  playbook, not broad motivational advice.
+- **Next-session focus:** a small checklist or single theme for tomorrow, such
+  as "wait for the first pullback," "keep red trades small," "only size up on
+  A+ structure," or "do not re-enter after frustration."
+
+Potential frameworks to borrow from:
+
+- **Start / Stop / Continue:** start one behavior, stop one behavior, continue
+  one behavior.
+- **Keep / Kill / Try:** keep what is working, kill the biggest leak, try one
+  focused adjustment next session.
+- **Repeat / Reduce / Review:** repeat the best process, reduce the main
+  mistake, review the trade that explains the day.
+
+The coach should keep this recap short enough to read before the next session.
+It should cite the trades, tickers, notes, and stats behind the finding so the
+feedback feels grounded instead of abstract.
+
 ### Daily Attribution Review
 
 Some raw data points are useful, but they become much more valuable when the
