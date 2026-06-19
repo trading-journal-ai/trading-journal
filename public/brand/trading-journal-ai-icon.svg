@@ -21,14 +21,14 @@
   <rect x="238" y="238" width="548" height="548" rx="88" fill="url(#page)"/>
 
   <path d="M352 390V650" stroke="#1db26b" stroke-width="26" stroke-linecap="square"/>
-  <rect x="312" y="470" width="80" height="110" fill="#1db26b"/>
+  <rect x="312" y="474" width="80" height="102" fill="#1db26b"/>
 
   <path d="M462 330V610" stroke="#f05143" stroke-width="26" stroke-linecap="square"/>
-  <rect x="422" y="405" width="80" height="135" fill="#f05143"/>
+  <rect x="422" y="434" width="80" height="76" fill="#f05143"/>
 
   <path d="M572 440V700" stroke="#1db26b" stroke-width="26" stroke-linecap="square"/>
-  <rect x="532" y="535" width="80" height="115" fill="#1db26b"/>
+  <rect x="532" y="528" width="80" height="126" fill="#1db26b"/>
 
   <path d="M682 320V610" stroke="#1db26b" stroke-width="26" stroke-linecap="square"/>
-  <rect x="642" y="385" width="80" height="135" fill="#1db26b"/>
+  <rect x="642" y="380" width="80" height="146" fill="#1db26b"/>
 </svg>
