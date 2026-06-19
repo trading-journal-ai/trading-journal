@@ -3,8 +3,12 @@
 This folder is for public-safe demo data.
 
 The included demo dataset is meant for previewing and testing the app with
-realistic trades and seeded journal notes, without requiring someone to import
-their own trading history first.
+augmented sample trades and placeholder journal notes, without requiring someone
+to import their own trading history first.
+
+The trades are realistic enough to exercise the journal, charts, calendar,
+reports, and trade-review flows, but this is not a perfect trading record or a
+model trading system. Treat it as demo material.
 
 Do not commit real broker exports here. Real exports belong in `data/samples/`,
 which is gitignored because those files can contain private account and trading
@@ -12,11 +16,9 @@ history.
 
 Current demo fixtures:
 
-- `das-paper-trades-2026-demo.csv` - paper-trading DAS-style trade summary
-  export from January through June 2026, normalized for public demo use. The
-  dates, symbols, prices, and trade outcomes are preserved, but share sizes are
-  compressed into realistic demo lots so the UI stays useful and the examples
-  do not showcase oversized trades.
+- `demo-trades-and-notes.csv` - augmented trade data from January through June
+  2026, normalized for public demo use. The dataset is designed to make the UI
+  feel active and testable without requiring private broker exports.
 
 The goal is for a new contributor to run:
 
@@ -37,11 +39,11 @@ If they also want candlestick charts, they need a server-side Massive API key in
 npm run demo:candles -- --db data/tradingjournaldemo.db
 ```
 
-For the current DAS paper-trading demo fixture:
+For the current demo fixture:
 
 ```bash
-npm run demo:normalize-das -- --input /path/to/raw-das-export.csv --output samples/das-paper-trades-2026-demo.csv
-npm run demo:paper-db -- --db data/tradingjournaldemo.db --csv samples/das-paper-trades-2026-demo.csv
+npm run demo:normalize-das -- --input /path/to/raw-das-export.csv --output samples/demo-trades-and-notes.csv
+npm run demo:paper-db -- --db data/tradingjournaldemo.db --csv samples/demo-trades-and-notes.csv
 npm run demo:notes -- --db data/tradingjournaldemo.db --month all
 ```
 
