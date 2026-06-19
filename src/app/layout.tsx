@@ -12,10 +12,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-import AppShell from "@/components/AppShell";
-import { getActiveAccount, listAccounts } from "@/lib/accountScope";
-import { canImportData } from "@/lib/demoMode";
-
 export const metadata: Metadata = {
   title: "Trading Journal AI",
   description: "Local-first trading journal for review, recaps, charts, and performance analysis.",
@@ -30,10 +26,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const accounts = await listAccounts();
-  const activeAccount = await getActiveAccount(accounts);
-  const showImport = canImportData();
-
   return (
     <html
       lang="en"
@@ -48,9 +40,7 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
-        <AppShell accounts={accounts} activeAccountId={activeAccount.id} showImport={showImport}>
-          {children}
-        </AppShell>
+        {children}
       </body>
     </html>
   );
