@@ -20,17 +20,27 @@ const reviewSteps = [
   },
 ];
 
-const coachSteps = [
-  ["Codify your edge", "Turn your setups, process rules, and tags into the rubric the coach reviews against."],
-  ["Review against it", "Read the trade, ticker, day, and month through the rules you actually care about."],
-  ["Draft, never auto-post", "The coach can suggest notes and recaps, but you decide what gets saved."],
-];
-
 const localCards = [
-  ["On your machine", "Everything runs locally with a SQLite database inside the project folder."],
-  ["Private by default", "Broker exports, API keys, local databases, and chart cache files are ignored by git."],
-  ["No subscription", "No hosted account is required to run the app for yourself."],
-  ["Open source", "Use it, fork it, change it, or make it the starting point for your own workflow."],
+  {
+    icon: "monitor",
+    title: "On your machine",
+    body: "Everything lives in a local SQLite file in your project folder. Stopping the app never touches your entries.",
+  },
+  {
+    icon: "lock",
+    title: "Private by default",
+    body: "Your broker exports and notes are gitignored. Trade data stays yours unless you intentionally deploy or share it.",
+  },
+  {
+    icon: "help",
+    title: "No subscription",
+    body: "No hosted account, no monthly fee, no signup. Reflection that does not depend on someone else's server.",
+  },
+  {
+    icon: "github",
+    title: "Open source · MIT",
+    body: "Built in the open. Download it, fork it, run it, or use it as the starting point for your own journal.",
+  },
 ];
 
 const installCommand = `git clone https://github.com/trading-journal-ai/trading-journal.git
@@ -223,18 +233,37 @@ function CoachSection() {
         <div>
           <div className="flex items-center gap-3">
             <SparkIcon />
-            <SectionEyebrow className="text-[var(--blue)]">AI coach preview</SectionEyebrow>
+            <SectionEyebrow className="text-[var(--blue)]">The AI in Trading Journal AI</SectionEyebrow>
             <span className="rounded border border-[var(--border)] px-2 py-0.5 font-mono text-[11px] text-[var(--muted)]">
-              Future
+              Preview
             </span>
           </div>
           <h2 className="mt-5 text-[38px] font-semibold leading-tight md:text-[52px]">
-            Coaching against your rules, not generic trading advice.
+            A coach that grades against <span className="text-[var(--blue)]">your</span> rules.
           </h2>
           <p className="mt-6 max-w-[620px] text-lg leading-8 text-[var(--muted)]">
-            The AI layer is intended for post-trade review. Your notes, tags, recaps,
-            and executions become the context for feedback that helps you understand
-            drift, repeat strengths, and refine your trading process.
+            First you codify what an A+ trade looks like: the entry, risk, and process
+            criteria you already track as pills. Then the coach reads every imported
+            trade against that standard, flags where you drifted, and drafts the note
+            and recap in your voice.
+          </p>
+          <div className="mt-10 space-y-7">
+            {[
+              ["01", "Codify your edge", "Turn your process pills into the rubric the coach grades by."],
+              ["02", "Review against it", "Each trade gets read against your own criteria, not generic advice."],
+              ["03", "Draft, never auto-post", "The coach proposes the note and recap; you always edit before it saves."],
+            ].map(([number, title, body]) => (
+              <div key={number} className="grid grid-cols-[32px_1fr] gap-4">
+                <span className="font-mono text-sm text-[var(--blue)]">{number}</span>
+                <div>
+                  <h3 className="text-lg font-semibold">{title}</h3>
+                  <p className="mt-2 text-base leading-7 text-[var(--muted)]">{body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-12 font-mono text-sm text-[var(--faint)]">
+            Concept preview · runs on your trades, on your machine.
           </p>
         </div>
         <CoachCard />
@@ -246,24 +275,40 @@ function CoachSection() {
 function LocalFirstSection() {
   return (
     <section id="local" className="scroll-mt-28">
-      <div className="mx-auto grid w-full max-w-[1200px] gap-14 px-6 py-24 md:px-8 lg:grid-cols-[0.95fr_1.05fr]">
+      <div className="mx-auto grid w-full max-w-[1200px] gap-14 px-6 py-24 md:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
         <div>
           <SectionEyebrow className="text-[var(--green)]">Local-first</SectionEyebrow>
           <h2 className="mt-5 text-[38px] font-semibold leading-tight md:text-[52px]">
             Your trading day stays on your machine.
           </h2>
-          <p className="mt-6 max-w-[620px] text-lg leading-8 text-[var(--muted)]">
-            A trading journal holds sensitive records: account history, timestamps,
-            notes, trade behavior, and API keys. Trading Journal AI is a personal tool,
-            not a hosted subscription.
+          <p className="mt-8 max-w-[620px] text-lg leading-8 text-[var(--muted)]">
+            It&apos;s the first thing serious traders ask about, and the answer is simple.
+            A trading journal holds some of your most sensitive records: account
+            history, positions, timestamps. Trading Journal AI is a personal tool,
+            not a hosted service. It runs locally and stores everything on disk, so
+            your review habit stays completely private.
           </p>
+          <Link
+            href="#get-started"
+            className="mt-10 inline-flex items-center gap-3 font-semibold text-[var(--blue)] transition-opacity hover:opacity-80"
+          >
+            Read how it works
+            <ArrowRight className="ml-0" />
+          </Link>
         </div>
-        <div className="grid overflow-hidden rounded-md border border-[var(--border)] bg-[var(--border)] md:grid-cols-2">
-          {localCards.map(([title, body]) => (
-            <article key={title} className="bg-[#0b0d12] p-6">
-              <span className="block size-2 rounded-full bg-[var(--green)]" />
-              <h3 className="mt-5 text-base font-semibold">{title}</h3>
-              <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{body}</p>
+        <div className="grid overflow-hidden rounded-md border border-[var(--border)] bg-[#0b0d12]/40 md:grid-cols-2">
+          {localCards.map((card, index) => (
+            <article
+              key={card.title}
+              className={[
+                "min-h-[240px] p-7 md:p-8",
+                index % 2 === 0 ? "md:border-r md:border-[var(--border)]" : "",
+                index < 2 ? "border-b border-[var(--border)]" : "",
+              ].join(" ")}
+            >
+              <LocalCardIcon icon={card.icon} />
+              <h3 className="mt-8 text-lg font-semibold">{card.title}</h3>
+              <p className="mt-5 max-w-[310px] text-base leading-7 text-[var(--muted)]">{card.body}</p>
             </article>
           ))}
         </div>
@@ -274,7 +319,7 @@ function LocalFirstSection() {
 
 function GetStartedSection() {
   return (
-    <section className="border-t border-[var(--hairline)]">
+    <section id="get-started" className="scroll-mt-28 border-t border-[var(--hairline)]">
       <div className="mx-auto w-full max-w-[1200px] px-6 py-24 text-center md:px-8">
         <SectionEyebrow>Get started</SectionEyebrow>
         <h2 className="mx-auto mt-5 max-w-[760px] text-[38px] font-semibold leading-tight md:text-[52px]">
@@ -484,33 +529,58 @@ function TradeNoteMock() {
 
 function CoachCard() {
   return (
-    <div className="rounded-md border border-[var(--border)] bg-[#0f141c] p-6">
-      <div className="font-mono text-sm font-semibold uppercase text-[var(--muted)]">
-        Daily review draft
+    <div className="rounded-md border border-[var(--border)] bg-[#0f141c] p-7 md:p-8">
+      <div className="flex items-center justify-between gap-6">
+        <div className="flex items-center gap-2 font-mono text-sm font-semibold uppercase text-[var(--blue)]">
+          <SparkIcon />
+          <span>Coach review</span>
+          <span className="text-[var(--faint)]">· NPT · Trade 1</span>
+        </div>
+        <span className="text-2xl font-semibold text-[var(--green)]">A-</span>
       </div>
-      <div className="mt-7 space-y-6">
-        {coachSteps.map(([title, body], index) => (
-          <div key={title} className="grid grid-cols-[38px_1fr] gap-4">
-            <span className="font-mono text-sm text-[var(--blue)]">
-              {String(index + 1).padStart(2, "0")}
+      <div className="mt-9 font-mono text-[13px] font-semibold uppercase text-[var(--faint)]">
+        Read against your rules
+      </div>
+      <div className="mt-6 space-y-5">
+        {[
+          ["pass", "Waited for confirmation", "Entry after the reclaim held"],
+          ["pass", "Sized to plan", "10 sh · within your risk"],
+          ["pass", "Let the winner work", "Added on the first pullback"],
+          ["warn", "Took profits early", "Trimmed half before your 2R target"],
+        ].map(([status, title, body]) => (
+          <div key={title} className="grid grid-cols-[28px_1fr] items-start gap-3">
+            <span
+              className={
+                status === "pass"
+                  ? "grid size-5 place-items-center rounded-full bg-[rgba(29,178,107,.18)] text-[var(--green)]"
+                  : "grid size-5 place-items-center rounded-full bg-[rgba(255,91,76,.18)] text-[var(--red)]"
+              }
+            >
+              {status === "pass" ? "✓" : "!"}
             </span>
-            <div>
-              <h3 className="text-base font-semibold">{title}</h3>
-              <p className="mt-1 text-sm leading-6 text-[var(--muted)]">{body}</p>
-            </div>
+            <p className="text-base leading-6">
+              <span className="font-semibold">{title}</span>{" "}
+              <span className="text-[var(--muted)]">{body}</span>
+            </p>
           </div>
         ))}
       </div>
-      <div className="mt-8 rounded-md border border-[var(--hairline)] bg-black/20 p-4 font-mono text-sm leading-7 text-[var(--body)]">
-        <p className="text-[var(--green)]">Coach note</p>
-        <p className="mt-2">
-          Your best trades came after confirmation. The weaker entries happened when
-          size increased before the move proved itself.
+      <div className="mt-9 border-t border-[var(--border)] pt-7">
+        <p className="text-lg leading-8 text-[var(--body)]">
+          “Your highest-quality entry this week. The only drift was trimming early,
+          the same pattern flagged Tuesday. Worth sizing the runner next time.”
         </p>
       </div>
-      <p className="mt-6 font-mono text-xs text-[var(--faint)]">
-        Concept preview · post-trade review only
-      </p>
+      <div className="mt-7 flex flex-wrap items-center gap-4">
+        <button
+          type="button"
+          className="inline-flex h-10 items-center gap-2 rounded-md border border-[var(--border)] px-4 text-sm font-semibold text-[var(--foreground)]"
+        >
+          <SparkIcon />
+          Use as note draft
+        </button>
+        <p className="font-mono text-xs text-[var(--faint)]">You always edit before it saves</p>
+      </div>
     </div>
   );
 }
@@ -616,18 +686,51 @@ function GhostButton({ href, children }: { href: string; children: React.ReactNo
   );
 }
 
-function ArrowRight() {
+function ArrowRight({ className = "ml-3" }: { className?: string }) {
   return (
-    <svg className="ml-3 size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg className={`${className} size-4`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M5 12h14" />
       <path d="m13 6 6 6-6 6" />
     </svg>
   );
 }
 
-function GitHubIcon() {
+function LocalCardIcon({ icon }: { icon: string }) {
+  if (icon === "monitor") {
+    return (
+      <svg className="size-6 text-[var(--green)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="12" rx="2" />
+        <path d="M8 20h8" />
+        <path d="M12 16v4" />
+      </svg>
+    );
+  }
+
+  if (icon === "lock") {
+    return (
+      <svg className="size-6 text-[var(--green)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="5" y="10" width="14" height="10" rx="2" />
+        <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+      </svg>
+    );
+  }
+
+  if (icon === "help") {
+    return (
+      <svg className="size-6 text-[var(--green)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9.5 9a2.7 2.7 0 0 1 5.2 1c0 2-2.7 2-2.7 4" />
+        <path d="M12 17h.01" />
+      </svg>
+    );
+  }
+
+  return <GitHubIcon className="size-6 text-[var(--green)]" />;
+}
+
+function GitHubIcon({ className = "size-4" }: { className?: string }) {
   return (
-    <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M9 19c-5 1.5-5-2.5-7-3" />
       <path d="M15 22v-3.9a3.4 3.4 0 0 0-.9-2.6c3-.3 6.2-1.5 6.2-6.7A5.2 5.2 0 0 0 19 5.3a4.9 4.9 0 0 0-.1-3.6s-1.1-.3-3.6 1.4a12.3 12.3 0 0 0-6.6 0C6.2 1.4 5.1 1.7 5.1 1.7A4.9 4.9 0 0 0 5 5.3 5.2 5.2 0 0 0 3.7 8.8c0 5.2 3.2 6.4 6.2 6.7a3.4 3.4 0 0 0-.9 2.6V22" />
     </svg>
