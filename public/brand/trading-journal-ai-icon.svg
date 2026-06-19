@@ -4,15 +4,15 @@
 
   <rect width="1024" height="1024" fill="#ffffff"/>
 
-  <path d="M366 360V656" stroke="#1db26b" stroke-width="24" stroke-linecap="square"/>
-  <rect x="328" y="458" width="76" height="98" fill="#1db26b"/>
+  <path d="M320 360V656" stroke="#1db26b" stroke-width="28" stroke-linecap="square"/>
+  <rect x="282" y="458" width="76" height="98" fill="#1db26b"/>
 
-  <path d="M464 324V628" stroke="#f05143" stroke-width="24" stroke-linecap="square"/>
-  <rect x="426" y="438" width="76" height="72" fill="#f05143"/>
+  <path d="M448 324V628" stroke="#f05143" stroke-width="28" stroke-linecap="square"/>
+  <rect x="410" y="438" width="76" height="72" fill="#f05143"/>
 
-  <path d="M562 410V708" stroke="#1db26b" stroke-width="24" stroke-linecap="square"/>
-  <rect x="524" y="510" width="76" height="120" fill="#1db26b"/>
+  <path d="M576 410V708" stroke="#1db26b" stroke-width="28" stroke-linecap="square"/>
+  <rect x="538" y="510" width="76" height="120" fill="#1db26b"/>
 
-  <path d="M660 314V654" stroke="#1db26b" stroke-width="24" stroke-linecap="square"/>
-  <rect x="622" y="402" width="76" height="138" fill="#1db26b"/>
+  <path d="M704 314V654" stroke="#1db26b" stroke-width="28" stroke-linecap="square"/>
+  <rect x="666" y="402" width="76" height="138" fill="#1db26b"/>
 </svg>
