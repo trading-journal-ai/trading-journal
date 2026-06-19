@@ -2,7 +2,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import readline from "node:readline";
 import { stdin as input, stdout as output } from "node:process";
 
@@ -35,28 +35,8 @@ const colors =
 const INDENT = "     ";
 const INSET_RULE = `${INDENT}-------------------------------------------------------`;
 
-function run(command, args, options = {}) {
-  const result = spawnSync(command, args, {
-    stdio: options.quiet ? "pipe" : "inherit",
-    encoding: "utf8",
-    env: { ...process.env, ...options.env },
-  });
-  if (result.error) throw result.error;
-  if (result.status !== 0) {
-    if (options.quiet) {
-      const outputText = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
-      if (outputText) console.error(outputText);
-    }
-    throw new Error(`${command} ${args.join(" ")} exited with status ${result.status}`);
-  }
-}
-
 function heading(text) {
   console.log(`${INDENT}${colors.bold}${text}${colors.reset}`);
-}
-
-function section(text) {
-  console.log(`${INDENT}${colors.blue}${colors.bold}${text}${colors.reset}`);
 }
 
 function detail(text) {
@@ -80,21 +60,58 @@ function divider() {
 }
 
 function quietStep(label, fn) {
-  output.write(`${INDENT}${colors.dim}${label}...${colors.reset}`);
+  return withLoader(`${INDENT}${colors.dim}${label}...${colors.reset}`, fn);
+}
+
+async function withLoader(label, fn) {
+  if (!output.isTTY) {
+    output.write(label);
+    try {
+      await fn();
+      console.log(` ${colors.green}done${colors.reset}`);
+    } catch (error) {
+      console.log(` ${colors.red}failed${colors.reset}`);
+      throw error;
+    }
+    return;
+  }
+
+  const frames = ["/", "-", "\\", "|"];
+  let index = 0;
+  output.write(`${label} ${colors.dim}${frames[index]}${colors.reset}\n\n`);
+  const timer = setInterval(() => {
+    index = (index + 1) % frames.length;
+    output.write(`\x1b[2A\r${label} ${colors.dim}${frames[index]}${colors.reset}\x1b[K\x1b[2B`);
+  }, 160);
+
   try {
-    fn();
-    console.log(` ${colors.green}done${colors.reset}`);
+    await fn();
+    clearInterval(timer);
+    output.write(`\x1b[2A\r${label} ${colors.green}done${colors.reset}\x1b[K\x1b[2B`);
   } catch (error) {
-    console.log(` ${colors.red}failed${colors.reset}`);
+    clearInterval(timer);
+    output.write(`\x1b[2A\r${label} ${colors.red}failed${colors.reset}\x1b[K\x1b[2B\n\n`);
     throw error;
   }
+}
+
+function reservePromptSpace() {
+  if (!input.isTTY || !output.isTTY) return;
+  output.write("\n\n\x1b[2A");
+}
+
+function clearPromptSpace() {
+  if (!input.isTTY || !output.isTTY) return;
+  output.write("\x1b[2B");
 }
 
 function question(prompt) {
   const rl = readline.createInterface({ input, output });
   return new Promise((resolveQuestion) => {
+    reservePromptSpace();
     rl.question(prompt, (answer) => {
       rl.close();
+      clearPromptSpace();
       resolveQuestion(answer.trim());
     });
   });
@@ -130,12 +147,41 @@ function secretQuestion(prompt) {
       }
     };
 
+    reservePromptSpace();
     output.write(prompt);
     rl.question("", (answer) => {
       value = answer;
       rl._writeToOutput = originalWrite;
       rl.close();
+      clearPromptSpace();
       resolveQuestion(value.trim());
+    });
+  });
+}
+
+function runAsync(command, args, options = {}) {
+  return new Promise((resolveRun, rejectRun) => {
+    const child = spawn(command, args, {
+      stdio: options.quiet ? ["ignore", "pipe", "pipe"] : "inherit",
+      encoding: "utf8",
+      env: { ...process.env, ...options.env },
+    });
+    const chunks = [];
+
+    if (options.quiet) {
+      child.stdout?.on("data", (chunk) => chunks.push(chunk));
+      child.stderr?.on("data", (chunk) => chunks.push(chunk));
+    }
+
+    child.on("error", rejectRun);
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolveRun();
+        return;
+      }
+      const outputText = chunks.join("").trim();
+      if (outputText) console.error(outputText);
+      rejectRun(new Error(`${command} ${args.join(" ")} exited with status ${code}`));
     });
   });
 }
@@ -199,11 +245,11 @@ async function setupLocal() {
 
   heading("Choose a starting point");
   console.log("");
-  console.log(`${INDENT}${colors.bold}1.${colors.reset} Install Trading Journal using demo data with sample trades and notes`);
-  detail("   Best for previewing the app before using personal data.");
+  console.log(`${INDENT}${colors.bold}1.${colors.reset} Install Trading Journal Demo`);
+  detail("   For previewing the app with demo trades and notes.");
   console.log("");
-  console.log(`${INDENT}${colors.bold}2.${colors.reset} Install Trading Journal to use your own data`);
-  detail("   Best when you are ready to import your own broker CSV.");
+  console.log(`${INDENT}${colors.bold}2.${colors.reset} Install Trading Journal`);
+  detail("   Import your own broker CSV.");
   console.log("");
 
   const existingEnv = parseEnvFile(ENV_PATH);
@@ -263,13 +309,13 @@ async function setupLocal() {
   detail(`Settings: ${ENV_PATH}`);
   detail(`Database: ${dbPath}`);
 
-  quietStep("Applying database migrations", () => {
-    run("npm", ["run", "--silent", "db:migrate"], { env: { DB_PATH: dbPath }, quiet: true });
+  await quietStep("Applying database migrations", () => {
+    return runAsync("npm", ["run", "--silent", "db:migrate"], { env: { DB_PATH: dbPath }, quiet: true });
   });
 
   if (useDemo) {
-    quietStep("Loading demo trades and notes", () => {
-      run("npm", ["run", "--silent", "demo:paper"], { quiet: true });
+    await quietStep("Loading demo trades and notes", () => {
+      return runAsync("npm", ["run", "--silent", "demo:paper"], { quiet: true });
     });
     console.log("");
     success("Demo trades and journal notes are ready.");
@@ -282,14 +328,14 @@ async function setupLocal() {
   divider();
 }
 
-function resetDemo() {
+async function resetDemo() {
   ensureDataDir(DEMO_DB);
   writeLocalEnv({ dbPath: DEMO_DB, massiveKey: parseEnvFile(ENV_PATH).get("MASSIVE_API_KEY") ?? "" });
-  quietStep("Applying database migrations", () => {
-    run("npm", ["run", "--silent", "db:migrate"], { env: { DB_PATH: DEMO_DB }, quiet: true });
+  await quietStep("Applying database migrations", () => {
+    return runAsync("npm", ["run", "--silent", "db:migrate"], { env: { DB_PATH: DEMO_DB }, quiet: true });
   });
-  quietStep("Loading demo trades and notes", () => {
-    run("npm", ["run", "--silent", "demo:paper"], { quiet: true });
+  await quietStep("Loading demo trades and notes", () => {
+    return runAsync("npm", ["run", "--silent", "demo:paper"], { quiet: true });
   });
   console.log("");
   success("Reset local demo data in data/tradingjournaldemo.db.");
@@ -297,7 +343,7 @@ function resetDemo() {
 
 async function main() {
   if (process.argv.includes("--reset-demo")) {
-    resetDemo();
+    await resetDemo();
     return;
   }
   await setupLocal();
