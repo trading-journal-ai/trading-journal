@@ -1,7 +1,14 @@
 {
   "name": "trading-journal",
   "version": "0.1.0",
+  "description": "A local-first trading journal for CSV imports, chart review, daily recaps, and performance analysis.",
   "private": true,
+  "homepage": "https://trading-journal.ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/justin-carlson/trading-journal.git"
+  },
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

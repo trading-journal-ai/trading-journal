@@ -1,8 +1,8 @@
-# Trading Journal
+# Trading Journal AI
 
-A local-first trading journal built around the review habit first: write the
-recap, see the day in context, and drill into the trade evidence only when it
-matters.
+[Trading Journal AI](https://trading-journal.ai) is a local-first trading
+journal built around the review habit first: write the recap, see the day in
+context, and drill into the trade evidence only when it matters.
 
 Instead of starting with a dense trade table, the app treats trading review more
 like a chronological note journal. Days, weeks, and months become the structure.
@@ -28,10 +28,11 @@ review loop is more human:
 - Did I hold winners long enough?
 - Was this a process problem, an emotional problem, or just normal variance?
 
-Trading Journal is designed around that loop. The journal is the center of the
-product, not an afterthought. You can scan a month like a notebook, read daily
-recaps chronologically, see the trades that shaped the day, and then drill into a
-ticker or individual trade when you need the chart, executions, or trade note.
+Trading Journal AI is designed around that loop. The journal is the center of
+the product, not an afterthought. You can scan a month like a notebook, read
+daily recaps chronologically, see the trades that shaped the day, and then drill
+into a ticker or individual trade when you need the chart, executions, or trade
+note.
 
 The goal is to reduce friction between "what happened?" and "what did I learn?"
 The numbers, charts, and trade log are still there, but they support the journal
@@ -476,6 +477,9 @@ Important import roadmap:
 
 Near-term:
 
+- Validate the public launch path for `trading-journal.ai`: hosted domain,
+  canonical `www` redirect, clean first-run/onboarding flow, demo setup, import
+  flow, empty states, and contributor testing docs.
 - Harden import previews and error states.
 - Design broker CSV adapter support and collect anonymized sample exports from
   Lightspeed, CenterPoint, Ocean One, DAS Trader, and other active trading

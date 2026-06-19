@@ -10,6 +10,22 @@
 
 ---
 
+## 0. Launch QA / public readiness  ⭐
+- 🔜 Verify `trading-journal.ai` end-to-end on Vercel: root domain, `www`
+  redirect, HTTPS, fresh browser load, mobile viewport, and any stale DNS/cache
+  edge cases.
+- 🔜 Test the first-run/onboarding flow from a clean environment with no local
+  database: install/setup, demo data path, import path, empty states, settings,
+  and recovery from missing env vars or missing data files.
+- 🔜 Document the public path clearly: what the hosted site is for, how to run
+  the app locally, how to load demo data, how to import real broker exports, and
+  how contributors should validate changes before opening PRs.
+- 🔜 Add a lightweight release checklist for future domain/deploy changes:
+  build, smoke test, DNS/domain verification, canonical URL behavior, README
+  accuracy, and known-risk notes.
+
+---
+
 ## 1. Data & Import
 - ✅ Import **TOS Account Statement** CSV → executions (parse `Account Trade
   History`; `Net Price`, `Pos Effect`; PT→ET; strip `="…"`/commas). *(Phase 2)*

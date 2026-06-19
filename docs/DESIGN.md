@@ -1,9 +1,9 @@
-# Trading Journal — Design Doc
+# Trading Journal AI — Design Doc
 
 > Status: **Draft v2** · Last updated: 2026-06-11
 
-A personal, local-first web app for logging stock/ETF trades, reviewing them
-reflectively, and tracking performance over time.
+A local-first web app for logging stock/ETF trades, reviewing them reflectively,
+and tracking performance over time.
 
 > **Catch-up note (read first).** Work on this has been spread across several
 > standalone files and chats. This doc is the single place that brings it
@@ -21,17 +21,16 @@ reflectively, and tracking performance over time.
 ## 1. Goals & Non-Goals
 
 ### Goals
-- **Single-user, personal tool.** Built for one trader (me). No accounts, no
-  multi-tenancy, no public sharing in v1.
+- **Single-user, local-first tool.** Built for individual traders. No
+  multi-tenancy or public sharing in v1.
 - **Capture every trade** with the context that makes review valuable: setup,
   notes, tags, emotional state, screenshots.
 - **Understand performance** through clear analytics: P&L, win rate,
   R-multiples, equity curve.
 - **Reduce friction on data entry** by supporting broker CSV import (manual
   exports for v1; optional automation later).
-- **Local-first, private, and cheap.** Data lives on my machine; no dependency
-  on a hosted service. Goal: **replace TraderVue ($29.95/mo)** and run on just
-  the existing TradingView sub (~$10/mo) — no new recurring cost.
+- **Local-first, private, and cheap.** Data lives on the user's machine; no
+  dependency on a hosted journaling subscription.
 
 ### Non-Goals (v1)
 - Multi-user accounts / authentication.
@@ -54,8 +53,8 @@ reflectively, and tracking performance over time.
 There are **two distinct data inputs**, both currently **manual CSV exports**:
 
 **A. Execution data (the trades) — ThinkorSwim (primary), DAS (secondary).**
-- Trading is done through **DAS Trader** on a **Schwab** account; **ThinkorSwim
-  (TOS)** runs on the same account and exports the same fills.
+- The first supported workflow uses broker CSV exports from **ThinkorSwim
+  (TOS)** and **DAS Trader**.
 - **Decision: TOS is the primary execution source for v1.** Its *Account
   Statement* export is stronger than the DAS log for our purposes (see §8 for
   the full format spec):
@@ -393,8 +392,8 @@ how it feeds this project:
   - This sample is 86 regular + 5 after-hours, **0 pre-market** (times read as
     PT, e.g. `06:34 PT → 09:34 ET`, regular). Pre-market still expected on other
     days → extended-hours candles required (§2-B).
-- **Account:** export is from the **Swing** account (`…SCHW (Swing)`),
-  commission-free; only tiny SEC/TAF Misc Fees.
+- **Account:** sample exports can include account labels, balances, and fees.
+  Real broker exports should be anonymized before they are shared or committed.
 
 ### Reference: current journal tool (UI inspiration)
 - Four screenshots of the journal app currently in use define the target feature
@@ -419,7 +418,11 @@ how it feeds this project:
   chart/journal code. Cloned locally only for evaluation.
 
 ### Source repo
-- `github.com/justin-carlson/trading-journal` (private) — this project.
+- Current working repo: `github.com/justin-carlson/trading-journal`.
+- Public domain: `https://trading-journal.ai`.
+- Community direction: keep the history intact and transfer the repo to a
+  dedicated GitHub organization when the project is ready for broader
+  open-source contribution, rather than starting over in a fresh repository.
 
 ---
 
