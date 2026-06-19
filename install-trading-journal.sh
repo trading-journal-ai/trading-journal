@@ -43,29 +43,42 @@ run_quiet() {
   local status_label="${INDENT}${CYAN}${BOLD}${label}${RESET}${DIM}...${RESET}"
 
   if [[ -t 1 ]]; then
-    printf "%s\n\n" "$status_label"
-  else
-    printf "%s" "$status_label"
-  fi
+    local frames=("/" "-" "\\" "|")
+    local index=0
+    "$@" >"$LOG_FILE" 2>&1 &
+    local pid=$!
 
-  if "$@" >"$LOG_FILE" 2>&1; then
-    if [[ -t 1 ]]; then
+    printf "%s %s\n\n" "$status_label" "${DIM}${frames[$index]}${RESET}"
+    while kill -0 "$pid" >/dev/null 2>&1; do
+      index=$(((index + 1) % ${#frames[@]}))
+      printf "\033[2A\r%s %s\033[K\033[2B" "$status_label" "${DIM}${frames[$index]}${RESET}"
+      sleep 0.16
+    done
+
+    if wait "$pid"; then
       printf "\033[2A\r%s %s\033[K\033[2B" "$status_label" "${GREEN}done${RESET}"
     else
-      printf " %s\n" "${GREEN}done${RESET}"
+      printf "\033[2A\r%s %s\033[K\033[2B\n\n" "$status_label" "${RED}failed${RESET}"
+      echo "The install command failed. Last log lines:"
+      echo
+      tail -n 80 "$LOG_FILE"
+      echo
+      echo "Full log: $LOG_FILE"
+      exit 1
     fi
   else
-    if [[ -t 1 ]]; then
-      printf "\033[2A\r%s %s\033[K\033[2B\n\n" "$status_label" "${RED}failed${RESET}"
+    printf "%s" "$status_label"
+    if "$@" >"$LOG_FILE" 2>&1; then
+      printf " %s\n" "${GREEN}done${RESET}"
     else
       printf " %s\n\n" "${RED}failed${RESET}"
+      echo "The install command failed. Last log lines:"
+      echo
+      tail -n 80 "$LOG_FILE"
+      echo
+      echo "Full log: $LOG_FILE"
+      exit 1
     fi
-    echo "The install command failed. Last log lines:"
-    echo
-    tail -n 80 "$LOG_FILE"
-    echo
-    echo "Full log: $LOG_FILE"
-    exit 1
   fi
 }
 
@@ -82,7 +95,6 @@ run_quiet "Step 1 of 3: Installing dependencies" npm install --no-audit --fund=f
 echo
 echo "${CYAN}${INSET_RULE}${RESET}"
 echo
-echo "${INDENT}${BLUE}${BOLD}Setup${RESET}"
 npm run --silent setup:local
 
 echo
