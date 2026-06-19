@@ -11,7 +11,7 @@ const nav = [
 ];
 
 function isActive(pathname: string, href: string): boolean {
-  if (href === "/journal" && pathname === "/") return true;
+  if (href === "/journal" && pathname === "/demo") return true;
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
 }

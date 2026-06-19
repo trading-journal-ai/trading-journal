@@ -12,11 +12,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-import Link from "next/link";
-import AccountSelector from "@/components/AccountSelector";
-import ImportForm from "@/components/ImportForm";
-import NavLinks from "@/components/NavLinks";
-import SettingsLink from "@/components/SettingsLink";
+import AppShell from "@/components/AppShell";
 import { getActiveAccount, listAccounts } from "@/lib/accountScope";
 import { canImportData } from "@/lib/demoMode";
 
@@ -52,18 +48,9 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
-        <header className="border-b border-[var(--border)] px-5 py-3 flex items-center gap-6">
-          <Link href="/" className="font-semibold tracking-tight">
-            Trading&nbsp;Journal&nbsp;AI
-          </Link>
-          <NavLinks />
-          <div className="ml-auto flex items-start gap-3">
-            <AccountSelector accounts={accounts} activeAccountId={activeAccount.id} />
-            {showImport ? <ImportForm /> : null}
-            <SettingsLink />
-          </div>
-        </header>
-        <main className="flex-1 px-5 py-6">{children}</main>
+        <AppShell accounts={accounts} activeAccountId={activeAccount.id} showImport={showImport}>
+          {children}
+        </AppShell>
       </body>
     </html>
   );

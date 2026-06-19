@@ -131,31 +131,49 @@ function secretQuestion(prompt) {
 
   return new Promise((resolveQuestion) => {
     let value = "";
-    const rl = readline.createInterface({
-      input,
-      output,
-      terminal: true,
-    });
+    const wasRaw = input.isRaw;
 
-    const originalWrite = rl._writeToOutput;
-    rl._writeToOutput = function writeMasked(text) {
-      if (text.includes("\r\n") || text.includes("\n")) {
-        originalWrite.call(rl, text);
-      } else {
-        const masked = text.replace(/[^\r\n]/g, "*");
-        originalWrite.call(rl, masked);
+    const finish = () => {
+      input.off("data", onData);
+      input.setRawMode(wasRaw);
+      input.pause();
+      output.write("\n");
+      clearPromptSpace();
+      resolveQuestion(value.trim());
+    };
+
+    const cancel = () => {
+      input.off("data", onData);
+      input.setRawMode(wasRaw);
+      output.write("\n");
+      process.exit(130);
+    };
+
+    const onData = (chunk) => {
+      const text = chunk.toString("utf8");
+      for (const char of text) {
+        if (char === "\u0003") cancel();
+        if (char === "\r" || char === "\n") {
+          finish();
+          return;
+        }
+        if (char === "\u007f" || char === "\b") {
+          if (value.length > 0) {
+            value = value.slice(0, -1);
+            output.write("\b \b");
+          }
+          continue;
+        }
+        value += char;
+        output.write("*");
       }
     };
 
     reservePromptSpace();
     output.write(prompt);
-    rl.question("", (answer) => {
-      value = answer;
-      rl._writeToOutput = originalWrite;
-      rl.close();
-      clearPromptSpace();
-      resolveQuestion(value.trim());
-    });
+    input.setRawMode(true);
+    input.resume();
+    input.on("data", onData);
   });
 }
 

@@ -48,17 +48,18 @@ run_quiet() {
     "$@" >"$LOG_FILE" 2>&1 &
     local pid=$!
 
-    printf "%s %s\n\n" "$status_label" "${DIM}${frames[$index]}${RESET}"
+    printf "\033[?25l"
+    printf "%s %s" "$status_label" "${DIM}${frames[$index]}${RESET}"
     while kill -0 "$pid" >/dev/null 2>&1; do
       index=$(((index + 1) % ${#frames[@]}))
-      printf "\033[2A\r%s %s\033[K\033[2B" "$status_label" "${DIM}${frames[$index]}${RESET}"
+      printf "\r%s %s\033[K" "$status_label" "${DIM}${frames[$index]}${RESET}"
       sleep 0.16
     done
 
     if wait "$pid"; then
-      printf "\033[2A\r%s %s\033[K\033[2B" "$status_label" "${GREEN}done${RESET}"
+      printf "\r%s %s\033[K\033[?25h\n" "$status_label" "${GREEN}done${RESET}"
     else
-      printf "\033[2A\r%s %s\033[K\033[2B\n\n" "$status_label" "${RED}failed${RESET}"
+      printf "\r%s %s\033[K\033[?25h\n\n" "$status_label" "${RED}failed${RESET}"
       echo "The install command failed. Last log lines:"
       echo
       tail -n 80 "$LOG_FILE"
@@ -92,7 +93,6 @@ fi
 
 run_quiet "Step 1 of 3: Installing dependencies" npm install --no-audit --fund=false
 
-echo
 echo "${CYAN}${INSET_RULE}${RESET}"
 echo
 npm run --silent setup:local
