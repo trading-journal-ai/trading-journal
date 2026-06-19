@@ -1,22 +1,29 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 const githubUrl = "https://github.com/trading-journal-ai/trading-journal";
 
-const reviewSteps = [
+const installCommand = `git clone ${githubUrl}.git
+cd trading-journal
+./install-trading-journal.sh`;
+
+const walkthroughSteps = [
   {
-    number: "01",
-    title: "Daily recap",
-    body: "The day starts with a human recap: market read, execution quality, what worked, and what to carry forward.",
+    kicker: "Recap",
+    desc: "Start with the story of the session.",
+    Screen: RecapScreen,
   },
   {
-    number: "02",
-    title: "Ticker review",
-    body: "Charts, P&L, and trades sit beside the note so you can review the evidence without losing the story.",
+    kicker: "Review & Reflect",
+    desc: "See the trade in context and note what mattered.",
+    Screen: ReviewScreen,
   },
   {
-    number: "03",
-    title: "Trade note",
-    body: "When a trade deserves attention, add a focused note and tag the behavior, emotion, or setup behind it.",
+    kicker: "Coach",
+    desc: "Get feedback graded against your own rules.",
+    Screen: CoachScreen,
   },
 ];
 
@@ -43,10 +50,6 @@ const localCards = [
   },
 ];
 
-const installCommand = `git clone https://github.com/trading-journal-ai/trading-journal.git
-cd trading-journal
-./install-trading-journal.sh`;
-
 export default function LandingPage() {
   return (
     <div className="min-h-screen overflow-hidden bg-[#0b0d12] text-[var(--foreground)]">
@@ -54,7 +57,6 @@ export default function LandingPage() {
 
       <main>
         <Hero />
-        <ValueBand />
         <ReviewHabit />
         <CoachSection />
         <LocalFirstSection />
@@ -69,13 +71,13 @@ export default function LandingPage() {
 function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--hairline)] bg-[#0b0d12]/75 backdrop-blur-xl">
-      <div className="mx-auto flex h-[68px] w-full max-w-[1200px] items-center justify-between px-6 md:px-8">
-        <Link href="/" className="flex items-center gap-3 text-[15px] font-semibold">
-          <span className="size-2 rounded-full bg-[var(--green)] shadow-[0_0_14px_rgba(29,178,107,.35)]" />
+      <div className="mx-auto flex h-16 w-full max-w-[1200px] items-center justify-between px-6 md:px-8">
+        <Link href="/" className="flex items-center gap-2.5 text-[15.5px] font-bold tracking-tight">
+          <span className="size-2.5 rounded-full bg-[var(--green)] shadow-[0_0_12px_rgba(29,178,107,.5)]" />
           <span>Trading Journal AI</span>
         </Link>
 
-        <nav aria-label="Primary" className="flex items-center gap-5 text-[13px] font-medium text-[var(--muted)] md:gap-7">
+        <nav aria-label="Primary" className="flex items-center gap-5 text-[13.5px] font-medium text-[var(--body)] md:gap-7">
           <a href="#review" className="hidden transition-colors hover:text-[var(--foreground)] md:inline">
             The review habit
           </a>
@@ -89,14 +91,14 @@ function SiteHeader() {
             href={githubUrl}
             rel="noreferrer"
             target="_blank"
-            className="hidden items-center gap-2 transition-colors hover:text-[var(--foreground)] sm:inline-flex"
+            className="hidden items-center gap-1.5 transition-colors hover:text-[var(--foreground)] sm:inline-flex"
           >
             <GitHubIcon />
             GitHub
           </a>
           <Link
             href="/demo"
-            className="inline-flex h-9 items-center rounded-md bg-[var(--foreground)] px-4 text-[13px] font-semibold text-[#0b0d12] transition-opacity hover:opacity-90"
+            className="inline-flex h-9 items-center rounded-lg bg-[var(--foreground)] px-4 text-[13.5px] font-semibold text-[#0b0d12] transition-opacity hover:opacity-90"
           >
             View the demo
           </Link>
@@ -108,117 +110,177 @@ function SiteHeader() {
 
 function Hero() {
   return (
-    <section className="mx-auto w-full max-w-[1200px] px-6 pb-16 pt-16 md:px-8 md:pb-20 md:pt-24">
-      <div className="max-w-[820px]">
-        <SectionEyebrow className="text-[var(--green)]">
-          Local-first trading journal · Open source
+    <section className="mx-auto w-full max-w-[1200px] px-6 pb-12 pt-16 md:px-8 md:pt-[72px]">
+      <div className="max-w-[800px]">
+        <SectionEyebrow className="text-[11.5px] text-[var(--green)]">
+          Local-first trading journal
         </SectionEyebrow>
-        <h1 className="mt-7 max-w-[800px] text-[54px] font-semibold leading-[1.02] md:text-[72px]">
+        <h1 className="mt-5 max-w-[900px] text-balance text-[44px] font-semibold leading-[1.05] tracking-[-0.03em] sm:text-[64px] md:text-[96px]">
           A journal-first trading review system.
         </h1>
-        <p className="mt-8 max-w-[760px] text-[24px] font-medium leading-snug text-[var(--body)] md:text-[32px]">
-          Review faster. Understand your patterns. Refine your trading process.
-        </p>
-        <p className="mt-6 max-w-[680px] text-lg leading-8 text-[var(--muted)] md:text-xl">
-          Trading Journal AI brings notes, charts, P&amp;L, tags, and coaching into
-          one journal-first workflow, so the data supports reflection instead of
-          replacing it.
+        <p className="mt-6 max-w-[620px] text-pretty text-[19px] leading-[1.6] text-[var(--prose,#99a3b1)]">
+          Trading Journal AI is built around the review habit. Write the daily recap,
+          drill into the trades that mattered, and note what to repeat &mdash; so the
+          story of each day stays easy to read.
         </p>
 
-        <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+        <div className="mt-8 flex flex-col gap-3.5 sm:flex-row sm:items-center">
           <PrimaryButton href="/demo">View the live demo</PrimaryButton>
           <GhostButton href={githubUrl}>
             <GitHubIcon />
             View on GitHub
           </GhostButton>
         </div>
-        <p className="mt-6 font-mono text-sm text-[var(--muted)]">
+        <p className="mt-[18px] font-mono text-xs text-[var(--muted)]">
           No signup · No subscription · Your data stays on your machine
         </p>
       </div>
 
-      <div className="mt-20">
-        <StepRail />
-        <BrowserFrame>
-          <DailyJournalPreview />
-        </BrowserFrame>
-      </div>
+      <HeroWalkthrough />
     </section>
   );
 }
 
-function ValueBand() {
+function HeroWalkthrough() {
+  const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (paused) return;
+    const timer = setTimeout(() => {
+      setActive((current) => (current + 1) % walkthroughSteps.length);
+    }, 4200);
+    return () => clearTimeout(timer);
+  }, [active, paused]);
+
   return (
-    <section className="border-y border-[var(--hairline)]">
-      <div className="mx-auto grid w-full max-w-[1200px] gap-10 px-6 py-14 md:grid-cols-[0.9fr_1.1fr] md:px-8 md:py-16">
-        <h2 className="max-w-[520px] text-[32px] font-semibold leading-tight md:text-[40px]">
-          Reflection first. Data where it helps.
-        </h2>
-        <p className="max-w-[680px] text-lg leading-8 text-[var(--muted)]">
-          Most trading journals start with a table. This one starts with the review
-          habit: write the recap, see the day in context, and open the trade evidence
-          only when it helps you understand what happened.
-        </p>
+    <div
+      className="mt-16"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <div className="mb-[22px] grid gap-3.5 sm:grid-cols-3">
+        {walkthroughSteps.map((step, index) => {
+          const isActive = index === active;
+          const isComplete = index < active;
+          return (
+            <button
+              key={step.kicker}
+              type="button"
+              onClick={() => setActive(index)}
+              className="flex flex-col gap-2.5 text-left"
+            >
+              <span className="relative block h-0.5 overflow-hidden rounded-sm bg-[var(--border)]">
+                {isActive ? (
+                  <span
+                    key={active}
+                    className="absolute inset-0 origin-left bg-[var(--green)]"
+                    style={{
+                      transform: paused ? "scaleX(1)" : "scaleX(0)",
+                      animation: paused ? "none" : "tj-growx 4.2s linear forwards",
+                    }}
+                  />
+                ) : (
+                  <span
+                    className="absolute inset-0 origin-left bg-[var(--green)]"
+                    style={{ transform: isComplete ? "scaleX(1)" : "scaleX(0)" }}
+                  />
+                )}
+              </span>
+              <span className="flex items-baseline gap-2">
+                <span className={`font-mono text-[11px] ${isActive ? "text-[var(--green)]" : "text-[var(--faint)]"}`}>
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span className={`text-sm font-semibold ${isActive ? "text-[var(--foreground)]" : "text-[var(--muted)]"}`}>
+                  {step.kicker}
+                </span>
+              </span>
+              <span className={`text-[12.5px] leading-[1.45] ${isActive ? "text-[var(--body)]" : "text-[var(--muted)]"}`}>
+                {step.desc}
+              </span>
+            </button>
+          );
+        })}
       </div>
-    </section>
+
+      <BrowserFrame>
+        <div className="grid">
+          {walkthroughSteps.map((step, index) => {
+            const isActive = index === active;
+            return (
+              <div
+                key={step.kicker}
+                aria-hidden={!isActive}
+                className={`[grid-area:1/1] transition-opacity duration-500 ${
+                  isActive ? "opacity-100" : "pointer-events-none opacity-0"
+                }`}
+              >
+                <step.Screen />
+              </div>
+            );
+          })}
+        </div>
+      </BrowserFrame>
+    </div>
   );
 }
 
 function ReviewHabit() {
   return (
-    <section id="review" className="scroll-mt-28">
-      <div className="mx-auto w-full max-w-[1200px] px-6 py-24 md:px-8">
+    <section id="review" className="scroll-mt-24">
+      <div className="mx-auto w-full max-w-[1200px] px-6 pb-8 pt-24 md:px-8">
         <div className="max-w-[760px]">
           <SectionEyebrow>The review habit</SectionEyebrow>
-          <h2 className="mt-5 text-[38px] font-semibold leading-tight md:text-[52px]">
-            A calmer way to read your trading day.
+          <h2 className="mt-[18px] text-balance text-[32px] font-semibold leading-[1.08] tracking-[-0.025em] md:text-[40px]">
+            Review faster. Remember more.
+            <br />
+            <span className="text-[var(--prose,#99a3b1)]">Refine your process.</span>
           </h2>
-          <p className="mt-6 max-w-[660px] text-lg leading-8 text-[var(--muted)]">
-            The journal gives your recap, ticker review, and trade note a clear place
-            in the same flow. The result feels more like a record you can revisit and
-            less like data you have to sort through again.
+          <p className="mt-[22px] max-w-[640px] text-pretty text-[17.5px] leading-[1.6] text-[var(--prose,#99a3b1)]">
+            Trading Journal AI brings notes, charts, P&amp;L, tags, and coaching into one
+            journal-first workflow.
           </p>
         </div>
 
-        <div className="mt-14 grid gap-6 md:grid-cols-3">
-          {reviewSteps.map((step) => (
-            <article key={step.number} className="border-t border-[var(--border)] pt-5">
-              <div className="flex items-baseline gap-3">
-                <span className="font-mono text-sm text-[var(--green)]">{step.number}</span>
-                <h3 className="text-lg font-semibold">{step.title}</h3>
-              </div>
-              <p className="mt-4 text-base leading-7 text-[var(--muted)]">{step.body}</p>
-            </article>
-          ))}
-        </div>
-
-        <div className="mt-20 grid gap-12 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
+        {/* Feature 1: the day in context */}
+        <div className="mt-16 grid gap-14 pb-16 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
           <div>
-            <p className="font-mono text-sm text-[var(--green)]">01 · See the day in context</p>
-            <h3 className="mt-4 text-2xl font-semibold">The recap leads, the data follows.</h3>
-            <p className="mt-4 text-base leading-7 text-[var(--muted)]">
-              Open a day and the written recap sits first: market read, execution,
-              lesson, and what stood out. The P&amp;L chart and ticker list are nearby,
-              but they support the note instead of becoming the whole experience.
+            <p className="font-mono text-xs text-[var(--green)]">01 · See the day in context</p>
+            <h3 className="mt-3.5 text-[25px] font-semibold leading-tight tracking-[-0.01em]">
+              The recap leads, the data follows.
+            </h3>
+            <p className="mt-4 text-pretty text-base leading-[1.6] text-[var(--prose,#99a3b1)]">
+              Open a day and the recap sits first &mdash; market read, execution, lesson
+              &mdash; with the trades and P&amp;L beside it for reference, not as the
+              headline. The week and month are just containers you scroll back through.
             </p>
           </div>
-          <PreviewPanel>
-            <DayContextMock />
-          </PreviewPanel>
+          <PreviewFrame>
+            <RecapScreen />
+          </PreviewFrame>
         </div>
 
-        <div className="mt-20 grid gap-12 border-t border-[var(--hairline)] pt-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-          <PreviewPanel>
-            <TradeNoteMock />
-          </PreviewPanel>
-          <div>
-            <p className="font-mono text-sm text-[var(--green)]">02 · Capture it in seconds</p>
-            <h3 className="mt-4 text-2xl font-semibold">Tag the trade in your own language.</h3>
-            <p className="mt-4 text-base leading-7 text-[var(--muted)]">
-              Add a short note, then use consistent labels for quality, process, and
-              emotion. Over time, the journal becomes a searchable memory of the
-              habits that move your trading forward or hold it back.
+        {/* Feature 2: capture it fast (note + pills) */}
+        <div className="grid gap-14 border-t border-[var(--hairline)] pt-16 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+          <div className="order-2 lg:order-1">
+            <NoteComposerCard />
+          </div>
+          <div className="order-1 lg:order-2">
+            <p className="font-mono text-xs text-[var(--green)]">02 · Capture it in seconds</p>
+            <h3 className="mt-3.5 text-[25px] font-semibold leading-tight tracking-[-0.01em]">
+              Tag the trade in your own language.
+            </h3>
+            <p className="mt-4 text-pretty text-base leading-[1.6] text-[var(--prose,#99a3b1)]">
+              Write a sentence, then tap the pills that fit &mdash; one quality call,
+              plus the process and emotion behind it. The same vocabulary every session,
+              so patterns become searchable instead of buried in prose.
             </p>
+            <div className="mt-[22px] flex flex-wrap gap-2">
+              <Pill label="Best setup" tone="positive" active />
+              <Pill label="Patient" tone="positive" active />
+              <Pill label="Oversized" tone="negative" />
+              <Pill label="FOMO" tone="negative" />
+            </div>
           </div>
         </div>
       </div>
@@ -228,42 +290,42 @@ function ReviewHabit() {
 
 function CoachSection() {
   return (
-    <section id="coach" className="scroll-mt-28 border-y border-[var(--hairline)] bg-[var(--surface)]">
+    <section id="coach" className="scroll-mt-24 border-y border-[var(--hairline)] bg-[var(--surface)]">
       <div className="mx-auto grid w-full max-w-[1200px] gap-14 px-6 py-24 md:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <SparkIcon />
             <SectionEyebrow className="text-[var(--blue)]">The AI in Trading Journal AI</SectionEyebrow>
-            <span className="rounded border border-[var(--border)] px-2 py-0.5 font-mono text-[11px] text-[var(--muted)]">
+            <span className="rounded border border-[var(--border)] px-1.5 py-0.5 font-mono text-[10.5px] text-[var(--muted)]">
               Preview
             </span>
           </div>
-          <h2 className="mt-5 text-[38px] font-semibold leading-tight md:text-[52px]">
+          <h2 className="mt-[18px] text-balance text-[32px] font-semibold leading-[1.08] tracking-[-0.025em] md:text-[40px]">
             A coach that grades against <span className="text-[var(--blue)]">your</span> rules.
           </h2>
-          <p className="mt-6 max-w-[620px] text-lg leading-8 text-[var(--muted)]">
-            First you codify what an A+ trade looks like: the entry, risk, and process
-            criteria you already track as pills. Then the coach reads every imported
-            trade against that standard, flags where you drifted, and drafts the note
-            and recap in your voice.
+          <p className="mt-[22px] max-w-[520px] text-pretty text-[17px] leading-[1.62] text-[var(--prose,#99a3b1)]">
+            First you codify what an A+ trade looks like &mdash; the entry, risk, and
+            process criteria you already track as pills. Then the coach reads every
+            imported trade against that standard, flags where you drifted, and drafts the
+            note and recap in your voice.
           </p>
-          <div className="mt-10 space-y-7">
+          <div className="mt-[30px] space-y-4">
             {[
               ["01", "Codify your edge", "Turn your process pills into the rubric the coach grades by."],
-              ["02", "Review against it", "Each trade gets read against your own criteria, not generic advice."],
+              ["02", "Review against it", "Each trade gets read against your own criteria — not generic advice."],
               ["03", "Draft, never auto-post", "The coach proposes the note and recap; you always edit before it saves."],
             ].map(([number, title, body]) => (
-              <div key={number} className="grid grid-cols-[32px_1fr] gap-4">
-                <span className="font-mono text-sm text-[var(--blue)]">{number}</span>
+              <div key={number} className="grid grid-cols-[28px_1fr] gap-3.5">
+                <span className="pt-0.5 font-mono text-xs text-[var(--blue)]">{number}</span>
                 <div>
-                  <h3 className="text-lg font-semibold">{title}</h3>
-                  <p className="mt-2 text-base leading-7 text-[var(--muted)]">{body}</p>
+                  <h3 className="text-[15.5px] font-semibold">{title}</h3>
+                  <p className="mt-1 text-sm leading-[1.5] text-[var(--prose,#99a3b1)]">{body}</p>
                 </div>
               </div>
             ))}
           </div>
-          <p className="mt-12 font-mono text-sm text-[var(--faint)]">
-            Concept preview · runs on your trades, on your machine.
+          <p className="mt-[26px] font-mono text-[11.5px] text-[var(--faint)]">
+            Concept preview &mdash; runs on your trades, on your machine.
           </p>
         </div>
         <CoachCard />
@@ -274,41 +336,36 @@ function CoachSection() {
 
 function LocalFirstSection() {
   return (
-    <section id="local" className="scroll-mt-28">
-      <div className="mx-auto grid w-full max-w-[1200px] gap-14 px-6 py-24 md:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+    <section id="local" className="scroll-mt-24 border-b border-[var(--hairline)] bg-[var(--surface)]">
+      <div className="mx-auto grid w-full max-w-[1200px] gap-16 px-6 py-[90px] md:px-8 lg:grid-cols-2 lg:items-start">
         <div>
           <SectionEyebrow className="text-[var(--green)]">Local-first</SectionEyebrow>
-          <h2 className="mt-5 text-[38px] font-semibold leading-tight md:text-[52px]">
-            Your trading day stays on your machine.
+          <h2 className="mt-[18px] text-balance text-[30px] font-semibold leading-[1.1] tracking-[-0.02em] md:text-[38px]">
+            Your trading day never leaves your machine.
           </h2>
-          <p className="mt-8 max-w-[620px] text-lg leading-8 text-[var(--muted)]">
-            It&apos;s the first thing serious traders ask about, and the answer is simple.
-            A trading journal holds some of your most sensitive records: account
-            history, positions, timestamps. Trading Journal AI is a personal tool,
-            not a hosted service. It runs locally and stores everything on disk, so
-            your review habit stays completely private.
+          <p className="mt-[22px] max-w-[620px] text-pretty text-[17px] leading-[1.62] text-[var(--prose,#99a3b1)]">
+            It&apos;s the first thing serious traders ask about &mdash; and the answer is
+            simple. A trading journal holds some of your most sensitive records: account
+            history, positions, timestamps. Trading Journal AI is a personal tool, not a
+            hosted service. It runs locally and stores everything on disk, so your review
+            habit stays completely private.
           </p>
-          <Link
-            href="#get-started"
-            className="mt-10 inline-flex items-center gap-3 font-semibold text-[var(--blue)] transition-opacity hover:opacity-80"
+          <a
+            href={githubUrl}
+            rel="noreferrer"
+            target="_blank"
+            className="mt-7 inline-flex items-center gap-2 text-[15px] font-semibold text-[var(--blue)] transition-opacity hover:opacity-80"
           >
             Read how it works
             <ArrowRight className="ml-0" />
-          </Link>
+          </a>
         </div>
-        <div className="grid overflow-hidden rounded-md border border-[var(--border)] bg-[#0b0d12]/40 md:grid-cols-2">
-          {localCards.map((card, index) => (
-            <article
-              key={card.title}
-              className={[
-                "min-h-[240px] p-7 md:p-8",
-                index % 2 === 0 ? "md:border-r md:border-[var(--border)]" : "",
-                index < 2 ? "border-b border-[var(--border)]" : "",
-              ].join(" ")}
-            >
+        <div className="grid overflow-hidden rounded-[10px] border border-[var(--border)] bg-[var(--hairline)] md:grid-cols-2 md:gap-px">
+          {localCards.map((card) => (
+            <article key={card.title} className="bg-[#0b0d12] p-6">
               <LocalCardIcon icon={card.icon} />
-              <h3 className="mt-8 text-lg font-semibold">{card.title}</h3>
-              <p className="mt-5 max-w-[310px] text-base leading-7 text-[var(--muted)]">{card.body}</p>
+              <h3 className="mt-4 text-base font-semibold">{card.title}</h3>
+              <p className="mt-2 text-[13.5px] leading-[1.55] text-[var(--prose,#99a3b1)]">{card.body}</p>
             </article>
           ))}
         </div>
@@ -319,39 +376,70 @@ function LocalFirstSection() {
 
 function GetStartedSection() {
   return (
-    <section id="get-started" className="scroll-mt-28 border-t border-[var(--hairline)]">
-      <div className="mx-auto w-full max-w-[1200px] px-6 py-24 text-center md:px-8">
+    <section id="get-started" className="scroll-mt-24">
+      <div className="mx-auto w-full max-w-[900px] px-6 py-24 text-center md:px-8">
         <SectionEyebrow>Get started</SectionEyebrow>
-        <h2 className="mx-auto mt-5 max-w-[760px] text-[38px] font-semibold leading-tight md:text-[52px]">
-          Try the demo, or run your own journal locally.
+        <h2 className="mx-auto mt-5 max-w-[760px] text-balance text-[32px] font-semibold leading-[1.08] tracking-[-0.025em] md:text-[42px]">
+          Try the demo, or run your own in two minutes.
         </h2>
-        <p className="mx-auto mt-6 max-w-[620px] text-lg leading-8 text-[var(--muted)]">
-          Explore the hosted demo with seeded trades and journal notes, or clone the
-          repo and start a private local journal with your own broker CSV.
+        <p className="mx-auto mt-[22px] max-w-[560px] text-pretty text-[17px] leading-[1.6] text-[var(--prose,#99a3b1)]">
+          Explore the hosted demo with seeded trades and journal notes, or clone the repo
+          and start a private local journal with your own broker CSV.
         </p>
-        <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
+        <div className="mt-9 flex flex-col justify-center gap-3.5 sm:flex-row">
           <PrimaryButton href="/demo">View the live demo</PrimaryButton>
           <GhostButton href={githubUrl}>
             <GitHubIcon />
-            View on GitHub
+            Star on GitHub
           </GhostButton>
         </div>
-        <div className="mx-auto mt-10 max-w-[680px] rounded-md border border-[var(--border)] bg-[var(--surface)] p-5 text-left">
-          <pre className="overflow-x-auto font-mono text-sm leading-7 text-[var(--body)]">
-            <code>{installCommand}</code>
-          </pre>
-        </div>
+        <InstallCommand />
       </div>
     </section>
+  );
+}
+
+function InstallCommand() {
+  const [copied, setCopied] = useState(false);
+
+  const copy = () => {
+    navigator.clipboard?.writeText(installCommand);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  };
+
+  return (
+    <div className="mx-auto mt-10 max-w-[620px] text-left">
+      <p className="mb-2.5 text-center font-mono text-[10.5px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+        Or run it locally
+      </p>
+      <button
+        type="button"
+        onClick={copy}
+        className="flex w-full items-center justify-between gap-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-[18px] py-[15px] text-left transition-colors hover:border-[var(--muted)]"
+      >
+        <code className="truncate font-mono text-[13px] text-[var(--body)]">
+          <span className="text-[var(--muted)]">$ </span>
+          git clone … &amp;&amp; ./install-trading-journal.sh
+        </code>
+        <span className={`shrink-0 font-mono text-xs font-semibold ${copied ? "text-[var(--green)]" : "text-[var(--muted)]"}`}>
+          {copied ? "Copied ✓" : "Copy"}
+        </span>
+      </button>
+    </div>
   );
 }
 
 function SiteFooter() {
   return (
     <footer className="border-t border-[var(--hairline)]">
-      <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-6 py-8 font-mono text-xs text-[var(--muted)] md:flex-row md:items-center md:justify-between md:px-8">
-        <span>Trading Journal AI · trading-journal.ai</span>
-        <div className="flex gap-6">
+      <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-6 py-[34px] md:flex-row md:items-center md:justify-between md:px-8">
+        <div className="flex items-center gap-2.5">
+          <span className="size-2 rounded-full bg-[var(--green)]" />
+          <span className="text-[13.5px] font-semibold text-[var(--body)]">Trading Journal AI</span>
+          <span className="ml-1.5 font-mono text-xs text-[var(--faint)]">trading-journal.ai</span>
+        </div>
+        <div className="flex gap-6 font-mono text-xs text-[var(--muted)]">
           <Link href="/demo" className="transition-colors hover:text-[var(--foreground)]">
             Demo
           </Link>
@@ -364,162 +452,27 @@ function SiteFooter() {
             GitHub
           </a>
           <span>MIT License</span>
+          <span>© 2026</span>
         </div>
       </div>
     </footer>
   );
 }
 
-function StepRail() {
-  return (
-    <div className="mb-6 grid gap-5 md:grid-cols-3">
-      {[
-        ["01", "Daily recap", "The recap leads: market read, execution, lesson."],
-        ["02", "Ticker review", "Trades, charts, and P&L stay in context."],
-        ["03", "Trade note", "Capture the behavior behind the result."],
-      ].map(([number, title, body], index) => (
-        <div key={number} className="border-t border-[var(--border)] pt-4">
-          <div className={index === 0 ? "h-0.5 -translate-y-[17px] bg-[var(--green)]" : "h-0.5 -translate-y-[17px] bg-transparent"} />
-          <div className="flex items-baseline gap-3">
-            <span className={index === 0 ? "font-mono text-xs text-[var(--green)]" : "font-mono text-xs text-[var(--faint)]"}>
-              {number}
-            </span>
-            <h2 className={index === 0 ? "text-base font-semibold" : "text-base font-semibold text-[var(--muted)]"}>
-              {title}
-            </h2>
-          </div>
-          <p className={index === 0 ? "mt-3 text-sm leading-6 text-[var(--body)]" : "mt-3 text-sm leading-6 text-[var(--faint)]"}>
-            {body}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-}
+/* ── Product screen mocks (simplified re-creations of real app screens) ── */
 
-function BrowserFrame({ children }: { children: React.ReactNode }) {
+function MiniNav({ active }: { active: string }) {
+  const items = ["Calendar", "Trades", "Journal", "Reports"];
   return (
-    <section className="overflow-hidden rounded-md border border-[var(--border)] bg-[var(--surface)] shadow-2xl shadow-black/35">
-      <div className="flex items-center justify-between border-b border-[var(--hairline)] px-5 py-3">
-        <div className="flex gap-2">
-          <span className="size-3 rounded-full bg-[var(--red)]" />
-          <span className="size-3 rounded-full bg-[#f5b83d]" />
-          <span className="size-3 rounded-full bg-[var(--green)]" />
-        </div>
-        <div className="hidden rounded-md border border-black/40 bg-black/35 px-4 py-1 font-mono text-xs text-[var(--muted)] sm:block">
-          trading-journal.ai/demo
-        </div>
-        <div className="w-12" />
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function DailyJournalPreview() {
-  return (
-    <div className="min-h-[520px] bg-[#0d121a]">
-      <div className="flex items-center gap-8 border-b border-[var(--hairline)] px-7 py-5">
-        <span className="text-lg font-semibold">Trading Journal</span>
-        <span className="text-sm font-medium text-[var(--muted)]">Calendar</span>
-        <span className="text-sm font-semibold">Journal</span>
-        <span className="text-sm font-medium text-[var(--muted)]">Trades</span>
-        <span className="text-sm font-medium text-[var(--muted)]">Reports</span>
-      </div>
-      <div className="grid gap-10 p-7 md:grid-cols-[1fr_270px] md:p-10">
-        <div>
-          <p className="font-mono text-sm font-semibold text-[var(--muted)]">
-            Week 2 · June 8 - 12 2026
-          </p>
-          <div className="mt-9 flex items-baseline gap-4">
-            <span className="size-2.5 rounded-full bg-[var(--green)]" />
-            <h3 className="text-[40px] font-semibold leading-none">June 11</h3>
-            <span className="font-mono text-lg text-[var(--muted)]">Thursday</span>
-          </div>
-          <p className="mt-7 max-w-[700px] text-lg leading-8 text-[var(--body)]">
-            Strong session. The day rewarded patience more than activity, and the
-            biggest winner did most of the heavy lifting. Keep looking for the moments
-            where volume, direction, and entry location line up before adding risk.
-          </p>
-          <div className="mt-10 rounded-md bg-[var(--panel)] p-7">
-            <PnlSparkline />
-          </div>
-        </div>
-        <aside className="pt-28 font-mono text-lg">
-          <TickerList />
-          <div className="mt-12 border-t border-[var(--border)] pt-7 text-[var(--muted)]">
-            <div className="flex justify-between gap-8">
-              <span>Accuracy</span>
-              <span className="text-[var(--foreground)]">75%</span>
-            </div>
-            <div className="mt-3 flex justify-between gap-8">
-              <span>Profit Factor</span>
-              <span className="text-[var(--foreground)]">2.42</span>
-            </div>
-            <div className="mt-3 flex justify-between gap-8">
-              <span>P&amp;L</span>
-              <span className="text-[var(--green)]">+$546.69</span>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </div>
-  );
-}
-
-function DayContextMock() {
-  return (
-    <div className="grid gap-6 md:grid-cols-[1fr_180px]">
-      <div>
-        <div className="flex items-baseline gap-4">
-          <span className="size-2.5 rounded-full bg-[var(--green)]" />
-          <h4 className="text-3xl font-semibold">June 11</h4>
-          <span className="font-mono text-[var(--muted)]">Thursday</span>
-        </div>
-        <p className="mt-6 text-base leading-7 text-[var(--body)]">
-          Strong session. I stayed patient while the best trade did most of the work.
-          Review the weaker entry, but keep the main lesson simple: wait for volume,
-          direction, and entry location to line up.
-        </p>
-        <div className="mt-8 rounded-md bg-[var(--panel)] p-5">
-          <PnlSparkline compact />
-        </div>
-      </div>
-      <div className="pt-24 font-mono text-sm">
-        <TickerList compact />
-      </div>
-    </div>
-  );
-}
-
-function TradeNoteMock() {
-  return (
-    <div>
-      <p className="font-mono text-[13px] font-semibold uppercase text-[var(--muted)]">
-        Trade note
-      </p>
-      <div className="mt-6 rounded-md border border-dashed border-[#2a3950] p-5">
-        <p className="font-mono text-base font-semibold text-[var(--blue)]">
-          + Add a trade note
-        </p>
-        <p className="mt-4 max-w-[440px] text-sm leading-6 text-[var(--muted)]">
-          Setup quality, execution, rules followed or broken, emotions, and what to
-          remember next time.
-        </p>
-      </div>
-      <div className="mt-5 flex flex-wrap gap-2">
-        {[
-          ["Best setup", "green"],
-          ["Patient", "green"],
-          ["Let winner work", "green"],
-          ["Took profits early", "red"],
-        ].map(([tag, tone]) => (
+    <div className="flex items-center gap-7 border-b border-[var(--hairline)] px-7 py-4">
+      <span className="text-[15px] font-bold tracking-tight">Trading Journal</span>
+      <div className="flex gap-5">
+        {items.map((item) => (
           <span
-            key={tag}
-            className="rounded-md border border-[var(--border)] px-3 py-1 font-mono text-xs text-[var(--body)]"
+            key={item}
+            className={`text-[13px] ${item === active ? "font-semibold text-[var(--foreground)]" : "font-medium text-[var(--muted)]"}`}
           >
-            <span className={tone === "green" ? "text-[var(--green)]" : "text-[var(--red)]"}>•</span>{" "}
-            {tag}
+            {item}
           </span>
         ))}
       </div>
@@ -527,59 +480,288 @@ function TradeNoteMock() {
   );
 }
 
-function CoachCard() {
+function RecapScreen() {
   return (
-    <div className="rounded-md border border-[var(--border)] bg-[#0f141c] p-7 md:p-8">
+    <div className="min-h-[440px] bg-[#0d121a]">
+      <MiniNav active="Journal" />
+      <div className="px-7 py-6">
+        <p className="font-mono text-[12.5px] text-[var(--muted)]">Week 2 · June 8 – June 12 2026</p>
+        <div className="mt-4 flex items-baseline gap-3.5">
+          <span className="size-2.5 self-center rounded-full bg-[var(--green)]" />
+          <h3 className="text-[32px] font-semibold leading-none">Monday</h3>
+          <span className="font-mono text-lg text-[var(--green)]">8</span>
+        </div>
+        <p className="mt-3 pl-6 font-mono text-[13.5px] text-[var(--body)]">
+          5 trades <span className="text-[var(--faint)]">·</span> 63% win{" "}
+          <span className="text-[var(--faint)]">·</span> PF 1.64{" "}
+          <span className="text-[var(--faint)]">·</span>{" "}
+          <span className="font-semibold text-[var(--green)]">P&amp;L +$42.33</span>
+        </p>
+        <div className="mt-6 grid gap-9 pl-6 md:grid-cols-[1fr_230px]">
+          <div>
+            <SectionEyebrow>Daily Recap</SectionEyebrow>
+            <p className="mt-3 max-w-[560px] text-pretty text-[17px] leading-[1.6] text-[var(--foreground)]">
+              Clean open. Waited for the first pullback on NPT instead of chasing the
+              spike &mdash; that patience set the tone for the whole session. Sized
+              normal, took profits into strength, and walked away after the morning push.
+            </p>
+            <div className="mt-4 flex gap-2">
+              {["Patient", "Followed plan"].map((tag) => (
+                <span key={tag} className="rounded-md bg-[rgba(29,178,107,.16)] px-2.5 py-1 font-mono text-[11.5px] text-[var(--green)]">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div>
+            <SectionEyebrow>Trades</SectionEyebrow>
+            <div className="mt-3">
+              {[
+                ["NPT", "+$15.44", "green"],
+                ["INHD", "+$14.71", "green"],
+                ["SUNE", "+$8.36", "green"],
+                ["BYAH", "+$2.91", "green"],
+                ["PN", "+$0.90", "green"],
+              ].map(([ticker, pnl, tone], index, arr) => (
+                <div
+                  key={ticker}
+                  className={`flex items-center justify-between py-2.5 ${index < arr.length - 1 ? "border-b border-[var(--hairline)]" : ""}`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <span className={`size-1.5 rounded-full ${tone === "green" ? "bg-[var(--green)]" : "bg-[var(--red)]"}`} />
+                    <span className="text-[13.5px] font-semibold">{ticker}</span>
+                  </span>
+                  <span className={`font-mono text-[12.5px] font-semibold ${tone === "green" ? "text-[var(--green)]" : "text-[var(--red)]"}`}>
+                    {pnl}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReviewScreen() {
+  return (
+    <div className="min-h-[440px] bg-[#0d121a]">
+      <MiniNav active="Trades" />
+      <div className="px-7 py-6">
+        <p className="font-mono text-xs text-[var(--muted)]">
+          <span className="text-[var(--body)]">‹ NPT</span> &nbsp;|&nbsp; Trades / NPT /{" "}
+          <span className="font-semibold text-[var(--foreground)]">Trade 1</span>
+        </p>
+        <div className="mt-4 flex items-end gap-3.5">
+          <h3 className="text-[30px] font-semibold tracking-[-0.01em]">NPT</h3>
+          <span className="pb-1 font-mono text-[13px] text-[var(--muted)]">Jun 08, 2026 · Trade 1</span>
+        </div>
+        <div className="mt-5 grid gap-7 md:grid-cols-[1fr_280px] md:items-start">
+          <div className="rounded-md border border-[var(--border)] bg-[#0b0d12] px-4 pb-1.5 pt-3.5">
+            <PnlSparkline />
+          </div>
+          <div>
+            <div className="flex items-end justify-between">
+              <div>
+                <SectionEyebrow>Net P&amp;L</SectionEyebrow>
+                <p className="mt-1 font-mono text-[26px] font-semibold tracking-[-0.02em] text-[var(--green)]">+$15.44</p>
+              </div>
+              <div className="text-right">
+                <SectionEyebrow>Held</SectionEyebrow>
+                <p className="mt-1 font-mono text-[14.5px] font-semibold">6m</p>
+              </div>
+            </div>
+            <div className="my-4 h-px bg-[var(--hairline)]" />
+            <SectionEyebrow>Trade Note</SectionEyebrow>
+            <div className="mt-3 inline-flex items-center gap-2">
+              <span className="size-1.5 rounded-full bg-[var(--green)]" />
+              <span className="font-mono text-[11px] text-[var(--green)]">Best setup</span>
+            </div>
+            <p className="mt-3 text-pretty text-[15.5px] leading-[1.6] text-[var(--prose,#99a3b1)]">
+              Textbook green-to-red reclaim. Entered on the reclaim, added on the first
+              pullback, trimmed half into the move. The A+ I keep talking about &mdash;
+              patient entry, defined risk, let it work.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CoachScreen() {
+  return (
+    <div className="min-h-[440px] bg-[#0d121a]">
+      <MiniNav active="Trades" />
+      <div className="px-7 py-6">
+        <p className="font-mono text-xs text-[var(--muted)]">
+          <span className="text-[var(--body)]">‹ NPT</span> &nbsp;|&nbsp; Trades / NPT /{" "}
+          <span className="font-semibold text-[var(--foreground)]">Trade 1</span>
+        </p>
+        <div className="mt-5 grid gap-7 md:grid-cols-2 md:items-start">
+          <div>
+            <div className="flex items-end gap-3.5">
+              <h3 className="text-[28px] font-semibold tracking-[-0.01em]">NPT</h3>
+              <span className="pb-1 font-mono text-[12.5px] text-[var(--muted)]">Jun 08 · Trade 1</span>
+            </div>
+            <div className="mt-4 rounded-md border border-[var(--border)] bg-[#0b0d12] px-3.5 pb-1 pt-3">
+              <PnlSparkline compact />
+            </div>
+            <div className="mt-3.5 flex gap-5">
+              <div>
+                <SectionEyebrow>Net P&amp;L</SectionEyebrow>
+                <p className="mt-1 font-mono text-[17px] font-semibold text-[var(--green)]">+$15.44</p>
+              </div>
+              <div>
+                <SectionEyebrow>Held</SectionEyebrow>
+                <p className="mt-1 font-mono text-[17px] font-semibold">6m</p>
+              </div>
+            </div>
+          </div>
+          <CoachCard embedded />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Reusable bits ── */
+
+function BrowserFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[0_40px_90px_-30px_rgba(0,0,0,.7)]">
+      <div className="flex items-center gap-3.5 border-b border-[var(--hairline)] px-4 py-3">
+        <div className="flex gap-1.5">
+          <span className="size-[11px] rounded-full bg-[#ff5f57]" />
+          <span className="size-[11px] rounded-full bg-[#febc2e]" />
+          <span className="size-[11px] rounded-full bg-[#28c840]" />
+        </div>
+        <div className="flex flex-1 justify-center">
+          <div className="flex items-center gap-1.5 rounded-md border border-[var(--hairline)] bg-[#0b0d12] px-3.5 py-1 font-mono text-xs text-[var(--muted)]">
+            <LockGlyph />
+            trading-journal.ai/demo
+          </div>
+        </div>
+        <div className="w-[52px]" />
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function PreviewFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[0_30px_70px_-34px_rgba(0,0,0,.6)]">
+      {children}
+    </div>
+  );
+}
+
+function NoteComposerCard() {
+  return (
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-7 shadow-[0_30px_70px_-30px_rgba(0,0,0,.6)]">
+      <div className="flex items-baseline justify-between">
+        <SectionEyebrow>Trade Note</SectionEyebrow>
+        <span className="font-mono text-xs text-[var(--muted)]">
+          NPT · Trade 1 · <span className="text-[var(--green)]">+$15.44</span>
+        </span>
+      </div>
+
+      <GroupLabel className="mt-5">How was this trade?</GroupLabel>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Pill label="Best setup" tone="positive" active />
+        <Pill label="Good trade" tone="positive" />
+        <Pill label="Needs review" />
+        <Pill label="Chased" tone="negative" />
+        <Pill label="Rule break" tone="negative" />
+      </div>
+
+      <div className="mt-5 rounded-[10px] border border-[var(--border)] bg-[#0b0d12] px-[18px] py-4">
+        <p className="text-pretty text-base leading-[1.62] text-[var(--foreground)]">
+          Textbook green-to-red reclaim. Entered on the reclaim, added on the first
+          pullback, trimmed half into the move &mdash; the A+ I keep talking about:
+          patient entry, defined risk, let it work
+          <span className="ml-0.5 inline-block h-[18px] w-0.5 translate-y-[3px] animate-pulse bg-[var(--green)]" />
+        </p>
+      </div>
+
+      <GroupLabel className="mt-5">Process</GroupLabel>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Pill label="Patient" tone="positive" active />
+        <Pill label="Followed plan" tone="positive" active />
+        <Pill label="Let winner work" tone="positive" active />
+        <Pill label="Sized correctly" tone="positive" />
+        <Pill label="Took profits early" tone="negative" />
+        <Pill label="More" plus />
+      </div>
+
+      <GroupLabel className="mt-5">Emotion</GroupLabel>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Pill label="Calm" tone="positive" active />
+        <Pill label="Focused" tone="positive" />
+        <Pill label="Impatient" tone="negative" />
+        <Pill label="FOMO" tone="negative" />
+        <Pill label="More" plus />
+      </div>
+
+      <div className="mt-6 flex items-center justify-between border-t border-[var(--hairline)] pt-[18px]">
+        <span className="font-mono text-[11.5px] text-[var(--faint)]">Autosaves to your local file</span>
+        <span className="inline-flex items-center gap-2 rounded-lg bg-[var(--green)] px-4 py-2 text-[13.5px] font-semibold text-[#06121f]">
+          Save note
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function CoachCard({ embedded = false }: { embedded?: boolean }) {
+  return (
+    <div className={embedded ? "rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5" : "rounded-2xl border border-[var(--border)] bg-[#0f141c] p-7 md:p-8"}>
       <div className="flex items-center justify-between gap-6">
-        <div className="flex items-center gap-2 font-mono text-sm font-semibold uppercase text-[var(--blue)]">
+        <div className="flex items-center gap-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[var(--blue)]">
           <SparkIcon />
           <span>Coach review</span>
-          <span className="text-[var(--faint)]">· NPT · Trade 1</span>
+          {!embedded && <span className="text-[var(--muted)]">· NPT · Trade 1</span>}
         </div>
-        <span className="text-2xl font-semibold text-[var(--green)]">A-</span>
       </div>
-      <div className="mt-9 font-mono text-[13px] font-semibold uppercase text-[var(--faint)]">
-        Read against your rules
-      </div>
-      <div className="mt-6 space-y-5">
+      <GroupLabel className="mt-5">Read against your rules</GroupLabel>
+      <div className="mt-3.5 space-y-3">
         {[
           ["pass", "Waited for confirmation", "Entry after the reclaim held"],
           ["pass", "Sized to plan", "10 sh · within your risk"],
           ["pass", "Let the winner work", "Added on the first pullback"],
           ["warn", "Took profits early", "Trimmed half before your 2R target"],
         ].map(([status, title, body]) => (
-          <div key={title} className="grid grid-cols-[28px_1fr] items-start gap-3">
+          <div key={title} className="grid grid-cols-[20px_1fr] items-start gap-3">
             <span
               className={
                 status === "pass"
-                  ? "grid size-5 place-items-center rounded-full bg-[rgba(29,178,107,.18)] text-[var(--green)]"
-                  : "grid size-5 place-items-center rounded-full bg-[rgba(255,91,76,.18)] text-[var(--red)]"
+                  ? "mt-px grid size-[18px] place-items-center rounded-full bg-[rgba(29,178,107,.18)] text-[var(--green)]"
+                  : "mt-px grid size-[18px] place-items-center rounded-full bg-[rgba(240,81,67,.18)] text-[var(--red)]"
               }
             >
-              {status === "pass" ? "✓" : "!"}
+              <span className="text-[10px] leading-none">{status === "pass" ? "✓" : "!"}</span>
             </span>
-            <p className="text-base leading-6">
+            <p className="text-[13.5px] leading-[1.4]">
               <span className="font-semibold">{title}</span>{" "}
               <span className="text-[var(--muted)]">{body}</span>
             </p>
           </div>
         ))}
       </div>
-      <div className="mt-9 border-t border-[var(--border)] pt-7">
-        <p className="text-lg leading-8 text-[var(--body)]">
-          “Your highest-quality entry this week. The only drift was trimming early,
-          the same pattern flagged Tuesday. Worth sizing the runner next time.”
+      <div className="mt-[18px] border-t border-[var(--hairline)] pt-4">
+        <p className="text-pretty text-[14.5px] leading-[1.58] text-[var(--prose,#99a3b1)]">
+          &ldquo;Your highest-quality entry this week. The only drift was trimming early
+          &mdash; the same pattern flagged Tuesday. Worth sizing the runner next time.&rdquo;
         </p>
-      </div>
-      <div className="mt-7 flex flex-wrap items-center gap-4">
-        <button
-          type="button"
-          className="inline-flex h-10 items-center gap-2 rounded-md border border-[var(--border)] px-4 text-sm font-semibold text-[var(--foreground)]"
-        >
-          <SparkIcon />
-          Use as note draft
-        </button>
-        <p className="font-mono text-xs text-[var(--faint)]">You always edit before it saves</p>
+        <div className="mt-4 flex flex-wrap items-center gap-2.5">
+          <span className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3.5 py-2 text-[12.5px] font-semibold text-[var(--foreground)]">
+            <SparkIcon />
+            Use as note draft
+          </span>
+          <span className="font-mono text-[10.5px] text-[var(--faint)]">You always edit before it saves</span>
+        </div>
       </div>
     </div>
   );
@@ -588,62 +770,65 @@ function CoachCard() {
 function PnlSparkline({ compact = false }: { compact?: boolean }) {
   return (
     <div>
-      <div className="flex justify-between font-mono text-sm font-semibold uppercase text-[var(--muted)]">
-        <span>Daily P&amp;L</span>
-        <span className="text-[var(--green)]">+$546.69</span>
+      <div className="flex justify-between font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+        <span>NPT · 1m</span>
+        <span className="text-[var(--green)]">114.62 → 115.04</span>
       </div>
       <svg
         viewBox="0 0 640 170"
-        className={compact ? "mt-12 h-32 w-full" : "mt-20 h-40 w-full"}
+        className={compact ? "mt-6 h-28 w-full" : "mt-8 h-36 w-full"}
         role="img"
-        aria-label="Daily P&L chart preview"
+        aria-label="NPT price chart preview"
       >
-        <line x1="0" y1="116" x2="640" y2="116" stroke="rgba(255,255,255,.14)" strokeDasharray="5 6" />
+        <line x1="0" y1="116" x2="640" y2="116" stroke="rgba(255,255,255,.12)" strokeDasharray="5 6" />
         <path
-          d="M0 116 L70 104 L132 120 L210 92 L282 100 L360 72 L448 82 L520 42 L640 24 L640 116 L0 116 Z"
-          fill="rgba(29,178,107,.22)"
+          d="M0 110 L70 122 L132 130 L210 96 L282 86 L360 64 L448 70 L520 44 L640 30 L640 116 L0 116 Z"
+          fill="rgba(29,178,107,.18)"
         />
         <path
-          d="M0 116 L70 104 L132 120 L210 92 L282 100 L360 72 L448 82 L520 42 L640 24"
+          d="M0 110 L70 122 L132 130 L210 96 L282 86 L360 64 L448 70 L520 44 L640 30"
           fill="none"
           stroke="var(--green)"
-          strokeWidth="3"
+          strokeWidth="2.5"
         />
-        <text x="0" y="160" fill="var(--muted)" fontSize="13" fontFamily="monospace">10:18</text>
-        <text x="300" y="160" fill="var(--muted)" fontSize="13" fontFamily="monospace">13:31</text>
-        <text x="600" y="160" fill="var(--muted)" fontSize="13" fontFamily="monospace">15:14</text>
+        <text x="0" y="160" fill="var(--muted)" fontSize="12" fontFamily="monospace">15:34</text>
+        <text x="300" y="160" fill="var(--muted)" fontSize="12" fontFamily="monospace" textAnchor="middle">15:56</text>
+        <text x="640" y="160" fill="var(--muted)" fontSize="12" fontFamily="monospace" textAnchor="end">16:18</text>
       </svg>
     </div>
   );
 }
 
-function TickerList({ compact = false }: { compact?: boolean }) {
-  const tickers = [
-    ["CUPR", "+$305.53", "green"],
-    ["RGNT", "+$120.00", "green"],
-    ["JRSH", "+$98.42", "green"],
-    ["MTEN", "-$105.00", "red"],
-  ];
+function Pill({
+  label,
+  tone = "neutral",
+  active = false,
+  plus = false,
+}: {
+  label: string;
+  tone?: "positive" | "negative" | "neutral";
+  active?: boolean;
+  plus?: boolean;
+}) {
+  let cls = "border-[var(--border)] text-[var(--muted)]";
+  if (active && tone === "positive") cls = "border-[rgba(29,178,107,.6)] bg-[rgba(29,178,107,.16)] text-[var(--green)]";
+  else if (active && tone === "negative") cls = "border-[rgba(240,81,67,.6)] bg-[rgba(240,81,67,.16)] text-[var(--red)]";
+  else if (active) cls = "border-[var(--muted)] bg-[var(--surface-2)] text-[var(--foreground)]";
 
   return (
-    <div className={compact ? "space-y-3" : "space-y-5"}>
-      {tickers.map(([ticker, pnl, tone]) => (
-        <div key={ticker} className="flex justify-between gap-8">
-          <span>{ticker}</span>
-          <span className={tone === "green" ? "text-[var(--green)]" : "text-[var(--red)]"}>
-            {pnl}
-          </span>
-        </div>
-      ))}
-    </div>
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-xs font-medium ${cls}`}>
+      {active && !plus && <span className="size-[5px] rounded-full bg-current" />}
+      {plus && <span className="text-[13px] leading-none opacity-70">+</span>}
+      {label}
+    </span>
   );
 }
 
-function PreviewPanel({ children }: { children: React.ReactNode }) {
+function GroupLabel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="rounded-md border border-[var(--border)] bg-[#111821] p-6 shadow-2xl shadow-black/20">
+    <p className={`font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[var(--faint)] ${className}`}>
       {children}
-    </div>
+    </p>
   );
 }
 
@@ -655,7 +840,7 @@ function SectionEyebrow({
   className?: string;
 }) {
   return (
-    <p className={`font-mono text-[13px] font-semibold uppercase ${className}`}>
+    <p className={`font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] ${className}`}>
       {children}
     </p>
   );
@@ -665,10 +850,10 @@ function PrimaryButton({ href, children }: { href: string; children: React.React
   return (
     <Link
       href={href}
-      className="inline-flex h-12 items-center justify-center rounded-md bg-[var(--foreground)] px-6 text-sm font-semibold text-[#0b0d12] transition-opacity hover:opacity-90"
+      className="inline-flex h-12 items-center justify-center gap-2 rounded-[9px] bg-[var(--foreground)] px-[22px] text-[15px] font-semibold text-[#0b0d12] transition-opacity hover:opacity-90"
     >
       {children}
-      <ArrowRight />
+      <ArrowRight className="ml-0" />
     </Link>
   );
 }
@@ -679,7 +864,7 @@ function GhostButton({ href, children }: { href: string; children: React.ReactNo
       href={href}
       rel="noreferrer"
       target="_blank"
-      className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-[var(--border)] px-6 text-sm font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--muted)] hover:bg-[var(--surface)]"
+      className="inline-flex h-12 items-center justify-center gap-2 rounded-[9px] border border-[var(--border)] px-[22px] text-[15px] font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--muted)] hover:bg-[var(--surface)]"
     >
       {children}
     </a>
@@ -688,9 +873,18 @@ function GhostButton({ href, children }: { href: string; children: React.ReactNo
 
 function ArrowRight({ className = "ml-3" }: { className?: string }) {
   return (
-    <svg className={`${className} size-4`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg className={`${className} size-4`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M5 12h14" />
       <path d="m13 6 6 6-6 6" />
+    </svg>
+  );
+}
+
+function LockGlyph() {
+  return (
+    <svg className="size-[11px]" viewBox="0 0 14 14" fill="none" stroke="var(--green)" strokeWidth="1.6" aria-hidden="true">
+      <rect x="3" y="6.5" width="8" height="5.5" rx="1" />
+      <path d="M4.5 6.5V4.5a2.5 2.5 0 0 1 5 0v2" />
     </svg>
   );
 }
@@ -698,18 +892,18 @@ function ArrowRight({ className = "ml-3" }: { className?: string }) {
 function LocalCardIcon({ icon }: { icon: string }) {
   if (icon === "monitor") {
     return (
-      <svg className="size-6 text-[var(--green)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <rect x="3" y="4" width="18" height="12" rx="2" />
-        <path d="M8 20h8" />
-        <path d="M12 16v4" />
+      <svg className="size-5 text-[var(--green)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="13" rx="2" />
+        <path d="M8 21h8" />
+        <path d="M12 17v4" />
       </svg>
     );
   }
 
   if (icon === "lock") {
     return (
-      <svg className="size-6 text-[var(--green)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <rect x="5" y="10" width="14" height="10" rx="2" />
+      <svg className="size-5 text-[var(--green)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="4" y="10" width="16" height="11" rx="2" />
         <path d="M8 10V7a4 4 0 0 1 8 0v3" />
       </svg>
     );
@@ -717,18 +911,18 @@ function LocalCardIcon({ icon }: { icon: string }) {
 
   if (icon === "help") {
     return (
-      <svg className="size-6 text-[var(--green)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg className="size-5 text-[var(--green)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="12" cy="12" r="9" />
-        <path d="M9.5 9a2.7 2.7 0 0 1 5.2 1c0 2-2.7 2-2.7 4" />
+        <path d="M9.5 9.5a2.5 2.5 0 0 1 4.5 1.5c0 1.5-2 2-2 3" />
         <path d="M12 17h.01" />
       </svg>
     );
   }
 
-  return <GitHubIcon className="size-6 text-[var(--green)]" />;
+  return <GitHubIcon className="size-5 text-[var(--green)]" />;
 }
 
-function GitHubIcon({ className = "size-4" }: { className?: string }) {
+function GitHubIcon({ className = "size-[17px]" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M9 19c-5 1.5-5-2.5-7-3" />
@@ -739,15 +933,9 @@ function GitHubIcon({ className = "size-4" }: { className?: string }) {
 
 function SparkIcon() {
   return (
-    <svg className="size-4 text-[var(--blue)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 2v5" />
-      <path d="M12 17v5" />
-      <path d="M4.22 4.22 7.76 7.76" />
-      <path d="m16.24 16.24 3.54 3.54" />
-      <path d="M2 12h5" />
-      <path d="M17 12h5" />
-      <path d="m4.22 19.78 3.54-3.54" />
-      <path d="m16.24 7.76 3.54-3.54" />
+    <svg className="size-[15px] text-[var(--blue)]" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <path d="M8 1.2c.2 2.7 1.9 4.7 4.6 5.1-2.7.4-4.4 2.4-4.6 5.1-.2-2.7-1.9-4.7-4.6-5.1C5.8 5.9 7.5 3.9 8 1.2Z" />
+      <circle cx="12.8" cy="11.6" r="1.6" opacity="0.55" />
     </svg>
   );
 }
