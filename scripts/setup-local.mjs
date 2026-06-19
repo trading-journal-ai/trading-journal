@@ -61,6 +61,10 @@ function detail(text) {
   console.log(`${colors.dim}${text}${colors.reset}`);
 }
 
+function cyan(text) {
+  console.log(`${colors.cyan}${text}${colors.reset}`);
+}
+
 function success(text) {
   console.log(`${colors.green}${text}${colors.reset}`);
 }
@@ -70,7 +74,7 @@ function warn(text) {
 }
 
 function divider() {
-  detail("------------------------------------------------------------");
+  cyan("------------------------------------------------------------");
 }
 
 function quietStep(label, fn) {
@@ -178,7 +182,7 @@ function ensureDataDir(dbPath) {
 }
 
 async function setupLocal() {
-  section("Step 2 of 3: Set up your journal");
+  console.log(`${colors.cyan}${colors.bold}Step 2 of 3: Set up your journal${colors.reset}`);
   detail("Press Enter to accept the default answer in brackets.");
   console.log("");
 
@@ -205,7 +209,7 @@ async function setupLocal() {
   heading("Chart data");
   console.log("Massive provides candle data for charts.");
   console.log("Sign up for your free Massive key at https://www.massive.com/");
-  detail("You can skip this now. The app will still run, but uncached charts will not fetch candles.");
+  warn("Optional - skip this and uncached charts will not fetch candles.");
   console.log("");
   const keyPrompt = defaultKey
     ? "Massive API key already found. Press Enter to keep it, or enter a new key: "

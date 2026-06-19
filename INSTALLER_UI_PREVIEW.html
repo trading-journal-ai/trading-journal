@@ -103,31 +103,31 @@
           opacity: 0;
         }
       }
+
+      .square {
+        color: var(--cyan);
+      }
     </style>
   </head>
   <body>
     <main class="terminal" aria-label="Trading Journal installer preview">
-      <pre><span class="cyan">******************************************************************************
-******************************************************************************
-**</span>
-<span class="cyan">**</span>  <span class="bold">Trading Journal</span>
-<span class="cyan">**</span>
-<span class="cyan">**</span>  A local-first trading journal built around the review habit first:
-<span class="cyan">**</span>  write the recap, see the day in context, and drill into the trade
-<span class="cyan">**</span>  evidence only when it matters.
-<span class="cyan">**</span>
-<span class="cyan">******************************************************************************
-******************************************************************************</span>
+      <pre><span class="cyan">------------------------------------------------------------</span>
+  <span class="square">■</span>  <span class="cyan bold">Trading Journal</span> <span class="dim">installer</span>
 
-This installs project dependencies.
-It sets up a local database inside this folder.
-You can safely rerun this installer later.
+     <span class="dim">A local-first trading journal built around the review habit first:</span>
+     <span class="dim">write the recap, see the day in context, and drill into the trade</span>
+     <span class="dim">evidence only when it matters.</span>
+<span class="cyan">------------------------------------------------------------</span>
 
-<span class="dim">------------------------------------------------------------</span>
+  Installs project dependencies
+  Sets up a local database inside this folder
+  Safe to rerun later
 
-<span class="bold">Step 1 of 3: Installing dependencies</span><span class="dim">...</span> <span class="green">done</span>
+<span class="cyan">------------------------------------------------------------</span>
 
-<span class="blue bold">Step 2 of 3: Set up your journal</span>
+<span class="cyan bold">Step 1 of 3: Installing dependencies</span><span class="dim">...</span> <span class="green">done</span>
+
+<span class="cyan bold">Step 2 of 3: Set up your journal</span>
 <span class="dim">Press Enter to accept the default answer in brackets.</span>
 
 <span class="bold">Choose a starting point</span>
@@ -142,16 +142,16 @@ Choose a mode [1]:
 
 <span class="green">Demo mode selected.</span>
 
-<span class="dim">------------------------------------------------------------</span>
+<span class="cyan">------------------------------------------------------------</span>
 
 <span class="bold">Chart data</span>
 Massive provides candle data for charts.
 Sign up for your free Massive key at https://www.massive.com/
-<span class="dim">You can skip this now. The app will still run, but uncached charts will not fetch candles.</span>
+<span class="yellow">Optional - skip this and uncached charts will not fetch candles.</span>
 
 Enter your Massive API key, or press Enter to skip this: <span class="cursor"></span>
 
-<span class="dim">------------------------------------------------------------</span>
+<span class="cyan">------------------------------------------------------------</span>
 
 <span class="bold">Local database</span>
 <span class="dim">Settings: .env.local</span>
@@ -161,9 +161,13 @@ Enter your Massive API key, or press Enter to skip this: <span class="cursor"></
 
 <span class="green">Demo trades and journal notes are ready.</span>
 
-<span class="green bold">Step 3 of 3: Starting Trading Journal locally</span>
+<span class="cyan bold">Step 3 of 3: Starting Trading Journal locally</span>
 Local app: <a href="http://localhost:3000">http://localhost:3000</a>
-<span class="dim">If port 3000 is already in use, Next.js will print the available localhost URL below.</span></pre>
+<span class="dim">If port 3000 is already in use, Next.js will print the available localhost URL below.</span>
+
+<span class="bold">Start and stop</span>
+  To stop the app: press <span class="cyan">Ctrl+C</span> in this terminal.
+  To start it again later: run <span class="cyan">npm run dev</span> from this folder.</pre>
     </main>
   </body>
 </html>
