@@ -123,10 +123,38 @@
 
 ## 8. Dashboard  *(screenshot 4)*
 - 🔜 **Deferred for MVP** — Reports + Calendar cover the home-screen need for now.
-  When built, start **compact** (Cumulative P&L, Win %, Profit factor, Total/Avg
-  trade P&L, # trades, **Open trades** list) — not ~40 widgets.
+  When built, do **not** make it a generic widget wall. Reframe it as the
+  trader's orientation surface: account pulse, next-session focus, current
+  experiment, and market context.
+- 🔜 **Pre-session / next-session brief:** one focus item, active experiment,
+  risk guardrail, and link to the latest coach review.
+- 🔜 **Time-aware check-in modes:** pre-market, opening bell, midday/lunch,
+  power hour, after-hours, and hot-all-day exception mode. Each mode changes
+  dashboard emphasis and can act as a manual reorientation checkpoint.
+- 🔜 **One-button reorientation checkpoint:** future workflow to import latest
+  fills/scanner context, refresh account pulse, and show a short coach note:
+  keep trading, risk down, stop, or step back.
+- 🔜 **Market context snapshot:** market condition, active themes, top gainers,
+  stocks up 100%+, notable catalysts, and notes on whether the market was hot,
+  thin, choppy, or theme-driven.
+- 🔜 **Focus reset prompts:** lightweight coach nudges to step back from tunnel
+  vision, prevent overtrading, and decide whether the tape calls for risk up,
+  risk down, stop trading, or a brief context check.
+- 🔜 **Say it / write it check-in:** self-awareness prompts that help the trader
+  name what they see, name their state, and decide whether behavior still
+  matches the market before taking another trade.
+- 🔜 **Timed coaching prompts:** optional reminders around natural market
+  moments, such as 15 minutes before the open, 90 minutes after the open, midday,
+  and post-market. These are sounding-board prompts, not oracle calls.
+- 🔜 **Top gainers opportunity review:** document the day's best movers even if
+  they were not traded. Track whether each was captured, missed, poorly traded,
+  intentionally avoided, or a false opportunity.
+- 🔜 **5 Pillars of Stock Selection tracking:** price range ($1-$20), float
+  (<10M), relative volume (≥5x), daily percentage change (≥10%), and news
+  catalyst. Start manual; automate scanner/enrichment data later.
 - 🔜 **Edit Layout** / customizable widget grid; 30/60/90-day range; more widgets.
-- ⛔ "Instrument ATR / RVOL / opening gap / day type" widgets (heavy data needs).
+- ⛔ Fully automated scanner widgets, market breadth, ATR/RVOL/opening gap, and
+  day-type feeds until provider/data reliability is decided.
 
 ## 9. Cross-cutting / system
 - ✅ Local-first **SQLite**; data stays on disk (`data/journal.db`).
