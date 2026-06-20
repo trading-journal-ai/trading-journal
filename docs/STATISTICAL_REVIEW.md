@@ -49,16 +49,27 @@ alone as success.
 
 Two checks that separate skill from luck. Both run before any praise or alarm.
 
-**Trim / outlier test.** Re-compute the scorecard after removing (a) the single
-best and worst trade, then (b) the top/bottom ~5–8% of trades by P&L.
-- Still clearly green trimmed → **broad-based edge** (many small +EV decisions).
-- Flips flat/red after removing 1–2 trades → **outlier-carried** (one print was
-  the day; the rest of the book was flat-to-red).
+**Trim / outlier test.** Re-compute the scorecard after removing the single
+best/worst trade (`trim_1`) and the top/bottom `ceil(N × 5%)` trades (`trim_5`),
+then classify the session by how much result is retained:
+- Green: flips ≤ $0 → **outlier-carried**; else retention < 30% → **top-heavy**;
+  else → **broad green**.
+- Red: flips ≥ $0 → **tail-caused**; else loss-retention < 30% → **bottom-heavy**;
+  else → **broad-based red**.
 
-**Significance test.** Two-proportion z-test of the session's win rate vs. the
-trailing baseline (e.g. 90-day) win rate → a p-value.
-- `p > 0.05` → the day is statistically **indistinguishable from variance**. The
-  coach must say so, and must not over-learn from a single noisy day.
+The exact classifier, tail-count rule, and the `{calibrate}` retention boundary
+are specified deterministically in `REVIEW_ENGINE_SPEC.md`.
+
+**Significance — cluster-bootstrap primary, naive-z descriptive.** Trades are not
+independent; they cluster by ticker, setup, and session. A plain two-proportion
+z-test against the baseline win rate is therefore **overconfident** and is kept
+only as a familiar descriptive number, never as the verdict.
+- **Primary:** cluster bootstrap **by session** → the confidence estimate we act on.
+- **Secondary:** cluster bootstrap **by ticker** → concentration sensitivity (is
+  the "edge" really one or two names?).
+- **Persistence gate:** call a finding *persistent* only when it recurs over
+  **≥ 3 sessions** or survives a historical bootstrap — not from one day, however
+  good the single-day p-value looks.
 
 **Breakeven math** (the honest core):
 - **Breakeven win rate** = `|avg_loss| / (avg_win + |avg_loss|)`
@@ -148,6 +159,35 @@ change, then on later reviews check whether it was followed and whether it helpe
 (before/after aggregates). Recommendation-tracking is what turns daily recaps
 into actual improvement — without it the same advice recurs forever.
 
+## 10. Determinism boundary & numeric integrity
+
+Every number is produced by a **deterministic fact pack**, computed in code. The
+language model **only narrates** over that pack, gated to claims the evidence
+supports. The LLM must **never calculate, re-derive, or reinterpret a number** —
+that is the single largest source of confident-sounding error.
+
+The canonical failure to design against: the **"+5pp win-rate uplift"**. The
+incremental uplift `0.05 · N · (avg_win + |avg_loss|)` is *not* the projected
+total — the projected total is `baseline + uplift`. Conflating the two
+mislabels, e.g., a −$5,946 day as "+$1,943" when the real projection is −$4,003.
+The analytics service must therefore return **two separate immutable fields** and
+forbid the model from touching either:
+
+```json
+{
+  "accuracy_5pp_incremental_uplift": 1943.04,
+  "accuracy_5pp_projected_total": -4003.22
+}
+```
+
+This boundary applies to every counterfactual ("what capping X would have
+saved"), every projection, and every aggregate. If a value is not in the fact
+pack, the coach does not state it.
+
+The full deterministic specification — fact pack, classifier tree, trend vote,
+mechanism priority tree, surprise scoring, and the recommendation schema — lives
+in `REVIEW_ENGINE_SPEC.md`.
+
 ## Open questions / calibration TODO
 
 - Calibrate all `{calibrate}` thresholds (E[R]/trade floor, give-back %, cushion)
@@ -159,6 +199,8 @@ into actual improvement — without it the same advice recurs forever.
 
 ## Relationship to other docs
 
+- `REVIEW_ENGINE_SPEC.md` — the deterministic implementation spec for everything
+  here (fact pack, classifier, vote, schemas, `{calibrate}` constants).
 - `RESEARCH_REPORT_STUDY.md` — the evidence base these rules were derived from.
 - `TRADING_COACH.md` — the overall coach product; this is its statistical layer.
 - `FEATURES.md` §6 — the reporting metrics that feed this layer.
