@@ -10,7 +10,7 @@ the mechanical pillars:
 
 | Pillar | Doc | Question it answers |
 | --- | --- | --- |
-| Setups | `SETUPS.md` *(planned)* | *What* to trade — micro pullback, ABCD, the curl, … |
+| Setups | [`SETUPS.md`](../coach/SETUPS.md) *(planned)* | *What* to trade — micro pullback, ABCD, the curl, … |
 | Execution | `EXECUTION.md` *(planned)* | *When/how* to enter and exit — mechanical triggers |
 | **Statistical review** | **this doc** | *Was the process sound, is the edge real, and where does it live* |
 
@@ -195,12 +195,17 @@ in `REVIEW_ENGINE_SPEC.md`.
 - Decide the baseline window for the significance test (30 / 60 / 90 day).
 - Define the regime tagger (manual tag vs. derived from index/volatility/breadth).
 - Decide where derived metrics live: precomputed in the reports layer
-  (`FEATURES.md` §6) vs. computed on demand in the AI review layer.
+  ([`FEATURES.md`](../product/FEATURES.md) §6) vs. computed on demand in the AI
+  review layer.
 
 ## Relationship to other docs
 
-- `REVIEW_ENGINE_SPEC.md` — the deterministic implementation spec for everything
-  here (fact pack, classifier, vote, schemas, `{calibrate}` constants).
-- `RESEARCH_REPORT_STUDY.md` — the evidence base these rules were derived from.
-- `TRADING_COACH.md` — the overall coach product; this is its statistical layer.
-- `FEATURES.md` §6 — the reporting metrics that feed this layer.
+- [`REVIEW_ENGINE_SPEC.md`](REVIEW_ENGINE_SPEC.md) — the deterministic
+  implementation spec for everything here (fact pack, classifier, vote,
+  schemas, `{calibrate}` constants).
+- [`RESEARCH_REPORT_STUDY.md`](RESEARCH_REPORT_STUDY.md) — the evidence base
+  these rules were derived from.
+- [`TRADING_COACH.md`](../coach/TRADING_COACH.md) — the overall coach product;
+  this is its statistical layer.
+- [`FEATURES.md`](../product/FEATURES.md) §6 — the reporting metrics that feed
+  this layer.
