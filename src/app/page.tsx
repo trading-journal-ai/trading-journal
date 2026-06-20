@@ -12,17 +12,17 @@ cd trading-journal
 const walkthroughSteps = [
   {
     kicker: "Recap",
-    desc: "Start with the story of the session.",
+    desc: "Start with the day's story.",
     Screen: RecapScreen,
   },
   {
-    kicker: "Review & Reflect",
-    desc: "See the trade in context and note what mattered.",
+    kicker: "Review",
+    desc: "Every trade right there to tag.",
     Screen: ReviewScreen,
   },
   {
     kicker: "Coach",
-    desc: "Get feedback graded against your own rules.",
+    desc: "Guided by the rules you set.",
     Screen: CoachScreen,
   },
 ];
@@ -119,9 +119,9 @@ function Hero() {
           A journal-first trading review system.
         </h1>
         <p className="mt-6 max-w-[620px] text-pretty text-[19px] leading-[1.6] text-[var(--prose,#99a3b1)]">
-          Trading Journal AI is built around the review habit. Write the daily recap,
-          drill into the trades that mattered, and note what to repeat &mdash; so the
-          story of each day stays easy to read.
+          Trading Journal AI organizes your trades so they&apos;re easy to find, tag, and
+          reflect on. Reviewing stays fast, and an AI coach guides you based on your
+          rules.
         </p>
 
         <div className="mt-8 flex flex-col gap-3.5 sm:flex-row sm:items-center">
@@ -230,11 +230,11 @@ function ReviewHabit() {
     <section id="review" className="scroll-mt-24">
       <div className="mx-auto w-full max-w-[1200px] px-6 pb-8 pt-24 md:px-8">
         <div className="max-w-[760px]">
-          <SectionEyebrow>The review habit</SectionEyebrow>
+          <SectionEyebrow className="text-[var(--green)]">The review habit</SectionEyebrow>
           <h2 className="mt-[18px] text-balance text-[32px] font-semibold leading-[1.08] tracking-[-0.025em] md:text-[40px]">
             Review faster. Remember more.
             <br />
-            <span className="text-[var(--prose,#99a3b1)]">Refine your process.</span>
+            Refine your process.
           </h2>
           <p className="mt-[22px] max-w-[640px] text-pretty text-[17.5px] leading-[1.6] text-[var(--prose,#99a3b1)]">
             Trading Journal AI brings notes, charts, P&amp;L, tags, and coaching into one
@@ -250,9 +250,9 @@ function ReviewHabit() {
               The recap leads, the data follows.
             </h3>
             <p className="mt-4 text-pretty text-base leading-[1.6] text-[var(--prose,#99a3b1)]">
-              Open a day and the recap sits first &mdash; market read, execution, lesson
-              &mdash; with the trades and P&amp;L beside it for reference, not as the
-              headline. The week and month are just containers you scroll back through.
+              Open a day and the recap sits first: market read, execution, lesson. The
+              trades and P&amp;L sit beside it for reference, not as the headline. The
+              week and month are just containers you scroll back through.
             </p>
           </div>
           <PreviewFrame>
@@ -271,7 +271,7 @@ function ReviewHabit() {
               Tag the trade in your own language.
             </h3>
             <p className="mt-4 text-pretty text-base leading-[1.6] text-[var(--prose,#99a3b1)]">
-              Write a sentence, then tap the pills that fit &mdash; one quality call,
+              Write a sentence, then tap the pills that fit: one quality call,
               plus the process and emotion behind it. The same vocabulary every session,
               so patterns become searchable instead of buried in prose.
             </p>
@@ -301,18 +301,18 @@ function CoachSection() {
             </span>
           </div>
           <h2 className="mt-[18px] text-balance text-[32px] font-semibold leading-[1.08] tracking-[-0.025em] md:text-[40px]">
-            A coach that grades against <span className="text-[var(--blue)]">your</span> rules.
+            A coach that guides you by <span className="text-[var(--blue)]">your</span> rules.
           </h2>
           <p className="mt-[22px] max-w-[520px] text-pretty text-[17px] leading-[1.62] text-[var(--prose,#99a3b1)]">
-            First you codify what an A+ trade looks like &mdash; the entry, risk, and
+            First you codify what an A+ trade looks like: the entry, risk, and
             process criteria you already track as pills. Then the coach reads every
             imported trade against that standard, flags where you drifted, and drafts the
             note and recap in your voice.
           </p>
           <div className="mt-[30px] space-y-4">
             {[
-              ["01", "Codify your edge", "Turn your process pills into the rubric the coach grades by."],
-              ["02", "Review against it", "Each trade gets read against your own criteria — not generic advice."],
+              ["01", "Codify your edge", "Turn your process pills into the rubric your coach reviews against."],
+              ["02", "Review against it", "Each trade gets read against your own criteria, not generic advice."],
               ["03", "Draft, never auto-post", "The coach proposes the note and recap; you always edit before it saves."],
             ].map(([number, title, body]) => (
               <div key={number} className="grid grid-cols-[28px_1fr] gap-3.5">
@@ -325,7 +325,7 @@ function CoachSection() {
             ))}
           </div>
           <p className="mt-[26px] font-mono text-[11.5px] text-[var(--faint)]">
-            Concept preview &mdash; runs on your trades, on your machine.
+            Concept preview. Runs on your trades, on your machine.
           </p>
         </div>
         <CoachCard />
@@ -344,7 +344,7 @@ function LocalFirstSection() {
             Your trading day never leaves your machine.
           </h2>
           <p className="mt-[22px] max-w-[620px] text-pretty text-[17px] leading-[1.62] text-[var(--prose,#99a3b1)]">
-            It&apos;s the first thing serious traders ask about &mdash; and the answer is
+            It&apos;s the first thing serious traders ask about, and the answer is
             simple. A trading journal holds some of your most sensitive records: account
             history, positions, timestamps. Trading Journal AI is a personal tool, not a
             hosted service. It runs locally and stores everything on disk, so your review
@@ -502,7 +502,7 @@ function RecapScreen() {
             <SectionEyebrow>Daily Recap</SectionEyebrow>
             <p className="mt-3 max-w-[560px] text-pretty text-[17px] leading-[1.6] text-[var(--foreground)]">
               Clean open. Waited for the first pullback on NPT instead of chasing the
-              spike &mdash; that patience set the tone for the whole session. Sized
+              spike. That patience set the tone for the whole session. Sized
               normal, took profits into strength, and walked away after the morning push.
             </p>
             <div className="mt-4 flex gap-2">
@@ -580,8 +580,8 @@ function ReviewScreen() {
             </div>
             <p className="mt-3 text-pretty text-[15.5px] leading-[1.6] text-[var(--prose,#99a3b1)]">
               Textbook green-to-red reclaim. Entered on the reclaim, added on the first
-              pullback, trimmed half into the move. The A+ I keep talking about &mdash;
-              patient entry, defined risk, let it work.
+              pullback, trimmed half into the move. The A+ I keep talking about: patient
+              entry, defined risk, let it work.
             </p>
           </div>
         </div>
@@ -680,7 +680,7 @@ function NoteComposerCard() {
       <div className="mt-5 rounded-[10px] border border-[var(--border)] bg-[#0b0d12] px-[18px] py-4">
         <p className="text-pretty text-base leading-[1.62] text-[var(--foreground)]">
           Textbook green-to-red reclaim. Entered on the reclaim, added on the first
-          pullback, trimmed half into the move &mdash; the A+ I keep talking about:
+          pullback, trimmed half into the move. The A+ I keep talking about:
           patient entry, defined risk, let it work
           <span className="ml-0.5 inline-block h-[18px] w-0.5 translate-y-[3px] animate-pulse bg-[var(--green)]" />
         </p>
@@ -752,8 +752,8 @@ function CoachCard({ embedded = false }: { embedded?: boolean }) {
       </div>
       <div className="mt-[18px] border-t border-[var(--hairline)] pt-4">
         <p className="text-pretty text-[14.5px] leading-[1.58] text-[var(--prose,#99a3b1)]">
-          &ldquo;Your highest-quality entry this week. The only drift was trimming early
-          &mdash; the same pattern flagged Tuesday. Worth sizing the runner next time.&rdquo;
+          &ldquo;Your highest-quality entry this week. The only drift was trimming early,
+          the same pattern flagged Tuesday. Worth sizing the runner next time.&rdquo;
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2.5">
           <span className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3.5 py-2 text-[12.5px] font-semibold text-[var(--foreground)]">
