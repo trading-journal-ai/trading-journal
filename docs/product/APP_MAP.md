@@ -3,8 +3,9 @@
 ## Core Screens
 
 - Landing: `/` is the marketing/front-door page, not the main journal workflow.
-- Dashboard: there is no separate dashboard screen yet. `/journal` is the
-  default review surface and the closest thing to a home screen.
+- Dashboard: `/dashboard` is the orientation surface for account pulse,
+  next-session focus, market context, top-gainer opportunity review, and
+  candidate tracking. It is intentionally lighter than Analytics.
 - Trade import: `/import` uses `ImportForm`, `src/app/import/actions.ts`, and
   `src/lib/import/persist.ts`.
 - Trade detail: `/trades/[id]` shows the chart, executions, note composer, and

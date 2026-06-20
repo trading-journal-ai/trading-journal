@@ -11,6 +11,7 @@ function isSafeInternalHref(value: string | undefined): value is string {
 
 export function sectionLabelForHref(href: string | undefined): string {
   if (!href) return "Back";
+  if (href.startsWith("/dashboard")) return "Dashboard";
   if (href === "/" || href.startsWith("/journal")) return "Journal";
   if (href.startsWith("/trades")) return "Trades";
   if (href.startsWith("/calendar")) return "Calendar";
