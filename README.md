@@ -35,17 +35,16 @@ The next product layer is the AI coach: a post-trade review assistant that can
 read your notes, trades, chart context, tags, and playbook, then help summarize
 what worked, what did not, what can improve, and what to focus on next.
 
-## Importer
-
-The app currently supports the core review loop: import trades, read the journal
-chronologically, write daily recaps, inspect the tickers that shaped the day,
-open individual trades when they need a note, and use calendar/reports/trade-log
-views when structured data is useful.
+## Data Importer
 
 The current importer supports ThinkorSwim/Schwab account statement exports and
-DAS-style trade-summary CSVs. Other brokers may need a small adapter because CSV
-formats are not standardized. Detailed feature notes and roadmap items live in
-the project docs rather than this README.
+DAS-style trade-summary CSVs. Broker CSV formats are not standardized, so other
+brokers may need a small adapter before their files import cleanly.
+
+An adapter teaches the app how to read a broker's column names, timestamps, side
+labels, prices, fees, and row structure, then normalizes that data into the
+journal's shared execution format. Detailed feature notes and roadmap items live
+in the project docs rather than this README.
 
 ## Charts And Chart Data
 
