@@ -93,7 +93,6 @@ function SiteHeader() {
             target="_blank"
             className="hidden items-center gap-1.5 transition-colors hover:text-[var(--foreground)] sm:inline-flex"
           >
-            <GitHubIcon />
             GitHub
           </a>
           <Link
@@ -127,7 +126,6 @@ function Hero() {
         <div className="mt-8 flex flex-col gap-3.5 sm:flex-row sm:items-center">
           <PrimaryButton href="/demo">View the live demo</PrimaryButton>
           <GhostButton href={githubUrl}>
-            <GitHubIcon />
             View on GitHub
           </GhostButton>
         </div>
@@ -243,8 +241,13 @@ function ReviewHabit() {
         </div>
 
         {/* Feature 1: the day in context */}
-        <div className="mt-16 grid gap-14 pb-16 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
-          <div>
+        <div className="mt-16 grid gap-14 pb-16 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+          <div className="order-2 lg:order-1">
+            <PreviewFrame>
+              <RecapScreen hideNav />
+            </PreviewFrame>
+          </div>
+          <div className="order-1 lg:order-2 lg:pt-12">
             <p className="font-mono text-xs text-[var(--green)]">01 · See the day in context</p>
             <h3 className="mt-3.5 text-[25px] font-semibold leading-tight tracking-[-0.01em]">
               The recap leads, the data follows.
@@ -255,17 +258,11 @@ function ReviewHabit() {
               week and month are just containers you scroll back through.
             </p>
           </div>
-          <PreviewFrame>
-            <RecapScreen />
-          </PreviewFrame>
         </div>
 
         {/* Feature 2: capture it fast (note + pills) */}
-        <div className="grid gap-14 border-t border-[var(--hairline)] pt-16 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
-          <div className="order-2 lg:order-1">
-            <NoteComposerCard />
-          </div>
-          <div className="order-1 lg:order-2">
+        <div className="grid gap-14 pt-16 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
+          <div className="lg:pt-12">
             <p className="font-mono text-xs text-[var(--green)]">02 · Capture it in seconds</p>
             <h3 className="mt-3.5 text-[25px] font-semibold leading-tight tracking-[-0.01em]">
               Tag the trade in your own language.
@@ -282,6 +279,7 @@ function ReviewHabit() {
               <Pill label="FOMO" tone="negative" />
             </div>
           </div>
+          <NoteComposerCard />
         </div>
       </div>
     </section>
@@ -290,7 +288,7 @@ function ReviewHabit() {
 
 function CoachSection() {
   return (
-    <section id="coach" className="scroll-mt-24 border-y border-[var(--hairline)] bg-[var(--surface)]">
+    <section id="coach" className="scroll-mt-24">
       <div className="mx-auto grid w-full max-w-[1200px] gap-14 px-6 py-24 md:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
         <div>
           <div className="flex items-center gap-2.5">
@@ -389,8 +387,7 @@ function GetStartedSection() {
         <div className="mt-9 flex flex-col justify-center gap-3.5 sm:flex-row">
           <PrimaryButton href="/demo">View the live demo</PrimaryButton>
           <GhostButton href={githubUrl}>
-            <GitHubIcon />
-            Star on GitHub
+            View on GitHub
           </GhostButton>
         </div>
         <InstallCommand />
@@ -480,10 +477,10 @@ function MiniNav({ active }: { active: string }) {
   );
 }
 
-function RecapScreen() {
+function RecapScreen({ hideNav = false }: { hideNav?: boolean }) {
   return (
     <div className="min-h-[440px] bg-[#0d121a]">
-      <MiniNav active="Journal" />
+      {!hideNav && <MiniNav active="Journal" />}
       <div className="px-7 py-6">
         <p className="font-mono text-[12.5px] text-[var(--muted)]">Week 2 · June 8 – June 12 2026</p>
         <div className="mt-4 flex items-baseline gap-3.5">
@@ -652,7 +649,7 @@ function BrowserFrame({ children }: { children: React.ReactNode }) {
 
 function PreviewFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[0_30px_70px_-34px_rgba(0,0,0,.6)]">
+    <div className="overflow-hidden rounded-xl bg-[var(--surface)] shadow-[0_30px_70px_-34px_rgba(0,0,0,.6)]">
       {children}
     </div>
   );
@@ -660,7 +657,7 @@ function PreviewFrame({ children }: { children: React.ReactNode }) {
 
 function NoteComposerCard() {
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-7 shadow-[0_30px_70px_-30px_rgba(0,0,0,.6)]">
+    <div className="rounded-2xl bg-[var(--surface)] p-7 shadow-[0_30px_70px_-30px_rgba(0,0,0,.6)]">
       <div className="flex items-baseline justify-between">
         <SectionEyebrow>Trade Note</SectionEyebrow>
         <span className="font-mono text-xs text-[var(--muted)]">
@@ -717,7 +714,7 @@ function NoteComposerCard() {
 
 function CoachCard({ embedded = false }: { embedded?: boolean }) {
   return (
-    <div className={embedded ? "rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5" : "rounded-2xl border border-[var(--border)] bg-[#0f141c] p-7 md:p-8"}>
+    <div className={embedded ? "rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5" : "rounded-2xl bg-[#0f141c] p-7 md:p-8"}>
       <div className="flex items-center justify-between gap-6">
         <div className="flex items-center gap-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[var(--blue)]">
           <SparkIcon />
