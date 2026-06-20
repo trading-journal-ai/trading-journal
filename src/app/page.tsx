@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import heroBackground from "../../samples/landing-page/trading-journal-hero.png";
 import { useEffect, useState } from "react";
 
 const githubUrl = "https://github.com/trading-journal-ai/trading-journal";
@@ -109,32 +110,44 @@ function SiteHeader() {
 
 function Hero() {
   return (
-    <section className="mx-auto w-full max-w-[1200px] px-6 pb-12 pt-16 md:px-8 md:pt-[72px]">
-      <div className="max-w-[800px]">
-        <SectionEyebrow className="text-[11.5px] text-[var(--green)]">
-          Local-first trading journal
-        </SectionEyebrow>
-        <h1 className="mt-5 max-w-[900px] text-balance text-[44px] font-semibold leading-[1.05] tracking-[-0.03em] sm:text-[64px] md:text-[96px]">
-          A journal-first trading review system.
-        </h1>
-        <p className="mt-6 max-w-[620px] text-pretty text-[19px] leading-[1.6] text-[var(--prose,#99a3b1)]">
-          Trading Journal AI organizes your trades so they&apos;re easy to find, tag, and
-          reflect on. Reviewing stays fast, and an AI coach guides you based on your
-          rules.
-        </p>
-
-        <div className="mt-8 flex flex-col gap-3.5 sm:flex-row sm:items-center">
-          <PrimaryButton href="/demo">View the live demo</PrimaryButton>
-          <GhostButton href={githubUrl}>
-            View on GitHub
-          </GhostButton>
-        </div>
-        <p className="mt-[18px] font-mono text-xs text-[var(--muted)]">
-          No signup · No subscription · Your data stays on your machine
-        </p>
+    <section className="relative isolate overflow-hidden border-b border-[var(--hairline)]">
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 -z-30 hidden h-[620px] overflow-hidden md:block md:h-[670px] lg:h-[720px]">
+        <div
+          className="absolute inset-0 bg-[length:auto_94%] bg-[center_top] bg-no-repeat opacity-85 md:bg-[right_top]"
+          style={{ backgroundImage: `url(${heroBackground.src})` }}
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,#0b0d12_0%,rgba(11,13,18,.98)_30%,rgba(11,13,18,.8)_52%,rgba(11,13,18,.35)_78%,rgba(11,13,18,.18)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(11,13,18,0)_0%,rgba(11,13,18,.24)_58%,#0b0d12_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_36%,rgba(89,230,158,.12),transparent_34%)]" />
       </div>
 
-      <HeroWalkthrough />
+      <div className="mx-auto w-full max-w-[1200px] px-6 pb-12 pt-16 md:px-8 md:pt-[72px] lg:pb-14">
+        <div className="max-w-[760px]">
+          <SectionEyebrow className="text-[11.5px] text-[var(--green)]">
+            Local-first trading journal
+          </SectionEyebrow>
+          <h1 className="mt-5 max-w-[860px] text-balance text-[44px] font-semibold leading-[1.05] tracking-[-0.03em] sm:text-[64px] md:text-[88px]">
+            A journal-first trading review system.
+          </h1>
+          <p className="mt-6 max-w-[620px] text-pretty text-[19px] leading-[1.6] text-[var(--prose,#99a3b1)]">
+            Trading Journal AI organizes your trades so they&apos;re easy to find, tag, and
+            reflect on. Reviewing stays fast, and an AI coach guides you based on your
+            rules.
+          </p>
+
+          <div className="mt-8 flex flex-col gap-3.5 sm:flex-row sm:items-center">
+            <PrimaryButton href="/demo">View the live demo</PrimaryButton>
+            <GhostButton href={githubUrl}>
+              View on GitHub
+            </GhostButton>
+          </div>
+          <p className="mt-[18px] font-mono text-xs text-[var(--muted)]">
+            No signup · No subscription · Your data stays on your machine
+          </p>
+        </div>
+
+        <HeroWalkthrough />
+      </div>
     </section>
   );
 }
@@ -230,7 +243,7 @@ function ReviewHabit() {
         <div className="max-w-[760px]">
           <SectionEyebrow className="text-[var(--green)]">The review habit</SectionEyebrow>
           <h2 className="mt-[18px] text-balance text-[32px] font-semibold leading-[1.08] tracking-[-0.025em] md:text-[40px]">
-            Review faster. Remember more.
+            Review faster. Gain insights.
             <br />
             Refine your process.
           </h2>
