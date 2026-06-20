@@ -35,7 +35,7 @@ The next product layer is the AI coach: a post-trade review assistant that can
 read your notes, trades, chart context, tags, and playbook, then help summarize
 what worked, what did not, what can improve, and what to focus on next.
 
-## Current Shape
+## Importer
 
 The app currently supports the core review loop: import trades, read the journal
 chronologically, write daily recaps, inspect the tickers that shaped the day,
@@ -47,7 +47,31 @@ DAS-style trade-summary CSVs. Other brokers may need a small adapter because CSV
 formats are not standardized. Detailed feature notes and roadmap items live in
 the project docs rather than this README.
 
-## Run It Locally
+## Charts And Chart Data
+
+Charts are rendered with
+[TradingView Lightweight Charts](https://tradingview.github.io/lightweight-charts/),
+the open-source charting library from TradingView. The app uses it to display
+candles, volume, pan/zoom behavior, and trade markers.
+
+The candle data comes from [Massive](https://www.massive.com/). The free Massive
+plan is enough to run the app locally. When you open a trade chart, the app uses
+the trade's symbol and date to fetch one-minute OHLCV candle data: open, high,
+low, close, and volume. It then caches that data locally so the chart does not
+need to refetch the same candles every time.
+
+Your broker CSV provides the execution data: symbol, time, side, shares, and
+price. The chart combines both sources: Massive provides the market candles, and
+your broker import provides the entry and exit markers. This is why broker CSV
+parsing matters. If a broker export has unusual timestamps, time zones, prices,
+or row formats, the importer may need an adapter so trades map cleanly onto the
+chart.
+
+If you enter a Massive API key during setup, the installer saves it to
+`.env.local`, which is gitignored and stays on your machine. If you skip the key,
+the app still runs, but uncached charts will not be able to fetch new candles.
+
+## Install
 
 You can install the app in two ways:
 
@@ -85,31 +109,7 @@ The installer:
 The script does not install anything globally. Everything it creates stays
 inside this project folder.
 
-## Charts And Chart Data
-
-Charts are rendered with
-[TradingView Lightweight Charts](https://tradingview.github.io/lightweight-charts/),
-the open-source charting library from TradingView. The app uses it to display
-candles, volume, pan/zoom behavior, and trade markers.
-
-The candle data comes from [Massive](https://www.massive.com/). The free Massive
-plan is enough to run the app locally. When you open a trade chart, the app uses
-the trade's symbol and date to fetch one-minute OHLCV candle data: open, high,
-low, close, and volume. It then caches that data locally so the chart does not
-need to refetch the same candles every time.
-
-Your broker CSV provides the execution data: symbol, time, side, shares, and
-price. The chart combines both sources: Massive provides the market candles, and
-your broker import provides the entry and exit markers. This is why broker CSV
-parsing matters. If a broker export has unusual timestamps, time zones, prices,
-or row formats, the importer may need an adapter so trades map cleanly onto the
-chart.
-
-If you enter a Massive API key during setup, the installer saves it to
-`.env.local`, which is gitignored and stays on your machine. If you skip the key,
-the app still runs, but uncached charts will not be able to fetch new candles.
-
-## Start And Stop The App
+## Run It Locally
 
 After setup, the installer starts the app automatically.
 
@@ -128,7 +128,21 @@ a SQLite database file on disk.
 If the browser does not open automatically, go to the localhost URL printed in
 the terminal, usually [http://localhost:3000](http://localhost:3000).
 
-## Demo Data
+### Importing Your Own Data
+
+The importer was originally built around ThinkorSwim/Schwab account statement
+exports, especially the `Account Trade History` section. It also supports
+DAS-style trade-summary CSVs.
+
+If you use another broker, the CSV may not work immediately. Broker exports can
+use different column names, timestamps, side labels, fee fields, and row
+structures. The intended path is to add a broker-specific adapter that
+normalizes that broker's CSV into the app's shared execution format.
+
+For non-technical users: you do not have to redesign the app for each broker,
+but you may need help teaching the importer how to read your broker's CSV.
+
+### Demo Data
 
 The repo includes a demo dataset with augmented sample trades and placeholder
 journal notes:
@@ -151,20 +165,6 @@ npm run reset:local
 Demo mode creates a local SQLite database, imports the sample CSV, and adds
 placeholder journal notes: one daily recap per active trading day, plus trade
 notes for the best winner and worst loser when available.
-
-## Importing Your Own Data
-
-The importer was originally built around ThinkorSwim/Schwab account statement
-exports, especially the `Account Trade History` section. It also supports
-DAS-style trade-summary CSVs.
-
-If you use another broker, the CSV may not work immediately. Broker exports can
-use different column names, timestamps, side labels, fee fields, and row
-structures. The intended path is to add a broker-specific adapter that
-normalizes that broker's CSV into the app's shared execution format.
-
-For non-technical users: you do not have to redesign the app for each broker,
-but you may need help teaching the importer how to read your broker's CSV.
 
 ## Try The Hosted Demo
 
