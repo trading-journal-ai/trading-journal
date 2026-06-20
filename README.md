@@ -85,10 +85,25 @@ The installer:
 The script does not install anything globally. Everything it creates stays
 inside this project folder.
 
-## Chart Data
+## Charts And Chart Data
 
-Charts use one-minute candle data from Massive. The free Massive plan is enough
-to run the app locally.
+Charts are rendered with
+[TradingView Lightweight Charts](https://tradingview.github.io/lightweight-charts/),
+the open-source charting library from TradingView. The app uses it to display
+candles, volume, pan/zoom behavior, and trade markers.
+
+The candle data comes from [Massive](https://www.massive.com/). The free Massive
+plan is enough to run the app locally. When you open a trade chart, the app uses
+the trade's symbol and date to fetch one-minute OHLCV candle data: open, high,
+low, close, and volume. It then caches that data locally so the chart does not
+need to refetch the same candles every time.
+
+Your broker CSV provides the execution data: symbol, time, side, shares, and
+price. The chart combines both sources: Massive provides the market candles, and
+your broker import provides the entry and exit markers. This is why broker CSV
+parsing matters. If a broker export has unusual timestamps, time zones, prices,
+or row formats, the importer may need an adapter so trades map cleanly onto the
+chart.
 
 If you enter a Massive API key during setup, the installer saves it to
 `.env.local`, which is gitignored and stays on your machine. If you skip the key,
