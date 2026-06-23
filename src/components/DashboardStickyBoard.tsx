@@ -239,19 +239,23 @@ export default function DashboardStickyBoard() {
 
   useEffect(() => {
     if (!drag) return;
+    const activeDrag = drag;
 
     function move(event: globalThis.PointerEvent) {
       const board = boardRef.current?.getBoundingClientRect();
       if (!board) return;
 
-      const x = Math.max(0, Math.min(event.clientX - board.left - drag.dx, board.width - NOTE_WIDTH));
+      const x = Math.max(
+        0,
+        Math.min(event.clientX - board.left - activeDrag.dx, board.width - NOTE_WIDTH),
+      );
       const y = Math.max(
         0,
-        Math.min(event.clientY - board.top - drag.dy, board.height - NOTE_MIN_HEIGHT),
+        Math.min(event.clientY - board.top - activeDrag.dy, board.height - NOTE_MIN_HEIGHT),
       );
 
       setNotes((current) =>
-        current.map((note) => (note.id === drag.id ? { ...note, x, y } : note)),
+        current.map((note) => (note.id === activeDrag.id ? { ...note, x, y } : note)),
       );
     }
 
