@@ -1,4 +1,5 @@
 import Link from "next/link";
+import DashboardStickyBoard from "@/components/DashboardStickyBoardNoSsr";
 
 const phaseModes = [
   {
@@ -60,13 +61,6 @@ const pulseItems = [
   { label: "Trades", value: "0", tone: "neutral" },
   { label: "Risk posture", value: "Normal", tone: "focus" },
   { label: "Max loss room", value: "Available", tone: "neutral" },
-];
-
-const stickyCues = [
-  "Only A+ continuation setups.",
-  "Size follows tape quality.",
-  "Green in cold tape is enough.",
-  "Write the reason before the next click.",
 ];
 
 const handoffRows = [
@@ -227,6 +221,10 @@ export default function DashboardPage() {
         </div>
       </header>
 
+      <Section title="Sticky notes" eyebrow="Keep it on the glass" emphasis>
+        <DashboardStickyBoard />
+      </Section>
+
       <Section title="Current phase" eyebrow="Start here" emphasis>
         <div className="grid gap-3 md:grid-cols-3">
           {phaseModes.map((mode) => (
@@ -279,19 +277,6 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 gap-3">
               {pulseItems.map((item) => (
                 <PulseItem key={item.label} label={item.label} value={item.value} tone={item.tone} />
-              ))}
-            </div>
-          </Section>
-
-          <Section title="Sticky cues" eyebrow="Plan adherence">
-            <div className="space-y-2">
-              {stickyCues.map((cue) => (
-                <div
-                  key={cue}
-                  className="rounded border border-dashed border-[var(--hairline)] px-3 py-2 text-sm leading-6 text-[var(--body)]"
-                >
-                  {cue}
-                </div>
               ))}
             </div>
           </Section>
