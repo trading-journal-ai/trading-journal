@@ -1,7 +1,8 @@
 import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
-import { saveDraftCoachReviewAction } from "@/app/coach/actions";
+import { generateCoachReviewAction, saveDraftCoachReviewAction } from "@/app/coach/actions";
 import { saveCoachExperimentAction } from "@/app/journal/actions";
 import { db, schema } from "@/lib/db";
+import { parseCoachStoredReview, type CoachStoredReview } from "@/lib/coach/generatedReview";
 import { buildSessionFactPack, type SessionFactPack } from "@/lib/coach/reviewEngine";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { netPnl } from "@/lib/pnl";
@@ -109,6 +110,7 @@ type SavedCoachExperiment = {
 type SavedCoachReview = {
   status: string;
   updatedAt: Date;
+  storedReview: CoachStoredReview | null;
 };
 
 type DayRecapContext = {
@@ -637,6 +639,7 @@ async function loadSavedCoachReview(
   const row = await db
     .select({
       status: schema.coachReviews.status,
+      reviewJson: schema.coachReviews.reviewJson,
       updatedAt: schema.coachReviews.updatedAt,
     })
     .from(schema.coachReviews)
@@ -650,7 +653,13 @@ async function loadSavedCoachReview(
     .limit(1)
     .get();
 
-  return row ?? null;
+  return row
+    ? {
+        status: row.status,
+        updatedAt: row.updatedAt,
+        storedReview: parseCoachStoredReview(row.reviewJson),
+      }
+    : null;
 }
 
 async function loadReviewArchive(anchor: string, accountId: number, basePath: string, month?: string): Promise<ReviewArchive> {
@@ -1087,6 +1096,12 @@ function StarterCoachRead({
     [...factPack.history.signals]
       .filter((signal) => signal.vote !== 0 && signal.delta != null)
       .sort((a, b) => Math.abs(b.delta ?? 0) - Math.abs(a.delta ?? 0))[0] ?? null;
+  const generatedReview = savedReview?.storedReview && "review" in savedReview.storedReview
+    ? savedReview.storedReview
+    : null;
+  const generationError = savedReview?.storedReview && "error" in savedReview.storedReview
+    ? savedReview.storedReview.error
+    : null;
 
   return (
     <section className="pt-2">
@@ -1203,26 +1218,115 @@ function StarterCoachRead({
       <div className="mt-5 border-t border-[var(--hairline)] pt-4">
         <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Coach review payload</div>
         <p className="mt-2 max-w-[760px] text-sm leading-6 text-[var(--body)]">
-          This saves the exact context package the AI coach will use later: playbook, rubric,
-          deterministic facts, daily context, and annotated trade notes.
+          This uses the exact context package: playbook, rubric, deterministic facts,
+          daily context, and annotated trade notes.
         </p>
-        <form action={saveDraftCoachReviewAction} className="mt-3 flex flex-wrap items-center gap-3">
-          <input type="hidden" name="scope" value={reviewScope.scope} />
-          <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
-          <button
-            type="submit"
-            className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
-          >
-            {savedReview ? "Refresh draft payload" : "Prepare draft payload"}
-          </button>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <form action={generateCoachReviewAction}>
+            <input type="hidden" name="scope" value={reviewScope.scope} />
+            <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
+            <button
+              type="submit"
+              className="h-8 rounded-md border border-[var(--blue)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--foreground)] transition-colors hover:bg-[var(--blue)] hover:text-white"
+            >
+              {generatedReview ? "Regenerate coach review" : "Ask Coach"}
+            </button>
+          </form>
+          <form action={saveDraftCoachReviewAction}>
+            <input type="hidden" name="scope" value={reviewScope.scope} />
+            <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
+            <button
+              type="submit"
+              className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+            >
+              {savedReview ? "Refresh draft" : "Save draft"}
+            </button>
+          </form>
           {savedReview ? (
             <span className="font-mono text-[12px] text-[var(--muted)]">
               Saved as {savedReview.status}
             </span>
           ) : null}
-        </form>
+        </div>
+
+        {generationError ? (
+          <p className="mt-4 max-w-[760px] border-l border-[var(--red)] pl-4 text-sm leading-6 text-[var(--body)]">
+            Coach generation failed: {generationError}
+          </p>
+        ) : null}
+
+        {generatedReview ? (
+          <div className="mt-5 space-y-5">
+            <div className="border-l border-[var(--blue)] pl-4">
+              <div className="font-mono text-[11px] uppercase text-[var(--muted)]">AI coach verdict</div>
+              <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
+                {generatedReview.review.dayVerdict}
+              </p>
+              <p className="mt-2 font-mono text-[12px] text-[var(--muted)]">
+                {generatedReview.model}
+              </p>
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <CoachReviewList title="Matched playbook" items={generatedReview.review.whatMatchedPlaybook} />
+              <CoachReviewList title="Drifted" items={generatedReview.review.whatDriftedFromPlaybook} />
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Key trade to study</div>
+                <p className="mt-2 text-sm leading-6 text-[var(--body)]">
+                  {generatedReview.review.keyTradeToStudy.symbol ?? "Trade"}: {generatedReview.review.keyTradeToStudy.reason}
+                </p>
+              </div>
+              <div>
+                <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Behavior pattern</div>
+                <p className="mt-2 text-sm leading-6 text-[var(--body)]">
+                  {generatedReview.review.behaviorPattern}
+                </p>
+              </div>
+            </div>
+
+            <div className="border-t border-[var(--hairline)] pt-4">
+              <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Statistical read</div>
+              <p className="mt-2 text-sm leading-6 text-[var(--body)]">
+                {generatedReview.review.statisticalRead}
+              </p>
+            </div>
+
+            <div className="border-t border-[var(--hairline)] pt-4">
+              <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Coach experiment</div>
+              <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
+                <span className="font-semibold">{generatedReview.review.oneExperiment.action}</span>
+              </p>
+              <p className="mt-1 text-sm leading-6 text-[var(--body)]">
+                Trigger: {generatedReview.review.oneExperiment.trigger} Measure:{" "}
+                {generatedReview.review.oneExperiment.measure.join(", ")}.
+              </p>
+            </div>
+
+            <CoachReviewList title="Confidence / missing context" items={generatedReview.review.confidenceAndMissingContext} />
+          </div>
+        ) : null}
       </div>
     </section>
+  );
+}
+
+function CoachReviewList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div>
+      <div className="font-mono text-[11px] uppercase text-[var(--muted)]">{title}</div>
+      {items.length > 0 ? (
+        <ul className="mt-2 space-y-2 text-sm leading-6 text-[var(--body)]">
+          {items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">No clear signal yet.</p>
+      )}
+    </div>
   );
 }
 

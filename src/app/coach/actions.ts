@@ -4,6 +4,7 @@ import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getActiveAccount } from "@/lib/accountScope";
 import { buildCoachReviewPayload, type CoachReviewHumanContext, type CoachReviewTradeContext } from "@/lib/coach/payload";
+import { generateCoachReview } from "@/lib/coach/openai";
 import { buildSessionFactPack } from "@/lib/coach/reviewEngine";
 import { db, schema } from "@/lib/db";
 import { decodeJournalTags } from "@/lib/journalLabels";
@@ -43,6 +44,19 @@ Emotional discipline: strong / mixed / weak / unknown
 Journal completeness: strong / mixed / weak / unknown`;
 
 type CoachReviewScope = "day" | "week" | "month";
+
+type CoachReviewActionInput = {
+  accountId: number;
+  scope: CoachReviewScope;
+  scopeKey: string;
+};
+
+function coachReviewScopeFromForm(formData: FormData): { scope: CoachReviewScope; scopeKey: string } | null {
+  const scope = String(formData.get("scope") ?? "");
+  const scopeKey = String(formData.get("scopeKey") ?? "").trim();
+  if ((scope !== "day" && scope !== "week" && scope !== "month") || !scopeKey) return null;
+  return { scope, scopeKey };
+}
 
 export async function saveCoachPlaybookAction(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim() || "Trading Playbook";
@@ -93,32 +107,143 @@ export async function ensureCoachPlaybook(accountId: number) {
 }
 
 export async function saveDraftCoachReviewAction(formData: FormData) {
-  const scope = String(formData.get("scope") ?? "");
-  const scopeKey = String(formData.get("scopeKey") ?? "").trim();
-  if ((scope !== "day" && scope !== "week" && scope !== "month") || !scopeKey) return;
-  const reviewScope: CoachReviewScope = scope;
-
   const account = await getActiveAccount();
-  const playbook = await ensureCoachPlaybook(account.id);
+  const input = coachReviewScopeFromForm(formData);
+  if (!input) return;
+
+  const payload = await buildCoachReviewPayloadForScope({
+    accountId: account.id,
+    scope: input.scope,
+    scopeKey: input.scopeKey,
+  });
+  const values = {
+    accountId: account.id,
+    scope: input.scope,
+    scopeKey: input.scopeKey,
+    status: "draft" as const,
+    payloadJson: JSON.stringify(payload),
+    reviewJson: null,
+    updatedAt: new Date(),
+  };
+
+  await db
+    .insert(schema.coachReviews)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [
+        schema.coachReviews.accountId,
+        schema.coachReviews.scope,
+        schema.coachReviews.scopeKey,
+      ],
+      set: values,
+    });
+
+  revalidatePath("/journal");
+}
+
+export async function generateCoachReviewAction(formData: FormData) {
+  const account = await getActiveAccount();
+  const input = coachReviewScopeFromForm(formData);
+  if (!input) return;
+
+  const payload = await buildCoachReviewPayloadForScope({
+    accountId: account.id,
+    scope: input.scope,
+    scopeKey: input.scopeKey,
+  });
+  const generatedAt = new Date().toISOString();
+  let values:
+    | {
+        accountId: number;
+        scope: CoachReviewScope;
+        scopeKey: string;
+        status: "generated";
+        payloadJson: string;
+        reviewJson: string;
+        updatedAt: Date;
+      }
+    | {
+        accountId: number;
+        scope: CoachReviewScope;
+        scopeKey: string;
+        status: "stale";
+        payloadJson: string;
+        reviewJson: string;
+        updatedAt: Date;
+      };
+
+  try {
+    const result = await generateCoachReview(payload);
+    values = {
+      accountId: account.id,
+      scope: input.scope,
+      scopeKey: input.scopeKey,
+      status: "generated",
+      payloadJson: JSON.stringify(payload),
+      reviewJson: JSON.stringify({
+        version: 1,
+        model: result.model,
+        generatedAt,
+        review: result.review,
+      }),
+      updatedAt: new Date(),
+    };
+  } catch (error) {
+    values = {
+      accountId: account.id,
+      scope: input.scope,
+      scopeKey: input.scopeKey,
+      status: "stale",
+      payloadJson: JSON.stringify(payload),
+      reviewJson: JSON.stringify({
+        version: 1,
+        generatedAt,
+        error: error instanceof Error ? error.message : "Coach generation failed.",
+      }),
+      updatedAt: new Date(),
+    };
+  }
+
+  await db
+    .insert(schema.coachReviews)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [
+        schema.coachReviews.accountId,
+        schema.coachReviews.scope,
+        schema.coachReviews.scopeKey,
+      ],
+      set: values,
+    });
+
+  revalidatePath("/journal");
+}
+
+async function buildCoachReviewPayloadForScope({
+  accountId,
+  scope,
+  scopeKey,
+}: CoachReviewActionInput) {
+  const playbook = await ensureCoachPlaybook(accountId);
   const [recapRow] = await db
     .select()
     .from(schema.journalEntries)
     .where(
       and(
-        eq(schema.journalEntries.accountId, account.id),
-        eq(schema.journalEntries.scope, reviewScope),
+        eq(schema.journalEntries.accountId, accountId),
+        eq(schema.journalEntries.scope, scope),
         eq(schema.journalEntries.scopeKey, scopeKey),
       ),
     )
     .limit(1);
-  const trades = await loadTradesForCoachPayload(account.id, reviewScope, scopeKey);
+  const trades = await loadTradesForCoachPayload(accountId, scope, scopeKey);
   const tradeIds = trades.map((trade) => trade.id);
   const notes = tradeIds.length === 0 ? [] : await db
     .select()
     .from(schema.journalEntries)
     .where(
       and(
-        eq(schema.journalEntries.accountId, account.id),
+        eq(schema.journalEntries.accountId, accountId),
         inArray(schema.journalEntries.tradeId, tradeIds),
       ),
     );
@@ -149,8 +274,8 @@ export async function saveDraftCoachReviewAction(formData: FormData) {
       emotionTags: decodeJournalTags(note?.whatWentWrong ?? null),
     };
   });
-  const payload = buildCoachReviewPayload({
-    scope: reviewScope,
+  return buildCoachReviewPayload({
+    scope,
     scopeKey,
     generatedAt: new Date().toISOString(),
     playbook: {
@@ -162,29 +287,6 @@ export async function saveDraftCoachReviewAction(formData: FormData) {
     deterministicFacts: buildSessionFactPack(trades),
     trades: tradeContexts,
   });
-  const values = {
-    accountId: account.id,
-    scope: reviewScope,
-    scopeKey,
-    status: "draft" as const,
-    payloadJson: JSON.stringify(payload),
-    reviewJson: null,
-    updatedAt: new Date(),
-  };
-
-  await db
-    .insert(schema.coachReviews)
-    .values(values)
-    .onConflictDoUpdate({
-      target: [
-        schema.coachReviews.accountId,
-        schema.coachReviews.scope,
-        schema.coachReviews.scopeKey,
-      ],
-      set: values,
-    });
-
-  revalidatePath("/journal");
 }
 
 async function loadTradesForCoachPayload(accountId: number, scope: "day" | "week" | "month", scopeKey: string) {
