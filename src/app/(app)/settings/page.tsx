@@ -1,10 +1,14 @@
 import AccountSettings from "@/components/AccountSettings";
+import CoachPlaybookSettings from "@/components/CoachPlaybookSettings";
 import DevResetImports from "@/components/DevResetImports";
 import ThemeSettings from "@/components/ThemeSettings";
-import { listAccounts } from "@/lib/accountScope";
+import { ensureCoachPlaybook } from "@/app/coach/actions";
+import { getActiveAccount, listAccounts } from "@/lib/accountScope";
 
 export default async function SettingsPage() {
   const accounts = await listAccounts();
+  const activeAccount = await getActiveAccount(accounts);
+  const playbook = await ensureCoachPlaybook(activeAccount.id);
   const showDevReset = process.env.NODE_ENV !== "production";
 
   return (
@@ -34,6 +38,22 @@ export default async function SettingsPage() {
           </p>
         </div>
         <ThemeSettings />
+      </section>
+
+      <section className="space-y-4 border-t border-[var(--border)] pt-6">
+        <div>
+          <h2 className="text-base font-semibold">Coach Playbook</h2>
+          <p className="mt-1 max-w-xl text-sm leading-6 text-[var(--muted)]">
+            Draft the setups, risk rules, and qualitative rubric the coach should use once generation is enabled.
+          </p>
+        </div>
+        <CoachPlaybookSettings
+          playbook={{
+            title: playbook.title,
+            body: playbook.body,
+            rubric: playbook.rubric,
+          }}
+        />
       </section>
 
       <section className="space-y-4 border-t border-[var(--border)] pt-6">
