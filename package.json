@@ -11,6 +11,8 @@
   "license": "MIT",
   "scripts": {
     "dev": "next dev",
+    "dev:app": "TRADING_JOURNAL_MODE=app next dev",
+    "dev:site": "TRADING_JOURNAL_MODE=site next dev",
     "dev:stop": "node scripts/dev-server.mjs stop",
     "dev:restart": "node scripts/dev-server.mjs restart",
     "build": "next build",

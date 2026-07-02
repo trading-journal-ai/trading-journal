@@ -218,7 +218,14 @@ function parseEnvFile(path) {
 
 function writeLocalEnv({ dbPath, massiveKey }) {
   const existing = existsSync(ENV_PATH) ? readFileSync(ENV_PATH, "utf8").split(/\r?\n/) : [];
-  const managed = new Set(["DB_PATH", "MASSIVE_API_KEY", "DEMO_READ_ONLY", "TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN"]);
+  const managed = new Set([
+    "DB_PATH",
+    "TRADING_JOURNAL_MODE",
+    "MASSIVE_API_KEY",
+    "DEMO_READ_ONLY",
+    "TURSO_DATABASE_URL",
+    "TURSO_AUTH_TOKEN",
+  ]);
   const kept = existing.filter((line) => {
     const match = line.match(/^\s*([A-Z0-9_]+)\s*=/);
     return !match || !managed.has(match[1]);
@@ -228,6 +235,7 @@ function writeLocalEnv({ dbPath, massiveKey }) {
     "",
     "# Local Trading Journal setup",
     `DB_PATH=${dbPath}`,
+    "TRADING_JOURNAL_MODE=app",
     "DEMO_READ_ONLY=false",
     massiveKey ? `MASSIVE_API_KEY=${massiveKey}` : "# MASSIVE_API_KEY=",
     "",
