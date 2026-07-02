@@ -46,3 +46,37 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+.import-progress-track {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--panel);
+}
+
+.import-progress-bar {
+  position: absolute;
+  inset-block: 0;
+  width: 38%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--blue) 72%, white 12%),
+    var(--blue),
+    transparent
+  );
+  box-shadow: 0 0 18px rgba(88, 166, 255, 0.35);
+  animation: import-progress-sweep 1.15s ease-in-out infinite;
+}
+
+@keyframes import-progress-sweep {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  100% {
+    transform: translateX(270%);
+  }
+}

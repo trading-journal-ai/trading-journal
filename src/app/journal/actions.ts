@@ -84,6 +84,48 @@ export async function upsertScopedNoteAction(
   return { ok: true };
 }
 
+export async function upsertTickerReviewAction(formData: FormData) {
+  if (isDemoReadOnly()) return;
+
+  const scopeKey = String(formData.get("scopeKey") ?? "").trim();
+  const body = String(formData.get("body") ?? "").trim();
+  const returnTo = String(formData.get("returnTo") ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}:[A-Z0-9.\-]+$/.test(scopeKey)) return;
+
+  const activeAccount = await getActiveAccount();
+  const existing = await db
+    .select({ id: schema.journalEntries.id })
+    .from(schema.journalEntries)
+    .where(
+      and(
+        eq(schema.journalEntries.scope, "ticker"),
+        eq(schema.journalEntries.scopeKey, scopeKey),
+        eq(schema.journalEntries.accountId, activeAccount.id),
+      ),
+    )
+    .limit(1);
+
+  if (existing[0]) {
+    await db
+      .update(schema.journalEntries)
+      .set({ lessons: body || null })
+      .where(eq(schema.journalEntries.id, existing[0].id));
+  } else if (body) {
+    await db.insert(schema.journalEntries).values({
+      accountId: activeAccount.id,
+      scope: "ticker",
+      scopeKey,
+      lessons: body,
+    });
+  }
+
+  revalidateJournalLoop();
+  revalidatePath("/trades/review");
+  if (returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+    revalidatePath(returnTo.split("?")[0] || "/journal");
+  }
+}
+
 export async function saveCoachExperimentAction(formData: FormData) {
   if (isDemoReadOnly()) return;
 

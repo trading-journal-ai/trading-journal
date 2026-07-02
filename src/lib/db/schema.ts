@@ -151,7 +151,7 @@ export const journalEntries = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     accountId: integer("account_id").references(() => accounts.id),
     tradeId: integer("trade_id").references(() => trades.id),
-    scope: text("scope", { enum: ["trade", "day", "week", "month"] })
+    scope: text("scope", { enum: ["trade", "ticker", "day", "week", "month"] })
       .notNull()
       .default("trade"),
     scopeKey: text("scope_key"),
