@@ -2,7 +2,8 @@
 
 ## Core Screens
 
-- Landing: `/` is the marketing/front-door page, not the main journal workflow.
+- Home: `/` redirects to `/dashboard` in the app repo. The public marketing
+  front door lives in the separate `trading-journal-site` repo.
 - Dashboard: `/dashboard` is the active-day surface for planning,
   accountability, and check-ins. It keeps the plan, market read, risk posture,
   and notes visible while the user trades, then hands durable review context to
@@ -22,7 +23,9 @@
   `docs/analytics/REVIEW_ENGINE_SPEC.md`.
 - Settings: `/settings` holds account selection support, theme settings, export,
   and dev reset tools.
-- Demo: `/demo` is the read-only preview path.
+- Hosted demo: the public read-only preview should run from the app repo on a
+  demo deployment, preferably `demo.trading-journal.ai`. During the transition,
+  the old hosted `/demo` path may still exist on the current Vercel app project.
 
 ## Data Flow
 
