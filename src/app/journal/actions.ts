@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getActiveAccount } from "@/lib/accountScope";
 import { db, schema } from "@/lib/db";
+import { isDemoReadOnly } from "@/lib/demoMode";
 import {
   EMOTION_PILLS,
   PRIMARY_TRADE_LABELS,
@@ -28,6 +29,8 @@ export async function upsertScopedNoteAction(
   _prev: ScopedNoteState | null,
   formData: FormData,
 ): Promise<ScopedNoteState> {
+  if (isDemoReadOnly()) return { ok: false };
+
   const scope = String(formData.get("scope") ?? "") as RecapScope;
   const scopeKey = String(formData.get("scopeKey") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
@@ -82,6 +85,8 @@ export async function upsertScopedNoteAction(
 }
 
 export async function saveCoachExperimentAction(formData: FormData) {
+  if (isDemoReadOnly()) return;
+
   const scope = String(formData.get("scope") ?? "") as RecapScope;
   const scopeKey = String(formData.get("scopeKey") ?? "").trim();
   const hypothesis = String(formData.get("hypothesis") ?? "").trim();
@@ -135,6 +140,8 @@ export async function saveCoachExperimentAction(formData: FormData) {
 }
 
 export async function updateJournalEntryAction(formData: FormData) {
+  if (isDemoReadOnly()) return;
+
   const noteId = Number(formData.get("noteId"));
   const tradeId = Number(formData.get("tradeId"));
   const note = String(formData.get("note") ?? "").trim();
@@ -164,6 +171,8 @@ export async function updateJournalEntryAction(formData: FormData) {
 }
 
 export async function deleteJournalEntryAction(formData: FormData) {
+  if (isDemoReadOnly()) return;
+
   const noteId = Number(formData.get("noteId"));
   const tradeId = Number(formData.get("tradeId"));
 
@@ -183,6 +192,8 @@ export async function updateJournalEntryStateAction(
   _prev: TradeNoteState | null,
   formData: FormData,
 ): Promise<TradeNoteState> {
+  if (isDemoReadOnly()) return { ok: false };
+
   await updateJournalEntryAction(formData);
   return { ok: true };
 }

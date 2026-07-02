@@ -207,9 +207,8 @@ Push site repo main
 
 1. Add playbook fixtures.
 2. Add hosted refresh script with confirmation guard.
-3. Add hosted demo UI behavior for static coach reviews.
-4. Move app demo domain to `demo.trading-journal.ai`.
-5. Deploy marketing site to `trading-journal.ai`.
+3. Move app demo domain to `demo.trading-journal.ai`.
+4. Deploy marketing site to `trading-journal.ai`.
 
 ## Non-Goals
 
