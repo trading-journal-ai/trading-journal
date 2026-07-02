@@ -31,6 +31,10 @@ export async function upsertScopedNoteAction(
   const scope = String(formData.get("scope") ?? "") as RecapScope;
   const scopeKey = String(formData.get("scopeKey") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
+  const thesis = String(formData.get("thesis") ?? "").trim();
+  const whatWentWell = String(formData.get("whatWentWell") ?? "").trim();
+  const whatWentWrong = String(formData.get("whatWentWrong") ?? "").trim();
+  const emotionalState = String(formData.get("emotionalState") ?? "").trim();
 
   if (!RECAP_SCOPES.includes(scope) || !scopeKey) return { ok: false };
   const activeAccount = await getActiveAccount();
@@ -50,12 +54,27 @@ export async function upsertScopedNoteAction(
   if (existing[0]) {
     await db
       .update(schema.journalEntries)
-      .set({ lessons: body || null })
+      .set({
+        lessons: body || null,
+        thesis: thesis || null,
+        whatWentWell: whatWentWell || null,
+        whatWentWrong: whatWentWrong || null,
+        emotionalState: emotionalState || null,
+      })
       .where(eq(schema.journalEntries.id, existing[0].id));
   } else {
     await db
       .insert(schema.journalEntries)
-      .values({ accountId: activeAccount.id, scope, scopeKey, lessons: body || null });
+      .values({
+        accountId: activeAccount.id,
+        scope,
+        scopeKey,
+        lessons: body || null,
+        thesis: thesis || null,
+        whatWentWell: whatWentWell || null,
+        whatWentWrong: whatWentWrong || null,
+        emotionalState: emotionalState || null,
+      });
   }
 
   revalidateJournalLoop();

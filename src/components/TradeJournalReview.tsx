@@ -51,11 +51,20 @@ type PnlPoint = {
   value: number;
 };
 
+type KeyTradePrompt = {
+  key: string;
+  label: string;
+  symbol: string;
+  pnl: number;
+  href: string;
+};
+
 type ReviewData = {
   day: ReviewDay;
   tickerRows: TickerRow[];
   pnlPoints: PnlPoint[];
   coachRead: SessionFactPack;
+  keyTradePrompts: KeyTradePrompt[];
 };
 
 type ReviewWeek = ReviewSummary & {
@@ -94,6 +103,14 @@ type SavedCoachExperiment = {
   action: string;
   trigger: string;
   updatedAt: Date;
+};
+
+type DayRecapContext = {
+  text: string;
+  thesis: string;
+  whatWentWell: string;
+  whatWentWrong: string;
+  emotionalState: string;
 };
 
 const dateFmt = new Intl.DateTimeFormat("en-US", {
@@ -389,6 +406,42 @@ function buildDayData(date: string, trades: TradeRow[], executions: ExecutionRow
     pnlPoints.push({ time: formatTime(trades.at(-1)?.entryAt ?? start), value: summary.pnl });
   }
 
+  const closedTrades = trades
+    .map((trade) => ({ trade, pnl: netPnl(trade) ?? 0 }))
+    .filter(({ trade }) => trade.exitAt != null);
+  const bestTrade = [...closedTrades].sort((a, b) => b.pnl - a.pnl)[0];
+  const worstTrade = [...closedTrades].sort((a, b) => a.pnl - b.pnl)[0];
+  const biggestTicker = [...tickers.values()].sort((a, b) => Math.abs(b.pnl) - Math.abs(a.pnl))[0];
+  const keyTradePrompts: KeyTradePrompt[] = [];
+
+  if (bestTrade) {
+    keyTradePrompts.push({
+      key: `best-${bestTrade.trade.id}`,
+      label: "Best trade",
+      symbol: bestTrade.trade.symbol,
+      pnl: bestTrade.pnl,
+      href: `/trades/${bestTrade.trade.id}?returnTo=${encodeURIComponent(journalReviewHref("/journal", { preset: "today", date }))}`,
+    });
+  }
+  if (worstTrade && worstTrade.trade.id !== bestTrade?.trade.id) {
+    keyTradePrompts.push({
+      key: `worst-${worstTrade.trade.id}`,
+      label: "Worst trade",
+      symbol: worstTrade.trade.symbol,
+      pnl: worstTrade.pnl,
+      href: `/trades/${worstTrade.trade.id}?returnTo=${encodeURIComponent(journalReviewHref("/journal", { preset: "today", date }))}`,
+    });
+  }
+  if (biggestTicker && biggestTicker.trades > 1) {
+    keyTradePrompts.push({
+      key: `ticker-${biggestTicker.symbol}`,
+      label: "Ticker to explain",
+      symbol: biggestTicker.symbol,
+      pnl: biggestTicker.pnl,
+      href: `/trades/review?date=${date}&symbol=${biggestTicker.symbol}&returnTo=${encodeURIComponent(journalReviewHref("/journal", { preset: "today", date }))}`,
+    });
+  }
+
   return {
     day: {
       date,
@@ -399,6 +452,7 @@ function buildDayData(date: string, trades: TradeRow[], executions: ExecutionRow
     tickerRows: [...tickers.values()].sort((a, b) => b.pnl - a.pnl),
     pnlPoints,
     coachRead: buildSessionFactPack(trades),
+    keyTradePrompts,
   };
 }
 
@@ -612,13 +666,16 @@ async function loadReviewArchive(anchor: string, accountId: number, basePath: st
   return { months, years };
 }
 
-async function loadDayRecaps(accountId: number, dates: string[]): Promise<Map<string, string>> {
+async function loadDayRecaps(accountId: number, dates: string[]): Promise<Map<string, DayRecapContext>> {
   if (dates.length === 0) return new Map();
 
   const rows = await db
     .select({
       scopeKey: schema.journalEntries.scopeKey,
       thesis: schema.journalEntries.thesis,
+      whatWentWell: schema.journalEntries.whatWentWell,
+      whatWentWrong: schema.journalEntries.whatWentWrong,
+      emotionalState: schema.journalEntries.emotionalState,
       lessons: schema.journalEntries.lessons,
     })
     .from(schema.journalEntries)
@@ -630,9 +687,17 @@ async function loadDayRecaps(accountId: number, dates: string[]): Promise<Map<st
       ),
     );
 
-  const recaps = new Map<string, string>();
+  const recaps = new Map<string, DayRecapContext>();
   rows.forEach((row) => {
-    if (row.scopeKey) recaps.set(row.scopeKey, row.lessons ?? row.thesis ?? "");
+    if (row.scopeKey) {
+      recaps.set(row.scopeKey, {
+        text: row.lessons ?? "",
+        thesis: row.thesis ?? "",
+        whatWentWell: row.whatWentWell ?? "",
+        whatWentWrong: row.whatWentWrong ?? "",
+        emotionalState: row.emotionalState ?? "",
+      });
+    }
   });
   return recaps;
 }
@@ -759,16 +824,48 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
   );
 }
 
+function KeyTradePrompts({ prompts }: { prompts: KeyTradePrompt[] }) {
+  if (prompts.length === 0) return null;
+
+  return (
+    <section className="max-w-[665px] border-t border-[var(--hairline)] pt-4">
+      <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
+        Trades to annotate before coach
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        {prompts.map((prompt) => (
+          <a
+            key={prompt.key}
+            href={prompt.href}
+            className="rounded-md border border-[var(--hairline)] px-3 py-3 transition-colors hover:border-[var(--blue)]"
+          >
+            <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+              {prompt.label}
+            </div>
+            <div className="mt-2 flex items-baseline justify-between gap-3">
+              <span className="text-sm font-semibold text-[var(--foreground)]">{prompt.symbol}</span>
+              <span className={`font-mono text-[12px] tabular-nums ${pnlClass(prompt.pnl)}`}>
+                {formatMoney(prompt.pnl)}
+              </span>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function DayReviewSection({
   data,
   recaps,
   returnTo,
 }: {
   data: ReviewData;
-  recaps: Map<string, string>;
+  recaps: Map<string, DayRecapContext>;
   returnTo: string;
 }) {
-  const { day, tickerRows, pnlPoints } = data;
+  const { day, tickerRows, pnlPoints, keyTradePrompts } = data;
+  const recap = recaps.get(day.date);
 
   return (
     <section>
@@ -792,7 +889,11 @@ function DayReviewSection({
             <RecapNote
               scope="day"
               scopeKey={day.date}
-              text={recaps.get(day.date) ?? ""}
+              text={recap?.text ?? ""}
+              thesis={recap?.thesis ?? ""}
+              whatWentWell={recap?.whatWentWell ?? ""}
+              whatWentWrong={recap?.whatWentWrong ?? ""}
+              emotionalState={recap?.emotionalState ?? ""}
               placeholder="Add a daily recap: market read, execution quality, emotions, what worked, and what to tighten next session."
             />
           </div>
@@ -809,6 +910,9 @@ function DayReviewSection({
               profitFactor={day.profitFactor}
               pnl={day.pnl}
             />
+          </div>
+          <div className="mt-6">
+            <KeyTradePrompts prompts={keyTradePrompts} />
           </div>
         </div>
       </div>
@@ -857,7 +961,7 @@ function WeekSection({
   returnTo,
 }: {
   week: ReviewWeek;
-  recaps: Map<string, string>;
+  recaps: Map<string, DayRecapContext>;
   returnTo: string;
 }) {
   return (
