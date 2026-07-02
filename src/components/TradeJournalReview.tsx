@@ -1,4 +1,5 @@
 import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
+import { saveCoachExperimentAction } from "@/app/journal/actions";
 import { db, schema } from "@/lib/db";
 import { buildSessionFactPack, type SessionFactPack } from "@/lib/coach/reviewEngine";
 import { isDemoReadOnly } from "@/lib/demoMode";
@@ -82,6 +83,17 @@ type ReviewArchive = {
     label: string;
     href: string;
   }[];
+};
+
+type ReviewScope = {
+  scope: "day" | "week" | "month";
+  scopeKey: string;
+};
+
+type SavedCoachExperiment = {
+  action: string;
+  trigger: string;
+  updatedAt: Date;
 };
 
 const dateFmt = new Intl.DateTimeFormat("en-US", {
@@ -390,6 +402,12 @@ function buildDayData(date: string, trades: TradeRow[], executions: ExecutionRow
   };
 }
 
+function reviewScopeFor(preset: JournalReviewPreset, range: { from: string }): ReviewScope {
+  if (preset === "today") return { scope: "day", scopeKey: range.from };
+  if (preset === "week") return { scope: "week", scopeKey: range.from };
+  return { scope: "month", scopeKey: range.from.slice(0, 7) };
+}
+
 async function loadReviewRange({
   preset,
   date,
@@ -409,6 +427,10 @@ async function loadReviewRange({
   const selectedMonthKey = month ?? range.from.slice(0, 7);
   const { start } = etDayRange(range.from);
   const { end } = etDayRange(range.to);
+  const baselineFrom = isoAddDays(range.from, -30);
+  const baselineTo = isoAddDays(range.from, -1);
+  const { start: baselineStart } = etDayRange(baselineFrom);
+  const { start: baselineEnd } = etDayRange(range.from);
   const trades = (
     await db
       .select()
@@ -419,6 +441,17 @@ async function loadReviewRange({
     if (trade.entryAt == null) return false;
     const entryDate = etDateString(trade.entryAt);
     return entryDate >= range.from && entryDate <= range.to;
+  });
+  const baselineTrades = (
+    await db
+      .select()
+      .from(schema.trades)
+      .where(and(eq(schema.trades.accountId, accountId), gte(schema.trades.entryAt, baselineStart), lte(schema.trades.entryAt, baselineEnd)))
+      .orderBy(asc(schema.trades.entryAt))
+  ).filter((trade) => {
+    if (trade.entryAt == null) return false;
+    const entryDate = etDateString(trade.entryAt);
+    return entryDate >= baselineFrom && entryDate <= baselineTo;
   });
 
   if (trades.length === 0) {
@@ -442,7 +475,7 @@ async function loadReviewRange({
             : dateFmt.format(utcDate(anchor)),
       days: [],
       weeks: [],
-      coachRead: buildSessionFactPack([]),
+      coachRead: buildSessionFactPack([], { baselineTrades, baselineLabel: "Prior 30 days" }),
     };
   }
 
@@ -509,8 +542,32 @@ async function loadReviewRange({
           : firstDay?.displayDate ?? dateFmt.format(utcDate(anchor)),
     days,
     weeks,
-    coachRead: buildSessionFactPack(trades),
+    coachRead: buildSessionFactPack(trades, { baselineTrades, baselineLabel: "Prior 30 days" }),
   };
+}
+
+async function loadSavedCoachExperiment(
+  accountId: number,
+  reviewScope: ReviewScope,
+): Promise<SavedCoachExperiment | null> {
+  const row = await db
+    .select({
+      action: schema.coachExperiments.action,
+      trigger: schema.coachExperiments.trigger,
+      updatedAt: schema.coachExperiments.updatedAt,
+    })
+    .from(schema.coachExperiments)
+    .where(
+      and(
+        eq(schema.coachExperiments.accountId, accountId),
+        eq(schema.coachExperiments.scope, reviewScope.scope),
+        eq(schema.coachExperiments.scopeKey, reviewScope.scopeKey),
+      ),
+    )
+    .limit(1)
+    .get();
+
+  return row ?? null;
 }
 
 async function loadReviewArchive(anchor: string, accountId: number, basePath: string, month?: string): Promise<ReviewArchive> {
@@ -865,9 +922,36 @@ function confidenceClass(label: SessionFactPack["confidence"]["label"]) {
   return "text-[var(--muted)]";
 }
 
-function StarterCoachRead({ factPack }: { factPack: SessionFactPack }) {
+function trendClass(label: SessionFactPack["history"]["trendLabel"]) {
+  if (label === "improvement") return "text-[var(--green)]";
+  if (label === "deterioration") return "text-[var(--red)]";
+  if (label === "mixed") return "text-[var(--blue)]";
+  return "text-[var(--muted)]";
+}
+
+function formatTrendValue(value: number | null, key: string) {
+  if (value == null) return "-";
+  if (key === "win_rate") return formatPercent(value);
+  if (key === "profit_factor") return value.toFixed(2);
+  if (key === "expectancy") return value.toFixed(2);
+  return formatMoney(value);
+}
+
+function StarterCoachRead({
+  factPack,
+  reviewScope,
+  savedExperiment,
+}: {
+  factPack: SessionFactPack;
+  reviewScope: ReviewScope;
+  savedExperiment: SavedCoachExperiment | null;
+}) {
   const topSurprise = factPack.surprises[0];
   const experiment = factPack.experiment;
+  const strongestTrendSignal =
+    [...factPack.history.signals]
+      .filter((signal) => signal.vote !== 0 && signal.delta != null)
+      .sort((a, b) => Math.abs(b.delta ?? 0) - Math.abs(a.delta ?? 0))[0] ?? null;
 
   return (
     <section className="pt-2">
@@ -880,7 +964,7 @@ function StarterCoachRead({ factPack }: { factPack: SessionFactPack }) {
         </span>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid gap-3 sm:grid-cols-4">
         <div className="border-t border-[var(--hairline)] pt-3">
           <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Distribution</div>
           <div className="mt-1 text-sm font-semibold text-[var(--foreground)]">
@@ -899,7 +983,25 @@ function StarterCoachRead({ factPack }: { factPack: SessionFactPack }) {
             {factPack.confidence.riskModel === "r-multiple" ? "R-multiple" : "Dollar fallback"}
           </div>
         </div>
+        <div className="border-t border-[var(--hairline)] pt-3">
+          <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Trend</div>
+          <div className={`mt-1 text-sm font-semibold ${trendClass(factPack.history.trendLabel)}`}>
+            {factPack.history.trendLabel}
+          </div>
+        </div>
       </div>
+
+      {strongestTrendSignal ? (
+        <p className="mt-4 font-mono text-[12px] leading-5 text-[var(--muted)]">
+          {strongestTrendSignal.label}: {formatTrendValue(strongestTrendSignal.current, strongestTrendSignal.key)} vs{" "}
+          {formatTrendValue(strongestTrendSignal.baseline, strongestTrendSignal.key)} across{" "}
+          {factPack.history.baselineTrades} prior trades.
+        </p>
+      ) : (
+        <p className="mt-4 font-mono text-[12px] leading-5 text-[var(--muted)]">
+          {factPack.history.baselineTrades} prior trades in {factPack.history.baselineLabel}; trend vote needs more support.
+        </p>
+      )}
 
       {topSurprise ? (
         <div className="mt-5 border-l border-[var(--hairline)] pl-4">
@@ -925,6 +1027,27 @@ function StarterCoachRead({ factPack }: { factPack: SessionFactPack }) {
         <p className="mt-1 text-sm leading-6 text-[var(--body)]">
           Trigger: {experiment.trigger} Measure: {experiment.measure.join(", ")}.
         </p>
+        <form action={saveCoachExperimentAction} className="mt-3 flex flex-wrap items-center gap-3">
+          <input type="hidden" name="scope" value={reviewScope.scope} />
+          <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
+          <input type="hidden" name="hypothesis" value={experiment.hypothesis} />
+          <input type="hidden" name="trigger" value={experiment.trigger} />
+          <input type="hidden" name="action" value={experiment.action} />
+          <input type="hidden" name="experimentScope" value={experiment.scope} />
+          <input type="hidden" name="expires" value={experiment.expires} />
+          <input type="hidden" name="measure" value={JSON.stringify(experiment.measure)} />
+          <button
+            type="submit"
+            className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+          >
+            {savedExperiment ? "Update saved experiment" : "Save experiment"}
+          </button>
+          {savedExperiment ? (
+            <span className="font-mono text-[12px] text-[var(--muted)]">
+              Saved: {savedExperiment.action}
+            </span>
+          ) : null}
+        </form>
       </div>
 
       <div className="mt-5 grid gap-2 font-mono text-[12px] leading-5 text-[var(--muted)] sm:grid-cols-2">
@@ -969,7 +1092,11 @@ export default async function TradeJournalReview({
     loadReviewRange({ preset, date, from, month, accountId }),
     loadReviewArchive(archiveAnchor, accountId, basePath, month),
   ]);
-  const recaps = await loadDayRecaps(accountId, range.days.map((day) => day.day.date));
+  const reviewScope = reviewScopeFor(range.preset, rangeForPreset(range.preset, range.anchor));
+  const [recaps, savedExperiment] = await Promise.all([
+    loadDayRecaps(accountId, range.days.map((day) => day.day.date)),
+    loadSavedCoachExperiment(accountId, reviewScope),
+  ]);
   const currentHref = returnTo ?? journalReviewHref(basePath, { preset, date, from, month });
   const breadcrumbBack = backHref
     ? originCrumbFromHref(backHref, basePath)
@@ -1033,7 +1160,13 @@ export default async function TradeJournalReview({
             <DayReviewSection data={range.days[0]} recaps={recaps} returnTo={currentHref} />
           )}
 
-          {range.trades > 0 ? <StarterCoachRead factPack={range.coachRead} /> : null}
+          {range.trades > 0 ? (
+            <StarterCoachRead
+              factPack={range.coachRead}
+              reviewScope={reviewScope}
+              savedExperiment={savedExperiment}
+            />
+          ) : null}
         </div>
       </div>
     </div>
