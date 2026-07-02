@@ -9,6 +9,8 @@ This directory is organized by decision area:
   specs, and supporting reference data.
 - `coach/`: coaching strategy, setup taxonomy, next-build notes, and prompt
   drafts.
+- `deployment/`: Vercel/runtime boundaries, hosted demo contracts, and
+  deployment operations.
 
 Top-level docs are reserved for repo-wide notes that do not clearly belong to
 one product area.
