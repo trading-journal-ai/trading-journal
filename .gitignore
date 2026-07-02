@@ -12,6 +12,7 @@ data/journal.db
 data/journal.db-*
 data/*.db
 data/*.db-*
+data/evals/
 data/uploads/
 # real broker exports used as parser fixtures
 data/samples/
