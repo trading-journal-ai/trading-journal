@@ -3,11 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { getActiveAccount } from "@/lib/accountScope";
 import { canImportData } from "@/lib/demoMode";
+import { inspectBrokerCsv, type BrokerCsvInspection } from "@/lib/import/inspect";
 import { importBrokerCsv, type ImportSummary } from "@/lib/import/persist";
 
 export type ImportState =
   | { ok: true; summary: ImportSummary }
-  | { ok: false; error: string }
+  | { ok: false; error: string; inspection?: BrokerCsvInspection }
   | null;
 
 export async function importCsvAction(
@@ -24,6 +25,14 @@ export async function importCsvAction(
   }
   try {
     const csv = await file.text();
+    const inspection = inspectBrokerCsv(csv);
+    if (!inspection.importable) {
+      return {
+        ok: false,
+        error: inspection.recommendation,
+        inspection,
+      };
+    }
     const account = await getActiveAccount();
     const summary = await importBrokerCsv(csv, file.name, account.id);
     revalidatePath("/trades");
@@ -33,9 +42,11 @@ export async function importCsvAction(
     revalidatePath("/");
     return { ok: true, summary };
   } catch (e) {
+    const csv = await file.text().catch(() => "");
     return {
       ok: false,
       error: e instanceof Error ? e.message : "Import failed.",
+      inspection: csv ? inspectBrokerCsv(csv) : undefined,
     };
   }
 }
