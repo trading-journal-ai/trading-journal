@@ -29,6 +29,13 @@
       "when": 1781743200000,
       "tag": "0003_performance_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1783036800000,
+      "tag": "0004_coach_experiments",
+      "breakpoints": true
     }
   ]
 }

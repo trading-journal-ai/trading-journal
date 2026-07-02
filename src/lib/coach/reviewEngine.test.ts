@@ -84,4 +84,22 @@ describe("buildSessionFactPack", () => {
     expect(factPack.confidence.riskModel).toBe("r-multiple");
     expect(factPack.confidence.label).toBe("medium");
   });
+
+  it("votes improvement when current metrics materially beat the baseline", () => {
+    const baseline = Array.from({ length: 12 }, (_, index) =>
+      trade({ id: `b-${index}`, pnl: index % 2 === 0 ? 20 : -25 }),
+    );
+    const current = Array.from({ length: 12 }, (_, index) =>
+      trade({ id: `c-${index}`, pnl: index % 3 === 0 ? -10 : 60 }),
+    );
+    const factPack = buildSessionFactPack(current, {
+      baselineTrades: baseline,
+      baselineLabel: "Prior 30 days",
+    });
+
+    expect(factPack.history.baselineLabel).toBe("Prior 30 days");
+    expect(factPack.history.baselineTrades).toBe(12);
+    expect(factPack.history.trendLabel).toBe("improvement");
+    expect(factPack.history.signals.filter((signal) => signal.vote === 1).length).toBeGreaterThanOrEqual(3);
+  });
 });
