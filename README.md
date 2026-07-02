@@ -147,7 +147,7 @@ After setup, the installer starts the app automatically.
 To start it again later:
 
 ```bash
-npm run --silent dev:app
+npm run --silent dev
 ```
 
 Leave the terminal open while using the journal. To stop the app, click the
@@ -162,12 +162,12 @@ app mode, that opens the dashboard.
 
 There are two runtime surfaces:
 
-- `npm run dev:app` runs the installed/local product. `/` opens `/dashboard`,
+- `npm run dev` or `npm run dev:app` runs the installed/local product. `/` opens `/dashboard`,
   and `/demo` is hidden.
 - `npm run dev:site` runs the marketing website and public demo preview.
 
-The installer writes `TRADING_JOURNAL_MODE=app` to `.env.local` so local installs
-behave like the app, not the website. Hosted marketing/demo deployments should
+Local installs behave like the app, not the website. The website/demo surface is
+for the hosted preview and maintainers; hosted marketing/demo deployments should
 use `TRADING_JOURNAL_MODE=site`.
 
 If Next.js says another dev server is already running, or localhost feels stuck,
