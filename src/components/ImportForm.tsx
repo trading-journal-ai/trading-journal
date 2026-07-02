@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useRef } from "react";
 import { importCsvAction, type ImportState } from "@/app/import/actions";
+import type { BrokerCsvInspection } from "@/lib/import/inspect";
 
 export default function ImportForm() {
   const [state, formAction, pending] = useActionState<ImportState, FormData>(
@@ -51,8 +52,11 @@ export default function ImportForm() {
       </form>
 
       {state?.ok === false && (
-        <div className="rounded-md border border-[var(--red)]/40 bg-[var(--red)]/10 px-3 py-1.5 text-sm text-[var(--red)]">
-          {state.error}
+        <div className="space-y-2">
+          <div className="rounded-md border border-[var(--red)]/40 bg-[var(--red)]/10 px-3 py-1.5 text-sm text-[var(--red)]">
+            {state.error}
+          </div>
+          {state.inspection ? <ImportDiagnostics inspection={state.inspection} /> : null}
         </div>
       )}
 
@@ -75,4 +79,63 @@ export default function ImportForm() {
       )}
     </div>
   );
+}
+
+function ImportDiagnostics({ inspection }: { inspection: BrokerCsvInspection }) {
+  const formatLabel =
+    inspection.format === "tos_account_statement"
+      ? "ThinkorSwim statement"
+      : inspection.format === "das_trade_summary"
+        ? "DAS trade summary"
+        : inspection.format === "app_export"
+          ? "Trading Journal export"
+          : "Unknown CSV";
+  const rows = [
+    inspection.tos.cashBalance.present
+      ? `Cash balance: ${inspection.tos.cashBalance.tradeRows} trade rows (${inspection.tos.cashBalance.botRows} buys, ${inspection.tos.cashBalance.soldRows} sells)`
+      : null,
+    inspection.tos.cashBalance.tradeHistoryExactMatches != null
+      ? `Cash ↔ trade history: ${inspection.tos.cashBalance.tradeHistoryExactMatches} exact fill matches`
+      : null,
+    inspection.tos.tradeHistory.present
+      ? `Trade history: ${inspection.tos.tradeHistory.usableFills} usable fills from ${inspection.tos.tradeHistory.rows} rows`
+      : null,
+    inspection.tos.orderHistory.present
+      ? `Order history: ${inspection.tos.orderHistory.usableFilledRows} usable filled rows from ${inspection.tos.orderHistory.rows} rows`
+      : null,
+    inspection.tos.pnl.present
+      ? `P&L: ${inspection.tos.pnl.symbols} symbols${inspection.tos.pnl.netYtdPnl == null ? "" : `, YTD ${formatMoney(inspection.tos.pnl.netYtdPnl)}`}`
+      : null,
+    inspection.tos.equities.present
+      ? `Open positions: ${inspection.tos.equities.positions}`
+      : null,
+    inspection.dasTradeSummary.detected
+      ? `DAS rows: ${inspection.dasTradeSummary.tradeRows}`
+      : null,
+    inspection.appExport.detected
+      ? `App-export trades: ${inspection.appExport.tradeRows}`
+      : null,
+  ].filter((row): row is string => row != null);
+
+  return (
+    <div className="rounded-md border border-[var(--border)] bg-[var(--panel)] px-3 py-2 text-xs text-[var(--muted)]">
+      <div className="font-semibold text-[var(--foreground)]">CSV inspection: {formatLabel}</div>
+      {rows.length > 0 ? (
+        <ul className="mt-1 list-disc space-y-0.5 pl-4">
+          {rows.map((row) => (
+            <li key={row}>{row}</li>
+          ))}
+        </ul>
+      ) : null}
+      <div className="mt-1">{inspection.recommendation}</div>
+    </div>
+  );
+}
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(value);
 }
