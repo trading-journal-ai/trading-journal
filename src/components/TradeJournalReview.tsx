@@ -1,5 +1,6 @@
 import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { buildSessionFactPack, type SessionFactPack } from "@/lib/coach/reviewEngine";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
@@ -53,6 +54,7 @@ type ReviewData = {
   day: ReviewDay;
   tickerRows: TickerRow[];
   pnlPoints: PnlPoint[];
+  coachRead: SessionFactPack;
 };
 
 type ReviewWeek = ReviewSummary & {
@@ -70,6 +72,7 @@ type ReviewRange = ReviewSummary & {
   displayDate: string;
   days: ReviewData[];
   weeks: ReviewWeek[];
+  coachRead: SessionFactPack;
 };
 
 type ReviewArchive = {
@@ -128,6 +131,10 @@ function formatMoney(value: number) {
     maximumFractionDigits: 2,
     minimumFractionDigits: 2,
   })}`;
+}
+
+function formatPercent(value: number | null) {
+  return value == null ? "-" : `${(value * 100).toFixed(1)}%`;
 }
 
 function pnlClass(value: number | null | undefined) {
@@ -379,6 +386,7 @@ function buildDayData(date: string, trades: TradeRow[], executions: ExecutionRow
     },
     tickerRows: [...tickers.values()].sort((a, b) => b.pnl - a.pnl),
     pnlPoints,
+    coachRead: buildSessionFactPack(trades),
   };
 }
 
@@ -434,6 +442,7 @@ async function loadReviewRange({
             : dateFmt.format(utcDate(anchor)),
       days: [],
       weeks: [],
+      coachRead: buildSessionFactPack([]),
     };
   }
 
@@ -500,6 +509,7 @@ async function loadReviewRange({
           : firstDay?.displayDate ?? dateFmt.format(utcDate(anchor)),
     days,
     weeks,
+    coachRead: buildSessionFactPack(trades),
   };
 }
 
@@ -849,6 +859,92 @@ function EmptyReviewState() {
   );
 }
 
+function confidenceClass(label: SessionFactPack["confidence"]["label"]) {
+  if (label === "high") return "text-[var(--green)]";
+  if (label === "medium") return "text-[var(--blue)]";
+  return "text-[var(--muted)]";
+}
+
+function StarterCoachRead({ factPack }: { factPack: SessionFactPack }) {
+  const topSurprise = factPack.surprises[0];
+  const experiment = factPack.experiment;
+
+  return (
+    <section className="pt-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
+          Starter Coach Read
+        </h2>
+        <span className={`font-mono text-[12px] font-semibold uppercase ${confidenceClass(factPack.confidence.label)}`}>
+          {factPack.confidence.label} confidence
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="border-t border-[var(--hairline)] pt-3">
+          <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Distribution</div>
+          <div className="mt-1 text-sm font-semibold text-[var(--foreground)]">
+            {factPack.robustness.distributionLabel}
+          </div>
+        </div>
+        <div className="border-t border-[var(--hairline)] pt-3">
+          <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Mechanism</div>
+          <div className="mt-1 text-sm font-semibold text-[var(--foreground)]">
+            {factPack.mechanism.label}
+          </div>
+        </div>
+        <div className="border-t border-[var(--hairline)] pt-3">
+          <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Math basis</div>
+          <div className="mt-1 text-sm font-semibold text-[var(--foreground)]">
+            {factPack.confidence.riskModel === "r-multiple" ? "R-multiple" : "Dollar fallback"}
+          </div>
+        </div>
+      </div>
+
+      {topSurprise ? (
+        <div className="mt-5 border-l border-[var(--hairline)] pl-4">
+          <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Matched evidence</div>
+          <p className="mt-2 text-sm font-semibold leading-6 text-[var(--foreground)]">{topSurprise.title}</p>
+          <p className="mt-1 text-sm leading-6 text-[var(--body)]">{topSurprise.description}</p>
+          <p className="mt-2 font-mono text-[12px] leading-5 text-[var(--muted)]">
+            {topSurprise.evidence.join(" ")}
+          </p>
+        </div>
+      ) : (
+        <p className="mt-5 max-w-[760px] text-sm leading-6 text-[var(--body)]">
+          No contradiction cleared the starter evidence gate. The next useful step is cleaner
+          setup, stop, and journal context.
+        </p>
+      )}
+
+      <div className="mt-5 border-t border-[var(--hairline)] pt-4">
+        <div className="font-mono text-[11px] uppercase text-[var(--muted)]">One thing to try</div>
+        <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
+          <span className="font-semibold">{experiment.action}</span>
+        </p>
+        <p className="mt-1 text-sm leading-6 text-[var(--body)]">
+          Trigger: {experiment.trigger} Measure: {experiment.measure.join(", ")}.
+        </p>
+      </div>
+
+      <div className="mt-5 grid gap-2 font-mono text-[12px] leading-5 text-[var(--muted)] sm:grid-cols-2">
+        <span>
+          Win rate {formatPercent(factPack.session.winRate)} · breakeven {formatPercent(factPack.session.breakevenWinRate)}
+        </span>
+        <span>
+          Sample {factPack.confidence.sampleSize} trades · R coverage {formatPercent(factPack.session.rCoverage)}
+        </span>
+      </div>
+
+      {factPack.confidence.limitations.length > 0 ? (
+        <p className="mt-3 max-w-[760px] text-[12px] leading-5 text-[var(--muted)]">
+          {factPack.confidence.limitations.join(" ")}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 export default async function TradeJournalReview({
   preset = "month",
   date,
@@ -937,18 +1033,7 @@ export default async function TradeJournalReview({
             <DayReviewSection data={range.days[0]} recaps={recaps} returnTo={currentHref} />
           )}
 
-          {range.trades > 0 ? (
-            <section className="pt-2">
-              <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-                AI Review
-              </h2>
-              <p className="mt-4 max-w-[760px] text-sm leading-6 text-[var(--body)]">
-                AI review will summarize what drove the selected period after notes are added. It
-                should interpret the ticker attribution, P&L path, accuracy, and profit factor
-                instead of repeating the same stats shown above.
-              </p>
-            </section>
-          ) : null}
+          {range.trades > 0 ? <StarterCoachRead factPack={range.coachRead} /> : null}
         </div>
       </div>
     </div>
