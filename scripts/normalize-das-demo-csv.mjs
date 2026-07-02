@@ -4,8 +4,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const DEFAULTS = {
-  input: "samples/demo-trades-and-notes.csv",
-  output: "samples/demo-trades-and-notes.csv",
+  input: "samples/demo/trades.csv",
+  output: "samples/demo/trades.csv",
 };
 
 function parseArgs(argv) {

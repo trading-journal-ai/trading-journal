@@ -16,9 +16,11 @@ history.
 
 Current demo fixtures:
 
-- `demo-trades-and-notes.csv` - augmented trade data from January through June
+- `demo/trades.csv` - augmented trade data from January through June
   2026, normalized for public demo use. The dataset is designed to make the UI
   feel active and testable without requiring private broker exports.
+- `demo-trades-and-notes.csv` - legacy compatibility copy. New scripts should
+  prefer `demo/trades.csv`.
 
 The goal is for a new contributor to run:
 
@@ -42,8 +44,8 @@ npm run demo:candles -- --db data/tradingjournaldemo.db
 For the current demo fixture:
 
 ```bash
-npm run demo:normalize-das -- --input /path/to/raw-das-export.csv --output samples/demo-trades-and-notes.csv
-npm run demo:paper-db -- --db data/tradingjournaldemo.db --csv samples/demo-trades-and-notes.csv
+npm run demo:normalize-das -- --input /path/to/raw-das-export.csv --output samples/demo/trades.csv
+npm run demo:paper-db -- --db data/tradingjournaldemo.db --csv samples/demo/trades.csv
 npm run demo:notes -- --db data/tradingjournaldemo.db --month all
 ```
 
