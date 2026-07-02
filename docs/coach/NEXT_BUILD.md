@@ -1,5 +1,65 @@
 # AI Coach Next Build
 
+## Pickup Handoff - 2026-07-02
+
+Latest working checkpoint:
+
+- Branch: `codex/starter-review-engine`
+- Latest committed app work: `7cb79a3 feat: polish import flow and ticker review`
+- Verification before commit: `npm run verify:types`
+
+What is now in place:
+
+- Broker imports route through the normalized trade contract.
+- ThinkorSwim/Schwab statements can be normalized from fill-level data into
+  app trades with import diagnostics.
+- The import modal has a richer upload/import/success flow with date range,
+  counts, warnings, and a primary action to open the journal review.
+- Ticker-day review pages now support a ticker-level note below the chart.
+- Individual trade notes can surface under the ticker-level review when they
+  exist.
+- The ticker review header has a lightweight `<- Back` link aligned to the
+  chart column, plus whole-dollar chart axis labels for easier review.
+
+Private/local data state:
+
+- Raw broker and eval files should stay under `data/evals/` and remain ignored.
+- The LABT May 1 note was captured locally as reference context under
+  `data/evals/coach/notes/`.
+- Do not commit real trading exports or private eval notes.
+
+Current product decision:
+
+The next AI coach should not be a freeform LLM over raw trades. The app should
+first build a clean coaching workspace:
+
+```text
+Import -> normalized trades -> journal review -> ticker/day notes ->
+deterministic fact pack -> playbook rubric -> AI coach draft
+```
+
+Near-term priorities:
+
+1. QA import reconstruction across several high-activity days.
+2. Add/fine-tune note capture where real review happens: day, ticker, and
+   selected trades.
+3. Define the playbook rubric fields in the user's language.
+4. Shape a coach fact pack that combines deterministic analytics, import
+   confidence, ticker notes, trade notes, and daily context.
+5. Only then wire the LLM response into a persistent coach review.
+
+Open questions for the next session:
+
+- Which imported days have obvious reconstruction errors or missing executions?
+- Is ticker-level review enough, or do we need a dedicated daily context form
+  before coach generation?
+- What are the first playbook dimensions: setup, entry quality, chasing,
+  add/average-down behavior, exit quality, emotional discipline?
+- Should the first coach output be daily only, or should ticker-level coaching
+  come first for days like LABT/TLIH?
+- Which pieces of static demo coach copy need to be recorded once AI coach v1 is
+  stable?
+
 ## Status
 
 Captured after implementing the starter deterministic review engine on
