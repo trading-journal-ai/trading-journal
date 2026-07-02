@@ -21,6 +21,9 @@ export default function ImportForm() {
       ? state.summary.insertedFrom
       : `${state.summary.insertedFrom} to ${state.summary.insertedTo}`
     : null;
+  const recapHref = state?.ok && state.summary.insertedFrom
+    ? `/journal?preset=today&date=${state.summary.insertedTo ?? state.summary.insertedFrom}`
+    : "/journal";
   const sourceLabel =
     state?.ok && state.summary.source === "das_csv" ? "DAS" : "ThinkorSwim";
 
@@ -64,7 +67,10 @@ export default function ImportForm() {
             {parsedRange && ` · parsed ${parsedRange}`}
             {insertedRange && ` · added ${insertedRange}`}
           </span>{" "}
-          <Link href="/trades" className="text-[#58a6ff] hover:underline">view →</Link>
+          <span className="inline-flex gap-2">
+            <Link href={recapHref} className="text-[#58a6ff] hover:underline">review day →</Link>
+            <Link href="/trades" className="text-[#58a6ff] hover:underline">trades</Link>
+          </span>
         </div>
       )}
     </div>
