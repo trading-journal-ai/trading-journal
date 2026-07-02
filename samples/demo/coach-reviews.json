@@ -1,0 +1,50 @@
+[
+  {
+    "account": "Paper Account",
+    "scope": "day",
+    "scopeKey": "2026-06-08",
+    "status": "generated",
+    "model": "static-demo-fixture-v1",
+    "generatedAt": "2026-06-17T12:00:00.000Z",
+    "payload": {
+      "fixture": true,
+      "source": "samples/demo/coach-reviews.json",
+      "note": "Approved static coach review for hosted demo."
+    },
+    "review": {
+      "dayVerdict": "Strong green day, but the quality was concentrated. INHD carried most of the session, while OCC was the trade that kept the day from being cleaner. The useful read is not just that the day was profitable; it is that patience around the best ticker mattered more than taking more attempts.",
+      "whatMatchedPlaybook": [
+        "You leaned into the highest-quality mover instead of spreading attention evenly across every symbol.",
+        "The day had enough trade sample to separate the main opportunity from background noise.",
+        "The recap and selected trade notes give enough human context to review process, not just P&L."
+      ],
+      "whatDriftedFromPlaybook": [
+        "OCC stands out as the trade to inspect because it was the main red mark inside an otherwise strong day.",
+        "The number of INHD executions suggests a need to distinguish planned adds from extra activity after the move is already underway."
+      ],
+      "keyTradeToStudy": {
+        "tradeId": null,
+        "symbol": "INHD",
+        "reason": "INHD produced the bulk of the day and is the clearest place to study what the best version of the process looked like."
+      },
+      "behaviorPattern": "When the session gives you one dominant opportunity, your job is to protect focus around that ticker and avoid letting smaller side trades dilute the read.",
+      "statisticalRead": "The day was outlier-carried in a constructive way: one ticker did most of the lifting, and the weaker trades did not overwhelm the edge. That is a green-light pattern only if the main ticker was traded from planned criteria rather than from chase behavior.",
+      "oneExperiment": {
+        "hypothesis": "If I identify the dominant ticker early, reducing side attempts will improve the quality of my green days.",
+        "trigger": "One symbol is clearly carrying realized or unrealized P&L for the session.",
+        "action": "Pause before opening a different ticker and write the reason it is better than staying focused on the leader.",
+        "scope": "Next 3 trading sessions",
+        "expires": "After 3 sessions or 15 total trades",
+        "measure": [
+          "Number of side-ticker attempts after the leader is established",
+          "P&L from leader ticker versus all other tickers",
+          "Whether non-leader trades followed the written setup"
+        ]
+      },
+      "confidenceAndMissingContext": [
+        "Confidence is moderate because the trade data and demo notes support the read, but the exact entry intent is still thin.",
+        "A stronger review would include whether INHD adds were planned adds, trims, or reactive re-entries."
+      ]
+    }
+  }
+]

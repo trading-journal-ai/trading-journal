@@ -56,8 +56,8 @@ Current repo state:
 
 - Demo trades currently live at `samples/demo/trades.csv`.
 - `samples/demo-trades-and-notes.csv` remains as a legacy compatibility copy.
+- Approved static coach reviews live at `samples/demo/coach-reviews.json`.
 - Demo database builders currently write `data/tradingjournaldemo.db`.
-- Coach review fixtures do not exist yet.
 - Hosted Turso refresh is not automated yet.
 
 ## Runtime Matrix
@@ -205,12 +205,11 @@ Push site repo main
 
 ## Next Build Checklist
 
-1. Add playbook and static coach-review fixtures.
-2. Add local seed support for coach review fixtures.
-3. Add hosted refresh script with confirmation guard.
-4. Add hosted demo UI behavior for static coach reviews.
-5. Move app demo domain to `demo.trading-journal.ai`.
-6. Deploy marketing site to `trading-journal.ai`.
+1. Add playbook fixtures.
+2. Add hosted refresh script with confirmation guard.
+3. Add hosted demo UI behavior for static coach reviews.
+4. Move app demo domain to `demo.trading-journal.ai`.
+5. Deploy marketing site to `trading-journal.ai`.
 
 ## Non-Goals
 
