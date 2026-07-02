@@ -1,4 +1,5 @@
 import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
+import { saveDraftCoachReviewAction } from "@/app/coach/actions";
 import { saveCoachExperimentAction } from "@/app/journal/actions";
 import { db, schema } from "@/lib/db";
 import { buildSessionFactPack, type SessionFactPack } from "@/lib/coach/reviewEngine";
@@ -102,6 +103,11 @@ type ReviewScope = {
 type SavedCoachExperiment = {
   action: string;
   trigger: string;
+  updatedAt: Date;
+};
+
+type SavedCoachReview = {
+  status: string;
   updatedAt: Date;
 };
 
@@ -624,6 +630,29 @@ async function loadSavedCoachExperiment(
   return row ?? null;
 }
 
+async function loadSavedCoachReview(
+  accountId: number,
+  reviewScope: ReviewScope,
+): Promise<SavedCoachReview | null> {
+  const row = await db
+    .select({
+      status: schema.coachReviews.status,
+      updatedAt: schema.coachReviews.updatedAt,
+    })
+    .from(schema.coachReviews)
+    .where(
+      and(
+        eq(schema.coachReviews.accountId, accountId),
+        eq(schema.coachReviews.scope, reviewScope.scope),
+        eq(schema.coachReviews.scopeKey, reviewScope.scopeKey),
+      ),
+    )
+    .limit(1)
+    .get();
+
+  return row ?? null;
+}
+
 async function loadReviewArchive(anchor: string, accountId: number, basePath: string, month?: string): Promise<ReviewArchive> {
   const selectedMonthKey = month ?? anchor.slice(0, 7);
   const selectedWeekKey = weekStartFor(anchor);
@@ -1045,10 +1074,12 @@ function StarterCoachRead({
   factPack,
   reviewScope,
   savedExperiment,
+  savedReview,
 }: {
   factPack: SessionFactPack;
   reviewScope: ReviewScope;
   savedExperiment: SavedCoachExperiment | null;
+  savedReview: SavedCoachReview | null;
 }) {
   const topSurprise = factPack.surprises[0];
   const experiment = factPack.experiment;
@@ -1168,6 +1199,29 @@ function StarterCoachRead({
           {factPack.confidence.limitations.join(" ")}
         </p>
       ) : null}
+
+      <div className="mt-5 border-t border-[var(--hairline)] pt-4">
+        <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Coach review payload</div>
+        <p className="mt-2 max-w-[760px] text-sm leading-6 text-[var(--body)]">
+          This saves the exact context package the AI coach will use later: playbook, rubric,
+          deterministic facts, daily context, and annotated trade notes.
+        </p>
+        <form action={saveDraftCoachReviewAction} className="mt-3 flex flex-wrap items-center gap-3">
+          <input type="hidden" name="scope" value={reviewScope.scope} />
+          <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
+          <button
+            type="submit"
+            className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+          >
+            {savedReview ? "Refresh draft payload" : "Prepare draft payload"}
+          </button>
+          {savedReview ? (
+            <span className="font-mono text-[12px] text-[var(--muted)]">
+              Saved as {savedReview.status}
+            </span>
+          ) : null}
+        </form>
+      </div>
     </section>
   );
 }
@@ -1197,9 +1251,10 @@ export default async function TradeJournalReview({
     loadReviewArchive(archiveAnchor, accountId, basePath, month),
   ]);
   const reviewScope = reviewScopeFor(range.preset, rangeForPreset(range.preset, range.anchor));
-  const [recaps, savedExperiment] = await Promise.all([
+  const [recaps, savedExperiment, savedReview] = await Promise.all([
     loadDayRecaps(accountId, range.days.map((day) => day.day.date)),
     loadSavedCoachExperiment(accountId, reviewScope),
+    loadSavedCoachReview(accountId, reviewScope),
   ]);
   const currentHref = returnTo ?? journalReviewHref(basePath, { preset, date, from, month });
   const breadcrumbBack = backHref
@@ -1269,6 +1324,7 @@ export default async function TradeJournalReview({
               factPack={range.coachRead}
               reviewScope={reviewScope}
               savedExperiment={savedExperiment}
+              savedReview={savedReview}
             />
           ) : null}
         </div>
