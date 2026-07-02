@@ -54,7 +54,8 @@ samples/demo/
 
 Current repo state:
 
-- Demo trades currently live at `samples/demo-trades-and-notes.csv`.
+- Demo trades currently live at `samples/demo/trades.csv`.
+- `samples/demo-trades-and-notes.csv` remains as a legacy compatibility copy.
 - Demo database builders currently write `data/tradingjournaldemo.db`.
 - Coach review fixtures do not exist yet.
 - Hosted Turso refresh is not automated yet.
@@ -204,14 +205,12 @@ Push site repo main
 
 ## Next Build Checklist
 
-1. Create `samples/demo/` fixture layout.
-2. Move current demo CSV into the fixture layout without changing behavior.
-3. Add playbook and static coach-review fixtures.
-4. Add local seed support for coach review fixtures.
-5. Add hosted refresh script with confirmation guard.
-6. Add hosted demo UI behavior for static coach reviews.
-7. Move app demo domain to `demo.trading-journal.ai`.
-8. Deploy marketing site to `trading-journal.ai`.
+1. Add playbook and static coach-review fixtures.
+2. Add local seed support for coach review fixtures.
+3. Add hosted refresh script with confirmation guard.
+4. Add hosted demo UI behavior for static coach reviews.
+5. Move app demo domain to `demo.trading-journal.ai`.
+6. Deploy marketing site to `trading-journal.ai`.
 
 ## Non-Goals
 

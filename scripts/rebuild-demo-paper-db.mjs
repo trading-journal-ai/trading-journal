@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import Database from "better-sqlite3";
 
 const MARKET_TZ = "America/New_York";
+const DEMO_TRADES_CSV = "samples/demo/trades.csv";
+const LEGACY_DEMO_TRADES_CSV = "samples/demo-trades-and-notes.csv";
 const DEFAULTS = {
   db: "data/tradingjournaldemo.db",
-  csv: "samples/demo-trades-and-notes.csv",
+  csv: existsSync(DEMO_TRADES_CSV) ? DEMO_TRADES_CSV : LEGACY_DEMO_TRADES_CSV,
   account: "Paper Account",
 };
 
@@ -33,7 +35,7 @@ function parseArgs(argv) {
 function usage() {
   console.log(`
 Usage:
-  node scripts/rebuild-demo-paper-db.mjs --db data/tradingjournaldemo.db --csv samples/demo-trades-and-notes.csv
+  node scripts/rebuild-demo-paper-db.mjs --db data/tradingjournaldemo.db --csv samples/demo/trades.csv
 
 Replaces demo trade/import data from a DAS trade-summary CSV while preserving
 cached candle rows in the database.
