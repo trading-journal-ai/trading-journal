@@ -31,6 +31,8 @@
     "demo:normalize-das": "node scripts/normalize-das-demo-csv.mjs",
     "demo:paper": "node scripts/rebuild-demo-paper-db.mjs && node scripts/seed-demo-journal-notes.mjs --month all && node scripts/seed-demo-coach-reviews.mjs",
     "demo:paper-db": "node scripts/rebuild-demo-paper-db.mjs",
+    "broker:inspect": "node scripts/inspect-broker-csv.mjs",
+    "broker:normalize": "node scripts/normalize-broker-csv.mjs",
     "coach:eval": "node scripts/coach-eval.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

@@ -66,6 +66,18 @@ Each private case is a JSON file:
 
 ## Running
 
+Inspect a raw broker export before building cases from it:
+
+```bash
+npm run broker:inspect -- --file data/evals/coach/raw/2026-07-02-AccountStatement.csv
+```
+
+The inspector is local-only. It reports whether the file has app-export trades,
+ThinkorSwim/Schwab trade-history fills, ThinkorSwim/Schwab order-history rows,
+open positions, or symbol-level P&L. If order history exists but trade history
+does not, treat the rows as order-history facts; they may not contain true fill
+timestamps or executable prices for every market order.
+
 Validate cases and write local payload snapshots:
 
 ```bash

@@ -9,6 +9,8 @@ This directory is organized by decision area:
   specs, and supporting reference data.
 - `coach/`: coaching strategy, setup taxonomy, next-build notes, and prompt
   drafts.
+- `import/`: canonical import architecture, broker normalizer notes, adapter
+  assumptions, source-format docs, and parser diagnostics.
 - `deployment/`: Vercel/runtime boundaries, hosted demo contracts, and
   deployment operations.
 
