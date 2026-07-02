@@ -1084,11 +1084,13 @@ function StarterCoachRead({
   reviewScope,
   savedExperiment,
   savedReview,
+  readOnly,
 }: {
   factPack: SessionFactPack;
   reviewScope: ReviewScope;
   savedExperiment: SavedCoachExperiment | null;
   savedReview: SavedCoachReview | null;
+  readOnly: boolean;
 }) {
   const topSurprise = factPack.surprises[0];
   const experiment = factPack.experiment;
@@ -1177,27 +1179,33 @@ function StarterCoachRead({
         <p className="mt-1 text-sm leading-6 text-[var(--body)]">
           Trigger: {experiment.trigger} Measure: {experiment.measure.join(", ")}.
         </p>
-        <form action={saveCoachExperimentAction} className="mt-3 flex flex-wrap items-center gap-3">
-          <input type="hidden" name="scope" value={reviewScope.scope} />
-          <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
-          <input type="hidden" name="hypothesis" value={experiment.hypothesis} />
-          <input type="hidden" name="trigger" value={experiment.trigger} />
-          <input type="hidden" name="action" value={experiment.action} />
-          <input type="hidden" name="experimentScope" value={experiment.scope} />
-          <input type="hidden" name="expires" value={experiment.expires} />
-          <input type="hidden" name="measure" value={JSON.stringify(experiment.measure)} />
-          <button
-            type="submit"
-            className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
-          >
-            {savedExperiment ? "Update saved experiment" : "Save experiment"}
-          </button>
-          {savedExperiment ? (
-            <span className="font-mono text-[12px] text-[var(--muted)]">
-              Saved: {savedExperiment.action}
-            </span>
-          ) : null}
-        </form>
+        {!readOnly ? (
+          <form action={saveCoachExperimentAction} className="mt-3 flex flex-wrap items-center gap-3">
+            <input type="hidden" name="scope" value={reviewScope.scope} />
+            <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
+            <input type="hidden" name="hypothesis" value={experiment.hypothesis} />
+            <input type="hidden" name="trigger" value={experiment.trigger} />
+            <input type="hidden" name="action" value={experiment.action} />
+            <input type="hidden" name="experimentScope" value={experiment.scope} />
+            <input type="hidden" name="expires" value={experiment.expires} />
+            <input type="hidden" name="measure" value={JSON.stringify(experiment.measure)} />
+            <button
+              type="submit"
+              className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+            >
+              {savedExperiment ? "Update saved experiment" : "Save experiment"}
+            </button>
+            {savedExperiment ? (
+              <span className="font-mono text-[12px] text-[var(--muted)]">
+                Saved: {savedExperiment.action}
+              </span>
+            ) : null}
+          </form>
+        ) : (
+          <p className="mt-3 font-mono text-[12px] text-[var(--muted)]">
+            Read-only demo: experiments are shown but not saved.
+          </p>
+        )}
       </div>
 
       <div className="mt-5 grid gap-2 font-mono text-[12px] leading-5 text-[var(--muted)] sm:grid-cols-2">
@@ -1221,33 +1229,40 @@ function StarterCoachRead({
           This uses the exact context package: playbook, rubric, deterministic facts,
           daily context, and annotated trade notes.
         </p>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <form action={generateCoachReviewAction}>
-            <input type="hidden" name="scope" value={reviewScope.scope} />
-            <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
-            <button
-              type="submit"
-              className="h-8 rounded-md border border-[var(--blue)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--foreground)] transition-colors hover:bg-[var(--blue)] hover:text-white"
-            >
-              {generatedReview ? "Regenerate coach review" : "Ask Coach"}
-            </button>
-          </form>
-          <form action={saveDraftCoachReviewAction}>
-            <input type="hidden" name="scope" value={reviewScope.scope} />
-            <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
-            <button
-              type="submit"
-              className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
-            >
-              {savedReview ? "Refresh draft" : "Save draft"}
-            </button>
-          </form>
-          {savedReview ? (
-            <span className="font-mono text-[12px] text-[var(--muted)]">
-              Saved as {savedReview.status}
-            </span>
-          ) : null}
-        </div>
+        {!readOnly ? (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <form action={generateCoachReviewAction}>
+              <input type="hidden" name="scope" value={reviewScope.scope} />
+              <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
+              <button
+                type="submit"
+                className="h-8 rounded-md border border-[var(--blue)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--foreground)] transition-colors hover:bg-[var(--blue)] hover:text-white"
+              >
+                {generatedReview ? "Regenerate coach review" : "Ask Coach"}
+              </button>
+            </form>
+            <form action={saveDraftCoachReviewAction}>
+              <input type="hidden" name="scope" value={reviewScope.scope} />
+              <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
+              <button
+                type="submit"
+                className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+              >
+                {savedReview ? "Refresh draft" : "Save draft"}
+              </button>
+            </form>
+            {savedReview ? (
+              <span className="font-mono text-[12px] text-[var(--muted)]">
+                Saved as {savedReview.status}
+              </span>
+            ) : null}
+          </div>
+        ) : (
+          <p className="mt-3 max-w-[760px] font-mono text-[12px] leading-5 text-[var(--muted)]">
+            Read-only demo: coach reviews are loaded from approved static fixtures,
+            not generated live.
+          </p>
+        )}
 
         {generationError ? (
           <p className="mt-4 max-w-[760px] border-l border-[var(--red)] pl-4 text-sm leading-6 text-[var(--body)]">
@@ -1258,7 +1273,9 @@ function StarterCoachRead({
         {generatedReview ? (
           <div className="mt-5 space-y-5">
             <div className="border-l border-[var(--blue)] pl-4">
-              <div className="font-mono text-[11px] uppercase text-[var(--muted)]">AI coach verdict</div>
+              <div className="font-mono text-[11px] uppercase text-[var(--muted)]">
+                {readOnly ? "Static demo coach verdict" : "AI coach verdict"}
+              </div>
               <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
                 {generatedReview.review.dayVerdict}
               </p>
@@ -1307,6 +1324,10 @@ function StarterCoachRead({
 
             <CoachReviewList title="Confidence / missing context" items={generatedReview.review.confidenceAndMissingContext} />
           </div>
+        ) : readOnly ? (
+          <p className="mt-4 max-w-[760px] border-l border-[var(--hairline)] pl-4 text-sm leading-6 text-[var(--body)]">
+            No approved static coach review is seeded for this period yet.
+          </p>
         ) : null}
       </div>
     </section>
@@ -1360,6 +1381,7 @@ export default async function TradeJournalReview({
     loadSavedCoachExperiment(accountId, reviewScope),
     loadSavedCoachReview(accountId, reviewScope),
   ]);
+  const readOnly = isDemoReadOnly();
   const currentHref = returnTo ?? journalReviewHref(basePath, { preset, date, from, month });
   const breadcrumbBack = backHref
     ? originCrumbFromHref(backHref, basePath)
@@ -1429,6 +1451,7 @@ export default async function TradeJournalReview({
               reviewScope={reviewScope}
               savedExperiment={savedExperiment}
               savedReview={savedReview}
+              readOnly={readOnly}
             />
           ) : null}
         </div>

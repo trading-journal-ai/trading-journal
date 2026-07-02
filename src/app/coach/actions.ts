@@ -7,6 +7,7 @@ import { buildCoachReviewPayload, type CoachReviewHumanContext, type CoachReview
 import { generateCoachReview } from "@/lib/coach/openai";
 import { buildSessionFactPack } from "@/lib/coach/reviewEngine";
 import { db, schema } from "@/lib/db";
+import { isDemoReadOnly } from "@/lib/demoMode";
 import { decodeJournalTags } from "@/lib/journalLabels";
 import { netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
@@ -59,6 +60,8 @@ function coachReviewScopeFromForm(formData: FormData): { scope: CoachReviewScope
 }
 
 export async function saveCoachPlaybookAction(formData: FormData) {
+  if (isDemoReadOnly()) return;
+
   const title = String(formData.get("title") ?? "").trim() || "Trading Playbook";
   const body = String(formData.get("body") ?? "").trim();
   const rubric = String(formData.get("rubric") ?? "").trim();
@@ -107,6 +110,8 @@ export async function ensureCoachPlaybook(accountId: number) {
 }
 
 export async function saveDraftCoachReviewAction(formData: FormData) {
+  if (isDemoReadOnly()) return;
+
   const account = await getActiveAccount();
   const input = coachReviewScopeFromForm(formData);
   if (!input) return;
@@ -142,6 +147,8 @@ export async function saveDraftCoachReviewAction(formData: FormData) {
 }
 
 export async function generateCoachReviewAction(formData: FormData) {
+  if (isDemoReadOnly()) return;
+
   const account = await getActiveAccount();
   const input = coachReviewScopeFromForm(formData);
   if (!input) return;
