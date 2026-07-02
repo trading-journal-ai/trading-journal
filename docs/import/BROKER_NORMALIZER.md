@@ -95,14 +95,23 @@ DAS/TraderVue trade rows: 3735
   to treat open positions, earlier statement periods, and any unmatched
   representation quirks.
 
-## Next Step
+## App Import Path
 
-The next build slice should move this from CLI preview into app import flow:
+The app import path now uses the same normalization contract internally:
 
 ```text
-TOS statement
+raw CSV
 → inspect
-→ normalize preview
-→ import normalized trades
-→ show reconciliation warnings
+→ normalizeBrokerCsv
+→ persist normalized trades
+→ link source executions when available
+→ show confidence and warnings
 ```
+
+For high-confidence ThinkorSwim/Schwab imports, the app still persists the
+underlying fill-level executions and links them to normalized trades. For
+medium-confidence DAS/TraderVue trade-summary imports, the app persists
+synthetic open/close executions because the source does not contain every fill.
+
+The local `broker:normalize` command remains useful as a preview/export helper
+when we want to inspect the canonical table without writing to the app database.
