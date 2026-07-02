@@ -60,7 +60,7 @@ The repo includes a demo dataset with augmented sample trades and placeholder
 journal notes:
 
 ```text
-samples/demo-trades-and-notes.csv
+samples/demo/trades.csv
 ```
 
 The demo data is meant for previewing and testing the app. It is realistic

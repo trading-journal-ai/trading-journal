@@ -7,7 +7,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { parseCsvRows } from "./csv";
 
 const TOS_SAMPLE = "data/samples/2026-03-04-AccountStatement.csv";
-const DEMO_SAMPLE = "samples/demo-trades-and-notes.csv";
+const DEMO_SAMPLE = "samples/demo/trades.csv";
 const HAS_TOS_SAMPLE = readOptional(TOS_SAMPLE) != null;
 
 function readOptional(path: string): string | null {
