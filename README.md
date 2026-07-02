@@ -157,18 +157,13 @@ Stopping and restarting the app does not delete your data. Your journal lives in
 a SQLite database file on disk.
 
 If the browser does not open automatically, go to the localhost URL printed in
-the terminal, usually [http://localhost:3000](http://localhost:3000). In local
-app mode, that opens the dashboard.
+the terminal, usually [http://localhost:3000](http://localhost:3000). That opens
+the dashboard.
 
-There are two runtime surfaces:
-
-- `npm run dev` or `npm run dev:app` runs the installed/local product. `/` opens `/dashboard`,
-  and `/demo` is hidden.
-- `npm run dev:site` runs the marketing website and public demo preview.
-
-Local installs behave like the app, not the website. The website/demo surface is
-for the hosted preview and maintainers; hosted marketing/demo deployments should
-use `TRADING_JOURNAL_MODE=site`.
+This repo is the app source of truth. Local/live mode and demo mode run the same
+product code; the difference is the database and read/write settings. The public
+marketing website should live in a separate site repo and link into a hosted app
+demo instead of carrying its own copy of the dashboard.
 
 If Next.js says another dev server is already running, or localhost feels stuck,
 use the repo-local cleanup command:
@@ -190,10 +185,11 @@ The hosted demo is a quick way to click through the app before installing it:
 
 [trading-journal.ai/demo](https://trading-journal.ai/demo)
 
-It uses the same demo trades and placeholder journal notes that local demo mode
-imports from this repo. The hosted version is for previewing the workflow; the
-app itself is designed to run locally with your own broker exports, notes, API
-keys, and SQLite database on your machine.
+It should run this same app repo with demo data and read-only settings. That
+keeps the hosted preview in parity with local/live development, including coach,
+import, chart, journal, and reporting changes. The app itself is designed to run
+locally with your own broker exports, notes, API keys, and SQLite database on
+your machine.
 
 ## Data & Privacy
 
