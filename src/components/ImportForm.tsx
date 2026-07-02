@@ -27,6 +27,7 @@ export default function ImportForm() {
     : "/journal";
   const sourceLabel =
     state?.ok && state.summary.source === "das_csv" ? "DAS" : "ThinkorSwim";
+  const confidenceLabel = state?.ok ? confidenceCopy(state.summary.sourceConfidence) : null;
 
   return (
     <div className="space-y-2">
@@ -67,6 +68,9 @@ export default function ImportForm() {
           </span>{" "}
           <span className="text-[var(--foreground)]">
             {sourceLabel} · {state.summary.inserted} executions · {state.summary.trades} trades
+            {confidenceLabel && ` · ${confidenceLabel}`}
+            {state.summary.normalizedTrades !== state.summary.trades && ` · ${state.summary.normalizedTrades} normalized`}
+            {state.summary.openTrades > 0 && ` · ${state.summary.openTrades} open`}
             {state.summary.duplicates > 0 && ` · ${state.summary.duplicates} dupes skipped`}
             {parsedRange && ` · parsed ${parsedRange}`}
             {insertedRange && ` · added ${insertedRange}`}
@@ -75,6 +79,13 @@ export default function ImportForm() {
             <Link href={recapHref} className="text-[#58a6ff] hover:underline">review day →</Link>
             <Link href="/trades" className="text-[#58a6ff] hover:underline">trades</Link>
           </span>
+          {state.summary.warnings.length > 0 && (
+            <ul className="mt-1 list-disc pl-4 text-xs text-[var(--muted)]">
+              {state.summary.warnings.slice(0, 3).map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </div>
@@ -138,4 +149,11 @@ function formatMoney(value: number) {
     currency: "USD",
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function confidenceCopy(value: "high" | "medium" | "low" | "statement_only") {
+  if (value === "high") return "high confidence";
+  if (value === "medium") return "medium confidence";
+  if (value === "low") return "low confidence";
+  return "statement only";
 }
