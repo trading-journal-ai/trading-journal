@@ -6,21 +6,29 @@
 import { inArray } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { etDateString } from "@/lib/time";
-import { isDasTradeSummary, parseDasTradeSummary } from "./das";
-import { matchTrades } from "./match";
-import { parseTosStatement, type ParsedExecution } from "./tos";
+import {
+  normalizeBrokerCsv,
+  type NormalizedImport,
+  type NormalizedTrade,
+  type SourceConfidence,
+} from "./normalize";
+import type { ParsedExecution } from "./tos";
 
 export type ImportSummary = {
   batchId: number;
   source: "tos_csv" | "das_csv";
+  sourceConfidence: SourceConfidence;
   parsed: number;
   inserted: number;
   duplicates: number;
   trades: number;
+  normalizedTrades: number;
+  openTrades: number;
   parsedFrom: string | null;
   parsedTo: string | null;
   insertedFrom: string | null;
   insertedTo: string | null;
+  warnings: string[];
 };
 
 const INSERT_CHUNK_SIZE = 100;
@@ -29,10 +37,6 @@ function dateRange(executions: { executedAt: number }[]): { from: string | null;
   if (executions.length === 0) return { from: null, to: null };
   const dates = executions.map((e) => etDateString(e.executedAt)).sort();
   return { from: dates[0], to: dates.at(-1) ?? dates[0] };
-}
-
-function isTosStatement(csv: string): boolean {
-  return csv.replace(/^﻿/, "").split(/\r?\n/).some((line) => line.trim() === "Account Trade History");
 }
 
 async function insertExecutions(
@@ -69,91 +73,47 @@ async function insertExecutions(
   return insertedRows;
 }
 
-export async function importTosCsv(csv: string, fileName: string, accountId: number): Promise<ImportSummary> {
-  const parsed = parseTosStatement(csv);
-  if (parsed.length === 0) {
-    throw new Error("No executions found in the Account Trade History section.");
-  }
-  const parsedRange = dateRange(parsed);
+async function insertNormalizedTrade(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  normalizedTrade: NormalizedTrade,
+  accountId: number,
+  execIds: number[],
+) {
+  const trade = await tx
+    .insert(schema.trades)
+    .values({
+      symbol: normalizedTrade.symbol,
+      accountId,
+      side: normalizedTrade.side,
+      quantity: normalizedTrade.quantity,
+      avgEntryPrice: normalizedTrade.avgEntryPrice,
+      entryAt: normalizedTrade.entryAt,
+      avgExitPrice: normalizedTrade.avgExitPrice,
+      exitAt: normalizedTrade.exitAt,
+      fees: normalizedTrade.fees,
+      status: normalizedTrade.status,
+    })
+    .returning({ id: schema.trades.id })
+    .get();
 
-  return db.transaction(async (tx) => {
-    const batch = await tx
-      .insert(schema.importBatches)
-      .values({
-        kind: "executions",
-        accountId,
-        source: "tos_csv",
-        fileName,
-        rowCount: 0,
-      })
-      .returning({ id: schema.importBatches.id })
-      .get();
-
-    const insertedRows = await insertExecutions(tx, parsed, accountId, batch.id);
-    const idByHash = new Map(insertedRows.map((r) => [r.hash, r.id]));
-    const newExecutions = parsed.filter((e) => idByHash.has(e.sourceRowHash));
-    const insertedRange = dateRange(newExecutions);
-
-    // Match only the newly-inserted fills into trades.
-    const matched = matchTrades(newExecutions);
-    for (const t of matched) {
-      const trade = await tx
-        .insert(schema.trades)
-        .values({
-          symbol: t.symbol,
-          accountId,
-          side: t.side,
-          quantity: t.quantity,
-          avgEntryPrice: t.avgEntryPrice,
-          entryAt: t.entryAt,
-          avgExitPrice: t.avgExitPrice,
-          exitAt: t.exitAt,
-          fees: t.fees,
-          status: t.status,
-        })
-        .returning({ id: schema.trades.id })
-        .get();
-
-      const execIds = t.executionHashes
-        .map((h) => idByHash.get(h))
-        .filter((id): id is number => id != null);
-      if (execIds.length > 0) {
-        await tx
-          .update(schema.executions)
-          .set({ tradeId: trade.id })
-          .where(inArray(schema.executions.id, execIds))
-          .run();
-      }
-    }
-
+  if (execIds.length > 0) {
     await tx
-      .update(schema.importBatches)
-      .set({ rowCount: insertedRows.length })
-      .where(inArray(schema.importBatches.id, [batch.id]))
+      .update(schema.executions)
+      .set({ tradeId: trade.id })
+      .where(inArray(schema.executions.id, execIds))
       .run();
-
-    return {
-      batchId: batch.id,
-      source: "tos_csv",
-      parsed: parsed.length,
-      inserted: insertedRows.length,
-      duplicates: parsed.length - insertedRows.length,
-      trades: matched.length,
-      parsedFrom: parsedRange.from,
-      parsedTo: parsedRange.to,
-      insertedFrom: insertedRange.from,
-      insertedTo: insertedRange.to,
-    };
-  });
+  }
 }
 
-export async function importDasCsv(csv: string, fileName: string, accountId: number): Promise<ImportSummary> {
-  const parsedTrades = parseDasTradeSummary(csv);
-  if (parsedTrades.length === 0) {
-    throw new Error("No DAS trade rows found in the CSV.");
+async function importNormalized(
+  normalized: NormalizedImport,
+  fileName: string,
+  accountId: number,
+): Promise<ImportSummary> {
+  if (normalized.executions.length === 0) {
+    throw new Error("No importable executions found in the CSV.");
   }
-  const parsedExecutions = parsedTrades.flatMap((t) => t.executions);
-  const parsedRange = dateRange(parsedExecutions);
+  const parsedRange = dateRange(normalized.executions);
 
   return db.transaction(async (tx) => {
     const batch = await tx
@@ -161,47 +121,29 @@ export async function importDasCsv(csv: string, fileName: string, accountId: num
       .values({
         kind: "executions",
         accountId,
-        source: "das_csv",
+        source: normalized.source,
         fileName,
         rowCount: 0,
       })
       .returning({ id: schema.importBatches.id })
       .get();
 
-    const insertedRows = await insertExecutions(tx, parsedExecutions, accountId, batch.id);
+    const insertedRows = await insertExecutions(tx, normalized.executions, accountId, batch.id);
     const idByHash = new Map(insertedRows.map((r) => [r.hash, r.id]));
-    const newExecutions = parsedExecutions.filter((e) => idByHash.has(e.sourceRowHash));
+    const newExecutions = normalized.executions.filter((e) => idByHash.has(e.sourceRowHash));
     const insertedRange = dateRange(newExecutions);
     let trades = 0;
+    let skippedPartialTrades = 0;
 
-    for (const parsed of parsedTrades) {
-      const execIds = parsed.executions
-        .map((execution) => idByHash.get(execution.sourceRowHash))
+    for (const normalizedTrade of normalized.trades) {
+      const execIds = normalizedTrade.executionHashes
+        .map((h) => idByHash.get(h))
         .filter((id): id is number => id != null);
-      if (execIds.length !== parsed.executions.length) continue;
-
-      const trade = await tx
-        .insert(schema.trades)
-        .values({
-          symbol: parsed.symbol,
-          accountId,
-          side: parsed.side,
-          quantity: parsed.quantity,
-          avgEntryPrice: parsed.avgEntryPrice,
-          entryAt: parsed.entryAt,
-          avgExitPrice: parsed.avgExitPrice,
-          exitAt: parsed.exitAt,
-          fees: parsed.fees,
-          status: parsed.status,
-        })
-        .returning({ id: schema.trades.id })
-        .get();
-
-      await tx
-        .update(schema.executions)
-        .set({ tradeId: trade.id })
-        .where(inArray(schema.executions.id, execIds))
-        .run();
+      if (execIds.length !== normalizedTrade.executionHashes.length) {
+        if (execIds.length > 0) skippedPartialTrades += 1;
+        continue;
+      }
+      await insertNormalizedTrade(tx, normalizedTrade, accountId, execIds);
       trades += 1;
     }
 
@@ -213,21 +155,44 @@ export async function importDasCsv(csv: string, fileName: string, accountId: num
 
     return {
       batchId: batch.id,
-      source: "das_csv",
-      parsed: parsedExecutions.length,
+      source: normalized.source,
+      sourceConfidence: normalized.sourceConfidence,
+      parsed: normalized.executions.length,
       inserted: insertedRows.length,
-      duplicates: parsedExecutions.length - insertedRows.length,
+      duplicates: normalized.executions.length - insertedRows.length,
       trades,
+      normalizedTrades: normalized.trades.length,
+      openTrades: normalized.trades.filter((trade) => trade.status === "open").length,
       parsedFrom: parsedRange.from,
       parsedTo: parsedRange.to,
       insertedFrom: insertedRange.from,
       insertedTo: insertedRange.to,
+      warnings: [
+        ...normalized.warnings,
+        ...(skippedPartialTrades > 0
+          ? [`${skippedPartialTrades} normalized trades were skipped because only part of their executions were new.`]
+          : []),
+      ],
     };
   });
 }
 
+export async function importTosCsv(csv: string, fileName: string, accountId: number): Promise<ImportSummary> {
+  const normalized = normalizeBrokerCsv(csv);
+  if (normalized.source !== "tos_csv") {
+    throw new Error("Expected a ThinkorSwim account statement CSV.");
+  }
+  return importNormalized(normalized, fileName, accountId);
+}
+
+export async function importDasCsv(csv: string, fileName: string, accountId: number): Promise<ImportSummary> {
+  const normalized = normalizeBrokerCsv(csv);
+  if (normalized.source !== "das_csv") {
+    throw new Error("Expected a DAS/TraderVue trade-summary CSV.");
+  }
+  return importNormalized(normalized, fileName, accountId);
+}
+
 export async function importBrokerCsv(csv: string, fileName: string, accountId: number): Promise<ImportSummary> {
-  if (isDasTradeSummary(csv)) return importDasCsv(csv, fileName, accountId);
-  if (isTosStatement(csv)) return importTosCsv(csv, fileName, accountId);
-  throw new Error("Could not recognize this CSV. Supported formats: ThinkorSwim account statement or DAS trade summary.");
+  return importNormalized(normalizeBrokerCsv(csv), fileName, accountId);
 }
