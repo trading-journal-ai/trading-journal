@@ -7,7 +7,8 @@ This directory is organized by decision area:
   design prototypes.
 - `analytics/`: reporting research, statistical review logic, review-engine
   specs, and supporting reference data.
-- `coach/`: coaching strategy, setup taxonomy, and prompt drafts.
+- `coach/`: coaching strategy, setup taxonomy, next-build notes, and prompt
+  drafts.
 
 Top-level docs are reserved for repo-wide notes that do not clearly belong to
 one product area.
