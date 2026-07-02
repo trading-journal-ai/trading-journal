@@ -188,9 +188,8 @@ function InteractiveLightweightTradeChart({
       localization: {
         timeFormatter: formatChartTime,
         priceFormatter: (price: number) => {
-          if (Math.abs(price) >= 10) return price.toFixed(2);
-          if (Math.abs(price) >= 1) return price.toFixed(3).replace(/0$/, "");
-          return price.toFixed(4);
+          if (Math.abs(price) >= 1) return Math.round(price).toLocaleString("en-US");
+          return price.toFixed(2).replace(/0$/, "");
         },
       },
     });

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
+import { upsertTickerReviewAction } from "@/app/journal/actions";
 import { db, schema } from "@/lib/db";
 import { getActiveAccount } from "@/lib/accountScope";
 import { getCandles } from "@/lib/candles";
@@ -8,12 +9,15 @@ import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
 import LightweightTradeChart from "@/components/LightweightTradeChart";
 import ReviewHeader from "@/components/ReviewHeader";
 import { fmtDate, fmtMoney, fmtPrice } from "@/lib/format";
+import { isDemoReadOnly } from "@/lib/demoMode";
 import { netPnl } from "@/lib/pnl";
 import { etDayRange, etDateString } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
 type ExecutionRow = typeof schema.executions.$inferSelect;
+type TradeRow = typeof schema.trades.$inferSelect;
+type JournalEntryRow = typeof schema.journalEntries.$inferSelect;
 type TradeCycle = {
   id: string;
   executions: ExecutionRow[];
@@ -33,6 +37,18 @@ const timeFmt = new Intl.DateTimeFormat("en-US", {
   hour12: false,
 });
 const fmtTime = (t: number) => timeFmt.format(new Date(t * 1000));
+
+function formatTradeTime(value: number | null): string {
+  return value == null ? "--:--" : fmtTime(value).slice(0, 5);
+}
+
+function journalNoteBody(note: JournalEntryRow): string {
+  return note.lessons || note.thesis || "No note text.";
+}
+
+function tickerReviewKey(date: string, symbol: string): string {
+  return `${date}:${symbol}`;
+}
 function validDate(value: string | undefined): string | undefined {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
 }
@@ -190,6 +206,100 @@ function TradeCycleRail({
   );
 }
 
+function TickerReviewPanel({
+  date,
+  symbol,
+  note,
+  tradeNotes,
+  stats,
+  returnTo,
+  readOnly,
+}: {
+  date: string;
+  symbol: string;
+  note: JournalEntryRow | null;
+  tradeNotes: { trade: TradeRow; note: JournalEntryRow; index: number }[];
+  stats: { label: string; value: string; className?: string }[];
+  returnTo: string;
+  readOnly: boolean;
+}) {
+  const placeholder = `How did I trade ${symbol}? What was the setup, where did I chase, and what should I repeat or avoid next time?`;
+
+  return (
+    <section className="mt-6 rounded-md border border-[var(--hairline)] bg-[var(--surface)]/35 px-4 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+            Ticker Review
+          </div>
+          <h2 className="mt-2 text-lg font-semibold tracking-tight text-[var(--foreground)]">
+            How did I trade {symbol}?
+          </h2>
+        </div>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 font-mono text-[12px] sm:grid-cols-4">
+          {stats.map((stat) => (
+            <div key={stat.label}>
+              <div className="uppercase tracking-[0.14em] text-[var(--muted)]">{stat.label}</div>
+              <div className={`mt-1 tabular-nums text-[var(--foreground)] ${stat.className ?? ""}`}>{stat.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <form action={upsertTickerReviewAction} className="mt-4 space-y-3">
+        <input type="hidden" name="scopeKey" value={tickerReviewKey(date, symbol)} />
+        <input type="hidden" name="returnTo" value={returnTo} />
+        <textarea
+          name="body"
+          defaultValue={note?.lessons ?? ""}
+          disabled={readOnly}
+          placeholder={placeholder}
+          className="min-h-[128px] w-full resize-y rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-sm leading-6 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:border-[var(--blue)] disabled:cursor-not-allowed disabled:opacity-60"
+        />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs leading-5 text-[var(--muted)]">
+            Use this for the pattern across the ticker. Individual trade notes show below when present.
+          </p>
+          <button
+            type="submit"
+            disabled={readOnly}
+            className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Save ticker review
+          </button>
+        </div>
+      </form>
+
+      <div className="mt-5 border-t border-[var(--hairline)] pt-4">
+        <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+          Noted Trades
+        </div>
+        {tradeNotes.length > 0 ? (
+          <div className="mt-3 space-y-3">
+            {tradeNotes.map(({ trade, note: tradeNote, index }) => (
+              <article key={tradeNote.id} className="rounded-md border border-[var(--hairline)] px-3 py-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-3">
+                  <div className="font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--foreground)]">
+                    Trade {index + 1}
+                  </div>
+                  <div className={`font-mono text-[12px] tabular-nums ${pnlClass(netPnl(trade))}`}>
+                    {formatTradeTime(trade.entryAt)} · {fmtMoney(netPnl(trade) ?? 0)}
+                  </div>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-[var(--body)]">{journalNoteBody(tradeNote)}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+            No individual trade notes yet. Add notes on specific trades and they will surface here as evidence.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default async function TickerDayReviewPage({
   searchParams,
 }: {
@@ -232,6 +342,31 @@ export default async function TickerDayReviewPage({
           .where(inArray(schema.executions.tradeId, tradeIds))
           .orderBy(asc(schema.executions.executedAt))
       : [];
+  const [tickerReviewNote, tradeNoteRows] = await Promise.all([
+    db
+      .select()
+      .from(schema.journalEntries)
+      .where(
+        and(
+          eq(schema.journalEntries.accountId, activeAccount.id),
+          eq(schema.journalEntries.scope, "ticker"),
+          eq(schema.journalEntries.scopeKey, tickerReviewKey(date, symbol)),
+        ),
+      )
+      .limit(1),
+    tradeIds.length > 0
+      ? db
+          .select()
+          .from(schema.journalEntries)
+          .where(
+            and(
+              eq(schema.journalEntries.accountId, activeAccount.id),
+              eq(schema.journalEntries.scope, "trade"),
+              inArray(schema.journalEntries.tradeId, tradeIds),
+            ),
+          )
+      : Promise.resolve([]),
+  ]);
 
   const firstAt = execs[0]?.executedAt ?? trades[0]?.entryAt ?? start;
   const lastAt = execs.at(-1)?.executedAt ?? trades.at(-1)?.exitAt ?? firstAt;
@@ -250,12 +385,31 @@ export default async function TickerDayReviewPage({
   const tradeCycles = buildTradeCycles(execs);
   const tradeLabel = trades.length === 1 ? "trade" : "trades";
   const shareLabel = totalShares === 1 ? "share" : "shares";
+  const currentHref = tradeReviewHref(date, symbol, backHref);
+  const readOnly = isDemoReadOnly();
+  const tradeIndexById = new Map(trades.map((trade, index) => [trade.id, index]));
+  const tradeById = new Map(trades.map((trade) => [trade.id, trade]));
+  const tradeNotes = tradeNoteRows
+    .flatMap((note) => {
+      if (note.tradeId == null) return [];
+      const trade = tradeById.get(note.tradeId);
+      const index = tradeIndexById.get(note.tradeId);
+      if (!trade || index == null) return [];
+      return [{ trade, note, index }];
+    })
+    .sort((a, b) => a.index - b.index);
 
   const summaryStats = [
     { label: `${trades.length.toLocaleString()} ${tradeLabel}` },
     { label: `${totalShares.toLocaleString()} ${shareLabel}` },
     { label: counted === 0 ? "— win" : `${Math.round((wins / counted) * 100)}% win` },
     { label: `P&L ${fmtMoney(totalPnl)}`, className: pnlClass(totalPnl) },
+  ];
+  const tickerReviewStats = [
+    { label: "Trades", value: trades.length.toLocaleString() },
+    { label: "Executions", value: execs.length.toLocaleString() },
+    { label: "First", value: formatTradeTime(firstAt) },
+    { label: "Last", value: formatTradeTime(lastAt) },
   ];
   const originCrumb = originCrumbFromHref(backHref, "/trades");
   const isJournalOrigin = originCrumb.label === "Journal";
@@ -272,13 +426,23 @@ export default async function TickerDayReviewPage({
         className="mb-12"
       />
 
-      <div className="mb-0">
-        <ReviewHeader
-          eyebrow="Ticker Review"
-          title={symbol}
-          date={fmtDate(start)}
-          metrics={summaryStats}
-        />
+      <div className="mb-0 grid gap-8 lg:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="min-w-0">
+          <ReviewHeader
+            eyebrow="Ticker Review"
+            title={symbol}
+            date={fmtDate(start)}
+            metrics={summaryStats}
+            action={(
+              <Link
+                href={backHref}
+                className="text-[var(--blue)] hover:underline"
+              >
+                {"<-"} Back
+              </Link>
+            )}
+          />
+        </div>
       </div>
 
       <section className="mb-8 grid gap-8 pt-5 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
@@ -300,6 +464,15 @@ export default async function TickerDayReviewPage({
           ) : (
             <LightweightTradeChart candles={[]} markers={[]} />
           )}
+          <TickerReviewPanel
+            date={date}
+            symbol={symbol}
+            note={tickerReviewNote[0] ?? null}
+            tradeNotes={tradeNotes}
+            stats={tickerReviewStats}
+            returnTo={currentHref}
+            readOnly={readOnly}
+          />
         </div>
         <TradeCycleRail cycles={tradeCycles} date={date} symbol={symbol} backHref={backHref} />
       </section>

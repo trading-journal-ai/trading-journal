@@ -21,7 +21,7 @@ export default function NavLinks() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex gap-4 text-sm">
+    <nav className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
       {nav.map((item) => {
         const active = isActive(pathname, item.href);
         return (
