@@ -56,7 +56,7 @@ export async function deleteAccountAction(formData: FormData) {
   if (accounts.length <= 1) return;
 
   const activeAccount = await getActiveAccount();
-  const [tradeRows, executionRows, importRows, journalRows, coachExperimentRows] = await Promise.all([
+  const [tradeRows, executionRows, importRows, journalRows, coachExperimentRows, coachReviewRows, coachPlaybookRows] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)` })
       .from(schema.trades)
@@ -77,13 +77,23 @@ export async function deleteAccountAction(formData: FormData) {
       .select({ count: sql<number>`count(*)` })
       .from(schema.coachExperiments)
       .where(eq(schema.coachExperiments.accountId, accountId)),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(schema.coachReviews)
+      .where(eq(schema.coachReviews.accountId, accountId)),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(schema.coachPlaybooks)
+      .where(eq(schema.coachPlaybooks.accountId, accountId)),
   ]);
   const ownedRowCount =
     (tradeRows[0]?.count ?? 0) +
     (executionRows[0]?.count ?? 0) +
     (importRows[0]?.count ?? 0) +
     (journalRows[0]?.count ?? 0) +
-    (coachExperimentRows[0]?.count ?? 0);
+    (coachExperimentRows[0]?.count ?? 0) +
+    (coachReviewRows[0]?.count ?? 0) +
+    (coachPlaybookRows[0]?.count ?? 0);
   if (ownedRowCount > 0) return;
 
   await db.delete(schema.accounts).where(eq(schema.accounts.id, accountId));
@@ -128,6 +138,12 @@ export async function resetActiveAccountImportsAction() {
     await tx
       .delete(schema.coachExperiments)
       .where(eq(schema.coachExperiments.accountId, account.id));
+    await tx
+      .delete(schema.coachReviews)
+      .where(eq(schema.coachReviews.accountId, account.id));
+    await tx
+      .delete(schema.coachPlaybooks)
+      .where(eq(schema.coachPlaybooks.accountId, account.id));
     await tx
       .delete(schema.importBatches)
       .where(eq(schema.importBatches.accountId, account.id));

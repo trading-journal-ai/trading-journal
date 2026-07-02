@@ -201,6 +201,53 @@ export const coachExperiments = sqliteTable(
   ],
 );
 
+/** User-authored trading playbook and rubric context for coach reviews. */
+export const coachPlaybooks = sqliteTable(
+  "coach_playbooks",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    accountId: integer("account_id").references(() => accounts.id),
+    title: text("title").notNull().default("Trading Playbook"),
+    body: text("body").notNull(),
+    rubric: text("rubric").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    uniqueIndex("coach_playbooks_account_unq").on(t.accountId),
+  ],
+);
+
+/** Generated coach review placeholder/output saved separately from user notes. */
+export const coachReviews = sqliteTable(
+  "coach_reviews",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    accountId: integer("account_id").references(() => accounts.id),
+    scope: text("scope", { enum: ["day", "week", "month"] }).notNull(),
+    scopeKey: text("scope_key").notNull(),
+    status: text("status", { enum: ["draft", "generated", "stale"] })
+      .notNull()
+      .default("draft"),
+    payloadJson: text("payload_json").notNull(),
+    reviewJson: text("review_json"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    uniqueIndex("coach_reviews_account_scope_key_unq").on(t.accountId, t.scope, t.scopeKey),
+    index("coach_reviews_account_status_idx").on(t.accountId, t.status, t.updatedAt),
+  ],
+);
+
 /** Screenshot / image attached to a trade. */
 export const attachments = sqliteTable(
   "attachments",
