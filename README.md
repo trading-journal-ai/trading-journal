@@ -147,7 +147,7 @@ After setup, the installer starts the app automatically.
 To start it again later:
 
 ```bash
-npm run --silent dev
+npm run --silent dev:app
 ```
 
 Leave the terminal open while using the journal. To stop the app, click the
@@ -157,7 +157,18 @@ Stopping and restarting the app does not delete your data. Your journal lives in
 a SQLite database file on disk.
 
 If the browser does not open automatically, go to the localhost URL printed in
-the terminal, usually [http://localhost:3000](http://localhost:3000).
+the terminal, usually [http://localhost:3000](http://localhost:3000). In local
+app mode, that opens the dashboard.
+
+There are two runtime surfaces:
+
+- `npm run dev:app` runs the installed/local product. `/` opens `/dashboard`,
+  and `/demo` is hidden.
+- `npm run dev:site` runs the marketing website and public demo preview.
+
+The installer writes `TRADING_JOURNAL_MODE=app` to `.env.local` so local installs
+behave like the app, not the website. Hosted marketing/demo deployments should
+use `TRADING_JOURNAL_MODE=site`.
 
 If Next.js says another dev server is already running, or localhost feels stuck,
 use the repo-local cleanup command:
