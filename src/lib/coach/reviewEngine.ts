@@ -3,6 +3,9 @@ import { MARKET_TZ, timeZoneParts } from "@/lib/time";
 
 const TAIL_FRACTION = 0.05;
 const RETENTION_BOUNDARY = 0.3;
+const WIN_RATE_TREND_THRESHOLD = 0.02;
+const EXPECTANCY_TREND_THRESHOLD = 0.02;
+const PROFIT_FACTOR_TREND_THRESHOLD = 0.1;
 
 export type ReviewTradeInput = TradeLike & {
   id: number | string;
@@ -55,6 +58,15 @@ export type StarterExperiment = {
   measure: string[];
 };
 
+export type TrendSignal = {
+  key: "win_rate" | "expectancy" | "profit_factor" | "net";
+  label: string;
+  current: number | null;
+  baseline: number | null;
+  delta: number | null;
+  vote: -1 | 0 | 1;
+};
+
 export type SessionFactPack = {
   session: {
     trades: number;
@@ -85,6 +97,12 @@ export type SessionFactPack = {
     byTimeWindow: SegmentFact[];
     byPriceBand: SegmentFact[];
   };
+  history: {
+    baselineLabel: string;
+    baselineTrades: number;
+    trendLabel: "improvement" | "deterioration" | "mixed" | "insufficient baseline";
+    signals: TrendSignal[];
+  };
   mechanism: {
     key: string;
     label: string;
@@ -101,6 +119,11 @@ export type SessionFactPack = {
   };
 };
 
+type BuildSessionFactPackOptions = {
+  baselineTrades?: ReviewTradeInput[];
+  baselineLabel?: string;
+};
+
 type AnalyzedTrade = {
   id: string;
   symbol: string;
@@ -109,6 +132,24 @@ type AnalyzedTrade = {
   avgEntryPrice: number | null;
   pnl: number;
   rMultiple: number | null;
+};
+
+type SessionMetrics = {
+  trades: number;
+  netPnl: number;
+  grossWins: number;
+  grossLosses: number;
+  winRate: number | null;
+  profitFactor: number | null;
+  avgWinner: number | null;
+  avgLoser: number | null;
+  payoffRatio: number | null;
+  breakevenWinRate: number | null;
+  winRateMargin: number | null;
+  expectancyPerTrade: number | null;
+  totalR: number | null;
+  expectancyR: number | null;
+  rCoverage: number;
 };
 
 function average(values: number[]): number | null {
@@ -414,6 +455,111 @@ function sampleSupport(count: number): number {
   return 0;
 }
 
+function sessionMetrics(trades: AnalyzedTrade[]): SessionMetrics {
+  const pnls = trades.map((trade) => trade.pnl);
+  const wins = pnls.filter((pnl) => pnl > 0);
+  const losses = pnls.filter((pnl) => pnl < 0);
+  const netPnlValue = pnls.reduce((sum, pnl) => sum + pnl, 0);
+  const grossWins = wins.reduce((sum, pnl) => sum + pnl, 0);
+  const grossLosses = Math.abs(losses.reduce((sum, pnl) => sum + pnl, 0));
+  const winRate = winRateFor(wins.length, losses.length);
+  const avgWinner = average(wins);
+  const avgLoser = average(losses);
+  const payoffRatio = avgWinner == null || avgLoser == null || avgLoser === 0 ? null : avgWinner / Math.abs(avgLoser);
+  const breakevenWinRate = avgWinner == null || avgLoser == null
+    ? null
+    : Math.abs(avgLoser) / (avgWinner + Math.abs(avgLoser));
+  const rMultiples = trades.flatMap((trade) => (trade.rMultiple == null ? [] : [trade.rMultiple]));
+  const totalR = rMultiples.length === 0 ? null : rMultiples.reduce((sum, value) => sum + value, 0);
+
+  return {
+    trades: trades.length,
+    netPnl: netPnlValue,
+    grossWins,
+    grossLosses,
+    winRate,
+    profitFactor: grossLosses === 0 ? null : grossWins / grossLosses,
+    avgWinner,
+    avgLoser,
+    payoffRatio,
+    breakevenWinRate,
+    winRateMargin: winRate == null || breakevenWinRate == null ? null : winRate - breakevenWinRate,
+    expectancyPerTrade: trades.length === 0 ? null : netPnlValue / trades.length,
+    totalR,
+    expectancyR: totalR == null ? null : totalR / rMultiples.length,
+    rCoverage: trades.length === 0 ? 0 : rMultiples.length / trades.length,
+  };
+}
+
+function materialVote(current: number | null, baseline: number | null, threshold: number): TrendSignal["vote"] {
+  if (current == null || baseline == null) return 0;
+  const delta = current - baseline;
+  if (delta > threshold) return 1;
+  if (delta < -threshold) return -1;
+  return 0;
+}
+
+function buildTrendHistory(
+  current: SessionMetrics,
+  baseline: SessionMetrics,
+  baselineLabel: string,
+): SessionFactPack["history"] {
+  const currentExpectancy = current.expectancyR ?? current.expectancyPerTrade;
+  const baselineExpectancy = baseline.expectancyR ?? baseline.expectancyPerTrade;
+  const netThreshold = Math.max(50, Math.abs(baseline.netPnl) * 0.1);
+  const signals: TrendSignal[] = [
+    {
+      key: "win_rate",
+      label: "Win rate",
+      current: current.winRate,
+      baseline: baseline.winRate,
+      delta: current.winRate == null || baseline.winRate == null ? null : current.winRate - baseline.winRate,
+      vote: materialVote(current.winRate, baseline.winRate, WIN_RATE_TREND_THRESHOLD),
+    },
+    {
+      key: "expectancy",
+      label: current.expectancyR != null && baseline.expectancyR != null ? "E[R]" : "E[$]",
+      current: currentExpectancy,
+      baseline: baselineExpectancy,
+      delta: currentExpectancy == null || baselineExpectancy == null ? null : currentExpectancy - baselineExpectancy,
+      vote: materialVote(currentExpectancy, baselineExpectancy, EXPECTANCY_TREND_THRESHOLD),
+    },
+    {
+      key: "profit_factor",
+      label: "Profit factor",
+      current: current.profitFactor,
+      baseline: baseline.profitFactor,
+      delta: current.profitFactor == null || baseline.profitFactor == null ? null : current.profitFactor - baseline.profitFactor,
+      vote: materialVote(current.profitFactor, baseline.profitFactor, PROFIT_FACTOR_TREND_THRESHOLD),
+    },
+    {
+      key: "net",
+      label: "Net P&L",
+      current: current.netPnl,
+      baseline: baseline.netPnl,
+      delta: current.netPnl - baseline.netPnl,
+      vote: materialVote(current.netPnl, baseline.netPnl, netThreshold),
+    },
+  ];
+  const alignedPositive = signals.filter((signal) => signal.vote === 1).length;
+  const alignedNegative = signals.filter((signal) => signal.vote === -1).length;
+  const trendLabel =
+    baseline.trades < 10
+      ? "insufficient baseline"
+      : alignedPositive >= 3
+        ? "improvement"
+        : alignedNegative >= 3
+          ? "deterioration"
+          : "mixed";
+
+  return {
+    baselineLabel,
+    baselineTrades: baseline.trades,
+    trendLabel,
+    signals,
+  };
+}
+
 function surpriseCandidate(input: Omit<SurpriseCandidate, "score">): SurpriseCandidate {
   return {
     ...input,
@@ -576,23 +722,17 @@ function confidenceFor(trades: AnalyzedTrade[]): SessionFactPack["confidence"] {
   };
 }
 
-export function buildSessionFactPack(inputTrades: ReviewTradeInput[]): SessionFactPack {
+export function buildSessionFactPack(
+  inputTrades: ReviewTradeInput[],
+  options: BuildSessionFactPackOptions = {},
+): SessionFactPack {
   const trades = analyzeTrades(inputTrades);
+  const baselineTrades = analyzeTrades(options.baselineTrades ?? []);
+  const currentMetrics = sessionMetrics(trades);
+  const baselineMetrics = sessionMetrics(baselineTrades);
   const pnls = trades.map((trade) => trade.pnl);
-  const wins = pnls.filter((pnl) => pnl > 0);
-  const losses = pnls.filter((pnl) => pnl < 0);
-  const netPnlValue = pnls.reduce((sum, pnl) => sum + pnl, 0);
-  const grossWins = wins.reduce((sum, pnl) => sum + pnl, 0);
-  const grossLosses = Math.abs(losses.reduce((sum, pnl) => sum + pnl, 0));
-  const winRate = winRateFor(wins.length, losses.length);
-  const avgWinner = average(wins);
-  const avgLoser = average(losses);
-  const payoffRatio = avgWinner == null || avgLoser == null || avgLoser === 0 ? null : avgWinner / Math.abs(avgLoser);
-  const breakevenWinRate = avgWinner == null || avgLoser == null
-    ? null
-    : Math.abs(avgLoser) / (avgWinner + Math.abs(avgLoser));
-  const rMultiples = trades.flatMap((trade) => (trade.rMultiple == null ? [] : [trade.rMultiple]));
-  const totalR = rMultiples.length === 0 ? null : rMultiples.reduce((sum, value) => sum + value, 0);
+  const netPnlValue = currentMetrics.netPnl;
+  const winRate = currentMetrics.winRate;
   const byTicker = groupedSegments(trades, (trade) => ({ key: trade.symbol, label: trade.symbol }));
   const byTimeWindow = groupedSegments(trades, timeWindowForTrade).sort((a, b) => a.key.localeCompare(b.key));
   const byPriceBand = groupedSegments(trades, priceBandForTrade);
@@ -601,29 +741,14 @@ export function buildSessionFactPack(inputTrades: ReviewTradeInput[]): SessionFa
   const surprises = buildSurprises({ trades, netPnlValue, winRate, byTicker, byTimeWindow, byPriceBand });
 
   return {
-    session: {
-      trades: trades.length,
-      netPnl: netPnlValue,
-      grossWins,
-      grossLosses,
-      winRate,
-      profitFactor: grossLosses === 0 ? null : grossWins / grossLosses,
-      avgWinner,
-      avgLoser,
-      payoffRatio,
-      breakevenWinRate,
-      winRateMargin: winRate == null || breakevenWinRate == null ? null : winRate - breakevenWinRate,
-      expectancyPerTrade: trades.length === 0 ? null : netPnlValue / trades.length,
-      totalR,
-      expectancyR: totalR == null ? null : totalR / rMultiples.length,
-      rCoverage: trades.length === 0 ? 0 : rMultiples.length / trades.length,
-    },
+    session: currentMetrics,
     robustness,
     segments: {
       byTicker,
       byTimeWindow,
       byPriceBand,
     },
+    history: buildTrendHistory(currentMetrics, baselineMetrics, options.baselineLabel ?? "Prior baseline"),
     mechanism,
     surprises,
     experiment: compileExperiment(mechanism, surprises[0]),

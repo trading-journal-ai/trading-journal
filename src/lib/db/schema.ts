@@ -171,6 +171,36 @@ export const journalEntries = sqliteTable(
   ],
 );
 
+/** Coach-generated experiment saved back into the journal loop. */
+export const coachExperiments = sqliteTable(
+  "coach_experiments",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    accountId: integer("account_id").references(() => accounts.id),
+    scope: text("scope", { enum: ["day", "week", "month"] }).notNull(),
+    scopeKey: text("scope_key").notNull(),
+    hypothesis: text("hypothesis").notNull(),
+    trigger: text("trigger").notNull(),
+    action: text("action").notNull(),
+    experimentScope: text("experiment_scope").notNull(),
+    expires: text("expires").notNull(),
+    measure: text("measure").notNull(),
+    status: text("status", { enum: ["active", "completed", "retired"] })
+      .notNull()
+      .default("active"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    uniqueIndex("coach_experiments_account_scope_key_unq").on(t.accountId, t.scope, t.scopeKey),
+    index("coach_experiments_account_status_idx").on(t.accountId, t.status, t.updatedAt),
+  ],
+);
+
 /** Screenshot / image attached to a trade. */
 export const attachments = sqliteTable(
   "attachments",

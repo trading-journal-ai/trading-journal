@@ -17,6 +17,12 @@ type TradeNoteState = { ok: boolean };
 const RECAP_SCOPES = ["day", "week", "month"] as const;
 type RecapScope = (typeof RECAP_SCOPES)[number];
 
+function revalidateJournalLoop() {
+  revalidatePath("/dashboard");
+  revalidatePath("/journal");
+  revalidatePath("/reports");
+}
+
 /** Create-or-update a scoped recap note (day/week/month) keyed by scope+scopeKey. */
 export async function upsertScopedNoteAction(
   _prev: ScopedNoteState | null,
@@ -52,8 +58,61 @@ export async function upsertScopedNoteAction(
       .values({ accountId: activeAccount.id, scope, scopeKey, lessons: body || null });
   }
 
-  revalidatePath("/journal");
+  revalidateJournalLoop();
   return { ok: true };
+}
+
+export async function saveCoachExperimentAction(formData: FormData) {
+  const scope = String(formData.get("scope") ?? "") as RecapScope;
+  const scopeKey = String(formData.get("scopeKey") ?? "").trim();
+  const hypothesis = String(formData.get("hypothesis") ?? "").trim();
+  const trigger = String(formData.get("trigger") ?? "").trim();
+  const action = String(formData.get("action") ?? "").trim();
+  const experimentScope = String(formData.get("experimentScope") ?? "").trim();
+  const expires = String(formData.get("expires") ?? "").trim();
+  const measure = String(formData.get("measure") ?? "").trim();
+
+  if (
+    !RECAP_SCOPES.includes(scope) ||
+    !scopeKey ||
+    !hypothesis ||
+    !trigger ||
+    !action ||
+    !experimentScope ||
+    !expires ||
+    !measure
+  ) {
+    return;
+  }
+
+  const activeAccount = await getActiveAccount();
+  const values = {
+    accountId: activeAccount.id,
+    scope,
+    scopeKey,
+    hypothesis,
+    trigger,
+    action,
+    experimentScope,
+    expires,
+    measure,
+    status: "active" as const,
+    updatedAt: new Date(),
+  };
+
+  await db
+    .insert(schema.coachExperiments)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [
+        schema.coachExperiments.accountId,
+        schema.coachExperiments.scope,
+        schema.coachExperiments.scopeKey,
+      ],
+      set: values,
+    });
+
+  revalidateJournalLoop();
 }
 
 export async function updateJournalEntryAction(formData: FormData) {
@@ -79,7 +138,7 @@ export async function updateJournalEntryAction(formData: FormData) {
     })
     .where(eq(schema.journalEntries.id, noteId));
 
-  revalidatePath("/journal");
+  revalidateJournalLoop();
   if (Number.isInteger(tradeId) && tradeId > 0) {
     revalidatePath(`/trades/${tradeId}`);
   }
@@ -95,7 +154,7 @@ export async function deleteJournalEntryAction(formData: FormData) {
     .delete(schema.journalEntries)
     .where(eq(schema.journalEntries.id, noteId));
 
-  revalidatePath("/journal");
+  revalidateJournalLoop();
   if (Number.isInteger(tradeId) && tradeId > 0) {
     revalidatePath(`/trades/${tradeId}`);
   }
