@@ -103,8 +103,11 @@ The coach should use the journal as the human context layer:
 
 - Trade note text.
 - Primary trade label: good trade, rule break, revenge trade, etc.
-- Process pills: followed plan, cut loss, let winner work, oversized, etc.
-- Emotion pills: calm, frustrated, impatient, fearful, tilted, FOMO, etc.
+- Setup/pattern labels and definitions when the user has defined them.
+- Natural-language process and emotional context from notes and dictation.
+- AI-extracted process/emotion signals from prose, with confidence and user
+  correction, rather than relying on dense pill selection as the primary capture
+  UI.
 - Daily note.
 - Weekly recap.
 - Monthly recap.

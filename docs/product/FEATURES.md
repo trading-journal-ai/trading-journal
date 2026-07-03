@@ -16,7 +16,8 @@
   edge cases.
 - 🔜 Test the first-run/onboarding flow from a clean environment with no local
   database: install/setup, demo data path, import path, empty states, settings,
-  and recovery from missing env vars or missing data files.
+  and recovery from missing env vars or missing data files. Product direction
+  lives in `docs/product/ONBOARDING_SETUP_FLOW.md`.
 - 🔜 Document the public path clearly: what the hosted site is for, how to run
   the app locally, how to load demo data, how to import real broker exports, and
   how contributors should validate changes before opening PRs.
@@ -77,7 +78,14 @@
 
 ## 4. Journaling & Review  ⭐
 - ✅ Per-trade reflection: **thesis, what went well / wrong, lessons**.
-- ✅ **Discipline/emotion** tagging (followed plan? FOMO? revenge?).
+- 🔜 **Dictation-first note capture** across trade, day, ticker/day, check-in,
+  and coach surfaces. Direction lives in
+  `docs/product/NOTES_DICTATION_COACH_MODEL.md`.
+- 🔜 **AI-extracted process/emotion signals** from natural-language notes, with
+  user correction, instead of broad emotion/process pill banks as the primary
+  capture UI.
+- 🔜 **Setup/pattern taxonomy** as the main structured note control: user-defined
+  patterns, valid/invalid conditions, examples, and coach corrections.
 - ✅ **Screenshots**: attach images to a trade (stored locally).
 - 🔜 Searchable journal of mistakes/lessons across trades.
 - 🔜 Daily note / day snapshot (market regime, how I traded).

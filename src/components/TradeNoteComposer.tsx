@@ -3,15 +3,38 @@
 import { useState } from "react";
 import { addTradeNoteAction } from "@/app/trades/[id]/actions";
 import TradeNoteFormFields from "@/components/TradeNoteFormFields";
+import useLocalStorageText from "@/components/useLocalStorageText";
+import { demoTradeNoteKey } from "@/lib/demoLocalNotes";
 
 export default function TradeNoteComposer({
   tradeId,
   symbol,
+  readOnly = false,
 }: {
   tradeId: number;
   symbol: string;
+  readOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const localStorageKey = readOnly ? demoTradeNoteKey(tradeId) : undefined;
+  const [localText, setLocalText] = useLocalStorageText(localStorageKey, "");
+
+  if (!open && localText) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        data-testid="trade-journal-note"
+        className="block w-full text-left"
+        title="Click to edit"
+      >
+        <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">{localText}</p>
+        <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--muted)]">
+          Saved in this browser
+        </p>
+      </button>
+    );
+  }
 
   if (!open) {
     return (
@@ -38,8 +61,13 @@ export default function TradeNoteComposer({
       <TradeNoteFormFields
         symbol={symbol}
         defaultPrimaryLabel={null}
-        defaultText=""
+        defaultText={localText}
         onCancel={() => setOpen(false)}
+        localStorageKey={localStorageKey}
+        onLocalSave={(value) => {
+          setLocalText(value);
+          setOpen(false);
+        }}
       />
     </form>
   );

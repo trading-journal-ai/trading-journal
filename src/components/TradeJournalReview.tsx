@@ -897,10 +897,12 @@ function DayReviewSection({
   data,
   recaps,
   returnTo,
+  readOnly,
 }: {
   data: ReviewData;
   recaps: Map<string, DayRecapContext>;
   returnTo: string;
+  readOnly: boolean;
 }) {
   const { day, tickerRows, pnlPoints, keyTradePrompts } = data;
   const recap = recaps.get(day.date);
@@ -933,6 +935,7 @@ function DayReviewSection({
               whatWentWrong={recap?.whatWentWrong ?? ""}
               emotionalState={recap?.emotionalState ?? ""}
               placeholder="Add a daily recap: market read, execution quality, emotions, what worked, and what to tighten next session."
+              readOnly={readOnly}
             />
           </div>
 
@@ -1015,6 +1018,7 @@ function WeekSection({
             data={dayData}
             recaps={recaps}
             returnTo={returnTo}
+            readOnly={isDemoReadOnly()}
           />
         ))}
       </div>
@@ -1418,7 +1422,10 @@ export default async function TradeJournalReview({
           ) : null}
           {preset === "today" ? (
             <ScopeHeader>
-              <WeekHeader label="Today" displayDate={todayDisplayDate(range)} />
+              <WeekHeader
+                label={range.anchor === currentEtDate() ? "Today" : range.title}
+                displayDate={todayDisplayDate(range)}
+              />
             </ScopeHeader>
           ) : null}
 
@@ -1438,11 +1445,12 @@ export default async function TradeJournalReview({
                   data={dayData}
                   recaps={recaps}
                   returnTo={currentHref}
+                  readOnly={readOnly}
                 />
               ))}
             </div>
           ) : (
-            <DayReviewSection data={range.days[0]} recaps={recaps} returnTo={currentHref} />
+            <DayReviewSection data={range.days[0]} recaps={recaps} returnTo={currentHref} readOnly={readOnly} />
           )}
 
           {range.trades > 0 ? (

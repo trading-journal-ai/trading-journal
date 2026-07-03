@@ -5,7 +5,9 @@ import {
   deleteJournalEntryAction,
   updateJournalEntryStateAction,
 } from "@/app/journal/actions";
-import TradeNoteFormFields, { JournalNotePill } from "@/components/TradeNoteFormFields";
+import TradeNoteFormFields from "@/components/TradeNoteFormFields";
+import useLocalStorageText from "@/components/useLocalStorageText";
+import { demoTradeNoteKey } from "@/lib/demoLocalNotes";
 
 export default function TradeJournalNote({
   noteId,
@@ -13,8 +15,7 @@ export default function TradeJournalNote({
   symbol,
   text,
   primaryLabel,
-  processTags,
-  emotionTags,
+  readOnly = false,
   showHeader = false,
   showFormHeader = false,
 }: {
@@ -23,13 +24,14 @@ export default function TradeJournalNote({
   symbol: string;
   text: string;
   primaryLabel: string | null;
-  processTags: string[];
-  emotionTags: string[];
+  readOnly?: boolean;
   showHeader?: boolean;
   showFormHeader?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [state, formAction, pending] = useActionState(updateJournalEntryStateAction, null);
+  const localStorageKey = readOnly ? demoTradeNoteKey(tradeId, noteId) : undefined;
+  const [displayText, setDisplayText] = useLocalStorageText(localStorageKey, text);
 
   useEffect(() => {
     // Collapse back to the clean reading view after a successful save.
@@ -59,15 +61,8 @@ export default function TradeJournalNote({
           </div>
         ) : null}
         <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">
-          {text || "Add a trade note."}
+          {displayText || "Add a trade note."}
         </p>
-        {processTags.length > 0 || emotionTags.length > 0 ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {[...processTags, ...emotionTags].map((tag) => (
-              <JournalNotePill key={tag} label={tag} />
-            ))}
-          </div>
-        ) : null}
       </button>
     );
   }
@@ -79,13 +74,16 @@ export default function TradeJournalNote({
       <TradeNoteFormFields
         symbol={symbol}
         defaultPrimaryLabel={primaryLabel}
-        defaultText={text}
-        defaultProcessTags={processTags}
-        defaultEmotionTags={emotionTags}
+        defaultText={displayText}
         pending={pending}
         onCancel={() => setEditing(false)}
         showHeader={showFormHeader}
-        deleteControl={
+        localStorageKey={localStorageKey}
+        onLocalSave={(value) => {
+          setDisplayText(value);
+          setEditing(false);
+        }}
+        deleteControl={!readOnly ? (
           <button
             type="submit"
             formAction={deleteJournalEntryAction}
@@ -93,7 +91,7 @@ export default function TradeJournalNote({
           >
             Delete note
           </button>
-        }
+        ) : undefined}
       />
     </form>
   );
