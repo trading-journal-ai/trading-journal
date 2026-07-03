@@ -11,13 +11,16 @@ export default async function JournalAppLayout({
 }>) {
   const accounts = await listAccounts();
   const activeAccount = await getActiveAccount(accounts);
+  const demoReadOnly = isDemoReadOnly();
+  const brandHref = demoReadOnly ? "https://trading-journal.ai" : undefined;
   const showImport = canImportData();
-  const showSettings = !isDemoReadOnly();
+  const showSettings = !demoReadOnly;
 
   return (
     <AppShell
       accounts={accounts}
       activeAccountId={activeAccount.id}
+      brandHref={brandHref}
       showImport={showImport}
       showSettings={showSettings}
     >
