@@ -20,9 +20,9 @@ shape.
 
 What is landing now:
 
-- **Onboarding and setup flow**: first launch should guide people through the
-  choices that make the app useful quickly: demo vs. real journal, Massive API
-  key, broker/import setup, rules/playbook, and coach preferences. Anything
+- **Onboarding and setup flow**: first launch inside the app should help people
+  connect their broker/import source, add a language-model API key, define
+  trading rules, build a setup playbook, and tune coach preferences. Anything
   skipped during setup should be recoverable later from Settings or contextual
   setup prompts.
 - **Dictation-first note capture**: voice input is being treated as a core
