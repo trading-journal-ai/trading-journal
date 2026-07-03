@@ -320,6 +320,19 @@ function archiveWeeks(monthKey: string, activeWeekKey: string | undefined, baseP
   return weeks;
 }
 
+function isOptionalCoachReadError(error: unknown): boolean {
+  let current: unknown = error;
+
+  while (current instanceof Error) {
+    if (/no such (table|column)|SQLITE_ERROR|SQLITE_UNKNOWN|libsql/i.test(current.message)) {
+      return true;
+    }
+    current = current.cause;
+  }
+
+  return false;
+}
+
 function summarizeTrades(trades: TradeRow[], fills: number): ReviewSummary {
   const pnls = trades.map((trade) => netPnl(trade) ?? 0);
   const winners = pnls.filter((pnl) => pnl > 0);
@@ -612,54 +625,64 @@ async function loadSavedCoachExperiment(
   accountId: number,
   reviewScope: ReviewScope,
 ): Promise<SavedCoachExperiment | null> {
-  const row = await db
-    .select({
-      action: schema.coachExperiments.action,
-      trigger: schema.coachExperiments.trigger,
-      updatedAt: schema.coachExperiments.updatedAt,
-    })
-    .from(schema.coachExperiments)
-    .where(
-      and(
-        eq(schema.coachExperiments.accountId, accountId),
-        eq(schema.coachExperiments.scope, reviewScope.scope),
-        eq(schema.coachExperiments.scopeKey, reviewScope.scopeKey),
-      ),
-    )
-    .limit(1)
-    .get();
+  try {
+    const row = await db
+      .select({
+        action: schema.coachExperiments.action,
+        trigger: schema.coachExperiments.trigger,
+        updatedAt: schema.coachExperiments.updatedAt,
+      })
+      .from(schema.coachExperiments)
+      .where(
+        and(
+          eq(schema.coachExperiments.accountId, accountId),
+          eq(schema.coachExperiments.scope, reviewScope.scope),
+          eq(schema.coachExperiments.scopeKey, reviewScope.scopeKey),
+        ),
+      )
+      .limit(1)
+      .get();
 
-  return row ?? null;
+    return row ?? null;
+  } catch (error) {
+    if (isOptionalCoachReadError(error)) return null;
+    throw error;
+  }
 }
 
 async function loadSavedCoachReview(
   accountId: number,
   reviewScope: ReviewScope,
 ): Promise<SavedCoachReview | null> {
-  const row = await db
-    .select({
-      status: schema.coachReviews.status,
-      reviewJson: schema.coachReviews.reviewJson,
-      updatedAt: schema.coachReviews.updatedAt,
-    })
-    .from(schema.coachReviews)
-    .where(
-      and(
-        eq(schema.coachReviews.accountId, accountId),
-        eq(schema.coachReviews.scope, reviewScope.scope),
-        eq(schema.coachReviews.scopeKey, reviewScope.scopeKey),
-      ),
-    )
-    .limit(1)
-    .get();
+  try {
+    const row = await db
+      .select({
+        status: schema.coachReviews.status,
+        reviewJson: schema.coachReviews.reviewJson,
+        updatedAt: schema.coachReviews.updatedAt,
+      })
+      .from(schema.coachReviews)
+      .where(
+        and(
+          eq(schema.coachReviews.accountId, accountId),
+          eq(schema.coachReviews.scope, reviewScope.scope),
+          eq(schema.coachReviews.scopeKey, reviewScope.scopeKey),
+        ),
+      )
+      .limit(1)
+      .get();
 
-  return row
-    ? {
-        status: row.status,
-        updatedAt: row.updatedAt,
-        storedReview: parseCoachStoredReview(row.reviewJson),
-      }
-    : null;
+    return row
+      ? {
+          status: row.status,
+          updatedAt: row.updatedAt,
+          storedReview: row.reviewJson ? parseCoachStoredReview(row.reviewJson) : null,
+        }
+      : null;
+  } catch (error) {
+    if (isOptionalCoachReadError(error)) return null;
+    throw error;
+  }
 }
 
 async function loadReviewArchive(anchor: string, accountId: number, basePath: string, month?: string): Promise<ReviewArchive> {
