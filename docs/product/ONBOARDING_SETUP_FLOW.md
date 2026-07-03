@@ -2,32 +2,34 @@
 
 > Status: Draft · Last updated: 2026-07-03
 
-This doc defines the first-run setup experience for Trading Journal AI. The goal
-is not to trap a new user in a long wizard. The goal is to get enough context
-into the app that imports, charts, reports, and coaching work immediately, while
-leaving every preference tunable later.
+This doc defines the in-app setup experience for Trading Journal AI after the
+app is installed or the hosted demo is opened. The goal is not to recap the
+installer. The goal is to collect the few pieces of context that make the app
+work intelligently: broker/import source, language-model access, trading rules,
+setup playbook, and coach preferences.
 
 Working name: **Baby Onboarding**. It should feel lightweight, recoverable, and
 useful from minute one.
 
 ## Product Thesis
 
-The app becomes more valuable when it knows four things early:
+The app becomes more valuable when it knows five things early:
 
 - Where trade data will come from.
-- Whether candle data can be fetched.
 - Whether AI coaching can run, and which model/provider should power it.
 - What rules the trader is trying to follow.
 - Which setups and behaviors the coach should evaluate against.
+- Whether candle data can be fetched for chart context.
 
-Broker selection and the Massive key make the app functional. Trading rules,
-language-model setup, setup playbook, and coach preferences make the app feel
-personal and intelligent.
+Broker selection makes import trustworthy. Language-model setup unlocks live
+coach generation. Trading rules, setup playbook, and coach preferences make the
+coach specific to the trader instead of generic. Market-data setup improves
+charts, but it is supporting infrastructure, not the heart of onboarding.
 
 ## Goals
 
-- Guide a new user from first launch to useful review state.
-- Support demo, empty, and real-import starts.
+- Guide a new user from first app launch to a configured review state.
+- Keep install/demo/empty starts separate from the in-app setup checklist.
 - Make missing config obvious without blocking the rest of the app.
 - Let users return later to finish or change setup.
 - Keep sensitive data local-first and clearly explain what is stored.
@@ -39,6 +41,7 @@ personal and intelligent.
 - No broker account linking or automated execution sync.
 - No auth, cloud profile, or multi-user workspace assumptions.
 - No required AI configuration before the journal can be used.
+- No installer walkthrough or package/dependency setup.
 - No giant intake form that delays importing the first trades.
 
 ## Design Principles
@@ -56,8 +59,9 @@ Every question should unlock a capability:
 - Massive key unlocks high-quality charts.
 - Language-model key unlocks live AI coaching.
 - Broker choice unlocks import instructions and better diagnostics.
-- Risk rules unlock daily accountability and coach evaluation.
-- Setup playbook unlocks setup-level analytics and better AI review.
+- Trading rules unlock daily accountability and coach evaluation.
+- Setup playbook unlocks setup-level analytics, cleaner note tags, and better
+  AI review.
 - Coach preferences unlock tone and focus calibration.
 
 ### Defaults Beat Blankness
@@ -74,8 +78,10 @@ settings should power first-run setup and long-term configuration.
 
 ## Entry Points
 
-- First launch with no local database.
-- First launch with database but no imported trades.
+- First app launch after install or hosted-demo entry.
+- First launch with no broker/import source selected.
+- First launch with no AI provider configured.
+- First launch with no trading rules or setup playbook.
 - Settings: manual return to setup checklist.
 - Dashboard: persistent incomplete setup nudges.
 - Import page: broker setup and market-data setup prompts.
@@ -83,65 +89,36 @@ settings should power first-run setup and long-term configuration.
 
 ## Setup Checklist
 
-### 1. Start Mode
+### 1. AI Coach / Language Model
 
-Purpose: decide how the user wants to enter the product.
-
-Options:
-
-- **Use demo data**: fastest way to inspect the app.
-- **Import real trades**: go directly to broker import setup.
-- **Start empty**: create workspace/account and continue without data.
-
-Expected behavior:
-
-- Demo mode should be clearly labeled and reversible.
-- Real import should route into broker selection.
-- Empty mode should still create a default account/profile so navigation works.
-
-### 2. Account Profile
-
-Purpose: create a clean scope for imports, reporting, and settings.
+Purpose: connect the user's preferred language-model service so coach
+generation, rule assistance, and setup/playbook help can run outside the static
+demo path.
 
 Fields:
 
-- Account name.
-- Account type label: paper, live, IRA, other.
-- Default timezone, with ET as the market-review default.
-- Default gross/net reporting preference.
-- Optional starting balance or account size for risk context.
-
-Notes:
-
-- This should not become brokerage authentication.
-- Account switching should continue to scope imports, calendar, trades, reports,
-  and journal views.
-
-### 3. Market Data
-
-Purpose: connect candle data so charts render correctly after import.
-
-Fields:
-
-- `MASSIVE_API_KEY`.
-- Connection test status.
-- Optional fallback note for manual candle CSV later.
+- Provider: OpenAI first; other providers later if supported.
+- API key or local model endpoint.
+- Connection/test status.
+- Default model, if the provider exposes useful choices.
+- Whether live coach generation is enabled.
 
 UX copy should be plain:
 
-- Used for 1-minute candles and chart context.
-- Stored locally/server-side.
-- Never exposed to the browser.
-- App can still run without it, but charts may use cached or execution-derived
-  fallback behavior.
+- Used for AI coach reviews, summaries, rule/playbook drafting, and setup
+  assistance.
+- Stored locally/server-side, never in browser bundles.
+- The app can still run without it; coach surfaces fall back to static reviews,
+  deterministic facts, or missing-context prompts.
+- Hosted demo should not ask public visitors to enter secrets unless there is a
+  clearly local-only/private storage path and explicit copy.
 
 Open implementation question:
 
-- The current app reads `MASSIVE_API_KEY` from environment variables. A true
-  setup flow likely needs a local settings/config storage path, otherwise setup
-  still requires editing `.env.local`.
+- For local-first installs, should the key live in `.env.local`, an encrypted
+  local settings store, or a desktop wrapper keychain integration?
 
-### 4. Broker / Import Format
+### 2. Broker / Import Format
 
 Purpose: give the importer enough context to show the right instructions and
 diagnostics.
@@ -178,34 +155,7 @@ Unsupported broker hook:
   remove account numbers or identifying data before sharing samples outside the
   local app.
 
-### 5. AI Coach / Language Model
-
-Purpose: connect the user's preferred language-model service so coach generation
-can run outside the static demo path.
-
-Fields:
-
-- Provider: OpenAI first; other providers later if supported.
-- API key or local model endpoint.
-- Connection/test status.
-- Default model, if the provider exposes useful choices.
-- Whether live coach generation is enabled.
-
-UX copy should be plain:
-
-- Used for AI coach reviews, summaries, and setup/playbook assistance.
-- Stored locally/server-side, never in browser bundles.
-- The app can still run without it; coach surfaces fall back to static reviews,
-  deterministic facts, or missing-context prompts.
-- Hosted demo should not ask public visitors to enter secrets unless there is a
-  clearly local-only/private storage path and explicit copy.
-
-Open implementation question:
-
-- For local-first installs, should the key live in `.env.local`, an encrypted
-  local settings store, or a desktop wrapper keychain integration?
-
-### 6. Trading Rules
+### 3. Trading Rules
 
 Purpose: define the guardrails the trader wants to be judged against.
 
@@ -223,7 +173,17 @@ Suggested fields:
 This should be optional but strongly encouraged. Without rules, the app can
 report outcomes, but it cannot fully evaluate discipline.
 
-### 7. Setup Playbook
+Rule capture should allow both structured fields and plain-language rules:
+
+- Structured fields handle limits and numeric guardrails.
+- Plain-language rules handle trader-specific standards, such as "No first
+  candle chase unless it reclaims VWAP and holds the bid."
+- The model can help turn prose into candidate structured rules, but the trader
+  confirms what becomes official.
+- Rules should be editable later and visible anywhere the coach claims a rule
+  was held, bent, or broken.
+
+### 4. Setup Playbook
 
 Purpose: define what the trader is allowed to trade.
 
@@ -261,7 +221,7 @@ The setup playbook should feed:
 - Coach review prompt/context.
 - Daily recap: whether trades matched approved setups.
 
-### 8. Coach Preferences
+### 5. Coach Preferences
 
 Purpose: tune how the app talks back to the trader.
 
@@ -277,26 +237,69 @@ Suggested fields:
 The coach should never hide evidence because of tone settings. Tone changes the
 delivery, not the facts.
 
-### 9. Finish State
+### 6. Market Data
+
+Purpose: connect candle data so charts render correctly after import.
+
+Fields:
+
+- `MASSIVE_API_KEY`.
+- Connection test status.
+- Optional fallback note for manual candle CSV later.
+
+UX copy should be plain:
+
+- Used for 1-minute candles and chart context.
+- Stored locally/server-side.
+- Never exposed to the browser.
+- App can still run without it, but charts may use cached or execution-derived
+  fallback behavior.
+
+Open implementation question:
+
+- The current app reads `MASSIVE_API_KEY` from environment variables. A true
+  setup flow likely needs a local settings/config storage path, otherwise setup
+  still requires editing `.env.local`.
+
+### 7. Account / Review Preferences
+
+Purpose: create a clean scope for imports, reporting, and settings without
+turning onboarding into brokerage authentication.
+
+Fields:
+
+- Account name.
+- Account type label: paper, live, IRA, other.
+- Default timezone, with ET as the market-review default.
+- Default gross/net reporting preference.
+- Optional starting balance or account size for risk context.
+
+Notes:
+
+- This should not become broker login.
+- Account switching should continue to scope imports, calendar, trades, reports,
+  and journal views.
+- This step should feel secondary to broker/model/rules setup.
+
+### 8. Finish State
 
 Purpose: make progress visible and send the user somewhere useful.
 
 Possible completion destinations:
 
-- Demo data: Dashboard or Journal.
 - Real import complete: imported day/trades review.
 - No data yet: Import page.
-- Setup only: Dashboard with next action card.
+- Setup only: Dashboard or Journal with next action card.
 
 Completion summary:
 
-- Market data: connected / missing.
 - AI coach: connected / static only / missing.
 - Broker import: selected / not selected.
-- Account: configured.
 - Rules: configured / skipped.
 - Setups: count configured / skipped.
 - Coach: configured / default.
+- Market data: connected / missing.
+- Account/review preferences: configured / default.
 
 ## Later Editing Model
 
@@ -432,33 +435,39 @@ Important boundary:
 - Define setup checklist status model.
 - Add placeholder Settings sections for setup recovery.
 
-### Slice 2: First-Run Detection
+### Slice 2: Model Key + Broker Setup
 
-- Detect no database / no account / no trades.
-- Route to setup checklist or show setup prompt.
-- Support demo, import, or empty start.
-
-### Slice 3: Market Data + Broker Setup
-
-- Add Massive key status and connection test.
 - Add AI provider key status and connection test.
 - Add broker choice and import instructions.
 - Keep CSV inspection authoritative.
 - Add unsupported broker route into an assisted mapping/adapter workflow.
 
-### Slice 4: Rules + Playbook
+### Slice 3: Trading Rules
 
 - Add trading rules editor.
+- Support structured numeric guardrails and plain-language rules.
+- Let the model suggest structured rules from prose, with user confirmation.
+- Feed rules into coach payloads and missing-context caveats.
+
+### Slice 4: Setup Playbook
+
 - Add setup playbook editor.
 - Feed setup options into trade notes/review forms.
+- Feed setup definitions into reports and coach payloads.
 
 ### Slice 5: Coach Preferences
 
 - Add coach preference editor.
-- Include rules, setup playbook, and preferences in coach payloads.
+- Include preferences in coach payloads.
 - Make missing-context caveats explicit.
 
-### Slice 6: AI-Assisted Broker Adapter
+### Slice 6: Market Data + Account Preferences
+
+- Add Massive key status and connection test.
+- Add review/account preferences that affect reporting, timezone, and gross/net
+  defaults.
+
+### Slice 7: AI-Assisted Broker Adapter
 
 - Let the user provide an unsupported broker sample.
 - Inspect columns and representative rows locally.
@@ -468,7 +477,7 @@ Important boundary:
 
 ## Open Questions
 
-- Should first-run setup be its own route (`/setup`) or a mode inside
+- Should in-app setup be its own route (`/setup`) or a mode inside
   `/settings`?
 - Where should a local `MASSIVE_API_KEY` live in production-like deployments?
 - Should setup playbook definitions be database rows, markdown-backed docs, or

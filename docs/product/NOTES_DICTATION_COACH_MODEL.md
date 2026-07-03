@@ -6,6 +6,9 @@ This note captures a product direction shift: notes are not a sidecar to the
 trading journal. Notes are the most important human context surface, and
 dictation should become a first-class way to create them.
 
+For the more precise note taxonomy, recap ladder, and what stays structured
+versus prose, see [NOTE_MODEL.md](NOTE_MODEL.md).
+
 ## Product Thesis
 
 **Notes are the primary human context layer. Structured controls should only be
