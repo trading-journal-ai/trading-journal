@@ -6,11 +6,7 @@ import { getActiveAccount } from "@/lib/accountScope";
 import { db, schema } from "@/lib/db";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import {
-  EMOTION_PILLS,
   PRIMARY_TRADE_LABELS,
-  PROCESS_PILLS,
-  encodeJournalTags,
-  filterKnownJournalTags,
 } from "@/lib/journalLabels";
 
 type ScopedNoteState = { ok: boolean };
@@ -188,8 +184,6 @@ export async function updateJournalEntryAction(formData: FormData) {
   const tradeId = Number(formData.get("tradeId"));
   const note = String(formData.get("note") ?? "").trim();
   const primaryLabel = String(formData.get("primaryLabel") ?? "").trim();
-  const processTags = filterKnownJournalTags(formData.getAll("processTags"), PROCESS_PILLS);
-  const emotionTags = filterKnownJournalTags(formData.getAll("emotionTags"), EMOTION_PILLS);
   const validPrimaryLabel = PRIMARY_TRADE_LABELS.some((option) => option.value === primaryLabel)
     ? primaryLabel
     : "";
@@ -201,8 +195,6 @@ export async function updateJournalEntryAction(formData: FormData) {
     .set({
       lessons: note || null,
       emotionalState: validPrimaryLabel || null,
-      whatWentWell: encodeJournalTags(processTags),
-      whatWentWrong: encodeJournalTags(emotionTags),
     })
     .where(eq(schema.journalEntries.id, noteId));
 

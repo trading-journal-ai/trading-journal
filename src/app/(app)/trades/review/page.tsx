@@ -6,11 +6,12 @@ import { getActiveAccount } from "@/lib/accountScope";
 import { getCandles } from "@/lib/candles";
 import { fallbackCandlesFromExecutions } from "@/lib/candles/fallback";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
-import DictationTextarea from "@/components/DictationTextarea";
+import SharedNoteComposer from "@/components/SharedNoteComposer";
 import LightweightTradeChart from "@/components/LightweightTradeChart";
 import ReviewHeader from "@/components/ReviewHeader";
 import { fmtDate, fmtMoney, fmtPrice } from "@/lib/format";
 import { isDemoReadOnly } from "@/lib/demoMode";
+import { demoTickerNoteKey } from "@/lib/demoLocalNotes";
 import { netPnl } from "@/lib/pnl";
 import { etDayRange, etDateString } from "@/lib/time";
 
@@ -225,6 +226,7 @@ function TickerReviewPanel({
   readOnly: boolean;
 }) {
   const placeholder = `How did I trade ${symbol}? What was the setup, where did I chase, and what should I repeat or avoid next time?`;
+  const scopeKey = tickerReviewKey(date, symbol);
 
   return (
     <section className="mt-6 rounded-md border border-[var(--hairline)] bg-[var(--surface)]/35 px-4 py-4">
@@ -247,28 +249,18 @@ function TickerReviewPanel({
         </div>
       </div>
 
-      <form action={upsertTickerReviewAction} className="mt-4 space-y-3">
-        <input type="hidden" name="scopeKey" value={tickerReviewKey(date, symbol)} />
+      <form action={upsertTickerReviewAction} className="mt-4">
+        <input type="hidden" name="scopeKey" value={scopeKey} />
         <input type="hidden" name="returnTo" value={returnTo} />
-        <DictationTextarea
+        <SharedNoteComposer
           name="body"
           defaultValue={note?.lessons ?? ""}
-          disabled={readOnly}
           placeholder={placeholder}
-          className="min-h-[128px] w-full resize-y rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-sm leading-6 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:border-[var(--blue)] disabled:cursor-not-allowed disabled:opacity-60"
+          submitLabel="Save ticker review"
+          helper="Use this for the pattern across the ticker. Individual trade notes show below when present."
+          showSetupPatternCues
+          localStorageKey={readOnly ? demoTickerNoteKey(scopeKey) : undefined}
         />
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs leading-5 text-[var(--muted)]">
-            Use this for the pattern across the ticker. Individual trade notes show below when present.
-          </p>
-          <button
-            type="submit"
-            disabled={readOnly}
-            className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Save ticker review
-          </button>
-        </div>
       </form>
 
       <div className="mt-5 border-t border-[var(--hairline)] pt-4">

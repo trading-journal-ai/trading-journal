@@ -17,6 +17,15 @@ export const PRIMARY_TRADE_LABELS: JournalLabelOption[] = [
   { value: "Overtraded", label: "Overtraded", tone: "negative" },
 ];
 
+export const SETUP_PATTERN_CUES: JournalLabelOption[] = [
+  { value: "VWAP reclaim", label: "VWAP reclaim", tone: "neutral" },
+  { value: "HOD retest", label: "HOD retest", tone: "neutral" },
+  { value: "Failed breakdown reclaim", label: "Failed breakdown reclaim", tone: "neutral" },
+  { value: "EMA rail", label: "EMA rail", tone: "neutral" },
+  { value: "Opening range continuation", label: "Opening range", tone: "neutral" },
+  { value: "Extension chase", label: "Extension chase", tone: "neutral" },
+];
+
 export const PROCESS_PILLS: JournalLabelOption[] = [
   { value: "Followed plan", label: "Followed plan", tone: "positive" },
   { value: "Patient", label: "Patient", tone: "positive" },

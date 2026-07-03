@@ -4,13 +4,13 @@ import { db, schema } from "@/lib/db";
 import { getActiveAccount } from "@/lib/accountScope";
 import { getCandles } from "@/lib/candles";
 import { fallbackCandlesFromExecutions } from "@/lib/candles/fallback";
+import { isDemoReadOnly } from "@/lib/demoMode";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
 import LightweightTradeChart from "@/components/LightweightTradeChart";
 import TradeJournalNote from "@/components/TradeJournalNote";
 import TradeNoteComposer from "@/components/TradeNoteComposer";
 import ReviewHeader from "@/components/ReviewHeader";
 import { fmtDate, fmtMoney, fmtPrice } from "@/lib/format";
-import { decodeJournalTags } from "@/lib/journalLabels";
 import { etDateString, etDayRange } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +48,7 @@ export default async function TradeDetailPage({
   if (!Number.isInteger(tradeId)) notFound();
   const backHref = returnTo?.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/trades";
   const activeAccount = await getActiveAccount();
+  const readOnly = isDemoReadOnly();
 
   const trade = (
     await db.select().from(schema.trades).where(eq(schema.trades.id, tradeId)).limit(1)
@@ -221,8 +222,7 @@ export default async function TradeDetailPage({
                       symbol={trade.symbol}
                       text={journalNoteBody(note)}
                       primaryLabel={note.emotionalState}
-                      processTags={decodeJournalTags(note.whatWentWell)}
-                      emotionTags={decodeJournalTags(note.whatWentWrong)}
+                      readOnly={readOnly}
                       showHeader
                       showFormHeader
                     />
@@ -230,7 +230,7 @@ export default async function TradeDetailPage({
                 })}
               </div>
             ) : (
-              <TradeNoteComposer tradeId={trade.id} symbol={trade.symbol} />
+              <TradeNoteComposer tradeId={trade.id} symbol={trade.symbol} readOnly={readOnly} />
             )}
           </section>
         </aside>

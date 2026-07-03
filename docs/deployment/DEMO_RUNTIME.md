@@ -66,7 +66,7 @@ Current repo state:
 | --- | --- | --- | --- | --- | --- |
 | Local app | `DB_PATH=data/journal.db` | Enabled | Enabled | Remote fetch allowed with `MASSIVE_API_KEY` | Live OpenAI allowed with `OPENAI_API_KEY` |
 | Local demo | `DB_PATH=data/tradingjournaldemo.db` | Enabled/resettable | Seeded by scripts | Remote fetch allowed locally | Live OpenAI allowed locally for fixture generation |
-| Hosted demo | `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` | Disabled by `DEMO_READ_ONLY=true` | Disabled | Cached/fallback only | Static seeded coach reviews only |
+| Hosted demo | `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` | Server writes disabled by `DEMO_READ_ONLY=true`; personal browser overlays may use localStorage | Disabled | Cached/fallback only | Static seeded coach reviews only |
 | Marketing site | None | None | None | None | None |
 
 ## Environment Contract
@@ -104,6 +104,30 @@ OPENAI_API_KEY=unset
 
 Hosted demo must not require public live API calls. It should render from seeded
 database content and cached/fallback market data.
+
+## Hosted Demo Local Persistence
+
+The hosted demo may let visitors personalize the demo without accounts by using
+browser-local storage.
+
+Rules:
+
+- The shared hosted demo database stays read-only.
+- Demo note edits can be saved to `localStorage` on the visitor's browser.
+- Local demo overlays are device/browser-specific and can disappear if browser
+  data is cleared.
+- Use a versioned namespace such as `trading-journal.demo.v1.*`.
+- Do not store API keys, broker exports, account numbers, or raw audio in
+  localStorage.
+- Local overlays should be easy to reset or replace when demo fixtures change.
+
+Good localStorage candidates:
+
+- Trade note drafts.
+- Daily recap notes.
+- Ticker/day review notes.
+- Dismissed setup/onboarding prompts.
+- Future playbook/rule/coach-preference demo edits.
 
 ### Marketing site
 

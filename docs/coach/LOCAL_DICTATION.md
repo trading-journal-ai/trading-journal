@@ -1,5 +1,9 @@
 # Local Dictation
 
+> Product direction: dictation should become a first-class note input across
+> trade, day, ticker/day, check-in, and coach surfaces. See
+> `docs/product/NOTES_DICTATION_COACH_MODEL.md`.
+
 Local dictation turns microphone audio into normal journal text before the AI
 coach payload is built.
 
