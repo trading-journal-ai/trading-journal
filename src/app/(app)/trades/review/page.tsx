@@ -6,6 +6,7 @@ import { getActiveAccount } from "@/lib/accountScope";
 import { getCandles } from "@/lib/candles";
 import { fallbackCandlesFromExecutions } from "@/lib/candles/fallback";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
+import DictationTextarea from "@/components/DictationTextarea";
 import LightweightTradeChart from "@/components/LightweightTradeChart";
 import ReviewHeader from "@/components/ReviewHeader";
 import { fmtDate, fmtMoney, fmtPrice } from "@/lib/format";
@@ -249,7 +250,7 @@ function TickerReviewPanel({
       <form action={upsertTickerReviewAction} className="mt-4 space-y-3">
         <input type="hidden" name="scopeKey" value={tickerReviewKey(date, symbol)} />
         <input type="hidden" name="returnTo" value={returnTo} />
-        <textarea
+        <DictationTextarea
           name="body"
           defaultValue={note?.lessons ?? ""}
           disabled={readOnly}
