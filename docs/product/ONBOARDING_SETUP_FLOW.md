@@ -97,11 +97,27 @@ demo path.
 
 Fields:
 
-- Provider: OpenAI first; other providers later if supported.
+- Provider:
+  - OpenAI / ChatGPT.
+  - Anthropic Claude.
+  - Google Gemini.
+  - Ollama / local model.
+  - Other OpenAI-compatible endpoint.
 - API key or local model endpoint.
 - Connection/test status.
 - Default model, if the provider exposes useful choices.
 - Whether live coach generation is enabled.
+
+First-pass behavior:
+
+- OpenAI is the available provider because the app already generates coach
+  reviews from `OPENAI_API_KEY` and `OPENAI_MODEL`.
+- Claude, Gemini, Ollama, and OpenAI-compatible endpoints should appear in the
+  setup UI as intentional provider paths, but be labeled as adapter-next until
+  the server-side provider adapters exist.
+- The UI should ask the user to choose the provider they want the coach to use,
+  then reveal that provider's specific fields. Do not start with a giant model
+  menu.
 
 UX copy should be plain:
 
