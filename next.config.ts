@@ -7,12 +7,18 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/",
+        has: [{ type: "host", value: "demo.trading-journal.ai" }],
+        destination: "/journal",
+        permanent: false,
+      },
+      {
+        source: "/",
         destination: "/dashboard",
         permanent: false,
       },
       {
         source: "/demo",
-        destination: "/dashboard",
+        destination: "/journal",
         permanent: false,
       },
     ];
