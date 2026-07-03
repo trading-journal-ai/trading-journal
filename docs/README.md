@@ -8,8 +8,8 @@ This directory is organized by decision area:
   design prototypes.
 - `analytics/`: reporting research, statistical review logic, review-engine
   specs, and supporting reference data.
-- `coach/`: coaching strategy, setup taxonomy, next-build notes, and prompt
-  drafts.
+- `coach/`: coaching strategy, coach architecture, setup taxonomy,
+  psychology/process coaching, private eval contract, and prompt drafts.
 - `import/`: canonical import architecture, broker normalizer notes, adapter
   assumptions, source-format docs, and parser diagnostics.
 - `deployment/`: Vercel/runtime boundaries, hosted demo contracts, and
