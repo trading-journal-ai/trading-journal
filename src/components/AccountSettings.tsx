@@ -2,13 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { addAccountAction, deleteAccountAction, renameAccountAction } from "@/app/accounts/actions";
+import {
+  addAccountAction,
+  deleteAccountAction,
+  renameAccountAction,
+  selectAccountAction,
+} from "@/app/accounts/actions";
 import type { AccountOption } from "@/lib/accountScope";
 
 export default function AccountSettings({
   accounts,
+  activeAccountId,
 }: {
   accounts: AccountOption[];
+  activeAccountId: number;
 }) {
   const router = useRouter();
   const [newAccountName, setNewAccountName] = useState("");
@@ -29,12 +36,34 @@ export default function AccountSettings({
                 autoFocus
               />
             ) : (
-              <div className="flex h-10 items-center text-sm font-semibold text-[var(--foreground)]">
-                {account.name}
+              <div className="flex min-h-10 flex-wrap items-center gap-3">
+                <span className="text-sm font-semibold text-[var(--foreground)]">{account.name}</span>
+                {account.id === activeAccountId ? (
+                  <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--blue)]">
+                    Active
+                  </span>
+                ) : null}
               </div>
             )}
 
             <div className="flex flex-wrap gap-2">
+              {editingAccount !== account.id && account.id !== activeAccountId ? (
+                <form
+                  action={async (formData) => {
+                    await selectAccountAction(formData);
+                    router.refresh();
+                  }}
+                >
+                  <input type="hidden" name="accountId" value={account.id} />
+                  <button
+                    type="submit"
+                    className="h-10 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+                  >
+                    Switch
+                  </button>
+                </form>
+              ) : null}
+
               {editingAccount === account.id ? (
                 <>
                   <form
