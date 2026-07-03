@@ -12,6 +12,7 @@ Private files live under:
 data/evals/coach/
   raw/      # real CSV exports
   cases/    # private eval case JSON
+  notes/    # private reference notes (e.g. ticker-day context)
   outputs/  # local model outputs and payload snapshots
 ```
 
@@ -99,6 +100,26 @@ npm run coach:eval -- --case data/evals/coach/cases/001-june-16-paper.json --gen
 
 `--generate` requires `OPENAI_API_KEY` in `.env.local` or the shell
 environment. Outputs are saved under `data/evals/coach/outputs/`.
+
+## Starter Case List
+
+Before trusting the AI coach, build 10-20 known examples:
+
+- Good loss.
+- Bad winner.
+- Revenge trade.
+- Clean A setup.
+- Overtrading/churn day.
+- Sizing mistake.
+- Early exit from valid trend.
+- Trade outside playbook.
+- Outlier-carried green day.
+- High-win-rate red day.
+
+Each case should include the expected coach judgment in the trader's own
+vocabulary. Psychology-specific cases are enumerated in
+[`PSYCHOLOGY.md`](PSYCHOLOGY.md) §Evaluation Examples — keep that section the
+source of truth for the psychology lens.
 
 ## Review Standard
 
