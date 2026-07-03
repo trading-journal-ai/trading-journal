@@ -11,6 +11,12 @@ const wireframes = [
       { label: "Legacy alias", href: "/review/journal-coach-recap" },
     ],
   },
+  {
+    title: "Journal day recap — redesign",
+    href: "/review/journal/day-recap-redesign",
+    label: "Mockup",
+    body: "Pixel recreation of the Claude Design “Journal Day Recap” concept: one recap object with two voices, trader's read on top and coach's deterministic read below. Toggleable has-note and confidence states.",
+  },
 ];
 
 const prototypes = [
