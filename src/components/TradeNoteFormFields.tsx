@@ -2,13 +2,10 @@
 
 import type { ReactNode } from "react";
 import { useState } from "react";
-import DictationTextarea from "@/components/DictationTextarea";
+import SharedNoteComposer from "@/components/SharedNoteComposer";
 import {
-  EMOTION_PILLS,
   PRIMARY_TRADE_LABELS,
-  PROCESS_PILLS,
   journalLabelTone,
-  type JournalLabelOption,
 } from "@/lib/journalLabels";
 
 function toneDotClass(label: string) {
@@ -46,84 +43,26 @@ function PrimaryLabelBadge({ label }: { label: string }) {
   );
 }
 
-function PillCheckbox({
-  name,
-  option,
-  defaultChecked,
-}: {
-  name: string;
-  option: JournalLabelOption;
-  defaultChecked: boolean;
-}) {
-  return (
-    <label>
-      <input
-        type="checkbox"
-        name={name}
-        value={option.value}
-        defaultChecked={defaultChecked}
-        className="peer sr-only"
-      />
-      <span className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--border)] px-2.5 py-1 font-mono text-[11px] text-[var(--foreground)] transition-colors peer-checked:bg-[var(--surface)]">
-        <span className={`size-1 rounded-full ${toneDotClass(option.value)}`} />
-        {option.label}
-      </span>
-    </label>
-  );
-}
-
-function PillGroup({
-  title,
-  name,
-  options,
-  selected,
-}: {
-  title: string;
-  name: string;
-  options: JournalLabelOption[];
-  selected: string[];
-}) {
-  const selectedSet = new Set(selected);
-
-  return (
-    <div className="space-y-2">
-      <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-        {title}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {options.map((option) => (
-          <PillCheckbox
-            key={option.value}
-            name={name}
-            option={option}
-            defaultChecked={selectedSet.has(option.value)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default function TradeNoteFormFields({
   symbol,
   defaultPrimaryLabel,
   defaultText,
-  defaultProcessTags = [],
-  defaultEmotionTags = [],
   pending = false,
   onCancel,
   deleteControl,
   showHeader = true,
+  localStorageKey,
+  onLocalSave,
 }: {
   symbol: string;
   defaultPrimaryLabel: string | null;
   defaultText: string;
-  defaultProcessTags?: string[];
-  defaultEmotionTags?: string[];
   pending?: boolean;
   onCancel: () => void;
   deleteControl?: ReactNode;
   showHeader?: boolean;
+  localStorageKey?: string;
+  onLocalSave?: (value: string) => void;
 }) {
   const [primaryLabel, setPrimaryLabel] = useState(defaultPrimaryLabel ?? "");
 
@@ -157,52 +96,19 @@ export default function TradeNoteFormFields({
         </select>
       </label>
 
-      <div className="block space-y-2">
-        <span className="sr-only">Note</span>
-        <DictationTextarea
-          name="note"
-          rows={4}
-          autoFocus
-          defaultValue={defaultText}
-          placeholder="What happened? Good trade, bad trade, rule break, lesson, emotion, setup quality..."
-          className="w-full resize-y rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm leading-6 outline-none focus:border-[var(--blue)]"
-        />
-      </div>
-
-      <div className="space-y-4">
-        <PillGroup
-          title="Process"
-          name="processTags"
-          options={PROCESS_PILLS}
-          selected={defaultProcessTags}
-        />
-        <PillGroup
-          title="Emotion"
-          name="emotionTags"
-          options={EMOTION_PILLS}
-          selected={defaultEmotionTags}
-        />
-      </div>
-
-      <div className="flex items-center justify-between gap-3">
-        <div>{deleteControl}</div>
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="h-10 rounded-md px-3 text-sm text-[var(--muted)] hover:text-[var(--foreground)]"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={pending}
-            className="h-10 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[var(--blue)] hover:text-[var(--foreground)] disabled:opacity-50"
-          >
-            {pending ? "Saving..." : "Save note"}
-          </button>
-        </div>
-      </div>
+      <SharedNoteComposer
+        name="note"
+        defaultValue={defaultText}
+        placeholder="Talk through what happened, what you saw, where standards held or slipped, and what to remember next time."
+        autoFocus
+        pending={pending}
+        submitLabel="Save note"
+        onCancel={onCancel}
+        showSetupPatternCues
+        actionsSlot={deleteControl}
+        localStorageKey={localStorageKey}
+        onLocalSave={onLocalSave}
+      />
     </div>
   );
 }

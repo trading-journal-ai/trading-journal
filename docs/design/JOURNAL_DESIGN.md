@@ -6,12 +6,18 @@ The journal is a text-first review system for turning trading data into a
 repeatable feedback loop. Reports answer what happened. The journal should help
 answer why it happened and what to do next.
 
+> Direction update: notes and dictation are the primary human context layer.
+> Broad process/emotion pill banks should be de-emphasized or removed from main
+> capture flows. Keep structured controls mainly for setups, patterns, rules,
+> and experiments. See
+> `../product/NOTES_DICTATION_COACH_MODEL.md`.
+
 The product has two modes:
 
 - Reading mode: review day, week, and month narratives with lightweight trade
   context.
-- Editing mode: add concise notes, labels, and process markers without turning
-  the journal into a form-heavy workflow.
+- Editing mode: add concise notes, dictated context, setup/pattern labels, and
+  only the minimum structured metadata needed for review.
 
 ## Visual Language
 
@@ -97,44 +103,23 @@ Suggested tones:
 | Chased | Negative |
 | Overtraded | Negative |
 
-## Process And Emotion Pills
+## Dictation And Natural-Language Context
 
-Process and emotion pills are smaller descriptive tags that sit under the trade
-note or daily recap. They explain the trader state or execution quality without
-replacing the main callout.
+Process and emotion context should primarily live in the note body, especially
+when captured through dictation. The trader should be able to say what happened
+quickly and honestly without classifying every feeling or process mistake before
+saving.
 
-Process pills:
+Examples that belong in prose/dictation:
 
-- Followed plan
-- Patient
-- Focused
-- Sized correctly
-- Cut loss
-- Let winner work
-- Stopped trading
+- I hesitated because the prior loss was still in my head.
+- I chased after missing the clean entry.
+- I took profit early because the candle speed made me uncomfortable.
+- I was calm, but I lowered standards after the first winner.
+- I kept trading because I wanted to get back to high of day.
 
-Risk/process warning pills:
-
-- Oversized
-- Moved stop
-- No stop
-- Added to loser
-- Held too long
-- Took profits early
-- Forced trade
-
-Emotion pills:
-
-- Calm
-- Confident
-- Frustrated
-- Impatient
-- Fearful
-- Tilted
-- FOMO
-
-The pills should support multiple selections. They are secondary metadata, not
-the main note title.
+The coach can extract process/emotion signals after capture and show suggested
+labels with evidence, confidence, and a correction path.
 
 ## Future Tag Taxonomy
 
@@ -144,8 +129,9 @@ Tags should eventually separate into three related but distinct groups:
   Needs review, Rule break, Revenge trade, or Bad trade.
 - Trade setup: the technical setup or strategy context, such as VWAP reclaim,
   opening range breakout, news momentum, continuation, pullback, or scalp.
-- Emotion/process: the execution state, such as Calm, Frustrated, FOMO,
-  Patient, Followed plan, Chased, Oversized, or Moved stop.
+- AI-extracted emotion/process signals: the execution state inferred from prose,
+  such as calm, frustrated, FOMO, patient, followed plan, chased, oversized, or
+  moved stop.
 
 Custom tags should be managed separately from the current visual cleanup work.
 They will affect trade notes, journal editing, trade log filtering, reports, and
@@ -157,7 +143,8 @@ Trade detail page:
 
 - User writes or edits a trade note under the chart/executions.
 - User chooses one primary trade label.
-- User can optionally add process/emotion pills.
+- User can optionally attach setup/pattern context.
+- User can dictate the note and edit the transcript before saving.
 - Saving the note updates the trade detail page and the journal rollup.
 
 Journal page:
@@ -166,7 +153,8 @@ Journal page:
   - ticker
   - primary callout label
   - note body
-  - process/emotion pills
+  - setup/pattern context when present
+  - AI-suggested process/emotion signals only when useful
   - link back to trade
 - In reading mode, edit controls should stay hidden.
 - Clicking the note can enter editing mode.
@@ -206,13 +194,16 @@ Current `journal_entries` fields support the first version:
 For Part 2, likely additions:
 
 - Rename or generalize `emotionalState` to `label` or `reviewLabel`.
-- Add structured tag storage for multiple process/emotion pills.
+- Add setup/pattern references.
+- Add optional storage for AI-extracted process/emotion signals with evidence
+  and user correction.
 - Keep note text as plain text or Markdown-compatible text.
 
 Possible future tables:
 
 - `journal_labels`: canonical primary labels.
-- `journal_tags`: canonical process/emotion tags.
+- `setup_patterns`: user-defined setup/pattern definitions.
+- `journal_extracted_signals`: AI-suggested process/emotion signals.
 - `journal_entry_tags`: many-to-many join between notes and tags.
 
 ## Part 2 Scope
@@ -225,5 +216,6 @@ Build order:
 2. Reuse those constants on trade detail and journal edit forms.
 3. Replace duplicated hard-coded select options.
 4. Add primary label editing for trade notes.
-5. Add multi-select process/emotion pills.
-6. Persist tags in a future migration after the UI pattern feels right.
+5. Add setup/pattern selection where it improves review.
+6. Add dictation to primary note surfaces.
+7. Add AI-extracted process/emotion signals after save, with user corrections.
