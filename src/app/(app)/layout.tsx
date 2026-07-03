@@ -1,6 +1,6 @@
 import AppShell from "@/components/AppShell";
 import { getActiveAccount, listAccounts } from "@/lib/accountScope";
-import { canImportData } from "@/lib/demoMode";
+import { canImportData, isDemoReadOnly } from "@/lib/demoMode";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +12,15 @@ export default async function JournalAppLayout({
   const accounts = await listAccounts();
   const activeAccount = await getActiveAccount(accounts);
   const showImport = canImportData();
+  const showSettings = !isDemoReadOnly();
 
   return (
-    <AppShell accounts={accounts} activeAccountId={activeAccount.id} showImport={showImport}>
+    <AppShell
+      accounts={accounts}
+      activeAccountId={activeAccount.id}
+      showImport={showImport}
+      showSettings={showSettings}
+    >
       {children}
     </AppShell>
   );
