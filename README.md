@@ -11,6 +11,41 @@ review, document, and learn from later.
 The project is early, but the direction is clear: make journaling low-friction,
 private, and useful without depending on a hosted trading-journal subscription.
 
+## Active Roadmap
+
+Trading Journal AI is in active development. The current product is already
+useful for importing trades, reviewing sessions, writing daily recaps, tagging
+trade notes, and exploring demo data, but the larger rollout is still taking
+shape.
+
+What is landing now:
+
+- **Dictation-first note capture**: voice input is being treated as a core
+  journaling surface, because the real context behind a trade is often spoken
+  faster and more honestly than it is clicked.
+- **Unified notes architecture**: daily recaps, trade notes, review notes, and
+  coach-ready context are being refined into one consistent writing experience.
+- **Rule systems and playbooks**: traders will be able to define setups,
+  patterns, process rules, and review criteria that the journal can use as
+  context.
+- **AI coach**: the coach layer is being built around your actual trades,
+  notes, tags, screenshots, chart context, and rules, so feedback can become
+  more specific than generic trading advice.
+- **Dashboard and review loops**: the dashboard, calendar, reports, and journal
+  views are being tightened around faster post-session review and better
+  long-term pattern recognition.
+- **Broker adapter expansion**: the importer will continue moving toward a
+  clearer adapter model so more broker exports can be mapped into the shared
+  execution format.
+
+The goal is not to ship a static journal template. The goal is a local-first
+review system that compounds with the trader: notes become context, context
+becomes rules, rules become coaching, and coaching feeds a better next review.
+
+Expect rough edges while this rolls out. The app, demo, and documentation are
+moving quickly, and feedback from real review workflows is shaping the next
+round of improvements.
+
 ## Journal-First Review
 
 Most trading journals start with tables. This one starts with the day.
