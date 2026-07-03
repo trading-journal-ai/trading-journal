@@ -10,7 +10,7 @@ the mechanical pillars:
 
 | Pillar | Doc | Question it answers |
 | --- | --- | --- |
-| Setups | [`SETUPS.md`](../coach/SETUPS.md) *(planned)* | *What* to trade — micro pullback, ABCD, the curl, … |
+| Setups | [`SETUPS.md`](../coach/SETUPS.md) | *What* to trade — micro pullback, ABCD, the curl, … |
 | Execution | `EXECUTION.md` *(planned)* | *When/how* to enter and exit — mechanical triggers |
 | **Statistical review** | **this doc** | *Was the process sound, is the edge real, and where does it live* |
 

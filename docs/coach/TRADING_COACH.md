@@ -58,6 +58,12 @@ To give useful feedback, the coach needs a clear description of:
 Without this context, the coach will drift into generic feedback. With this
 context, it can evaluate whether a trade was aligned with the user's system.
 
+The psychology/process side of this playbook lives in
+[`PSYCHOLOGY.md`](PSYCHOLOGY.md). That pillar defines how the coach should talk
+about FOMO, revenge trading, hesitation, fear exits, overconfidence, tilt, loss
+acceptance, and trusting valid moves without becoming therapy or motivational
+filler.
+
 ## Required Inputs
 
 ### Trade Data
@@ -209,6 +215,16 @@ Possible dimensions:
 - Rule adherence
 - Journal completeness
 
+Ratings should be qualitative, not a fake-precise numeric score:
+
+- `strong`
+- `mixed`
+- `weak`
+- `unknown`
+
+Avoid a single 0-100 score until the app has enough eval data to earn that
+precision.
+
 ### Psychological And Emotional Coaching
 
 The coach should support the emotional side of trading because loss, variance,
@@ -295,6 +311,50 @@ Potential prompts:
 - Did I take partial profit according to the plan or because I wanted relief?
 - If I added back, was it because the structure improved or because I was afraid
   to miss the move?
+
+## Daily Coach Prep
+
+Per-trade notes must not be mandatory for every trade — that becomes homework.
+The app should surface the trades that deserve human context:
+
+- Best trade.
+- Worst trade.
+- Biggest surprise.
+- Largest ticker concentration.
+- Repeated loss or same-ticker re-entry.
+- Any trade manually marked "needs coach review."
+
+The trader annotates the important trades and writes a daily recap.
+
+### Daily Context Form
+
+Before the coach review, capture a compact daily context form:
+
+- What were you trying to trade today?
+- What did the market feel like?
+- What did you do well?
+- Where did you lower standards?
+- Any trade you want the coach to inspect closely?
+- Emotional state: calm, rushed, tilted, hesitant, FOMO, revenge, confident.
+- Did today match your playbook? `yes / mixed / no / unsure`.
+
+This context attaches to the daily recap. It does not replace the user's recap
+prose. The emotional-state field is trader-authored and therefore counts as
+strong evidence for the psychology lens ([`PSYCHOLOGY.md`](PSYCHOLOGY.md)).
+
+### Trade-Level Context
+
+For selected trades only, capture:
+
+- Intended setup.
+- Why did you enter?
+- Where was invalidation?
+- Did you follow the plan?
+- What happened emotionally?
+- Needs coach review toggle.
+
+This gives the coach enough human context to evaluate process without asking
+for a full write-up on every trade.
 
 ## Coaching Outputs
 
@@ -598,8 +658,9 @@ Guardrails from the prompt:
 Implementation to-do:
 
 - Add a user-editable playbook/levels model before enabling serious coaching.
-- Decide whether levels are manually entered, imported from screenshots, or
-  drawn on the chart.
+- Levels capture direction chosen: TradingView screenshot import with vision
+  extraction + trader confirmation first; in-app drawing later
+  ([`LEVELS.md`](LEVELS.md) §Capture flow).
 - Add indicator generation or import for EMA 9/20, daily 200 EMA, VWAP, MACD,
   and volume context.
 - Build a normalized AI input payload for a single ticker/day session.
