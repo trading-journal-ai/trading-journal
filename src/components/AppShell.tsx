@@ -12,11 +12,13 @@ export default function AppShell({
   accounts,
   activeAccountId,
   showImport,
+  showSettings,
   children,
 }: {
   accounts: AccountOption[];
   activeAccountId: number;
   showImport: boolean;
+  showSettings: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -33,7 +35,7 @@ export default function AppShell({
           <div className="ml-auto flex flex-wrap items-start justify-end gap-3">
             <AccountSelector accounts={accounts} activeAccountId={activeAccountId} />
             {showImport ? <ImportForm /> : null}
-            <SettingsLink />
+            {showSettings ? <SettingsLink /> : null}
           </div>
         </header>
       ) : null}
