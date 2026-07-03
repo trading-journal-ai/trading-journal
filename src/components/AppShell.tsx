@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import AccountSelector from "@/components/AccountSelector";
 import ImportForm from "@/components/ImportForm";
@@ -11,26 +10,33 @@ import type { AccountOption } from "@/lib/accountScope";
 export default function AppShell({
   accounts,
   activeAccountId,
+  brandHref,
   showImport,
   showSettings,
   children,
 }: {
   accounts: AccountOption[];
   activeAccountId: number;
+  brandHref?: string;
   showImport: boolean;
   showSettings: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const isLanding = pathname === "/";
+  const brandClassName = "font-semibold tracking-tight";
 
   return (
     <>
       {!isLanding ? (
         <header className="flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-[var(--border)] px-5 py-3">
-          <Link href="/" className="font-semibold tracking-tight">
-            Trading&nbsp;Journal&nbsp;AI
-          </Link>
+          {brandHref ? (
+            <a href={brandHref} className={brandClassName}>
+              Trading&nbsp;Journal&nbsp;AI
+            </a>
+          ) : (
+            <span className={brandClassName}>Trading&nbsp;Journal&nbsp;AI</span>
+          )}
           <NavLinks />
           <div className="ml-auto flex flex-wrap items-start justify-end gap-3">
             <AccountSelector accounts={accounts} activeAccountId={activeAccountId} />
