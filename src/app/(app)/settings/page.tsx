@@ -4,8 +4,12 @@ import DevResetImports from "@/components/DevResetImports";
 import ThemeSettings from "@/components/ThemeSettings";
 import { ensureCoachPlaybook } from "@/app/coach/actions";
 import { getActiveAccount, listAccounts } from "@/lib/accountScope";
+import { isDemoReadOnly } from "@/lib/demoMode";
+import { redirect } from "next/navigation";
 
 export default async function SettingsPage() {
+  if (isDemoReadOnly()) redirect("/journal");
+
   const accounts = await listAccounts();
   const activeAccount = await getActiveAccount(accounts);
   const playbook = await ensureCoachPlaybook(activeAccount.id);
