@@ -20,6 +20,11 @@ shape.
 
 What is landing now:
 
+- **Onboarding and setup flow**: first launch should guide people through the
+  choices that make the app useful quickly: demo vs. real journal, Massive API
+  key, broker/import setup, rules/playbook, and coach preferences. Anything
+  skipped during setup should be recoverable later from Settings or contextual
+  setup prompts.
 - **Dictation-first note capture**: voice input is being treated as a core
   journaling surface, because the real context behind a trade is often spoken
   faster and more honestly than it is clicked.
@@ -34,9 +39,11 @@ What is landing now:
 - **Dashboard and review loops**: the dashboard, calendar, reports, and journal
   views are being tightened around faster post-session review and better
   long-term pattern recognition.
-- **Broker adapter expansion**: the importer will continue moving toward a
-  clearer adapter model so more broker exports can be mapped into the shared
-  execution format.
+- **Data importer and broker adapters**: imports now move toward a clearer
+  inspect -> normalize -> review -> persist flow. ThinkorSwim/Schwab,
+  DAS-style, and TraderVue-style exports are the current focus, and the adapter
+  model will keep expanding so more broker exports can map into the same
+  canonical trade format.
 
 The goal is not to ship a static journal template. The goal is a local-first
 review system that compounds with the trader: notes become context, context
@@ -72,22 +79,52 @@ what worked, what did not, what can improve, and what to focus on next.
 
 ## Data Importer
 
-Trading Journal reads broker CSV exports and turns fills into a shared execution
-format the journal, charts, calendar, reports, and trade log can use.
+Trading Journal reads broker CSV exports and turns them into one normalized
+trade format the journal, charts, calendar, reports, and coach can all use.
+
+The import path has improved from "parse this one CSV shape" toward a real
+broker-normalization pipeline:
+
+```text
+raw broker CSV
+-> inspect source and shape
+-> normalize with a broker/source adapter
+-> preview diagnostics and confidence
+-> persist trades and executions
+-> power journal, charts, reports, and coach context
+```
+
+That separation matters. Broker CSVs are messy in different ways: some provide
+fill-level executions, some provide trade summaries, some split fees into other
+statement sections, and some use timestamps or side labels that need careful
+handling. The app should keep that broker-specific work inside adapters instead
+of leaking it into the journal, chart, reports, or coach layers.
 
 ### Your Own Data
 
-The importer was originally built around ThinkorSwim/Schwab account statement
-exports, especially the `Account Trade History` section. It also supports
-DAS-style trade-summary CSVs.
+The strongest current path is ThinkorSwim/Schwab account statement exports,
+especially the `Account Trade History` section. Those imports can preserve
+fill-level executions, match them into round-trip trades, attach fees where the
+statement exposes them, dedupe repeated imports, and keep enough source detail
+for chart markers and review.
+
+The app also supports DAS-style and TraderVue-style trade-summary CSVs. Those
+are useful for review and coaching, but they are treated as medium-confidence
+imports because they usually summarize a trade rather than exposing every
+underlying fill.
 
 If you use another broker, the CSV may not work immediately. Broker exports can
 use different column names, timestamps, side labels, fee fields, and row
 structures. The intended path is to add a broker-specific adapter that
-normalizes that broker's CSV into the app's shared execution format.
+normalizes that broker's CSV into the app's shared trade format before anything
+else tries to use it.
 
 For non-technical users: you do not have to redesign the app for each broker,
-but you may need help teaching the importer how to read your broker's CSV.
+but you may need help teaching the importer how to read your broker's CSV. The
+direction is an assisted adapter workflow: inspect the file locally, explain
+what the app understands, preview normalized rows, and only import after the
+shape looks right. Automated broker syncing and order execution are intentionally
+out of scope for now.
 
 ### Demo Data
 
@@ -218,7 +255,7 @@ npm run dev:stop
 
 The hosted demo is a quick way to click through the app before installing it:
 
-[trading-journal.ai/demo](https://trading-journal.ai/demo)
+[demo.trading-journal.ai](https://demo.trading-journal.ai)
 
 It should run this same app repo with demo data and read-only settings. That
 keeps the hosted preview in parity with local/live development, including coach,
