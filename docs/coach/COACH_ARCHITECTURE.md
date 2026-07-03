@@ -67,6 +67,12 @@ structured data so the stats layer can join on it:
 - `psych_pattern` — name, signals, coach-response notes (seeded from
   [`PSYCHOLOGY.md`](PSYCHOLOGY.md), correctable by the trader).
 - `improvement_theme` — current week/month focus.
+- `assessment` — versioned self-assessment snapshots (performance self-read,
+  personal psychology vocabulary, priorities/coaching contract); each
+  checkable claim carries a verification status
+  (`unverified` / `supported` / `contradicted`) updated by later reviews
+  ([`TRADING_COACH.md`](TRADING_COACH.md) §Trader Self-Assessment). Never an
+  input to deterministic detectors.
 - `playbook_version` — monotonic version; bump on any edit.
 
 Every trade carries a `setup` tag (or `no-setup`, itself a finding). Tags
@@ -102,6 +108,7 @@ from both layers; it never calculates.
 [system]  coach constitution (static, cache-friendly)
           + output JSON schema (structured output / tool definition)
 [context] playbook markdown (compiled from DB, versioned)
+          + current self-assessment (claims labeled with verification status)
           + deterministic fact pack (REVIEW_ENGINE_SPEC — immutable numbers)
           + level map: calculated + user-marked levels (LEVELS.md)
           + candidate-quality snapshot (five-pillar read, if captured)
@@ -152,10 +159,12 @@ No fine-tuning, no hidden memory. The coach improves only through data that
 persists and re-enters the prompt:
 
 1. Playbook edits (trader refines definitions).
-2. Label corrections (trader teaches vocabulary).
-3. Experiment outcomes (what was tried, whether it helped).
-4. Calibrated `{calibrate}` constants (tuned on imported history).
-5. Prompt/constitution revisions, guarded by the eval set
+2. Assessment revisions (the trader's self-model updates; assessment-vs-data
+   deltas tracked and reviewed at the monthly horizon).
+3. Label corrections (trader teaches vocabulary).
+4. Experiment outcomes (what was tried, whether it helped).
+5. Calibrated `{calibrate}` constants (tuned on imported history).
+6. Prompt/constitution revisions, guarded by the eval set
    ([`PRIVATE_EVALS.md`](PRIVATE_EVALS.md)).
 
 Every one of these is inspectable and reversible, which is the point.

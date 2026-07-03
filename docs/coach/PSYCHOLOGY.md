@@ -107,6 +107,9 @@ Strong evidence:
 
 Medium evidence:
 
+- Standing self-assessment claims ("FOMO hits me on re-entries") — hypotheses
+  that prioritize review, never confirmation by themselves
+  ([`TRADING_COACH.md`](TRADING_COACH.md) §Trader Self-Assessment).
 - Rapid trade frequency after a loss.
 - Larger size on lower-quality or undefined setups.
 - Winners cut quickly while losers were given more room.
@@ -123,6 +126,12 @@ Weak evidence:
 - Generic market volatility without a trader-authored reaction.
 
 ## Common Psychology Patterns
+
+The patterns below are **templates**. The trader's self-assessment supplies
+the personal forms each one takes ("re-entry FOMO after a stop" vs. "watching
+a runner without me"), and the coach should name the trader's form, not the
+generic label. Personal definitions of patience and discipline evolve; the
+current assessment version holds the operative meaning.
 
 ### FOMO And Chasing
 
@@ -391,6 +400,9 @@ Near-term:
 - Let the coach extract possible process/emotion labels after save.
 - Show extracted labels with evidence and confidence.
 - Let the trader correct labels so the coach learns their vocabulary.
+- Seed each pattern's personal forms from the trader self-assessment, and
+  track how definitions (patience, discipline) evolve across assessment
+  versions.
 - Keep setup/pattern selection structured, because setups compound into
   measurable playbook concepts.
 

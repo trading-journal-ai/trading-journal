@@ -200,7 +200,54 @@ Examples:
 - Size down after a mistake.
 - Stop trading after revenge behavior appears.
 
-### Review Rubric
+### Trader Self-Assessment
+
+At onboarding (and on a recurring cadence), the trader completes a structured
+self-assessment that frames the coach's perspective. It captures the trader's
+*self-model* — distinct from the playbook's rules and definitions.
+
+Three parts:
+
+**Performance self-read** — claims the data can check:
+
+- Which setups are working for you right now? Which aren't?
+- What's working in your trading overall? What's not?
+- What is your biggest blocker?
+- Where do you believe your losses concentrate (time, ticker type, situation)?
+- What was your last meaningful improvement?
+
+**Personal psychology vocabulary** — shapes how the coach speaks:
+
+- How does FOMO show up for you? It can take different forms by situation —
+  missing the first move, watching a runner without you, re-entry after a
+  stop. Name your forms.
+- What does patience mean to you right now?
+- What does discipline mean to you right now?
+- What are your tells that a session is going sideways?
+- What emotional state precedes your worst trades? Your best?
+
+**Priorities and coaching contract:**
+
+- What are you working on this month?
+- What should the coach watch closely?
+- What feedback style lands with you — direct callout or question-led?
+- What would make you dismiss the coach's feedback?
+
+Epistemic rules (how the coach may use it):
+
+- Every assessment claim is a **hypothesis, not a fact**. Performance claims
+  are verified against by-setup and behavioral stats over time; each carries
+  a status: `unverified` / `supported` / `contradicted`.
+- Agreement raises confidence quietly. Contradiction is surfaced as a
+  finding — never silently overridden in either direction. The gap between
+  self-model and data is among the most valuable things the coach can show.
+- The assessment **never feeds deterministic detectors**. Detection stays
+  independent code so the coach can disagree with the self-model; the
+  assessment shapes vocabulary, priorities, and framing only.
+- Assessments are **versioned and re-taken** (e.g. quarterly, or after a
+  material change). Diffs are reviewed at the monthly horizon: evolving
+  definitions of patience and discipline are development evidence, not
+  inconsistency.
 
 The coach should score or classify trades based on process, not only P&L.
 
@@ -497,6 +544,8 @@ Should be more strategic:
 - What risk rule needs adjustment?
 - What is the next month improvement theme?
 - Is the trader ready to size up based on evidence, or should size stay stable?
+- Self-model check: which self-assessment claims did the data support or
+  contradict this month? Which personal definitions evolved?
 
 ## Example Analysis Ideas
 
