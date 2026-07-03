@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useState } from "react";
+import DictationTextarea from "@/components/DictationTextarea";
 import {
   EMOTION_PILLS,
   PRIMARY_TRADE_LABELS,
@@ -156,9 +157,9 @@ export default function TradeNoteFormFields({
         </select>
       </label>
 
-      <label className="block space-y-2">
+      <div className="block space-y-2">
         <span className="sr-only">Note</span>
-        <textarea
+        <DictationTextarea
           name="note"
           rows={4}
           autoFocus
@@ -166,7 +167,7 @@ export default function TradeNoteFormFields({
           placeholder="What happened? Good trade, bad trade, rule break, lesson, emotion, setup quality..."
           className="w-full resize-y rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm leading-6 outline-none focus:border-[var(--blue)]"
         />
-      </label>
+      </div>
 
       <div className="space-y-4">
         <PillGroup
