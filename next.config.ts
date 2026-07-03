@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
         permanent: false,
       },
       {
+        source: "/settings",
+        has: [{ type: "host", value: "demo.trading-journal.ai" }],
+        destination: "/journal",
+        permanent: false,
+      },
+      {
         source: "/",
         destination: "/dashboard",
         permanent: false,
