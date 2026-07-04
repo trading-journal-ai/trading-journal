@@ -3,7 +3,7 @@
 This directory is organized by decision area:
 
 - `product/`: product spec, feature inventory, app map, onboarding/setup flow,
-  notes/dictation/coach direction, and dashboard concepts.
+  playbook thesis/MVP, notes/dictation/coach direction, and dashboard concepts.
 - `design/`: visual language, design system references, journal UI notes, and
   design prototypes.
 - `analytics/`: reporting research, statistical review logic, review-engine
