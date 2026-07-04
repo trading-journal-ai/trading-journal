@@ -3,13 +3,18 @@
 import type { RefObject, TextareaHTMLAttributes } from "react";
 import { useEffect, useRef, useState } from "react";
 
-type DictationStatus = "idle" | "recording" | "transcribing" | "unsupported";
+export type DictationStatus = "idle" | "recording" | "transcribing" | "unsupported";
 
 type DictationTextareaProps = Omit<
   TextareaHTMLAttributes<HTMLTextAreaElement>,
   "children" | "defaultValue" | "onChange" | "value"
 > & {
   defaultValue?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
+  onDictationStatusChange?: (status: DictationStatus) => void;
+  onDictationComplete?: (value: string, transcript: string) => void;
+  onDictationStop?: () => void;
 };
 
 type BrowserWindowWithAudioContext = Window &
@@ -202,11 +207,16 @@ function transcriptInsertion({
 
 export default function DictationTextarea({
   defaultValue = "",
+  value: controlledValue,
+  onValueChange,
+  onDictationStatusChange,
+  onDictationComplete,
+  onDictationStop,
   disabled = false,
   className,
   ...props
 }: DictationTextareaProps) {
-  const [value, setValue] = useState(defaultValue);
+  const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue);
   const [status, setStatus] = useState<DictationStatus>("idle");
   const [error, setError] = useState("");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -224,6 +234,12 @@ export default function DictationTextarea({
   const recordingStartedAtRef = useRef(0);
   const valueRef = useRef(defaultValue);
   const mountedRef = useRef(false);
+  const value = controlledValue ?? uncontrolledValue;
+
+  function updateValue(nextValue: string) {
+    if (controlledValue === undefined) setUncontrolledValue(nextValue);
+    onValueChange?.(nextValue);
+  }
 
   function resetWaveform() {
     waveformLevelsRef.current = [];
@@ -363,7 +379,8 @@ export default function DictationTextarea({
       const end = textarea?.selectionEnd ?? start;
       const insertion = transcriptInsertion({ current, transcript, start, end, appendToEnd });
 
-      setValue(insertion.value);
+      updateValue(insertion.value);
+      onDictationComplete?.(insertion.value, transcript);
       requestAnimationFrame(() => {
         textarea?.focus();
         textarea?.setSelectionRange(insertion.cursor, insertion.cursor);
@@ -407,6 +424,10 @@ export default function DictationTextarea({
   useEffect(() => {
     valueRef.current = value;
   }, [value]);
+
+  useEffect(() => {
+    onDictationStatusChange?.(status);
+  }, [onDictationStatusChange, status]);
 
   async function startRecording() {
     setError("");
@@ -479,6 +500,7 @@ export default function DictationTextarea({
 
     setError("");
     setStatus("transcribing");
+    onDictationStop?.();
     recorder.stop();
   }
 
@@ -507,7 +529,7 @@ export default function DictationTextarea({
           ref={textareaRef}
           disabled={disabled}
           value={value}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) => updateValue(event.target.value)}
           className={`${className ?? ""} block pb-13 pr-12`}
         />
         <VoiceActivityIndicator status={status} elapsedSeconds={elapsedSeconds} canvasRef={waveformCanvasRef} />
