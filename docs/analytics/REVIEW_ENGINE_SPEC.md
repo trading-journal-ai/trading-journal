@@ -31,21 +31,17 @@ It must never calculate, re-derive, or reinterpret a number. See
 `STATISTICAL_REVIEW.md` §10 for the numeric-integrity rule (and the two-field
 uplift example).
 
-## Provenance & validation status
+## Calibration & validation status
 
-The rules below were shaped by a 27-session review of full-format daily reports
-(2026-04-16 → 2026-06-17). The classifier reproduced the published
-distribution label on **27/27** sessions.
-
-**Caveat — thin, single-regime sample.** All 27 sessions fall in one hot,
-high-frequency regime. Treat the *structure* (tail fraction, tree shape, vote
-structure, surprise formula) as robust; treat the *numeric constants* below as
-**research-observed starting hypotheses, not defaults**. Recalibrate every
-`{calibrate}` value against the user's own history before shipping.
+The rules below are implementation hypotheses for the deterministic review
+engine. Treat the structure (tail fraction, tree shape, vote structure, surprise
+formula) as the v0 framework; treat the numeric constants as starting points,
+not universal defaults. Recalibrate every `{calibrate}` value against the user's
+own history before shipping.
 
 ## Calibration constants `{calibrate}`
 
-| Constant | Reference value | Used by |
+| Constant | Starting value | Used by |
 | --- | --- | --- |
 | Trim tail fraction | `0.05` → `k = ceil(N·0.05)` | trim classifier |
 | Trim retention boundary | `30%` | distribution label |
