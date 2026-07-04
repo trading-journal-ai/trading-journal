@@ -17,7 +17,7 @@ as if it were live and dynamic.
 
 ## The core mismatch
 
-Per [`DEMO_RUNTIME.md`](DEMO_RUNTIME.md), the hosted demo is **100% read-only,
+Per [`ARCHITECTURE.md`](../ARCHITECTURE.md), the hosted demo is **100% read-only,
 static content**: `DEMO_READ_ONLY=true`, imports disabled, server writes
 disabled, static seeded coach reviews. The data is identical for every visitor
 and never changes between deploys.
@@ -170,6 +170,5 @@ there first**, then implement behind a branch and re-measure.
 
 ## Relationship to other docs
 
-- [`DEMO_RUNTIME.md`](DEMO_RUNTIME.md) — the runtime matrix that defines the
-  hosted demo as read-only Turso-backed; this audit argues that read-only
-  surface should be static-first.
+- [`ARCHITECTURE.md`](../ARCHITECTURE.md) — the system model and runtime/env
+  reference; this audit is its latency deep-dive.
