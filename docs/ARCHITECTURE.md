@@ -139,7 +139,11 @@ caused the `package.json` corruption).
 ## Optimization opportunities (prioritized)
 
 1. **Static/ISR demo rendering** — removes cold start entirely; needs the
-   searchParams refactor. *(biggest remaining win, real project)*
+   searchParams refactor. *(biggest remaining win, real project)* — attempted
+   via Next 16 Cache Components and **paused** (it's an app-wide migration, not
+   demo-scoped); findings + resume steps in
+   [`CACHE_COMPONENTS_MIGRATION.md`](CACHE_COMPONENTS_MIGRATION.md), WIP on
+   branch `perf/demo-ppr-static`.
 2. **Direct-link the marketing CTA** — drop the redirect hop. *(trivial)*
 3. **`localStorage` session overlay** — lets visitors interact without any
    backend. *(feature, not perf)*

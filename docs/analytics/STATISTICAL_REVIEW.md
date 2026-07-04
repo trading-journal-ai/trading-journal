@@ -18,7 +18,9 @@ Setups and execution are mechanical (pattern + trigger). This layer is
 mathematical: it evaluates **outcomes and process statistics across trades**,
 agnostic to what any individual setup looks like.
 
-**Calibration stance:** the rules below are framework defaults, not universal truths. Thresholds marked `{calibrate}` must be tuned against the user's own history before they fire. Do not ship starting assumptions as defaults.
+**Calibration stance:** the rules below are framework defaults, not universal
+truths. Thresholds marked `{calibrate}` must be tuned against the user's own
+history before they fire. Do not ship starting assumptions as defaults.
 
 ---
 
@@ -203,8 +205,6 @@ in `REVIEW_ENGINE_SPEC.md`.
 - [`REVIEW_ENGINE_SPEC.md`](REVIEW_ENGINE_SPEC.md) — the deterministic
   implementation spec for everything here (fact pack, classifier, vote,
   schemas, `{calibrate}` constants).
-- [`RESEARCH_REPORT_STUDY.md`](RESEARCH_REPORT_STUDY.md) — the evidence base
-  these rules were derived from.
 - [`TRADING_COACH.md`](../coach/TRADING_COACH.md) — the overall coach product;
   this is its statistical layer.
 - [`FEATURES.md`](../product/FEATURES.md) §6 — the reporting metrics that feed
