@@ -3,6 +3,11 @@
 import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getActiveAccount } from "@/lib/accountScope";
+import {
+  generateCoachChatReply,
+  type CoachChatMessage,
+  type CoachChatReply,
+} from "@/lib/coach/chat";
 import { buildCoachReviewPayload, type CoachReviewHumanContext, type CoachReviewTradeContext } from "@/lib/coach/payload";
 import { generateCoachReview } from "@/lib/coach/openai";
 import { buildSessionFactPack } from "@/lib/coach/reviewEngine";
@@ -51,6 +56,12 @@ type CoachReviewActionInput = {
   scope: CoachReviewScope;
   scopeKey: string;
 };
+
+export async function sendCoachChatMessageAction(
+  messages: CoachChatMessage[],
+): Promise<CoachChatReply> {
+  return generateCoachChatReply(messages);
+}
 
 function coachReviewScopeFromForm(formData: FormData): { scope: CoachReviewScope; scopeKey: string } | null {
   const scope = String(formData.get("scope") ?? "");

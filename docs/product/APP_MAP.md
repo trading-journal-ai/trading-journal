@@ -17,9 +17,13 @@
   handles ticker-by-day review; `/calendar` gives the month/year overview.
   Daily recap editor and coach handoff concepts are captured in
   `docs/product/DAILY_RECAP_FLOW.md`.
-- AI coach / report: `/reports` is the live analytics screen. The fuller coach
-  system is still primarily specified in `docs/coach/TRADING_COACH.md`,
-  `docs/analytics/STATISTICAL_REVIEW.md`, and
+- Reports: `/reports` is the live analytics screen.
+- AI Coach chat: `/coach` is the standalone chat/reset preview surface. It
+  should support debriefing, reset prompts, and dictation-first text chat
+  without becoming a live trade-calling tool.
+- Structured AI review: the fuller coach system is still primarily specified in
+  `docs/coach/TRADING_COACH.md`, `docs/coach/COACH_ARCHITECTURE.md`,
+  `docs/coach/BUILD_TODO.md`, `docs/analytics/STATISTICAL_REVIEW.md`, and
   `docs/analytics/REVIEW_ENGINE_SPEC.md`.
 - Settings: `/settings` holds account selection support, theme settings, export,
   and dev reset tools.
