@@ -2,10 +2,16 @@
 
 A holistic map of the whole system, written to step back after a fast-moving
 build and ask three questions honestly: **did we make the right decisions, can
-we simplify, and what's next?** This is the repo-wide companion to the
-surface-specific docs ([`DEMO_RUNTIME.md`](deployment/DEMO_RUNTIME.md) for the
-runtime contract, [`PERFORMANCE_AUDIT.md`](deployment/PERFORMANCE_AUDIT.md) for
-the latency work).
+we simplify, and what's next?**
+
+This is the single source of truth for how the surfaces relate, how data and
+rendering work, and how to operate the demo. Part 1 is the model and analysis;
+Part 2 is the operational reference (env, build, deploy). The latency
+deep-dive lives in [`PERFORMANCE_AUDIT.md`](deployment/PERFORMANCE_AUDIT.md).
+
+---
+
+# Part 1 — Model & Analysis
 
 ## The mental model: 3 surfaces, 2 repos, 1 app in 2 modes
 
@@ -23,17 +29,20 @@ repos. There is one app; it runs in two modes.
   any app behavior or performance; it loads instantly.
 - The **hosted demo and the local app are the same codebase** in different
   modes, switched by `DEMO_READ_ONLY` ([`demoMode.ts`](../src/lib/demoMode.ts)).
+- **Local demo** is a fourth flavor: the local app pointed at the resettable
+  demo DB — used to test and to generate demo fixtures.
 - There is **no auth, no user system, no middleware**. A single account with a
   cookie-selected "active account" — consistent with local-first.
 
 ## Data & storage architecture
 
 **Principle: SQLite everywhere. Local when you run it, bundled when it's the
-demo.** ([`db/index.ts`](../src/lib/db/index.ts) resolves the source.)
+demo. Nothing phones a database over the network.**
+([`db/index.ts`](../src/lib/db/index.ts) resolves the source.)
 
 | Mode | Store | Writes |
 | --- | --- | --- |
-| Local app / demo | SQLite file (`DB_PATH`) | read-write |
+| Local app / local demo | SQLite file (`DB_PATH`) | read-write |
 | Hosted demo | **bundled** SQLite file (`DEMO_DB_PATH`), copied to `/tmp` per cold start | read-only |
 | Per-visitor demo edits | `localStorage` overlay *(planned)* | browser-only, throwaway |
 
@@ -46,21 +55,14 @@ a **generated artifact** built from them, not hand-maintained.
   (runs on your machine, nothing phones home, easy to fork).
 - ✅ **Bundled file for the demo (not a separate static-JSON renderer) is
   right** — it keeps the demo on the *identical* server-render + Drizzle code
-  path as the real app, so the demo can't drift from the product. (See
-  [`PERFORMANCE_AUDIT.md`](deployment/PERFORMANCE_AUDIT.md).)
-- ⚠️ **Turso is vestigial and should be removed.** It exists only because
-  serverless filesystems are read-only/ephemeral, so a *read-write* hosted
-  demo would have needed an external DB. The demo is now read-**only**, which
-  erased that need. Because the whole product is local-first, a hosted DB
-  server is arguably never needed. **Next step:** after the bundled-file demo
-  is verified on a preview deploy, delete the `TURSO_DATABASE_URL` path from
-  `db/index.ts` and the env docs. Collapses the storage story to one sentence.
-- 🔜 **`localStorage` overlay (planned).** Let demo visitors add notes/tags
-  during a session; store them in the browser only, merged over the read-only
-  seed **client-side**; clears when they leave. Adds *zero* backend surface.
-  The strict rule that keeps it lightweight: demo writes never reach the
-  server — the server always renders the shared seed, a thin client layer
-  overlays the visitor's session edits.
+  path as the real app, so the demo can't drift from the product.
+- ✅ **Turso removed.** It existed only because serverless filesystems are
+  read-only/ephemeral, so a *read-write* hosted demo would have needed an
+  external DB. The demo is read-**only**, which erased that need, and the
+  product is local-first, so a hosted DB server is never needed. The
+  `TURSO_DATABASE_URL` path is gone from `db/index.ts`; storage is now one
+  sentence: a SQLite file, local when you run it, bundled when it's the demo.
+- 🔜 **`localStorage` overlay (planned).** See Part 2 for the rules.
 
 ## Rendering architecture
 
@@ -76,30 +78,31 @@ per request.
 
 - ✅ **`force-dynamic` is correct for the local app** — a live read-write
   journal should always reflect current data.
-- ⚠️ **`force-dynamic` on the read-only demo is the core latency bug.** Static
-  content is served through the most dynamic possible path (cold start + DB
-  round-trips per request). PR fixing the DB round-trips is in flight; the
-  *rendering* mode is the remaining lever.
+- ⚠️ **`force-dynamic` on the read-only demo is the remaining latency cost.**
+  The bundled-file DB removed the per-request network round-trips; what's left
+  is the serverless **cold start** (a function still wakes and renders on every
+  hit). This is why the demo is faster but not yet instant.
 - 🚧 **Fully static demo is blocked app-wide by `searchParams`.** Journal,
   trades, reports, calendar, and review all filter via the URL query string,
   which forces dynamic rendering. Making the demo static (served from CDN, no
-  function, no cold start) requires either moving that filtering client-side or
-  restructuring routes to path segments (`/journal/[date]`). This is the
-  biggest remaining optimization and a real project — not a config flip.
+  function, no cold start — i.e. *instant*) requires either moving that
+  filtering client-side or restructuring routes to path segments
+  (`/journal/[date]`). This is the biggest remaining optimization and a real
+  project — not a config flip.
 
 ## External dependencies
 
-Three, and the demo should need **none** of them at runtime.
+Two remain (Turso was removed), and the demo needs **neither** at runtime.
 
 | Dependency | Used for | Needed on hosted demo? |
 | --- | --- | --- |
-| Turso (`@libsql/client` remote) | hosted-demo DB (legacy) | ❌ replaced by bundled file — remove |
 | MASSIVE (`MASSIVE_API_KEY`) | live candle/market data ([`candles/`](../src/lib/candles/)) | ❌ demo uses cached/fallback candles only |
 | OpenAI (`OPENAI_API_KEY`) | live AI coach generation | ❌ demo uses static seeded coach reviews |
 
-The demo is designed to make **no public live API calls** — it renders from
-seeded content and cached/fallback data. Worth confirming each fallback path is
-actually exercised in demo mode (see Open questions).
+Dictation (voice notes → text) runs on a **local** Whisper Python sidecar
+([`scripts/local_transcribe_server.py`](../scripts/local_transcribe_server.py))
+— local-only, never part of the hosted demo. The demo makes **no public live
+API calls**; it renders from the bundled DB and cached/fallback data.
 
 ## Deployment topology
 
@@ -110,52 +113,181 @@ Visitor → trading-journal.ai (marketing, static CDN, instant)
         demo.trading-journal.ai (this app on Vercel, DEMO_READ_ONLY=true)
             │  serverless function: cold start → render → read DB
             ▼
-        bundled SQLite file (after the perf change; was remote Turso)
+        bundled SQLite file (local to the function; was remote Turso)
 ```
 
-The multi-second first load = **redirect hop + serverless cold start + (was)
-remote DB round-trips**. The bundled-file change removes the DB network cost;
-cold start remains until/unless the demo goes static.
+The multi-second first load was **redirect hop + serverless cold start +
+remote DB round-trips**. The bundled-file DB removed the DB network cost
+(~halved the load in practice); the **cold start** remains until/unless the
+demo goes static.
 
 ## Decisions to re-examine (the "did we move too fast?" list)
 
-1. **Turso** — vestigial; remove. (High confidence, low effort, after preview
-   verify.)
-2. **`force-dynamic` on the demo** — the real perf ceiling; static is the fix
-   but needs the searchParams refactor. (High value, higher effort.)
-3. **Redirect chain** — marketing CTA should link to the final URL
+1. **`force-dynamic` on the demo** — the real perf ceiling now that Turso is
+   gone; static is the fix but needs the searchParams refactor. (High value,
+   higher effort.)
+2. **Redirect chain** — marketing CTA should link to the final URL
    (`/journal`) to skip the 307. (Trivial.)
-4. **Line-ending hygiene** — mixed LF/CRLF has already caused one corruption
-   this cycle; add a `.gitattributes` to normalize. (Cheap, prevents pain.)
-5. **Shared working tree** — multiple people editing one checkout caused a
-   corrupted `package.json` and a tangled PR. Adopt git worktrees / clearer
-   branch ownership. (Process, not code.)
+3. **Shared working tree** — multiple people editing one checkout caused a
+   corrupted `package.json`, a tangled PR, and a lost doc consolidation. Adopt
+   git worktrees / clearer branch ownership. (Process, not code.)
+
+*Resolved this cycle:* Turso removed; line-ending hygiene fixed
+(`.gitattributes` now normalizes `.ts/.tsx/.json/.css` to LF, the gap that
+caused the `package.json` corruption).
 
 ## Optimization opportunities (prioritized)
 
-1. **Bundled-file demo DB** — removes remote-DB latency. *(in flight)*
-2. **Remove Turso** — simplifies storage to one story. *(after #1 verified)*
-3. **Direct-link the marketing CTA** — drop the redirect hop. *(trivial)*
-4. **Static/ISR demo rendering** — removes cold start entirely; needs the
+1. **Static/ISR demo rendering** — removes cold start entirely; needs the
    searchParams refactor. *(biggest remaining win, real project)*
-5. **`localStorage` session overlay** — lets visitors interact without any
+2. **Direct-link the marketing CTA** — drop the redirect hop. *(trivial)*
+3. **`localStorage` session overlay** — lets visitors interact without any
    backend. *(feature, not perf)*
 
 ## Open questions
 
 - Are the MASSIVE and OpenAI **fallback paths** actually exercised on the demo,
   or could a missing key throw at request time?
-- What is the real breakdown of the ~3s (redirect vs. cold start vs. DB)?
+- What is the real breakdown of the remaining load (redirect vs. cold start)?
   Capture a live trace before committing to the static refactor.
 - Should the demo eventually be its **own thinner build** (static export) or
   stay the full app in read-only mode?
 - Where does the `localStorage` overlay merge happen, per component, without
   forking the render path?
 
-## Relationship to other docs
+---
 
-- [`deployment/DEMO_RUNTIME.md`](deployment/DEMO_RUNTIME.md) — the runtime
-  contract and env matrix per surface.
-- [`deployment/PERFORMANCE_AUDIT.md`](deployment/PERFORMANCE_AUDIT.md) — the
-  latency root-cause analysis and the bundled-file fix.
-- [`product/APP_MAP.md`](product/APP_MAP.md) — the in-app feature/route map.
+# Part 2 — Operational Reference
+
+## Source of truth
+
+- **App code:** the `trading-journal` repo.
+- **Demo content:** fixture files in the app repo (reviewed and committed). The
+  demo database is a **generated deploy artifact**, not the source of truth.
+
+```text
+samples/demo/
+  trades.csv            # present
+  coach-reviews.json    # present (approved static coach reviews)
+  journal-notes.json    # target
+  playbook.json         # target
+  candles/              # target
+```
+
+## Environment contract
+
+### Local app
+
+```text
+DB_PATH=data/journal.db
+DEMO_READ_ONLY=false
+MASSIVE_API_KEY=optional_local_key
+OPENAI_API_KEY=optional_local_key
+```
+
+### Local demo
+
+```text
+DB_PATH=data/tradingjournaldemo.db
+DEMO_READ_ONLY=false
+MASSIVE_API_KEY=optional_local_key
+OPENAI_API_KEY=optional_local_key
+```
+
+Local demo may call OpenAI because it is developer-owned and useful for
+generating approved coach fixtures.
+
+### Hosted demo
+
+```text
+DEMO_DB_PATH=data/tradingjournaldemo.db
+DEMO_READ_ONLY=true
+MASSIVE_API_KEY=unset
+OPENAI_API_KEY=unset
+```
+
+The hosted demo makes **no public live API calls** — it renders from the
+bundled DB and cached/fallback market data. There is no Turso configuration.
+
+### Marketing site
+
+```text
+NEXT_PUBLIC_DEMO_URL=https://demo.trading-journal.ai
+```
+
+During transition the site can default to `https://trading-journal.ai/demo`.
+
+## Demo DB build
+
+The bundled demo DB is built from fixtures at deploy time — no hosted database
+to mutate, no refresh script, no confirmation guard.
+
+```text
+Fixture files (samples/demo/)
+  → build step: npm run demo:db   (generates data/tradingjournaldemo.db)
+  → next build                     (next.config outputFileTracingIncludes bundles the .db)
+  → serverless function reads the bundled file locally (copied to /tmp per cold start)
+```
+
+How the runtime resolves it: when `DEMO_DB_PATH` is set and
+`DEMO_READ_ONLY=true`, [`db/index.ts`](../src/lib/db/index.ts) reads that file.
+Serverless bundles are read-only and SQLite must write its `-wal`/`-shm`
+sidecars, so the file is copied into writable `/tmp` once per cold start.
+**Verify on a Vercel preview deployment** (renders + latency dropped) before
+pointing the live demo at it.
+
+## Per-visitor demo persistence (`localStorage`)
+
+The hosted demo may let visitors personalize without accounts, using
+browser-local storage. **The shared demo DB stays read-only; demo writes never
+reach the server** — the server always renders the shared seed, a thin client
+layer overlays the visitor's session edits and clears when they leave.
+
+Rules:
+
+- Versioned namespace, e.g. `trading-journal.demo.v1.*`.
+- Overlays are device/browser-specific; they vanish when browser data clears.
+- Never store API keys, broker exports, account numbers, or raw audio.
+- Overlays must be easy to reset or replace when demo fixtures change.
+
+Good candidates: trade-note drafts, daily recap notes, ticker/day review notes,
+dismissed onboarding prompts, future playbook/coach-preference demo edits.
+
+## AI coach in the demo
+
+The public demo must not call OpenAI live. Flow:
+
+1. Run local demo with a private `OPENAI_API_KEY`.
+2. Generate coach reviews from the deterministic payload + demo notes.
+3. Edit and approve the responses.
+4. Save approved responses as fixtures (`samples/demo/coach-reviews.json`).
+5. Seed them into `coach_reviews` rows when building the demo DB.
+6. Hosted demo displays those seeded reviews read-only.
+
+When `DEMO_READ_ONLY=true`, the coach UI prefers existing seeded rows and must
+not expose a public path that triggers paid or nondeterministic generation.
+
+## Deployment flows
+
+```text
+App code update:   push main → Vercel rebuilds → demo gets latest UI + a freshly built demo DB
+Demo content:      update samples/demo fixtures → verify local demo → rebuild → deploy
+Marketing update:  push site repo → Vercel rebuilds trading-journal.ai → CTA → hosted demo
+```
+
+App code deploys automatically via Vercel. Because the demo DB is a build
+artifact (not a mutated hosted DB), a demo-content change is just a fixture edit
++ redeploy — no separate hosted-refresh operation.
+
+## Near-term checklist
+
+1. Add `.gitattributes` line-ending normalization. ✅ done
+2. Remove Turso. ✅ done
+3. Point the marketing CTA at `demo.trading-journal.ai/journal` (skip redirect).
+4. Add playbook/journal-note/candle fixtures under `samples/demo/`.
+
+## Non-goals
+
+- The marketing site must not own demo data.
+- Public demo users must not trigger live OpenAI calls.
+- The demo must not depend on a hosted database server.

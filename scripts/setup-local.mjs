@@ -222,6 +222,7 @@ function writeLocalEnv({ dbPath, massiveKey }) {
     "DB_PATH",
     "MASSIVE_API_KEY",
     "DEMO_READ_ONLY",
+    // Legacy — Turso is no longer used; listed so setup strips any stale lines.
     "TURSO_DATABASE_URL",
     "TURSO_AUTH_TOKEN",
   ]);
@@ -240,10 +241,6 @@ function writeLocalEnv({ dbPath, massiveKey }) {
     "# Optional AI coach model. Keep real keys local and never commit them.",
     "# OPENAI_API_KEY=",
     "# OPENAI_MODEL=gpt-5.5",
-    "",
-    "# Turso is intentionally left unset for local SQLite mode.",
-    "# TURSO_DATABASE_URL=",
-    "# TURSO_AUTH_TOKEN=",
     "",
   ];
   const nextContents = lines.join("\n");
