@@ -78,6 +78,32 @@ labels, not by writing in a third place.
 
 Out of scope for this slice. It should use the same composer later.
 
+### Coach Session
+
+Future direction: a coach chat can become its own day-linked artifact. It is
+related to the trading day, but it should not automatically merge into the
+Daily Recap.
+
+Purpose:
+
+- Process a bad day, spiral, reset, or stop-trading moment.
+- Talk through trades or emotions without forcing the conversation into the
+  structured review format.
+- Preserve useful coach guidance as part of the personal/trading journal record.
+
+Demo decision:
+
+- Start with a standalone **AI Coach** preview tab or route.
+- Do not persist coach sessions in v0.
+- If the surface proves useful, save sessions by trading date with a distinct
+  type, then let Journal filter or view them separately from trade notes and
+  daily recaps.
+
+Open product question:
+
+- Does the journal eventually show coach sessions as a separate day section,
+  a filterable note type, or a private personal-journal layer?
+
 ## Solving "Notes Get Buried"
 
 A note is never a dead end. Every saved note has three exits:

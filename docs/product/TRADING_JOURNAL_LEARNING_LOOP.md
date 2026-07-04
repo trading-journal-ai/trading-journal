@@ -91,6 +91,7 @@ loop wherever it helps the user and coach understand the day.
 | Daily recap | Journal | Full record of the day: trades, market context, emotions, process, and user reflection. |
 | Check-ins | Journal, initiated by Dashboard | Timestamped prompts from the dashboard, attached to the daily recap. |
 | Coach feedback | Journal / Coach | Interpretation of journal context plus trade evidence. |
+| Coach session | Coach / Journal later | A chat-style reset, debrief, or pep-talk session attached to a trading date but distinct from the structured daily recap. |
 | Insight | Shared context | A lesson moving through the system: journal observation, coach synthesis, dashboard reminder, or next-session cue. |
 | Current experiment | Coach -> Dashboard | A coach-generated behavior to test for a defined period. |
 | Carry forward | Journal -> Dashboard | A user-authored lesson, unresolved pattern, or note that should remain visible. |
@@ -156,6 +157,19 @@ Every check-in can become the next session's focus.
 4. Dashboard cue: "Missing the first move is not a reason to lower standards."
 5. Dashboard prompt: "Are you lowering standards because you missed the first
    move?" The answer attaches back to the daily recap.
+
+## Coach Chat Preview
+
+The first AI Coach chat surface can live outside the full learning loop as a
+preview. Its job is to prove the emotional/debrief use case:
+
+- The trader can open **AI Coach** when they are spiraling, frustrated, or ready
+  to stop trading.
+- The coach can help review the day, ask grounding questions, and produce a
+  reset cue.
+- The chat does not give live trade calls.
+- Persistence is optional later; if saved, the session attaches to the trading
+  date as a coach session rather than replacing the Daily Recap.
 
 ## Design Notes
 

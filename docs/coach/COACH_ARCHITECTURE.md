@@ -13,6 +13,7 @@ persisted. This is the runtime/systems companion to the content pillars:
 | Statistical pillar (*was it real*) | [`STATISTICAL_REVIEW.md`](../analytics/STATISTICAL_REVIEW.md) | done |
 | Deterministic engine spec | [`REVIEW_ENGINE_SPEC.md`](../analytics/REVIEW_ENGINE_SPEC.md) | done (v0.1) |
 | Candidate quality (Five Pillars of Stock Selection) | [`ANALYTICS_RESEARCH_PLAN.md`](../analytics/ANALYTICS_RESEARCH_PLAN.md) | research |
+| Working build list | [`BUILD_TODO.md`](BUILD_TODO.md) | active |
 
 The five-pillar stock-selection framework is an *input* to the coach (quality of
 the opportunity set before the trade), not a coach pillar itself. It feeds the
@@ -181,25 +182,33 @@ Build **Daily Coach Prep before wiring the LLM**:
 
 1. Author [`SETUPS.md`](SETUPS.md) bodies and write `EXECUTION.md` — the coach
    cannot grade setup validity or entry quality against TODOs.
-2. Compute indicator series in app code from stored OHLCV: EMA 9/20, VWAP,
-   session volume aggregates (daily 200EMA once daily history exists). The
+2. Add trade-detail screenshot upload so a trade can carry visual chart
+   evidence before level extraction exists. This is the first image step in
+   [`BUILD_TODO.md`](BUILD_TODO.md).
+3. Compute indicator series in app code from stored OHLCV: EMA 9/20/200, VWAP,
+   session volume aggregates, and anchored VWAP / NVWAP variants only after
+   their exact definitions are chosen. The
    chart library (TradingView lightweight-charts) only renders — it provides
    no data or indicators — so we own these series, and the *same* computed
    values feed both the chart overlays and the `[D]` setup predicates in the
    fact pack. One source, no display/grading drift.
-3. After import, offer a primary action to open the daily recap: show the
+4. Extend screenshots to ticker/day multi-timeframe level maps: 1m/5m/daily
+   plus higher-timeframe TradingView screenshots with support, resistance,
+   pivots, descending resistance, and other marked levels. Confirmation creates
+   user-marked level records; screenshots remain visual evidence.
+5. After import, offer a primary action to open the daily recap: show the
    deterministic starter read, highlight the key trades that deserve
    annotation, and add the daily + selected-trade context fields
    ([`TRADING_COACH.md`](TRADING_COACH.md) §Daily Coach Prep).
-4. Define the playbook DB schema (above) and seed it from the authored docs.
-5. Freeze coach review + experiment schemas; persist even while the LLM call
+6. Define the playbook DB schema (above) and seed it from the authored docs.
+7. Freeze coach review + experiment schemas; persist even while the LLM call
    is stubbed.
-6. Build the prompt assembler (constitution + playbook compiler + fact pack +
+8. Build the prompt assembler (constitution + playbook compiler + fact pack +
    notes) as a pure function → payload snapshot, so evals and production share
    one code path.
-7. Extend the eval set with the psychology cases listed in
+9. Extend the eval set with the psychology cases listed in
    [`PSYCHOLOGY.md`](PSYCHOLOGY.md) §Evaluation Examples.
-8. Wire the live model call last, behind the evals.
+10. Wire the live model call last, behind the evals.
 
 Explicitly **not next**: a single coach score, a freeform LLM review from raw
 trades alone, mandatory notes on every trade, chart-image analysis before

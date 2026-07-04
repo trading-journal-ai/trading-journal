@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    ".venv*/**",
+    "**/__pycache__/**",
     // Static design references kept for product/design review, not app source.
     "samples/**",
     "public/review/**",

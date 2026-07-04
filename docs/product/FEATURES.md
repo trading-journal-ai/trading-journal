@@ -86,13 +86,21 @@
   capture UI.
 - 🔜 **Setup/pattern taxonomy** as the main structured note control: user-defined
   patterns, valid/invalid conditions, examples, and coach corrections.
-- ✅ **Screenshots**: attach images to a trade (stored locally).
+- 🔜 **Screenshot upload UI**: attach one or more chart images to a trade from
+  trade detail. The database has an attachment shape, but the user-facing upload
+  flow still needs to be built.
+- 🔜 **Multi-timeframe level screenshots**: attach TradingView screenshots to a
+  ticker/day review for 1m, 5m, daily, and higher-timeframe level context before
+  any vision-assisted level extraction.
 - 🔜 Searchable journal of mistakes/lessons across trades.
 - 🔜 Daily note / day snapshot (market regime, how I traded).
 - 🔜 AI trade-review coach: daily-first review using the Find Your Levels prompt
   rubric, user-marked levels, chart data, trade records, and journal notes.
 - 🔜 AI daily coach recap: summarize what worked, what did not work, what can
   improve, and one focused next-session checklist item.
+- 🔜 **AI Coach chat preview**: standalone chat surface for debriefing, reset
+  prompts, and "help me stop trading" moments. Dictation-first input with
+  text-based live coach replies.
 
 ## 5. Calendar  *(screenshot 3)*
 - ✅ **Monthly P&L calendar**, days color-coded by net P&L.
