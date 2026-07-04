@@ -65,7 +65,7 @@ export default function ImportForm() {
           setDismissedResult(true);
         }}
         disabled={pending}
-        className="cursor-pointer rounded-md bg-[#58a6ff] px-4 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex h-10 cursor-pointer items-center justify-center rounded-md bg-[#58a6ff] px-4 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50"
       >
         {pending ? "Importing..." : "Import"}
       </button>
