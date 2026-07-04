@@ -20,11 +20,11 @@ shape.
 
 What is landing now:
 
-- **Onboarding and setup flow**: first launch inside the app should help people
-  connect their broker/import source, add a language-model API key, define
-  trading rules, build a setup playbook, and tune coach preferences. Anything
-  skipped during setup should be recoverable later from Settings or contextual
-  setup prompts.
+- **Setup workspace and coach context**: Settings should help people connect
+  their broker/import source, add a language-model API key, complete a trader
+  self-assessment, define trading rules, build a setup playbook, and tune coach
+  preferences. First launch can point into this workspace, but setup should stay
+  editable and recoverable from Settings and contextual setup prompts.
 - **Dictation-first note capture**: voice input is being treated as a core
   journaling surface, because the real context behind a trade is often spoken
   faster and more honestly than it is clicked.
