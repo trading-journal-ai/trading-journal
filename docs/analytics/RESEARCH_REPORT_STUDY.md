@@ -1,16 +1,14 @@
-# Daily Report Methodology — Reference Teardown
+# Daily Report Methodology Notes
 
-> A reverse-engineering of a public trader's daily review reports (an anonymized
-> reference journal). The point is **not** to
-> copy the trader's strategy, tickers, or specific rules — it is to learn *how
-> the data is analyzed* so our AI coach (see
-> [`TRADING_COACH.md`](../coach/TRADING_COACH.md)) can produce
-> reviews of comparable rigor. Read this as "what a strong daily recap computes
-> and why," not as trading advice.
+> Notes from reviewing an anonymized set of daily trading review reports. The
+> goal is to clarify what a strong daily recap computes and why, so our AI coach
+> (see [`TRADING_COACH.md`](../coach/TRADING_COACH.md)) can produce reviews with
+> comparable rigor. This is product research, not trading advice, and it is not
+> a strategy, ticker, or rule template.
 
-## Why this is worth studying
+## Why this matters
 
-The reference reports do something most journal tools do not: they separate
+The reports do something most journal tools do not: they separate
 **luck from skill** with explicit statistics, attribute edge across multiple
 axes, and end each day with exactly one falsifiable experiment. They are honest
 to the point of telling the trader when a green day was statistically
@@ -95,8 +93,8 @@ the per-day significance math kept asserting.
 
 ### The lesson a daily report structurally cannot deliver
 
-This is the most important takeaway of the whole study. The reference trader's
-own engine labeled the early high-frequency days "outlier-carried" and statistically
+This is the most important takeaway of the whole study. The sampled reports
+labeled the early high-frequency days "outlier-carried" and statistically
 insignificant **day by day**. Only the multi-month aggregate reveals the regime
 change was the best decision in the dataset.
 
@@ -106,8 +104,8 @@ change was the best decision in the dataset.
 > **daily** = process/rule adherence; **weekly** = is a leak chronic or one-off;
 > **monthly/regime** = did a deliberate change (frequency, price band, sizing)
 > actually move the needle. The monthly job only works if the coach persists the
-> change and the prior recommendation — the loop-closing feature the reference
-> reports lack (see the section above).
+> change and the prior recommendation — the loop-closing feature this product
+> should add (see the section above).
 
 Risk note for the coach's design: **drawdowns scaled with the account.** Worst
 days: −$16.3k (Dec), −$8.6k (Nov), −$5.9k (Apr), −$5.2k (Jan), plus a 3-day
@@ -216,7 +214,7 @@ computed together.
 Bucket trades by entry price ($0.50–1, $1–2, $2–3, $3–5, $5–10, $10–15,
 $15–20, …). Per bucket: trade count, win rate, net $.
 
-Surfaces *where* edge lives. The reference reports repeatedly find that cheap
+Surfaces *where* edge lives. The sampled reports repeatedly find that cheap
 buckets ($1–5) bleed money on high trade counts while mid-priced buckets
 ($5–15) carry the day on far fewer trades — sometimes a bucket with a *sub-50%
 win rate* still leads in dollars because of payoff asymmetry.
@@ -253,7 +251,7 @@ seen: cap cheap-bucket trade count; block re-entry in a ticker after a realized
 6. **Exactly one next action,** falsifiable, with hypothetical P&L.
 7. **Baseline-relative everything** — judge against a trailing window, not zero.
 
-## Where our coach can be *better* than the reference
+## Where our coach can improve the loop
 
 Across the sampled reports, the engine kept prescribing the **same fix** (cap
 cheap names, limit re-entries) day after day — evidence the leak is chronic and
@@ -262,8 +260,8 @@ daily without tracking whether prior recommendations were followed or worked.
 
 Our coach should **close that loop**: persist each "one thing to try," then on
 later days check whether the trader actually followed it and whether it helped.
-That recommendation-tracking is a feature the reference reports lack and a clear
-place for us to add value. It fits the Pattern/Process phases in
+That recommendation-tracking is a clear place for us to add value. It fits the
+Pattern/Process phases in
 [`TRADING_COACH.md`](../coach/TRADING_COACH.md).
 
 ## Design principles from observed data (operator's thesis)
@@ -291,8 +289,8 @@ Three coaching principles fall out of this, each supported by the data:
    **E[R]/trade** and time-in-market/exposure, and treat a high-volume, low-edge
    day as a *warning*, not a win. Evidence: low-count conviction days (Apr 6: 4
    trades, PF 4.27; Mar 17: ~1.9R per trade) vastly out-earn per decision versus
-   churn days (May 19: **118 trades, +$570, ~0.007R per trade**). The reference
-   trader's own engine repeatedly prescribed the same fix — "fewer trades,
+   churn days (May 19: **118 trades, +$570, ~0.007R per trade**). The sampled
+   reports repeatedly prescribed the same fix — "fewer trades,
    concentrate, cap the cheap buckets" — confirming the churn is a known leak.
 
 3. **Frequency should be regime-aware.** High frequency is *rewarded* in a hot,
@@ -312,7 +310,7 @@ than assuming the answer.
 
 ## Mapping to our existing plans
 
-> The rules **derived** from this study live in
+> The rules shaped by this study live in
 > [`STATISTICAL_REVIEW.md`](STATISTICAL_REVIEW.md) (the coach's statistical
 > layer). This doc is the evidence base; that doc is the framework we adopt.
 
@@ -329,7 +327,6 @@ than assuming the answer.
 
 ## Source
 
-A public trader's daily-report journal (anonymized reference; daily reports,
-Nov 2025 – present). Reviewed full reports across winning, losing, and
-outlier-carried days plus the earliest narrative-era report to trace methodology
-evolution.
+A public daily-report journal (anonymized; daily reports, Nov 2025 – present).
+Reviewed full reports across winning, losing, and outlier-carried days plus the
+earliest narrative-era report to trace methodology evolution.

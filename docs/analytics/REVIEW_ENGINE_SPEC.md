@@ -33,14 +33,14 @@ uplift example).
 
 ## Provenance & validation status
 
-The rules below were reverse-engineered from a 27-session replay of a public
-reference engine (full-format reports, 2026-04-16 → 2026-06-17). The classifier
-reproduced the published distribution label on **27/27** sessions.
+The rules below were shaped by a 27-session review of full-format daily reports
+(2026-04-16 → 2026-06-17). The classifier reproduced the published
+distribution label on **27/27** sessions.
 
 **Caveat — thin, single-regime sample.** All 27 sessions fall in one hot,
 high-frequency regime. Treat the *structure* (tail fraction, tree shape, vote
 structure, surprise formula) as robust; treat the *numeric constants* below as
-**reference-observed starting hypotheses, not defaults**. Recalibrate every
+**research-observed starting hypotheses, not defaults**. Recalibrate every
 `{calibrate}` value against the user's own history before shipping.
 
 ## Calibration constants `{calibrate}`

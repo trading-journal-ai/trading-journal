@@ -3,7 +3,7 @@
 > Status: draft research plan
 > Last updated: 2026-06-20
 > Inputs: current `/reports` implementation, existing coach/statistics docs, and
-> reference screenshots from Tradervue-style reports.
+> examples of Tradervue-style reports.
 
 ## Purpose
 
@@ -46,9 +46,9 @@ Current deterministic data is mostly trade-level:
   taxonomy, market regime, liquidity add/remove semantics, MAE/MFE snapshots,
   commissions vs fees split, benchmark/index context.
 
-## Reference Screenshot Takeaways
+## Report Pattern Takeaways
 
-The reference product organizes reports around these families:
+The report examples organize around these families:
 
 - Overview: recent daily P&L, cumulative P&L, volume, win percentage.
 - Detailed stats: a broad matrix of trade and day statistics.
@@ -68,7 +68,7 @@ Useful ideas to borrow:
   trade.
 - Scatter plots for relationships like duration vs P&L or price vs P&L.
 
-Ideas to avoid copying wholesale:
+Ideas to avoid bringing over wholesale:
 
 - Locked/premium placeholder report grids.
 - Too many equal-weight tabs before the default analytics story is clear.
@@ -76,9 +76,9 @@ Ideas to avoid copying wholesale:
   chance probability, unless they are backed by the deterministic review engine.
 - Liquidity reports until imports reliably expose add/remove liquidity.
 
-## Reference Tab Mental Model
+## Analytics Tab Mental Model
 
-The reference screenshots are organized less by chart type and more by review
+The report examples are organized less by chart type and more by review
 job. That is useful: each tab answers a different kind of trader question.
 
 ### Overview
