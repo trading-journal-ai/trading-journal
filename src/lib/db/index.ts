@@ -6,16 +6,21 @@ import { drizzle } from "drizzle-orm/libsql";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import * as schema from "./schema";
 
-// Hosted demo: ship the data with the app. When DEMO_DB_PATH points at a
-// bundled SQLite file, read it locally. Serverless bundles are read-only but
-// SQLite needs to write its -wal/-shm sidecars, so copy the file into the
-// writable /tmp dir once per cold start and read from there. Returns undefined
-// when no bundled demo DB is configured, so callers fall back to the local file.
-function bundledDemoUrl(): string | undefined {
-  const bundled = process.env.DEMO_DB_PATH;
-  if (!isDemoReadOnly() || !bundled) return undefined;
+// The demo DB ships committed at samples/demo (data is built from committed
+// fixtures — see samples/demo/trades.csv). This is the default so read-only
+// demo mode always finds it even if DEMO_DB_PATH is unset — a missing env var
+// must never fall through to a nonexistent DB and 500.
+const DEFAULT_DEMO_DB_PATH = "samples/demo/tradingjournaldemo.db";
 
-  const src = resolve(bundled);
+// Hosted demo: ship the data with the app and read it locally. Serverless
+// bundles are read-only but SQLite needs to write its -wal/-shm sidecars, so
+// copy the file into the writable /tmp dir once per cold start and read from
+// there. Returns undefined only outside read-only demo mode (local runs), so
+// those fall back to the local file.
+function bundledDemoUrl(): string | undefined {
+  if (!isDemoReadOnly()) return undefined;
+
+  const src = resolve(process.env.DEMO_DB_PATH ?? DEFAULT_DEMO_DB_PATH);
   if (!existsSync(src)) return undefined;
 
   const runtimeDir = process.env.DEMO_DB_RUNTIME_DIR ?? (existsSync("/tmp") ? "/tmp" : dirname(src));

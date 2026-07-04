@@ -3,11 +3,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // better-sqlite3 is a native module — keep it external to the server bundle.
   serverExternalPackages: ["better-sqlite3"],
-  // Ship the bundled demo SQLite DB into the serverless functions so the hosted
-  // demo reads it locally (DEMO_DB_PATH) instead of a remote Turso DB. Built
-  // from samples/demo fixtures during the demo deploy's build step.
+  // Ship the committed demo SQLite DB into the serverless functions so the
+  // hosted demo reads it locally instead of a remote database. The file is
+  // committed at samples/demo (built from samples/demo fixtures), so it is
+  // always present at build time — no build-step generation required.
   outputFileTracingIncludes: {
-    "/**": ["./data/tradingjournaldemo.db"],
+    "/**": ["./samples/demo/tradingjournaldemo.db"],
   },
   async redirects() {
     return [

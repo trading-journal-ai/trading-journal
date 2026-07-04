@@ -163,15 +163,17 @@ caused the `package.json` corruption).
 
 - **App code:** the `trading-journal` repo.
 - **Demo content:** fixture files in the app repo (reviewed and committed). The
-  demo database is a **generated deploy artifact**, not the source of truth.
+  demo database is **generated from those fixtures and committed** as the demo
+  seed — it is a build input, not the source of truth.
 
 ```text
 samples/demo/
-  trades.csv            # present
-  coach-reviews.json    # present (approved static coach reviews)
-  journal-notes.json    # target
-  playbook.json         # target
-  candles/              # target
+  trades.csv                    # present — source fixture
+  coach-reviews.json            # present (approved static coach reviews)
+  tradingjournaldemo.db         # present — committed demo seed (built from the fixtures)
+  journal-notes.json            # target
+  playbook.json                 # target
+  candles/                      # target
 ```
 
 ## Environment contract
@@ -200,14 +202,17 @@ generating approved coach fixtures.
 ### Hosted demo
 
 ```text
-DEMO_DB_PATH=data/tradingjournaldemo.db
 DEMO_READ_ONLY=true
 MASSIVE_API_KEY=unset
 OPENAI_API_KEY=unset
+# DEMO_DB_PATH optional — defaults to the committed samples/demo/tradingjournaldemo.db
 ```
 
 The hosted demo makes **no public live API calls** — it renders from the
-bundled DB and cached/fallback market data. There is no Turso configuration.
+committed demo DB and cached/fallback market data. There is no Turso
+configuration. `DEMO_READ_ONLY=true` is the **only** required setting; the demo
+DB path defaults in code, so a missing env var can never fall through to a
+nonexistent DB (the failure that took the demo down once).
 
 ### Marketing site
 
@@ -217,24 +222,37 @@ NEXT_PUBLIC_DEMO_URL=https://demo.trading-journal.ai
 
 During transition the site can default to `https://trading-journal.ai/demo`.
 
-## Demo DB build
+## Demo DB: committed seed
 
-The bundled demo DB is built from fixtures at deploy time — no hosted database
-to mutate, no refresh script, no confirmation guard.
+The demo DB (`samples/demo/tradingjournaldemo.db`, ~19MB, mostly candle data
+for charts) is **committed to the repo**, so it is always present in the
+deployment — no build-time generation, no hosted database to mutate, no refresh
+script. Regenerate it from fixtures when they change:
 
 ```text
-Fixture files (samples/demo/)
-  → build step: npm run demo:db   (generates data/tradingjournaldemo.db)
-  → next build                     (next.config outputFileTracingIncludes bundles the .db)
-  → serverless function reads the bundled file locally (copied to /tmp per cold start)
+npm run demo:db -- samples/demo/tradingjournaldemo.db   # rebuild the seed, then commit it
 ```
 
-How the runtime resolves it: when `DEMO_DB_PATH` is set and
-`DEMO_READ_ONLY=true`, [`db/index.ts`](../src/lib/db/index.ts) reads that file.
-Serverless bundles are read-only and SQLite must write its `-wal`/`-shm`
-sidecars, so the file is copied into writable `/tmp` once per cold start.
-**Verify on a Vercel preview deployment** (renders + latency dropped) before
-pointing the live demo at it.
+```text
+Deploy:  committed seed (samples/demo/tradingjournaldemo.db)
+  → next build   (next.config outputFileTracingIncludes bundles the file into the functions)
+  → serverless function reads it locally, copied to /tmp once per cold start
+```
+
+Runtime resolution: when `DEMO_READ_ONLY=true`,
+[`db/index.ts`](../src/lib/db/index.ts) reads `DEMO_DB_PATH` (default:
+`samples/demo/tradingjournaldemo.db`). Serverless bundles are read-only and
+SQLite must write its `-wal`/`-shm` sidecars, so the file is copied into
+writable `/tmp` once per cold start.
+
+*Why committed, not generated at deploy:* the earlier build-time generation was
+never actually wired into the Vercel build, so the file was never bundled and
+the demo silently ran on Turso; removing Turso then took it down. Committing the
+seed removes that whole failure class — the file simply exists.
+
+**Alternatives if 19MB in git becomes a concern:** move the seed to Git LFS, or
+slim it (drop candles, let them generate at runtime) to shrink it well under a
+megabyte.
 
 ## Per-visitor demo persistence (`localStorage`)
 
