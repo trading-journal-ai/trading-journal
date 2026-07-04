@@ -66,7 +66,7 @@ Current repo state:
 | --- | --- | --- | --- | --- | --- |
 | Local app | `DB_PATH=data/journal.db` | Enabled | Enabled | Remote fetch allowed with `MASSIVE_API_KEY` | Live OpenAI allowed with `OPENAI_API_KEY` |
 | Local demo | `DB_PATH=data/tradingjournaldemo.db` | Enabled/resettable | Seeded by scripts | Remote fetch allowed locally | Live OpenAI allowed locally for fixture generation |
-| Hosted demo | `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` | Server writes disabled by `DEMO_READ_ONLY=true`; personal browser overlays may use localStorage | Disabled | Cached/fallback only | Static seeded coach reviews only |
+| Hosted demo | Bundled SQLite file via `DEMO_DB_PATH` (read locally, no network) | Server writes disabled by `DEMO_READ_ONLY=true`; personal browser overlays may use localStorage | Disabled | Cached/fallback only | Static seeded coach reviews only |
 | Marketing site | None | None | None | None | None |
 
 ## Environment Contract
@@ -95,15 +95,37 @@ approved coach fixtures.
 ### Hosted demo app
 
 ```text
-TURSO_DATABASE_URL=libsql://demo-database...
-TURSO_AUTH_TOKEN=demo_database_token
+DEMO_DB_PATH=data/tradingjournaldemo.db
 DEMO_READ_ONLY=true
 MASSIVE_API_KEY=unset
 OPENAI_API_KEY=unset
+# TURSO_* no longer required — the demo DB ships with the deploy.
 ```
 
 Hosted demo must not require public live API calls. It should render from seeded
 database content and cached/fallback market data.
+
+**Why bundled, not Turso.** The demo is read-only static content. Reading it
+from a remote Turso DB meant an HTTP round-trip per query on every request,
+which (with serverless cold start) is the bulk of the multi-second first load
+([`PERFORMANCE_AUDIT.md`](PERFORMANCE_AUDIT.md)). Shipping the SQLite file with
+the deploy and reading it locally removes the network entirely.
+
+**How it works.** When `DEMO_DB_PATH` is set and `DEMO_READ_ONLY=true`,
+[`src/lib/db/index.ts`](../../src/lib/db/index.ts) reads that file instead of
+Turso. Because serverless bundles are read-only and SQLite must write its
+`-wal`/`-shm` sidecars, the file is copied into the writable `/tmp` once per
+cold start and read from there. `next.config.ts` `outputFileTracingIncludes`
+bundles the file into the functions.
+
+**Deploy steps.**
+
+1. Generate the demo DB from fixtures during the build, before `next build`
+   (e.g. `npm run demo:db && next build`).
+2. Set `DEMO_DB_PATH=data/tradingjournaldemo.db` and `DEMO_READ_ONLY=true`;
+   remove `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN`.
+3. Verify on a **Vercel preview deployment** first — confirm the demo renders
+   and first-load latency dropped — before pointing the live demo at it.
 
 ## Hosted Demo Local Persistence
 
