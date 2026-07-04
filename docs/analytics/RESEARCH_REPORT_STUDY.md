@@ -59,11 +59,10 @@ entire dataset — the edge scaled through *volume × payoff asymmetry*, not a
 rising hit rate. Typical losing days stayed in a stable −$1.6k to −$2.2k band
 even as winners grew, consistent with disciplined fixed per-trade risk.
 
-### Monthly aggregates (full archive, 144 days)
+### Monthly aggregates (review sample, 144 days)
 
-The complete dataset is captured in
-[`research-report-study-daily.csv`](reference-data/research-report-study-daily.csv)
-(one row per published report, Nov 17 2025 – Jun 17 2026). Rolled up by month:
+The reviewed sample covered one report per trading day from Nov 17 2025 through
+Jun 17 2026. Rolled up by month:
 
 | Month | Days | Net P&L* | Avg trades/day | Era |
 | --- | --- | --- | --- | --- |
@@ -325,8 +324,9 @@ than assuming the answer.
   [`FEATURES.md`](../product/FEATURES.md) roadmap (§6, marked 🔜) — this is the
   analytical payload they should feed.
 
-## Source
+## Source Notes
 
-A public daily-report journal (anonymized; daily reports, Nov 2025 – present).
-Reviewed full reports across winning, losing, and outlier-carried days plus the
-earliest narrative-era report to trace methodology evolution.
+This doc records methodology observations from an anonymized daily-report
+review. The underlying source data is intentionally not stored in the repo; the
+durable product output is the analytics framework, calibration guidance, and
+review-engine behavior captured in this folder.

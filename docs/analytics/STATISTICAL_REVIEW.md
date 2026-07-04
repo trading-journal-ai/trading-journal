@@ -21,7 +21,7 @@ agnostic to what any individual setup looks like.
 **Evidence base:** the rules below were shaped by
 [`RESEARCH_REPORT_STUDY.md`](RESEARCH_REPORT_STUDY.md)
 (a 144-day methodology review of daily trading reports). That doc holds the
-supporting data; this doc holds the framework we adopt. Thresholds marked
+methodology notes; this doc holds the framework we adopt. Thresholds marked
 `{calibrate}` must be tuned against the user's own history before they fire —
 do not ship research-sample numbers as defaults.
 
