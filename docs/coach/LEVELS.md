@@ -21,6 +21,7 @@ compute. The app should generate these automatically per ticker/day:
 - Opening range high / low.
 - High of day / low of day (as the session evolves).
 - VWAP (reclaim / rejection / trend filter).
+- EMA 9 / EMA 20 trend context and EMA 200 higher-timeframe regime context.
 - Whole and half dollar levels near the action.
 - Gap zones (gap-up / gap-down boundaries).
 - Classic pivots (P, R1–R3, S1–S3) if adopted.
@@ -94,7 +95,10 @@ level map present.
 
 - **Calculated levels:** generated at import for each traded ticker/day; zero
   trader effort.
-- **Marked levels — screenshot import (primary).** The trader already
+- **Trade screenshots (first step).** Add an **Add screenshot** action on trade
+  detail near the chart. These images are evidence for a single trade and can
+  be captioned with the timeframe or purpose. They do not need extraction in v1.
+- **Marked levels — ticker/day screenshot import (primary).** The trader already
   maintains the full level map in TradingView: the 1-minute execution view
   plus daily 200EMA context, with 4-hour / weekly / monthly / yearly sweeps
   for critical levels on in-play names. Pipeline:
