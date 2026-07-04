@@ -1,5 +1,7 @@
 # Dependencies
 node_modules/
+.venv*/
+__pycache__/
 
 # Next.js
 .next/
@@ -21,6 +23,7 @@ data/samples/
 .env
 .env.local
 .env*.local
+.env.local.backup-*
 
 # Logs
 *.log

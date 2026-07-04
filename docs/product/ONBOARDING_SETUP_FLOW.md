@@ -1,15 +1,16 @@
-# Baby Onboarding & Setup Flow
+# Setup Workspace & Coach Context
 
 > Status: Draft · Last updated: 2026-07-03
 
-This doc defines the in-app setup experience for Trading Journal AI after the
-app is installed or the hosted demo is opened. The goal is not to recap the
-installer. The goal is to collect the few pieces of context that make the app
-work intelligently: broker/import source, language-model access, trading rules,
-setup playbook, and coach preferences.
+This doc defines the in-app setup experience for Trading Journal AI. The goal
+is not to force a first-run wizard or recap the installer. The goal is to give
+the trader a clear Settings-based workspace for adding the context that makes
+the app work intelligently: broker/import source, language-model access,
+trader self-assessment, trading rules, setup playbook, and coach preferences.
 
-Working name: **Baby Onboarding**. It should feel lightweight, recoverable, and
-useful from minute one.
+Working name: **Setup Workspace**. It should feel lightweight, recoverable, and
+useful from minute one. First launch can point here, but setup itself should
+live where users expect to maintain it long term: Settings.
 
 ## Product Thesis
 
@@ -17,19 +18,23 @@ The app becomes more valuable when it knows five things early:
 
 - Where trade data will come from.
 - Whether AI coaching can run, and which model/provider should power it.
+- Where the trader believes they are in their trading journey, what is working,
+  what is not working, and what the coach should help with.
 - What rules the trader is trying to follow.
 - Which setups and behaviors the coach should evaluate against.
 - Whether candle data can be fetched for chart context.
 
 Broker selection makes import trustworthy. Language-model setup unlocks live
-coach generation. Trading rules, setup playbook, and coach preferences make the
-coach specific to the trader instead of generic. Market-data setup improves
-charts, but it is supporting infrastructure, not the heart of onboarding.
+coach generation. Trader self-assessment, trading rules, setup playbook, and
+coach preferences make the coach specific to the trader instead of generic.
+Market-data setup improves charts, but it is supporting infrastructure, not the
+heart of the coach setup experience.
 
 ## Goals
 
-- Guide a new user from first app launch to a configured review state.
-- Keep install/demo/empty starts separate from the in-app setup checklist.
+- Give a new or returning user clear wayfinding toward a configured review
+  state.
+- Keep install/demo/empty starts separate from long-term Settings.
 - Make missing config obvious without blocking the rest of the app.
 - Let users return later to finish or change setup.
 - Keep sensitive data local-first and clearly explain what is stored.
@@ -46,11 +51,20 @@ charts, but it is supporting infrastructure, not the heart of onboarding.
 
 ## Design Principles
 
-### Setup Is a Checklist, Not a Wall
+### Setup Is Wayfinding, Not a Sequence
 
-The user should be able to skip any step and land in the app. Skipped items
-remain visible as incomplete setup cards in Settings, Dashboard, or an explicit
-Setup page.
+The user should be able to configure the app in the order that matches their
+moment. Setup should live primarily in Settings as a small set of status panels,
+not a forced first-run sequence. First-run, Dashboard, Import, and Coach views
+can link into the relevant Settings panel when context is missing.
+
+### Unlock The Next Useful Question
+
+Some setup questions make sense only after another capability exists. For
+example, once the user connects an AI model, the app can present the trader
+self-assessment because the answer now powers live coaching, rule drafting, and
+playbook help. The user can still skip it, but the timing should feel useful
+rather than bureaucratic.
 
 ### Ask Only When the Answer Improves the App
 
@@ -58,6 +72,8 @@ Every question should unlock a capability:
 
 - Massive key unlocks high-quality charts.
 - Language-model key unlocks live AI coaching.
+- Trader self-assessment unlocks coach vocabulary, priorities, and a baseline
+  self-model the app can compare against data over time.
 - Broker choice unlocks import instructions and better diagnostics.
 - Trading rules unlock daily accountability and coach evaluation.
 - Setup playbook unlocks setup-level analytics, cleaner note tags, and better
@@ -73,23 +89,28 @@ setup was valid.
 
 ### Tunable Forever
 
-Anything collected during onboarding must be editable later. The same underlying
-settings should power first-run setup and long-term configuration.
+Anything collected during setup must be editable later. The same underlying
+Settings data should power first-run wayfinding and long-term configuration.
 
 ## Entry Points
 
-- First app launch after install or hosted-demo entry.
+- First app launch after install or hosted-demo entry, as lightweight wayfinding
+  into Settings rather than a required wizard.
 - First launch with no broker/import source selected.
 - First launch with no AI provider configured.
 - First launch with no trading rules or setup playbook.
-- Settings: manual return to setup checklist.
+- Settings: primary home for all setup and coach-context panels.
 - Dashboard: persistent incomplete setup nudges.
 - Import page: broker setup and market-data setup prompts.
-- Coach page or report flow: setup playbook and coach preference prompts.
+- Coach page or report flow: self-assessment, setup playbook, and coach
+  preference prompts when review quality is limited by missing context.
 
-## Setup Checklist
+## Settings Panels
 
-### 1. AI Coach / Language Model
+The panels below can be shown as a compact setup health area in Settings. They
+are ordered by practical dependency, not by required completion sequence.
+
+### AI Coach / Language Model
 
 Purpose: connect the user's preferred language-model service so coach
 generation, rule assistance, and setup/playbook help can run outside the static
@@ -134,7 +155,52 @@ Open implementation question:
 - For local-first installs, should the key live in `.env.local`, an encrypted
   local settings store, or a desktop wrapper keychain integration?
 
-### 2. Broker / Import Format
+### Trader Self-Assessment
+
+Purpose: give the coach a baseline view of where the trader thinks they are in
+their trading journey, what is working, what is not working, and what kind of
+help they want from the coach.
+
+Trigger:
+
+- Present this prominently after an AI model is connected or selected.
+- Keep it available in Settings forever.
+- Prompt for refresh on a recurring cadence, such as monthly or quarterly, and
+  after major playbook changes.
+
+The assessment should feel like coach setup, not a personality quiz. It should
+be short enough to complete in one sitting, but deep enough to create useful
+review context.
+
+Suggested sections:
+
+- **Performance self-read:** what is working, what is not working, which setups
+  seem strongest, where losses seem to concentrate, and what the last real
+  improvement was.
+- **Psychology vocabulary:** how FOMO, hesitation, revenge, patience,
+  discipline, fear, confidence, and session drift show up for this trader.
+- **Coaching contract:** what the trader wants the coach to watch closely, what
+  feedback style lands, and what would make the trader dismiss the coach's
+  feedback.
+
+Important use rules:
+
+- Assessment answers are hypotheses, not facts.
+- They shape coach framing, vocabulary, and priorities.
+- They never feed deterministic detectors directly.
+- Later reviews can mark claims as `unverified`, `supported`, or
+  `contradicted` by data.
+- The gap between self-read and observed behavior is a coaching feature, not a
+  failure state.
+
+Feeds:
+
+- Coach review prompt/context.
+- Psychology pattern vocabulary.
+- Monthly self-model review.
+- Suggested rules, setup focus, and improvement themes.
+
+### Broker / Import Format
 
 Purpose: give the importer enough context to show the right instructions and
 diagnostics.
@@ -171,7 +237,7 @@ Unsupported broker hook:
   remove account numbers or identifying data before sharing samples outside the
   local app.
 
-### 3. Trading Rules
+### Trading Rules
 
 Purpose: define the guardrails the trader wants to be judged against.
 
@@ -199,7 +265,7 @@ Rule capture should allow both structured fields and plain-language rules:
 - Rules should be editable later and visible anywhere the coach claims a rule
   was held, bent, or broken.
 
-### 4. Setup Playbook
+### Setup Playbook
 
 Purpose: define what the trader is allowed to trade.
 
@@ -237,7 +303,7 @@ The setup playbook should feed:
 - Coach review prompt/context.
 - Daily recap: whether trades matched approved setups.
 
-### 5. Coach Preferences
+### Coach Preferences
 
 Purpose: tune how the app talks back to the trader.
 
@@ -253,7 +319,7 @@ Suggested fields:
 The coach should never hide evidence because of tone settings. Tone changes the
 delivery, not the facts.
 
-### 6. Market Data
+### Market Data
 
 Purpose: connect candle data so charts render correctly after import.
 
@@ -277,7 +343,7 @@ Open implementation question:
   setup flow likely needs a local settings/config storage path, otherwise setup
   still requires editing `.env.local`.
 
-### 7. Account / Review Preferences
+### Account / Review Preferences
 
 Purpose: create a clean scope for imports, reporting, and settings without
 turning onboarding into brokerage authentication.
@@ -297,7 +363,7 @@ Notes:
   and journal views.
 - This step should feel secondary to broker/model/rules setup.
 
-### 8. Finish State
+### Setup Health Summary
 
 Purpose: make progress visible and send the user somewhere useful.
 
@@ -310,6 +376,7 @@ Possible completion destinations:
 Completion summary:
 
 - AI coach: connected / static only / missing.
+- Trader self-assessment: current / stale / missing.
 - Broker import: selected / not selected.
 - Rules: configured / skipped.
 - Setups: count configured / skipped.
@@ -319,19 +386,19 @@ Completion summary:
 
 ## Later Editing Model
 
-Onboarding and Settings should share the same underlying configuration. The app
-should not have separate "first-run answers" that become stale.
+Setup and Settings should be the same system. The app should not have separate
+"first-run answers" that become stale.
 
-Skipped onboarding items become **setup hooks** throughout the app. If the user
-skips trading rules, setup definitions, coach preferences, broker choice, or
-market-data setup, the app should keep a clear return path:
+Skipped setup items become **setup hooks** throughout the app. If the user
+skips self-assessment, trading rules, setup definitions, coach preferences,
+broker choice, or market-data setup, the app should keep a clear return path:
 
 - Settings owns the full editable version of every setup area.
 - Dashboard can show compact incomplete setup prompts when they affect the
   current workflow.
 - Import can prompt for broker setup or unsupported broker assistance.
-- Coach can prompt for rules, setup playbook, or preference tuning when review
-  quality is limited by missing context.
+- Coach can prompt for self-assessment, rules, setup playbook, or preference
+  tuning when review quality is limited by missing context.
 - Reports can prompt for setup taxonomy when free-form labels are too noisy to
   explain edge.
 
@@ -342,15 +409,17 @@ Recommended future Settings sections:
 - AI model provider.
 - Broker import preferences.
 - Broker adapter lab / unsupported broker assistant.
+- Trader self-assessment.
 - Trading rules.
 - Setup playbook.
 - Coach preferences.
 - Backup/export.
 
-Dashboard or Setup page should show a compact setup health checklist:
+Dashboard or Settings should show a compact setup health checklist:
 
 - Market data connected.
 - AI coach connected.
+- Trader self-assessment current.
 - Broker import ready.
 - At least one account exists.
 - Rules configured.
@@ -405,15 +474,24 @@ No coach preferences:
 
 - Use balanced, evidence-first defaults.
 
+No trader self-assessment:
+
+- Coach can still review completed trades from facts, rules, notes, and setup
+  definitions.
+- Coach should use generic psychology vocabulary and avoid claiming it knows
+  the trader's personal forms of FOMO, patience, discipline, or tilt.
+- Settings should invite the trader to complete the assessment after an AI model
+  is connected.
+
 ## UX Shape
 
 Preferred structure:
 
-- A compact setup checklist with 6-8 steps.
-- Each step opens a focused panel or page section.
-- Steps can be completed out of order.
+- A compact setup health area in Settings.
+- Each item opens a focused panel or page section.
+- Items can be completed out of order.
 - Primary actions stay concrete: Test key, choose broker, import CSV, add rule,
-  add setup, save coach preferences.
+  complete assessment, add setup, save coach preferences.
 - Avoid onboarding slides, marketing copy, or abstract education.
 
 Visual tone:
@@ -427,12 +505,13 @@ Visual tone:
 
 Likely future entities or settings groups:
 
-- App setup state or derived checklist status.
+- App setup state or derived setup health status.
 - Account profile settings.
 - Market data provider credentials/config.
 - Language-model provider credentials/config.
 - Broker import preference.
 - Broker adapter/mapping drafts.
+- Trader self-assessment snapshots.
 - Trading rules.
 - Setup definitions.
 - Coach preference profile.
@@ -445,45 +524,55 @@ Important boundary:
 
 ## Implementation Slices
 
-### Slice 1: Setup Doc + Settings Skeleton
+### Slice 1: Settings Setup Skeleton
 
 - Add this product spec.
-- Define setup checklist status model.
+- Define setup health/status model.
 - Add placeholder Settings sections for setup recovery.
 
 ### Slice 2: Model Key + Broker Setup
 
 - Add AI provider key status and connection test.
+- After a model is connected, present Trader Self-Assessment as the next useful
+  coach-context action.
 - Add broker choice and import instructions.
 - Keep CSV inspection authoritative.
 - Add unsupported broker route into an assisted mapping/adapter workflow.
 
-### Slice 3: Trading Rules
+### Slice 3: Trader Self-Assessment
+
+- Add a short assessment editor in Settings.
+- Capture performance self-read, psychology vocabulary, and coaching contract.
+- Version each completed assessment snapshot.
+- Include the current assessment in coach payloads as hypothesis context with
+  verification status.
+
+### Slice 4: Trading Rules
 
 - Add trading rules editor.
 - Support structured numeric guardrails and plain-language rules.
 - Let the model suggest structured rules from prose, with user confirmation.
 - Feed rules into coach payloads and missing-context caveats.
 
-### Slice 4: Setup Playbook
+### Slice 5: Setup Playbook
 
 - Add setup playbook editor.
 - Feed setup options into trade notes/review forms.
 - Feed setup definitions into reports and coach payloads.
 
-### Slice 5: Coach Preferences
+### Slice 6: Coach Preferences
 
 - Add coach preference editor.
 - Include preferences in coach payloads.
 - Make missing-context caveats explicit.
 
-### Slice 6: Market Data + Account Preferences
+### Slice 7: Market Data + Account Preferences
 
 - Add Massive key status and connection test.
 - Add review/account preferences that affect reporting, timezone, and gross/net
   defaults.
 
-### Slice 7: AI-Assisted Broker Adapter
+### Slice 8: AI-Assisted Broker Adapter
 
 - Let the user provide an unsupported broker sample.
 - Inspect columns and representative rows locally.
@@ -493,8 +582,8 @@ Important boundary:
 
 ## Open Questions
 
-- Should in-app setup be its own route (`/setup`) or a mode inside
-  `/settings`?
+- Should Settings include a dedicated Setup/Coach Context tab, or should setup
+  health appear at the top of existing Settings sections?
 - Where should a local `MASSIVE_API_KEY` live in production-like deployments?
 - Should setup playbook definitions be database rows, markdown-backed docs, or
   both?
@@ -504,5 +593,7 @@ Important boundary:
   explicitly opt into sending anonymized samples to a hosted model?
 - How much of the coach preference profile belongs in deterministic app
   settings versus prompt text?
+- How short can the Trader Self-Assessment be while still producing a useful
+  baseline self-model?
 - Should the app ship with a starter setup template for active momentum
   traders, or should every setup be user-authored?

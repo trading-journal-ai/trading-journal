@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { spawn } from "node:child_process";
 import readline from "node:readline";
@@ -237,12 +237,21 @@ function writeLocalEnv({ dbPath, massiveKey }) {
     "DEMO_READ_ONLY=false",
     massiveKey ? `MASSIVE_API_KEY=${massiveKey}` : "# MASSIVE_API_KEY=",
     "",
+    "# Optional AI coach model. Keep real keys local and never commit them.",
+    "# OPENAI_API_KEY=",
+    "# OPENAI_MODEL=gpt-5.5",
+    "",
     "# Turso is intentionally left unset for local SQLite mode.",
     "# TURSO_DATABASE_URL=",
     "# TURSO_AUTH_TOKEN=",
     "",
   ];
-  writeFileSync(ENV_PATH, lines.join("\n"));
+  const nextContents = lines.join("\n");
+  if (existsSync(ENV_PATH) && readFileSync(ENV_PATH, "utf8") !== nextContents) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    copyFileSync(ENV_PATH, `${ENV_PATH}.backup-${timestamp}`);
+  }
+  writeFileSync(ENV_PATH, nextContents);
 }
 
 async function testMassiveKey(apiKey) {

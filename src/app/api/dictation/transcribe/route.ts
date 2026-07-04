@@ -78,6 +78,6 @@ export async function POST(request: Request) {
         : null,
     });
   } catch {
-    return jsonError("Local dictation service is not running.", 503);
+    return jsonError("Local dictation service is not running. Start the Whisper sidecar on port 8788, then try again.", 503);
   }
 }
