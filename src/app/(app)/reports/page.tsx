@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getActiveAccount } from "@/lib/accountScope";
+import { isDemoReadOnly } from "@/lib/demoMode";
 import { fmtMoney } from "@/lib/format";
 import { grossPnl, netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange, MARKET_TZ, timeZoneParts } from "@/lib/time";
@@ -66,6 +67,15 @@ function parseSearchParams(params: {
   };
 }
 
+function hasExplicitDateScope(params: {
+  date?: string;
+  preset?: string;
+  from?: string;
+  to?: string;
+}): boolean {
+  return Boolean(params.date || params.preset || params.from || params.to);
+}
+
 function isoAddDays(date: string, days: number): string {
   const [year, month, day] = date.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
@@ -89,6 +99,11 @@ function lastDayOfMonth(date: string): string {
 function yearRange(date: string): { from: string; to: string } {
   const year = date.slice(0, 4);
   return { from: `${year}-01-01`, to: `${year}-12-31` };
+}
+
+function weekRange(date: string): { from: string; to: string } {
+  const monday = isoAddDays(date, -((isoWeekday(date) + 6) % 7));
+  return { from: monday, to: isoAddDays(monday, 4) };
 }
 
 const monthLabelFmt = new Intl.DateTimeFormat("en-US", {
@@ -191,6 +206,39 @@ function filterHref(filters: ReportFilters, updates: Partial<ReportFilters>) {
 
 async function loadTagOptions() {
   return db.select({ name: schema.tags.name }).from(schema.tags);
+}
+
+async function loadLatestTradeDate(accountId: number): Promise<string | null> {
+  const row = (
+    await db
+      .select({ latestEntryAt: sql<number | null>`max(${schema.trades.entryAt})` })
+      .from(schema.trades)
+      .where(eq(schema.trades.accountId, accountId))
+      .limit(1)
+  )[0];
+
+  return row?.latestEntryAt == null ? null : etDateString(row.latestEntryAt);
+}
+
+async function defaultLandingFilters(filters: ReportFilters, accountId: number): Promise<ReportFilters> {
+  if (isDemoReadOnly()) return { ...filters, preset: "year" };
+
+  const latestTradeDate = await loadLatestTradeDate(accountId);
+  if (!latestTradeDate) return { ...filters, preset: "year" };
+
+  const today = currentEtDate();
+  if (latestTradeDate === today) return { ...filters, preset: "today" };
+
+  const currentWeek = weekRange(today);
+  if (latestTradeDate >= currentWeek.from && latestTradeDate <= currentWeek.to) {
+    return { ...filters, preset: "week" };
+  }
+
+  if (latestTradeDate.slice(0, 7) === today.slice(0, 7)) {
+    return { ...filters, preset: "month" };
+  }
+
+  return { ...filters, preset: "year", from: latestTradeDate };
 }
 
 async function loadTrades(filters: ReportFilters, accountId: number): Promise<ReportTrade[]> {
@@ -983,8 +1031,12 @@ export default async function ReportsPage({
     account?: string;
   }>;
 }) {
-  const filters = parseSearchParams(await searchParams);
+  const rawSearchParams = await searchParams;
+  const parsedFilters = parseSearchParams(rawSearchParams);
   const activeAccount = await getActiveAccount();
+  const filters = hasExplicitDateScope(rawSearchParams)
+    ? parsedFilters
+    : await defaultLandingFilters(parsedFilters, activeAccount.id);
   const [trades, tagOptions] = await Promise.all([loadTrades(filters, activeAccount.id), loadTagOptions()]);
   const statSections = buildStats(trades);
   const dayBuckets = buildDayBuckets(trades);

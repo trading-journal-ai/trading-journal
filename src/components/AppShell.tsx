@@ -29,7 +29,7 @@ export default function AppShell({
   return (
     <>
       {!isLanding ? (
-        <header className="flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-[var(--border)] px-5 py-3">
+        <header className="sticky top-0 z-40 flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-[var(--border)] bg-[var(--background)] px-5 py-3">
           {brandHref ? (
             <a href={brandHref} className={brandClassName}>
               Trading&nbsp;Journal&nbsp;AI

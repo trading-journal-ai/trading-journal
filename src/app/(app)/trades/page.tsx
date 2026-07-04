@@ -2,17 +2,18 @@ import Link from "next/link";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getActiveAccount } from "@/lib/accountScope";
+import { isDemoReadOnly } from "@/lib/demoMode";
 import { fmtDate, fmtMoney, fmtPrice } from "@/lib/format";
 import { grossPnl, netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
-import MonthPicker from "@/components/MonthPicker";
+import ReportRangeFilter from "@/components/ReportRangeFilter";
 import { RowLink } from "./RowLink";
 
 export const dynamic = "force-dynamic";
 
 type TradeSort = "date" | "symbol" | "side" | "shares" | "execs" | "entry" | "exit" | "perShare" | "pnl";
 type SortDir = "asc" | "desc";
-type DatePreset = "all" | "today" | "week" | "month" | "custom";
+type DatePreset = "all" | "today" | "week" | "month" | "year" | "custom";
 
 type TradeFilters = {
   date?: string;
@@ -47,7 +48,7 @@ function parseSearchParams(params: {
   perPage?: string;
 }): TradeFilters {
   const sortOptions = new Set<TradeSort>(["date", "symbol", "side", "shares", "execs", "entry", "exit", "perShare", "pnl"]);
-  const presetOptions = new Set<DatePreset>(["all", "today", "week", "month", "custom"]);
+  const presetOptions = new Set<DatePreset>(["all", "today", "week", "month", "year", "custom"]);
   const pageSizeOptions = new Set<number>(PAGE_SIZE_OPTIONS);
   const side = params.side === "long" || params.side === "short" ? params.side : undefined;
   const sort = sortOptions.has(params.sort as TradeSort) ? (params.sort as TradeSort) : "date";
@@ -72,6 +73,15 @@ function parseSearchParams(params: {
   };
 }
 
+function hasExplicitDateScope(params: {
+  date?: string;
+  preset?: string;
+  from?: string;
+  to?: string;
+}): boolean {
+  return Boolean(params.date || params.preset || params.from || params.to);
+}
+
 function isoAddDays(date: string, days: number): string {
   const [year, month, day] = date.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
@@ -90,6 +100,16 @@ function lastDayOfMonth(date: string): string {
   const [year, month] = date.split("-").map(Number);
   const day = new Date(Date.UTC(year, month, 0)).getUTCDate();
   return `${date.slice(0, 7)}-${String(day).padStart(2, "0")}`;
+}
+
+function yearRange(date: string): { from: string; to: string } {
+  const year = date.slice(0, 4);
+  return { from: `${year}-01-01`, to: `${year}-12-31` };
+}
+
+function weekRange(date: string): { from: string; to: string } {
+  const monday = isoAddDays(date, -((isoWeekday(date) + 6) % 7));
+  return { from: monday, to: isoAddDays(monday, 4) };
 }
 
 const monthLabelFmt = new Intl.DateTimeFormat("en-US", {
@@ -128,6 +148,7 @@ function dateRangeFor(filters: TradeFilters): { from: string; to: string } | und
   if (filters.preset === "month") {
     return { from: `${anchor.slice(0, 7)}-01`, to: lastDayOfMonth(anchor) };
   }
+  if (filters.preset === "year") return yearRange(anchor);
   if (filters.preset === "custom") {
     if (!filters.from && !filters.to) return undefined;
     return {
@@ -239,6 +260,39 @@ async function loadTagOptions() {
   return db.select({ name: schema.tags.name }).from(schema.tags);
 }
 
+async function loadLatestTradeDate(accountId: number): Promise<string | null> {
+  const row = (
+    await db
+      .select({ latestEntryAt: sql<number | null>`max(${schema.trades.entryAt})` })
+      .from(schema.trades)
+      .where(eq(schema.trades.accountId, accountId))
+      .limit(1)
+  )[0];
+
+  return row?.latestEntryAt == null ? null : etDateString(row.latestEntryAt);
+}
+
+async function defaultLandingFilters(filters: TradeFilters, accountId: number): Promise<TradeFilters> {
+  if (isDemoReadOnly()) return { ...filters, preset: "year" };
+
+  const latestTradeDate = await loadLatestTradeDate(accountId);
+  if (!latestTradeDate) return { ...filters, preset: "year" };
+
+  const today = currentEtDate();
+  if (latestTradeDate === today) return { ...filters, preset: "today" };
+
+  const currentWeek = weekRange(today);
+  if (latestTradeDate >= currentWeek.from && latestTradeDate <= currentWeek.to) {
+    return { ...filters, preset: "week" };
+  }
+
+  if (latestTradeDate.slice(0, 7) === today.slice(0, 7)) {
+    return { ...filters, preset: "month" };
+  }
+
+  return { ...filters, preset: "year", from: latestTradeDate };
+}
+
 function filterHref(filters: TradeFilters, updates: Partial<TradeFilters>) {
   const next = { ...filters, ...updates };
   const params = new URLSearchParams();
@@ -279,6 +333,10 @@ function rangeSummary(filters: TradeFilters, shownCount: number, totalCount: num
 
   if (filters.preset === "month") {
     return { title: monthLabel(range.from), detail: countLabel };
+  }
+
+  if (filters.preset === "year") {
+    return { title: range.from.slice(0, 4), detail: countLabel };
   }
 
   return { title: `${dateLabel(range.from)} to ${dateLabel(range.to)}`, detail: countLabel };
@@ -337,8 +395,12 @@ export default async function TradesPage({
     perPage?: string;
   }>;
 }) {
-  const filters = parseSearchParams(await searchParams);
+  const rawSearchParams = await searchParams;
+  const parsedFilters = parseSearchParams(rawSearchParams);
   const activeAccount = await getActiveAccount();
+  const filters = hasExplicitDateScope(rawSearchParams)
+    ? parsedFilters
+    : await defaultLandingFilters(parsedFilters, activeAccount.id);
   const { trades, total, page, totalPages } = await loadTrades(filters, activeAccount.id);
   const tagOptions = await loadTagOptions();
   const date = filters.date;
@@ -355,7 +417,6 @@ export default async function TradesPage({
     }`;
   const navButtonClass = "flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[#58a6ff] hover:text-[var(--foreground)]";
   const disabledNavButtonClass = "flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] opacity-40";
-  const selectedDate = dateRangeFor(filters)?.from ?? currentEtDate();
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
@@ -366,6 +427,9 @@ export default async function TradesPage({
         <input type="hidden" name="perPage" value={filters.perPage} />
 
         <input type="hidden" name="preset" value={activePreset} />
+        {filters.date && <input type="hidden" name="date" value={filters.date} />}
+        {filters.from && <input type="hidden" name="from" value={filters.from} />}
+        {filters.to && <input type="hidden" name="to" value={filters.to} />}
 
         <div className="relative space-y-2">
           <span className="block text-sm font-semibold text-[var(--muted)]">Date range</span>
@@ -380,15 +444,12 @@ export default async function TradesPage({
               <Link href={filterHref(filters, { ...presetBase, preset: "month", page: 1 })} className={presetButtonClass("month")}>
                 Month
               </Link>
+              <Link href={filterHref(filters, { ...presetBase, preset: "year", page: 1 })} className={presetButtonClass("year")}>
+                Year
+              </Link>
             </div>
             <div className="flex flex-wrap gap-2">
-              <MonthPicker selectedDate={selectedDate} />
-              <Link
-                href="/trades"
-                className="flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm text-[var(--muted)] hover:border-[#58a6ff]"
-              >
-                Clear
-              </Link>
+              <ReportRangeFilter from={filters.from} to={filters.to} clearHref="/trades" />
             </div>
           </div>
         </div>
