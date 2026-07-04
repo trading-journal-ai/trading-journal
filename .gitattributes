@@ -1,5 +1,17 @@
-.gitattributes text eol=lf
-*.sh text eol=lf
+# Normalize all text files to LF. Prevents CRLF creeping in from mixed editors
+# (which previously corrupted package.json / db source). Binary is auto-detected.
+* text=auto eol=lf
+
+# Explicit for the file types the repo cares about.
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
 *.mjs text eol=lf
-*.html text eol=lf
+*.cjs text eol=lf
+*.json text eol=lf
+*.css text eol=lf
 *.md text eol=lf
+*.html text eol=lf
+*.sh text eol=lf
+*.py text eol=lf
