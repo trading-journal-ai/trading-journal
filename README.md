@@ -8,6 +8,13 @@ Your daily recap leads. Trades, P&L, charts, notes, tags, calendar context, and
 reports sit beside the writing so the story of each trading day is easier to
 review, document, and learn from later.
 
+The deeper product thesis is that repeated review should become a personal
+trading playbook. Self-assessment, setup identification, trade review, daily
+recaps, analytics, and coach feedback all ladder toward one living standards
+layer: what you trade, how you trade it, what invalidates it, and what the data
+shows about whether the edge is improving. See
+[`docs/product/PLAYBOOK.md`](docs/product/PLAYBOOK.md).
+
 The project is early, but the direction is clear: make journaling low-friction,
 private, and useful without depending on a hosted trading-journal subscription.
 
@@ -32,7 +39,11 @@ What is landing now:
   coach-ready context are being refined into one consistent writing experience.
 - **Rule systems and playbooks**: traders will be able to define setups,
   patterns, process rules, and review criteria that the journal can use as
-  context.
+  context. The playbook roadmap now lives in
+  [`docs/product/PLAYBOOK.md`](docs/product/PLAYBOOK.md), with the first
+  implementation slice in
+  [`docs/product/PLAYBOOK_MVP.md`](docs/product/PLAYBOOK_MVP.md) and a
+  development-only wireframe at `/preview/playbook`.
 - **AI coach**: the coach layer is being built around your actual trades,
   notes, tags, screenshots, chart context, and rules, so feedback can become
   more specific than generic trading advice.
@@ -48,6 +59,11 @@ What is landing now:
 The goal is not to ship a static journal template. The goal is a local-first
 review system that compounds with the trader: notes become context, context
 becomes rules, rules become coaching, and coaching feeds a better next review.
+
+The playbook is the connective tissue in that compounding loop. It turns the
+trader's own examples, rules, mistakes, and setup definitions into context the
+journal, analytics, and coach can use. The next product slice is the data model
+and daily archive flow outlined in the playbook MVP doc.
 
 Expect rough edges while this rolls out. The app, demo, and documentation are
 moving quickly, and feedback from real review workflows is shaping the next
