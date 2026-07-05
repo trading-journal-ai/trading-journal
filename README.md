@@ -8,12 +8,11 @@ Your daily recap leads. Trades, P&L, charts, notes, tags, calendar context, and
 reports sit beside the writing so the story of each trading day is easier to
 review, document, and learn from later.
 
-The deeper product thesis is that repeated review should become a personal
-trading playbook. Self-assessment, setup identification, trade review, daily
-recaps, analytics, and coach feedback all ladder toward one living standards
-layer: what you trade, how you trade it, what invalidates it, and what the data
-shows about whether the edge is improving. See
-[`docs/product/PLAYBOOK.md`](docs/product/PLAYBOOK.md).
+The deeper thesis is that repeated review should compound into a personal
+trading playbook: what you trade, how you trade it, what invalidates it, and
+what the data shows about whether the edge is improving.
+[`docs/product/PLAYBOOK.md`](docs/product/PLAYBOOK.md) covers that direction in
+full.
 
 The project is early, but the direction is clear: make journaling low-friction,
 private, and useful without depending on a hosted trading-journal subscription.
@@ -27,30 +26,31 @@ shape.
 
 What is landing now:
 
-- **Setup workspace and coach context**: Settings should help people connect
-  their broker/import source, add a language-model API key, complete a trader
-  self-assessment, define trading rules, build a setup playbook, and tune coach
-  preferences. First launch can point into this workspace, but setup should stay
-  editable and recoverable from Settings and contextual setup prompts.
-- **Dictation-first note capture**: voice input is being treated as a core
-  journaling surface, because the real context behind a trade is often spoken
-  faster and more honestly than it is clicked.
-- **Unified notes architecture**: daily recaps, trade notes, review notes, and
-  coach-ready context are being refined into one consistent writing experience.
-- **Rule systems and playbooks**: traders will be able to define setups,
+- **Setup workspace and coach context**: Settings is becoming the home for
+  connecting a broker/import source, adding a language-model API key,
+  completing a trader self-assessment, defining trading rules, building a setup
+  playbook, and tuning coach preferences. First launch can point into this
+  workspace, and setup stays editable afterward from Settings and contextual
+  setup prompts.
+- **Dictation-first note capture**: Voice input is becoming a core journaling
+  surface, because the real context behind a trade is often spoken faster and
+  more honestly than it is typed.
+- **Unified notes architecture**: Daily recaps, trade notes, review notes, and
+  coach-ready context are converging into one consistent writing experience.
+- **Rule systems and playbooks**: Traders will be able to define setups,
   patterns, process rules, and review criteria that the journal can use as
-  context. The playbook roadmap now lives in
+  context. The playbook roadmap lives in
   [`docs/product/PLAYBOOK.md`](docs/product/PLAYBOOK.md), with the first
   implementation slice in
   [`docs/product/PLAYBOOK_MVP.md`](docs/product/PLAYBOOK_MVP.md) and a
   development-only wireframe at `/preview/playbook`.
-- **AI coach**: the coach layer is being built around your actual trades,
+- **AI coach**: The coach layer is being built around your actual trades,
   notes, tags, screenshots, chart context, and rules, so feedback can become
   more specific than generic trading advice.
-- **Dashboard and review loops**: the dashboard, calendar, reports, and journal
+- **Dashboard and review loops**: The dashboard, calendar, reports, and journal
   views are being tightened around faster post-session review and better
   long-term pattern recognition.
-- **Data importer and broker adapters**: imports now move toward a clearer
+- **Data importer and broker adapters**: Imports are moving toward a clearer
   inspect -> normalize -> review -> persist flow. ThinkorSwim/Schwab,
   DAS-style, and TraderVue-style exports are the current focus, and the adapter
   model will keep expanding so more broker exports can map into the same
@@ -89,16 +89,16 @@ The goal is to reduce the distance between:
 - What needs work?
 - What should I focus on next session?
 
-The next product layer is the AI coach: a post-trade review assistant that can
-read your notes, trades, chart context, tags, and playbook, then help summarize
-what worked, what did not, what can improve, and what to focus on next.
+The AI coach builds on this same loop: a post-trade review assistant that reads
+that context and helps summarize what worked, what did not, and what to focus
+on next.
 
 ## Data Importer
 
-Trading Journal reads broker CSV exports and turns them into one normalized
+Trading Journal AI reads broker CSV exports and turns them into one normalized
 trade format the journal, charts, calendar, reports, and coach can all use.
 
-The import path has improved from "parse this one CSV shape" toward a real
+The import path has evolved from "parse this one CSV shape" into a real
 broker-normalization pipeline:
 
 ```text
@@ -113,8 +113,8 @@ raw broker CSV
 That separation matters. Broker CSVs are messy in different ways: some provide
 fill-level executions, some provide trade summaries, some split fees into other
 statement sections, and some use timestamps or side labels that need careful
-handling. The app should keep that broker-specific work inside adapters instead
-of leaking it into the journal, chart, reports, or coach layers.
+handling. Adapters exist to keep that broker-specific work from leaking into
+the journal, chart, reports, or coach layers.
 
 ### Your Own Data
 
@@ -135,16 +135,16 @@ structures. The intended path is to add a broker-specific adapter that
 normalizes that broker's CSV into the app's shared trade format before anything
 else tries to use it.
 
-For non-technical users: you do not have to redesign the app for each broker,
-but you may need help teaching the importer how to read your broker's CSV. The
-direction is an assisted adapter workflow: inspect the file locally, explain
+For non-technical users: you will not need to write code, but you may need
+help teaching the importer how to read your broker's CSV. The direction is an
+assisted adapter workflow: inspect the file locally, explain
 what the app understands, preview normalized rows, and only import after the
 shape looks right. Automated broker syncing and order execution are intentionally
 out of scope for now.
 
 ### Demo Data
 
-The repo includes a demo dataset with augmented sample trades and placeholder
+The repo includes a demo dataset with generated sample trades and placeholder
 journal notes:
 
 ```text
@@ -192,7 +192,7 @@ the app still runs, but uncached charts will not be able to fetch new candles.
 
 ## Install
 
-You can install the app in two ways:
+The installer offers two modes:
 
 - **Trading Journal Demo**: loads sample trades and notes so you can preview the
   app.
@@ -248,11 +248,6 @@ If the browser does not open automatically, go to the localhost URL printed in
 the terminal, usually [http://localhost:3000](http://localhost:3000). That opens
 the dashboard.
 
-This repo is the app source of truth. Local/live mode and demo mode run the same
-product code; the difference is the database and read/write settings. The public
-marketing website should live in a separate site repo and link into a hosted app
-demo instead of carrying its own copy of the dashboard.
-
 If Next.js says another dev server is already running, or localhost feels stuck,
 use the repo-local cleanup command:
 
@@ -273,11 +268,10 @@ The hosted demo is a quick way to click through the app before installing it:
 
 [demo.trading-journal.ai](https://demo.trading-journal.ai)
 
-It should run this same app repo with demo data and read-only settings. That
-keeps the hosted preview in parity with local/live development, including coach,
-import, chart, journal, and reporting changes. The app itself is designed to run
-locally with your own broker exports, notes, API keys, and SQLite database on
-your machine.
+It runs this same app repo with demo data and read-only settings, so the hosted
+preview stays in parity with local development, including coach, import, chart,
+journal, and reporting changes. The app itself is designed to run locally with
+your own broker exports, notes, API keys, and SQLite database on your machine.
 
 ## Data & Privacy
 
