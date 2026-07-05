@@ -47,6 +47,11 @@ What is landing now:
 - **AI coach**: The coach layer is being built around your actual trades,
   notes, tags, screenshots, chart context, and rules, so feedback can become
   more specific than generic trading advice.
+- **Image and video trade evidence**: The journal should support chart
+  screenshots, annotated levels, multi-timeframe context, and selective screen
+  recordings for meaningful wins, losses, rule breaks, and Level 2/tape review.
+  These uploads should become part of the trade record and coach context without
+  making video capture a requirement for every trade.
 - **Dashboard and review loops**: The dashboard, calendar, reports, and journal
   views are being tightened around faster post-session review and better
   long-term pattern recognition.
@@ -92,6 +97,28 @@ The goal is to reduce the distance between:
 The AI coach builds on this same loop: a post-trade review assistant that reads
 that context and helps summarize what worked, what did not, and what to focus
 on next.
+
+### Image And Video Review
+
+Trade review should preserve the evidence that explains what the trader saw in
+the moment, not just the final P&L. The roadmap includes support for uploading
+chart screenshots, marked-up key levels, multi-timeframe context, and optional
+video screen recordings of live trades.
+
+Screenshots are the default lightweight artifact for structure: levels,
+descending resistance, higher-timeframe context, entry zones, exit zones, and
+before/after trade state. Video is intended as a selective deep-review artifact
+for significant good trades, significant bad trades, execution lessons, and
+moments where Level 2, tape speed, liquidity, hesitation, or real-time decision
+making mattered.
+
+Those uploads should be attached to the relevant trade, ticker/day review, or
+daily recap; processed into journal context such as timeframe, level notes,
+setup notes, and review prompts; and made available to the coach alongside
+executions, chart data, tags, rules, and written reflections. The goal is not to
+record every trade. The goal is to make high-signal evidence easy to review so
+the journal and coach can surface what was good, what was bad, and what should
+change next time.
 
 ## Data Importer
 
