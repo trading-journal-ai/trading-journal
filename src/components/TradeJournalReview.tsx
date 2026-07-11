@@ -888,7 +888,7 @@ function KeyTradePrompts({ prompts }: { prompts: KeyTradePrompt[] }) {
 
   return (
     <section className="max-w-[665px] border-t border-[var(--hairline)] pt-4">
-      <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
+      <div className="text-[14px] font-semibold text-[var(--muted)]">
         Trades to annotate before coach
       </div>
       <div className="mt-3 grid gap-2 sm:grid-cols-3">
@@ -898,7 +898,7 @@ function KeyTradePrompts({ prompts }: { prompts: KeyTradePrompt[] }) {
             href={prompt.href}
             className="rounded-md border border-[var(--hairline)] px-3 py-3 transition-colors hover:border-[var(--accent)]"
           >
-            <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+            <div className="text-[12px] text-[var(--muted)]">
               {prompt.label}
             </div>
             <div className="mt-2 flex items-baseline justify-between gap-3">
@@ -1159,32 +1159,32 @@ function StarterCoachRead({
     <section className="pt-2">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h2 className="text-[13px] font-semibold text-[var(--coach)]">✳ Coach read</h2>
-        <span className={`font-mono text-[12px] font-semibold uppercase ${confidenceClass(factPack.confidence.label)}`}>
+        <span className={`text-[12px] font-semibold ${confidenceClass(factPack.confidence.label)}`}>
           {factPack.confidence.label} confidence
         </span>
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-4">
         <div className="border-t border-[var(--hairline)] pt-3">
-          <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Distribution</div>
+          <div className="text-[12px] text-[var(--muted)]">Distribution</div>
           <div className="mt-1 text-sm font-semibold text-[var(--foreground)]">
             {factPack.robustness.distributionLabel}
           </div>
         </div>
         <div className="border-t border-[var(--hairline)] pt-3">
-          <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Mechanism</div>
+          <div className="text-[12px] text-[var(--muted)]">Mechanism</div>
           <div className="mt-1 text-sm font-semibold text-[var(--foreground)]">
             {factPack.mechanism.label}
           </div>
         </div>
         <div className="border-t border-[var(--hairline)] pt-3">
-          <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Math basis</div>
+          <div className="text-[12px] text-[var(--muted)]">Math basis</div>
           <div className="mt-1 text-sm font-semibold text-[var(--foreground)]">
             {factPack.confidence.riskModel === "r-multiple" ? "R-multiple" : "Dollar fallback"}
           </div>
         </div>
         <div className="border-t border-[var(--hairline)] pt-3">
-          <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Trend</div>
+          <div className="text-[12px] text-[var(--muted)]">Trend</div>
           <div className={`mt-1 text-sm font-semibold ${trendClass(factPack.history.trendLabel)}`}>
             {factPack.history.trendLabel}
           </div>
@@ -1205,7 +1205,7 @@ function StarterCoachRead({
 
       {topSurprise ? (
         <div className="mt-5 border-l border-[var(--hairline)] pl-4">
-          <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Matched evidence</div>
+          <div className="text-[12px] text-[var(--muted)]">Matched evidence</div>
           <p className="mt-2 text-sm font-semibold leading-6 text-[var(--foreground)]">{topSurprise.title}</p>
           <p className="mt-1 text-sm leading-6 text-[var(--body)]">{topSurprise.description}</p>
           <p className="mt-2 font-mono text-[12px] leading-5 text-[var(--muted)]">
@@ -1220,7 +1220,7 @@ function StarterCoachRead({
       )}
 
       <div className="mt-5 border-t border-[var(--hairline)] pt-4">
-        <div className="font-mono text-[11px] uppercase text-[var(--muted)]">One thing to try</div>
+        <div className="text-[12px] text-[var(--muted)]">One thing to try</div>
         <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
           <span className="font-semibold">{experiment.action}</span>
         </p>
@@ -1239,7 +1239,7 @@ function StarterCoachRead({
             <input type="hidden" name="measure" value={JSON.stringify(experiment.measure)} />
             <button
               type="submit"
-              className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
+              className="h-8 rounded-md border border-[var(--border)] px-3 text-[12px] font-semibold text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
             >
               {savedExperiment ? "Update saved experiment" : "Save experiment"}
             </button>
@@ -1272,7 +1272,7 @@ function StarterCoachRead({
       ) : null}
 
       <div className="mt-5 border-t border-[var(--hairline)] pt-4">
-        <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Coach review payload</div>
+        <div className="text-[12px] text-[var(--muted)]">Coach review payload</div>
         <p className="mt-2 max-w-[760px] text-sm leading-6 text-[var(--body)]">
           This uses the exact context package: playbook, rubric, deterministic facts,
           daily context, and annotated trade notes.
@@ -1284,7 +1284,7 @@ function StarterCoachRead({
               <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
               <button
                 type="submit"
-                className="h-8 rounded-md border border-[var(--foreground)] bg-[var(--foreground)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--background)] transition-opacity hover:opacity-90"
+                className="h-8 rounded-md border border-[var(--foreground)] bg-[var(--foreground)] px-3 text-[12px] font-semibold text-[var(--background)] transition-opacity hover:opacity-90"
               >
                 {generatedReview ? "Regenerate coach review" : "Ask Coach"}
               </button>
@@ -1294,7 +1294,7 @@ function StarterCoachRead({
               <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
               <button
                 type="submit"
-                className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
+                className="h-8 rounded-md border border-[var(--border)] px-3 text-[12px] font-semibold text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
               >
                 {savedReview ? "Refresh draft" : "Save draft"}
               </button>
@@ -1321,7 +1321,7 @@ function StarterCoachRead({
         {generatedReview ? (
           <div className="mt-5 space-y-5">
             <div className="border-l border-[var(--coach)] pl-4">
-              <div className="font-mono text-[11px] uppercase text-[var(--muted)]">
+              <div className="text-[12px] text-[var(--muted)]">
                 {readOnly ? "Static demo coach verdict" : "AI coach verdict"}
               </div>
               <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
@@ -1339,13 +1339,13 @@ function StarterCoachRead({
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Key trade to study</div>
+                <div className="text-[12px] text-[var(--muted)]">Key trade to study</div>
                 <p className="mt-2 text-sm leading-6 text-[var(--body)]">
                   {generatedReview.review.keyTradeToStudy.symbol ?? "Trade"}: {generatedReview.review.keyTradeToStudy.reason}
                 </p>
               </div>
               <div>
-                <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Behavior pattern</div>
+                <div className="text-[12px] text-[var(--muted)]">Behavior pattern</div>
                 <p className="mt-2 text-sm leading-6 text-[var(--body)]">
                   {generatedReview.review.behaviorPattern}
                 </p>
@@ -1353,14 +1353,14 @@ function StarterCoachRead({
             </div>
 
             <div className="border-t border-[var(--hairline)] pt-4">
-              <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Statistical read</div>
+              <div className="text-[12px] text-[var(--muted)]">Statistical read</div>
               <p className="mt-2 text-sm leading-6 text-[var(--body)]">
                 {generatedReview.review.statisticalRead}
               </p>
             </div>
 
             <div className="border-t border-[var(--hairline)] pt-4">
-              <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Coach experiment</div>
+              <div className="text-[12px] text-[var(--muted)]">Coach experiment</div>
               <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
                 <span className="font-semibold">{generatedReview.review.oneExperiment.action}</span>
               </p>
@@ -1385,7 +1385,7 @@ function StarterCoachRead({
 function CoachReviewList({ title, items }: { title: string; items: string[] }) {
   return (
     <div>
-      <div className="font-mono text-[11px] uppercase text-[var(--muted)]">{title}</div>
+      <div className="text-[12px] text-[var(--muted)]">{title}</div>
       {items.length > 0 ? (
         <ul className="mt-2 space-y-2 text-sm leading-6 text-[var(--body)]">
           {items.map((item) => (
