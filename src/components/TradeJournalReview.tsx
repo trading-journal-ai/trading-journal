@@ -954,8 +954,12 @@ function DayReviewSection({
   returnTo: string;
   readOnly: boolean;
 }) {
-  const { day, tickerRows, pnlPoints, keyTradePrompts, worstTrade } = data;
+  const { day, tickerRows, pnlPoints, keyTradePrompts, worstTrade, coachRead } = data;
   const recap = recaps.get(day.date);
+  const topSurprise = coachRead.surprises[0];
+  const verdictText = topSurprise
+    ? topSurprise.description
+    : "Clean session — nothing contradicted your baseline. Add the day's context so the coach read can go deeper.";
 
   return (
     <section>
@@ -995,18 +999,29 @@ function DayReviewSection({
             </div>
           </div>
 
-          <div className="mb-6 max-w-[665px] text-[15px] leading-6 text-[var(--body)]">
-            <RecapNote
-              scope="day"
-              scopeKey={day.date}
-              text={recap?.text ?? ""}
-              thesis={recap?.thesis ?? ""}
-              whatWentWell={recap?.whatWentWell ?? ""}
-              whatWentWrong={recap?.whatWentWrong ?? ""}
-              emotionalState={recap?.emotionalState ?? ""}
-              placeholder="Add a daily recap: market read, execution quality, emotions, what worked, and what to tighten next session."
-              readOnly={readOnly}
-            />
+          <div className="mb-8 max-w-[720px]">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="text-[13px] font-semibold text-[var(--coach)]">✳ Session verdict</span>
+              <span className="text-[12px] text-[var(--muted)]">
+                Coach · {coachRead.confidence.label} confidence
+              </span>
+            </div>
+            <p className="mt-3 text-[20px] font-medium leading-[1.55] tracking-[-0.005em] text-[var(--foreground)] [text-wrap:pretty]">
+              {verdictText}
+            </p>
+            <div className="mt-4 rounded-md bg-[var(--panel)] px-4 py-3.5 text-[14px] leading-6 text-[var(--body)]">
+              <RecapNote
+                scope="day"
+                scopeKey={day.date}
+                text={recap?.text ?? ""}
+                thesis={recap?.thesis ?? ""}
+                whatWentWell={recap?.whatWentWell ?? ""}
+                whatWentWrong={recap?.whatWentWrong ?? ""}
+                emotionalState={recap?.emotionalState ?? ""}
+                placeholder="Your recap: add the context the tape can't show — intent, hesitation, what to remember."
+                readOnly={readOnly}
+              />
+            </div>
           </div>
 
           <div className="grid max-w-[665px] gap-6 lg:grid-cols-[minmax(0,1fr)_200px] lg:items-start">
