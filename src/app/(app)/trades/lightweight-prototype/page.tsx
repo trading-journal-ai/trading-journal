@@ -69,7 +69,6 @@ export default async function LightweightPrototypePage({
       </div>
 
       <ReviewHeader
-        eyebrow="Chart Prototype"
         title={trade.symbol}
         date={fmtDate(trade.entryAt)}
         metrics={[

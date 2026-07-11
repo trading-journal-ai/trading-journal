@@ -396,7 +396,6 @@ export default async function TickerDayReviewPage({
     { label: `${trades.length.toLocaleString()} ${tradeLabel}` },
     { label: `${totalShares.toLocaleString()} ${shareLabel}` },
     { label: counted === 0 ? "— win" : `${Math.round((wins / counted) * 100)}% win` },
-    { label: `P&L ${fmtMoney(totalPnl)}`, className: pnlClass(totalPnl) },
   ];
   const tickerReviewStats = [
     { label: "Trades", value: trades.length.toLocaleString() },
@@ -422,9 +421,9 @@ export default async function TickerDayReviewPage({
       <div className="mb-0 grid gap-8 lg:grid-cols-[minmax(0,1fr)_260px]">
         <div className="min-w-0">
           <ReviewHeader
-            eyebrow="Ticker review"
             title={symbol}
             date={fmtDate(start)}
+            pnl={{ value: totalPnl, formatted: `${totalPnl > 0 ? "+" : ""}${fmtMoney(totalPnl)}` }}
             metrics={summaryStats}
             action={(
               <Link

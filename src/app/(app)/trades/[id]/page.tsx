@@ -116,6 +116,14 @@ export default async function TradeDetailPage({
     { label: "Per share", value: perShare == null ? "—" : fmtMoney(perShare), className: perShareClass },
     { label: "Held", value: trade.exitAt ? holdingPeriod(firstAt, trade.exitAt) : "Open" },
   ];
+  const headerStats = [
+    { label: trade.side === "short" ? "Short" : "Long" },
+    { label: `${trade.quantity.toLocaleString()} ${trade.quantity === 1 ? "share" : "shares"}` },
+    ...(perShare == null
+      ? []
+      : [{ label: `${perShare > 0 ? "+" : ""}${fmtMoney(perShare)} / share` }]),
+    { label: `held ${trade.exitAt ? holdingPeriod(firstAt, trade.exitAt) : "open"}` },
+  ];
   const originCrumb = originCrumbFromHref(backHref, "/trades");
   const isJournalOrigin = originCrumb.label === "Journal";
   const isCalendarOrigin = originCrumb.label === "Calendar";
@@ -141,18 +149,10 @@ export default async function TradeDetailPage({
 
       <div className="mb-0">
         <ReviewHeader
-          eyebrow="Trade detail"
-          title={
-            <>
-              {trade.symbol}
-              {trade.side === "short" && (
-                <span className="ml-3 align-middle rounded bg-[var(--red)]/15 px-2 py-1 text-xs font-semibold text-[var(--red)]">
-                  SHORT
-                </span>
-              )}
-            </>
-          }
+          title={trade.symbol}
           date={fmtDate(trade.entryAt)}
+          pnl={net == null ? undefined : { value: net, formatted: `${net > 0 ? "+" : ""}${fmtMoney(net)}` }}
+          metrics={headerStats}
         />
       </div>
 
