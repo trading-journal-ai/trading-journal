@@ -10,7 +10,6 @@ import { etDateString, etDayRange } from "@/lib/time";
 import ArchiveSidebar, { type ArchiveSidebarMonth } from "@/components/ArchiveSidebar";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
 import InlineImportPrompt from "@/components/InlineImportPrompt";
-import RecapNote from "@/components/RecapNote";
 import TickerReviewRail from "@/components/TickerReviewRail";
 
 export type JournalReviewPreset = "today" | "week" | "month";
@@ -122,14 +121,6 @@ type SavedCoachReview = {
   status: string;
   updatedAt: Date;
   storedReview: CoachStoredReview | null;
-};
-
-type DayRecapContext = {
-  text: string;
-  thesis: string;
-  whatWentWell: string;
-  whatWentWrong: string;
-  emotionalState: string;
 };
 
 const dateFmt = new Intl.DateTimeFormat("en-US", {
@@ -756,42 +747,6 @@ async function loadReviewArchive(anchor: string, accountId: number, basePath: st
   return { months, years };
 }
 
-async function loadDayRecaps(accountId: number, dates: string[]): Promise<Map<string, DayRecapContext>> {
-  if (dates.length === 0) return new Map();
-
-  const rows = await db
-    .select({
-      scopeKey: schema.journalEntries.scopeKey,
-      thesis: schema.journalEntries.thesis,
-      whatWentWell: schema.journalEntries.whatWentWell,
-      whatWentWrong: schema.journalEntries.whatWentWrong,
-      emotionalState: schema.journalEntries.emotionalState,
-      lessons: schema.journalEntries.lessons,
-    })
-    .from(schema.journalEntries)
-    .where(
-      and(
-        eq(schema.journalEntries.accountId, accountId),
-        eq(schema.journalEntries.scope, "day"),
-        inArray(schema.journalEntries.scopeKey, dates),
-      ),
-    );
-
-  const recaps = new Map<string, DayRecapContext>();
-  rows.forEach((row) => {
-    if (row.scopeKey) {
-      recaps.set(row.scopeKey, {
-        text: row.lessons ?? "",
-        thesis: row.thesis ?? "",
-        whatWentWell: row.whatWentWell ?? "",
-        whatWentWrong: row.whatWentWrong ?? "",
-        emotionalState: row.emotionalState ?? "",
-      });
-    }
-  });
-  return recaps;
-}
-
 function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoint[] }) {
   const width = 940;
   const height = 440;
@@ -945,17 +900,12 @@ function KeyTradePrompts({ prompts }: { prompts: KeyTradePrompt[] }) {
 
 function DayReviewSection({
   data,
-  recaps,
   returnTo,
-  readOnly,
 }: {
   data: ReviewData;
-  recaps: Map<string, DayRecapContext>;
   returnTo: string;
-  readOnly: boolean;
 }) {
   const { day, tickerRows, pnlPoints, keyTradePrompts, worstTrade, coachRead } = data;
-  const recap = recaps.get(day.date);
   const topSurprise = coachRead.surprises[0];
   const verdictText = topSurprise
     ? topSurprise.description
@@ -1009,19 +959,6 @@ function DayReviewSection({
             <p className="mt-3 text-[20px] font-medium leading-[1.55] tracking-[-0.005em] text-[var(--foreground)] [text-wrap:pretty]">
               {verdictText}
             </p>
-            <div className="mt-4 rounded-md bg-[var(--panel)] px-4 py-3.5 text-[14px] leading-6 text-[var(--body)]">
-              <RecapNote
-                scope="day"
-                scopeKey={day.date}
-                text={recap?.text ?? ""}
-                thesis={recap?.thesis ?? ""}
-                whatWentWell={recap?.whatWentWell ?? ""}
-                whatWentWrong={recap?.whatWentWrong ?? ""}
-                emotionalState={recap?.emotionalState ?? ""}
-                placeholder="Your recap: add the context the tape can't show — intent, hesitation, what to remember."
-                readOnly={readOnly}
-              />
-            </div>
           </div>
 
           <div className="grid max-w-[665px] gap-6 lg:grid-cols-[minmax(0,1fr)_200px] lg:items-start">
@@ -1127,11 +1064,9 @@ function ScopeHeader({
 
 function WeekSection({
   week,
-  recaps,
   returnTo,
 }: {
   week: ReviewWeek;
-  recaps: Map<string, DayRecapContext>;
   returnTo: string;
 }) {
   return (
@@ -1142,13 +1077,7 @@ function WeekSection({
 
       <div className="space-y-12">
         {week.days.map((dayData) => (
-          <DayReviewSection
-            key={dayData.day.date}
-            data={dayData}
-            recaps={recaps}
-            returnTo={returnTo}
-            readOnly={isDemoReadOnly()}
-          />
+          <DayReviewSection key={dayData.day.date} data={dayData} returnTo={returnTo} />
         ))}
       </div>
     </section>
@@ -1507,8 +1436,7 @@ export default async function TradeJournalReview({
     loadReviewArchive(archiveAnchor, accountId, basePath, month),
   ]);
   const reviewScope = reviewScopeFor(range.preset, rangeForPreset(range.preset, range.anchor));
-  const [recaps, savedExperiment, savedReview] = await Promise.all([
-    loadDayRecaps(accountId, range.days.map((day) => day.day.date)),
+  const [savedExperiment, savedReview] = await Promise.all([
     loadSavedCoachExperiment(accountId, reviewScope),
     loadSavedCoachReview(accountId, reviewScope),
   ]);
@@ -1547,23 +1475,17 @@ export default async function TradeJournalReview({
           ) : preset === "month" ? (
             <div className="space-y-14">
               {range.weeks.map((week) => (
-                <WeekSection key={week.key} week={week} recaps={recaps} returnTo={currentHref} />
+                <WeekSection key={week.key} week={week} returnTo={currentHref} />
               ))}
             </div>
           ) : preset === "week" ? (
             <div className="space-y-12">
               {range.days.map((dayData) => (
-                <DayReviewSection
-                  key={dayData.day.date}
-                  data={dayData}
-                  recaps={recaps}
-                  returnTo={currentHref}
-                  readOnly={readOnly}
-                />
+                <DayReviewSection key={dayData.day.date} data={dayData} returnTo={currentHref} />
               ))}
             </div>
           ) : (
-            <DayReviewSection data={range.days[0]} recaps={recaps} returnTo={currentHref} readOnly={readOnly} />
+            <DayReviewSection data={range.days[0]} returnTo={currentHref} />
           )}
 
           {range.trades > 0 ? (
