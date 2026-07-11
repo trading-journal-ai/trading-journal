@@ -61,12 +61,23 @@ type KeyTradePrompt = {
   href: string;
 };
 
+type WorstTradeCardData = {
+  symbol: string;
+  side: "long" | "short";
+  shares: number;
+  timeRange: string;
+  pnl: number;
+  fills: number;
+  href: string;
+};
+
 type ReviewData = {
   day: ReviewDay;
   tickerRows: TickerRow[];
   pnlPoints: PnlPoint[];
   coachRead: SessionFactPack;
   keyTradePrompts: KeyTradePrompt[];
+  worstTrade: WorstTradeCardData | null;
 };
 
 type ReviewWeek = ReviewSummary & {
@@ -463,6 +474,23 @@ function buildDayData(date: string, trades: TradeRow[], executions: ExecutionRow
     });
   }
 
+  const dayReturnTo = journalReviewHref("/journal", { preset: "today", date });
+  const worstTradeCard: WorstTradeCardData | null =
+    worstTrade && worstTrade.pnl < 0
+      ? {
+          symbol: worstTrade.trade.symbol,
+          side: worstTrade.trade.side,
+          shares: worstTrade.trade.quantity,
+          timeRange:
+            worstTrade.trade.entryAt != null && worstTrade.trade.exitAt != null
+              ? `${formatTime(worstTrade.trade.entryAt)} – ${formatTime(worstTrade.trade.exitAt)}`
+              : "",
+          pnl: worstTrade.pnl,
+          fills: executionCountByTrade.get(worstTrade.trade.id) ?? 0,
+          href: `/trades/${worstTrade.trade.id}?returnTo=${encodeURIComponent(dayReturnTo)}`,
+        }
+      : null;
+
   return {
     day: {
       date,
@@ -474,6 +502,7 @@ function buildDayData(date: string, trades: TradeRow[], executions: ExecutionRow
     pnlPoints,
     coachRead: buildSessionFactPack(trades),
     keyTradePrompts,
+    worstTrade: worstTradeCard,
   };
 }
 
@@ -925,7 +954,7 @@ function DayReviewSection({
   returnTo: string;
   readOnly: boolean;
 }) {
-  const { day, tickerRows, pnlPoints, keyTradePrompts } = data;
+  const { day, tickerRows, pnlPoints, keyTradePrompts, worstTrade } = data;
   const recap = recaps.get(day.date);
 
   return (
@@ -993,9 +1022,58 @@ function DayReviewSection({
               pnl={day.pnl}
             />
           </div>
+          {worstTrade ? (
+            <div className="mt-14 max-w-[665px]">
+              <WorstTradeCard trade={worstTrade} />
+            </div>
+          ) : null}
+
           <div className="mt-6">
             <KeyTradePrompts prompts={keyTradePrompts} />
           </div>
+      </div>
+    </section>
+  );
+}
+
+function WorstTradeCard({ trade }: { trade: WorstTradeCardData }) {
+  return (
+    <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2 border-b border-[var(--hairline)] px-5 py-4">
+        <span className="text-[20px] font-semibold text-[var(--foreground)]">{trade.symbol}</span>
+        <span className="text-[13.5px] text-[var(--muted)]">
+          {trade.side === "short" ? "Short" : "Long"} · {trade.shares.toLocaleString()}{" "}
+          {trade.shares === 1 ? "share" : "shares"}
+          {trade.timeRange ? ` · ${trade.timeRange}` : ""}
+        </span>
+        <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-0.5 text-[12px] text-[var(--muted)]">
+          ⇣ Imported
+        </span>
+        <span className="rounded-full bg-[var(--red-tint)] px-2.5 py-0.5 text-[12px] font-semibold text-[var(--red)]">
+          Worst trade
+        </span>
+        <span className="ml-auto font-mono text-[17px] font-semibold tabular-nums text-[var(--red)]">
+          {formatMoney(trade.pnl)}
+          <span className="ml-1 text-[10px]">▼</span>
+        </span>
+      </div>
+      <div className="grid gap-6 px-5 py-5 md:grid-cols-[minmax(0,1fr)_280px]">
+        <div>
+          <div className="text-[13px] font-semibold text-[var(--accent)]">✎ Your note</div>
+          <p className="mt-2.5 text-[15px] leading-6 text-[var(--body)] [text-wrap:pretty]">
+            Worst trade of the day — the one to inspect closely. Was the entry late, was the stop
+            respected, and did this loss influence the next trade?
+          </p>
+          <a
+            href={trade.href}
+            className="mt-4 inline-block text-[13px] font-semibold text-[var(--accent)] transition-colors hover:text-[var(--accent-strong)]"
+          >
+            Executions &amp; calculations ({trade.fills} {trade.fills === 1 ? "fill" : "fills"}) →
+          </a>
+        </div>
+        <div className="grid min-h-[150px] place-items-center rounded-md bg-[repeating-linear-gradient(-45deg,var(--surface-2)_0_12px,var(--panel)_12px_24px)]">
+          <span className="text-[13px] text-[var(--muted)]">1-min chart · {trade.symbol}</span>
+        </div>
       </div>
     </section>
   );
