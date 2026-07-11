@@ -9,6 +9,15 @@ dashboard and journal loop. The current clickable review prototype may stay
 lightweight, but these concepts should remain available for later product and UI
 work.
 
+> **Reconciliation (2026-07-11):** This is the earliest concept capture. Its flow
+> and hierarchy still hold and feed [AI_FIRST_DAILY_RECAP_PLAN.md](AI_FIRST_DAILY_RECAP_PLAN.md).
+> Where this doc predates the finalized contract, defer to it: the loose
+> **Coach Review Components** table below is superseded by the typed object family
+> in [COACH_REVIEW_SCHEMA_V2.md](COACH_REVIEW_SCHEMA_V2.md) (verdict, findings,
+> review queue, session structure, opportunity context, pattern, carry-forward,
+> playbook candidates). "Ticker-level rows link to the stock/day review" (below)
+> is the 07:00–20:00 ET full-session review chart defined in [../DATA_MODEL.md](../DATA_MODEL.md) §2.
+
 ## Core Idea
 
 The daily recap is the journal's durable day container. It should start simple
