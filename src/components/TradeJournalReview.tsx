@@ -795,11 +795,9 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
   const negativeClipId = `pnlNegativeClip-${day.date}`;
 
   return (
-    <section className="flex h-[380px] flex-col rounded-[6px] bg-[#1a2432] px-4 py-4">
+    <section className="flex h-[380px] flex-col rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-4">
       <div className="mb-1 flex items-center justify-between gap-4">
-        <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-          Daily P&L
-        </h2>
+        <h2 className="text-[15px] font-semibold text-[var(--foreground)]">Daily P&L</h2>
         <span className={`font-mono text-sm font-semibold tabular-nums ${pnlClass(day.pnl)}`}>
           {formatMoney(day.pnl)}
         </span>
@@ -807,12 +805,12 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
       <svg viewBox={`0 0 ${width} ${height}`} className="min-h-0 flex-1" role="img" aria-label="Daily P&L by time of day">
         <defs>
           <linearGradient id={positiveFillId} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="var(--green)" stopOpacity="0.36" />
-            <stop offset="100%" stopColor="var(--green)" stopOpacity="0.08" />
+            <stop offset="0%" stopColor="var(--green-chart)" stopOpacity="0.36" />
+            <stop offset="100%" stopColor="var(--green-chart)" stopOpacity="0.08" />
           </linearGradient>
           <linearGradient id={negativeFillId} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="var(--red)" stopOpacity="0.08" />
-            <stop offset="100%" stopColor="var(--red)" stopOpacity="0.36" />
+            <stop offset="0%" stopColor="var(--red-chart)" stopOpacity="0.08" />
+            <stop offset="100%" stopColor="var(--red-chart)" stopOpacity="0.36" />
           </linearGradient>
           <clipPath id={positiveClipId}>
             <rect x={pad.left} y={pad.top} width={plotW} height={Math.max(0, zeroY - pad.top)} />
@@ -827,9 +825,9 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
             <text
               x={pad.left - 10}
               y={y(tick) + 5}
-              fill="var(--body)"
+              fill="var(--muted)"
               fontFamily="var(--font-mono)"
-              fontSize="20"
+              fontSize="19"
               fontWeight="500"
               textAnchor="end"
             >
@@ -851,7 +849,7 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
         <polyline
           points={line}
           fill="none"
-          stroke="var(--green)"
+          stroke="var(--green-chart)"
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth="2"
@@ -860,7 +858,7 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
         <polyline
           points={line}
           fill="none"
-          stroke="var(--red)"
+          stroke="var(--red-chart)"
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth="2"
@@ -871,9 +869,9 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
             key={`${index}-${pnlPoints[index].time}`}
             x={x(index)}
             y={height - 16}
-            fill="var(--body)"
-            fontFamily="var(--font-mono)"
-            fontSize="20"
+            fill="var(--muted)"
+            fontFamily="var(--font-sans)"
+            fontSize="19"
             fontWeight="500"
             textAnchor="middle"
           >
