@@ -77,7 +77,10 @@ export default function RecapNote({
         title="Click to edit"
       >
         {displayText ? (
-          <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">{displayText}</p>
+          <div>
+            <p className="text-[13px] font-semibold text-[var(--accent)]">✎ Your {scope} recap</p>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">{displayText}</p>
+          </div>
         ) : (
           <div className="rounded-md border border-dashed border-[var(--border)] px-4 py-5 transition-colors hover:border-[var(--accent)]">
             <p className="font-mono text-[13px] font-semibold text-[var(--accent)]">

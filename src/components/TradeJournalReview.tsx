@@ -1158,9 +1158,7 @@ function StarterCoachRead({
   return (
     <section className="pt-2">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-          Starter Coach Read
-        </h2>
+        <h2 className="text-[13px] font-semibold text-[var(--coach)]">✳ Coach read</h2>
         <span className={`font-mono text-[12px] font-semibold uppercase ${confidenceClass(factPack.confidence.label)}`}>
           {factPack.confidence.label} confidence
         </span>
