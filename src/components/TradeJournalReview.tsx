@@ -933,14 +933,16 @@ function DayReviewSection({
       <div className="min-w-0">
           <div className="mb-6">
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-              <h2 className="text-[38px] font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
+              <h2 className="text-[32px] font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
                 {day.label}, {monthDayFmt.format(utcDate(day.date))}
               </h2>
               <span
-                className={`font-mono text-[19px] font-semibold tabular-nums ${pnlClass(day.pnl)}`}
+                className={`font-mono text-[15px] font-semibold tabular-nums ${pnlClass(day.pnl)}`}
               >
                 {formatMoney(day.pnl)}
-                {day.pnl > 0 ? " ▲" : day.pnl < 0 ? " ▼" : ""}
+                {day.pnl !== 0 ? (
+                  <span className="ml-1 text-[10px]">{day.pnl > 0 ? "▲" : "▼"}</span>
+                ) : null}
               </span>
             </div>
             <div className="mt-4 flex">
