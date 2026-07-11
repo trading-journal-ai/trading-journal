@@ -2,34 +2,24 @@
 
 import { useEffect, useState } from "react";
 
-type Theme = "dark" | "light";
-
-function getInitialTheme(): Theme {
-  if (typeof document === "undefined") return "dark";
-  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
-}
+import { THEMES, type Theme, readAppliedTheme, applyTheme } from "@/lib/theme";
 
 export default function ThemeSettings() {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const [theme, setTheme] = useState<Theme>(readAppliedTheme);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem("theme", theme);
+    applyTheme(theme);
   }, [theme]);
-
-  function updateTheme(nextTheme: Theme) {
-    setTheme(nextTheme);
-  }
 
   return (
     <div className="inline-flex h-10 items-center rounded-md border border-[var(--border)] p-1">
-      {(["dark", "light"] as const).map((option) => {
+      {THEMES.map((option) => {
         const active = theme === option;
         return (
           <button
             key={option}
             type="button"
-            onClick={() => updateTheme(option)}
+            onClick={() => setTheme(option)}
             className={`h-8 rounded px-3 text-sm font-semibold capitalize transition-colors ${
               active
                 ? "bg-[var(--foreground)] text-[var(--background)]"
