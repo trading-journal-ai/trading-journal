@@ -49,9 +49,40 @@ function formatChartTime(time: unknown): string {
   return chartTimeFormatter.format(new Date(time * 1000));
 }
 
+type ChartColors = {
+  surface: string;
+  text: string;
+  grid: string;
+  up: string;
+  down: string;
+  volumeUp: string;
+  volumeDown: string;
+};
+
+/**
+ * Read the resolved theme tokens off <html>. Lightweight Charts renders to a
+ * canvas, so it needs concrete color strings, not `var(--token)` references —
+ * we re-read these whenever the theme changes and rebuild the chart.
+ */
+function readChartColors(): ChartColors {
+  const styles = getComputedStyle(document.documentElement);
+  const token = (name: string, fallback: string) => styles.getPropertyValue(name).trim() || fallback;
+  const up = token("--green-chart", "#2c9a63");
+  const down = token("--red-chart", "#c4553f");
+  return {
+    surface: token("--surface", "#ffffff"),
+    text: token("--muted", "#8a8375"),
+    grid: token("--hairline", "rgba(0,0,0,0.08)"),
+    up,
+    down,
+    volumeUp: `${up}52`,
+    volumeDown: `${down}52`,
+  };
+}
+
 function EmptyTradeChart() {
   return (
-    <div className="flex h-[520px] items-center justify-center rounded-[6px] bg-[#1a2432] px-6 text-center text-sm text-[var(--muted)]">
+    <div className="flex h-[520px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 text-center text-sm text-[var(--muted)]">
       No candle data is available for this trade yet.
     </div>
   );
@@ -115,6 +146,13 @@ function InteractiveLightweightTradeChart({
   const rafRef = useRef<number | null>(null);
   const [markerPoints, setMarkerPoints] = useState<MarkerPoint[]>([]);
   const [chartSize, setChartSize] = useState<ChartSize>({ width: 0, height: 520 });
+  const [themeKey, setThemeKey] = useState(0);
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => setThemeKey((key) => key + 1));
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
 
   const candleData = useMemo<CandlestickData[]>(
     () =>
@@ -128,38 +166,35 @@ function InteractiveLightweightTradeChart({
     [candles],
   );
 
-  const volumeData = useMemo<HistogramData[]>(
-    () =>
-      candles.map((candle) => ({
-        time: timeValue(candle.t),
-        value: candle.vol,
-        color: candle.c >= candle.o ? "rgba(19, 195, 120, 0.32)" : "rgba(255, 82, 69, 0.32)",
-      })),
-    [candles],
-  );
-
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return undefined;
+
+    const colors = readChartColors();
+    const volumeData: HistogramData[] = candles.map((candle) => ({
+      time: timeValue(candle.t),
+      value: candle.vol,
+      color: candle.c >= candle.o ? colors.volumeUp : colors.volumeDown,
+    }));
 
     const chart = createChart(container, {
       autoSize: true,
       height: 520,
       layout: {
-        background: { type: ColorType.Solid, color: "#1a2432" },
-        textColor: "#8d98aa",
+        background: { type: ColorType.Solid, color: colors.surface },
+        textColor: colors.text,
         fontFamily: "var(--font-mono)",
         fontSize: 16,
         attributionLogo: false,
       },
       grid: {
-        horzLines: { color: "rgba(141, 152, 170, 0.16)", style: 2 },
-        vertLines: { color: "rgba(141, 152, 170, 0.08)", style: 0 },
+        horzLines: { color: colors.grid, style: 2 },
+        vertLines: { color: colors.grid, style: 0 },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
-        horzLine: { color: "rgba(141, 152, 170, 0.45)", labelBackgroundColor: "#1a2432" },
-        vertLine: { color: "rgba(141, 152, 170, 0.35)", labelBackgroundColor: "#1a2432" },
+        horzLine: { color: colors.text, labelBackgroundColor: colors.surface },
+        vertLine: { color: colors.text, labelBackgroundColor: colors.surface },
       },
       rightPriceScale: {
         borderVisible: false,
@@ -197,10 +232,10 @@ function InteractiveLightweightTradeChart({
     chartRef.current = chart;
 
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: "#13c378",
-      downColor: "#ff5245",
-      wickUpColor: "#13c378",
-      wickDownColor: "#ff5245",
+      upColor: colors.up,
+      downColor: colors.down,
+      wickUpColor: colors.up,
+      wickDownColor: colors.down,
       borderVisible: false,
       priceLineVisible: false,
       lastValueVisible: false,
@@ -269,10 +304,10 @@ function InteractiveLightweightTradeChart({
       chartRef.current = null;
       setMarkerPoints([]);
     };
-  }, [candleData, candles, markers, volumeData]);
+  }, [candleData, candles, markers, themeKey]);
 
   return (
-    <div className="overflow-hidden rounded-[6px] bg-[#1a2432]">
+    <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
       <div className={`relative w-full ${chartHeightClass}`}>
         <div ref={containerRef} className="relative z-0 h-full w-full" />
         <svg
@@ -293,8 +328,8 @@ function InteractiveLightweightTradeChart({
               <polygon
                 key={`${marker.side}-${marker.x}-${marker.y}-${index}`}
                 points={points}
-                fill={buy ? "#0f8f5a" : "#b9322b"}
-                stroke="rgba(255,255,255,0.9)"
+                fill={buy ? "#22c55e" : "#ef4444"}
+                stroke="#ffffff"
                 strokeLinejoin="round"
                 strokeWidth={1.2}
               />
@@ -345,7 +380,7 @@ export default function LightweightTradeChart(props: LightweightTradeChartProps)
       aria-label="Expand chart"
       title="Expand chart"
       onClick={() => setIsFullscreen(true)}
-      className="flex h-7 w-7 items-center justify-center rounded-[4px] text-[var(--muted)]/70 transition hover:bg-[var(--background)]/40 hover:text-[var(--foreground)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)]"
+      className="flex h-7 w-7 items-center justify-center rounded-[4px] text-[var(--muted)]/70 transition hover:bg-[var(--background)]/40 hover:text-[var(--foreground)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
     >
       <span aria-hidden="true" className="relative h-4 w-4">
         <span className="absolute bottom-0 left-0 h-2.5 w-2.5 border-b-2 border-l-2 border-current" />
@@ -366,7 +401,7 @@ export default function LightweightTradeChart(props: LightweightTradeChartProps)
                 type="button"
                 aria-label="Close expanded chart"
                 onClick={() => setIsFullscreen(false)}
-                className="flex h-10 w-10 items-center justify-center rounded-[6px] border border-[var(--border)] font-mono text-[16px] text-[var(--foreground)] transition hover:bg-[var(--surface)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue)]"
+                className="flex h-10 w-10 items-center justify-center rounded-[6px] border border-[var(--border)] font-mono text-[16px] text-[var(--foreground)] transition hover:bg-[var(--surface)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
               >
                 X
               </button>
