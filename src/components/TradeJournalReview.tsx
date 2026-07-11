@@ -942,7 +942,7 @@ function DayReviewSection({
               <h2 className="text-[24px] font-semibold leading-none tracking-[-0.01em] text-[var(--foreground)]">
                 {monthDayFmt.format(utcDate(day.date))}
               </h2>
-              <span className="font-mono text-sm text-[var(--muted)]">{day.label}</span>
+              <span className="text-sm text-[var(--muted)]">{day.label}</span>
               <span
                 className={`font-mono text-[17px] font-semibold tabular-nums ${pnlClass(day.pnl)}`}
               >
@@ -1015,7 +1015,7 @@ function WeekHeader({
   displayDate: string;
 }) {
   return (
-    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-sm font-semibold text-[var(--muted)]">
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm font-semibold text-[var(--muted)]">
       <h2 className="text-sm font-semibold leading-none">
         {label}
       </h2>
@@ -1192,13 +1192,13 @@ function StarterCoachRead({
       </div>
 
       {strongestTrendSignal ? (
-        <p className="mt-4 font-mono text-[12px] leading-5 text-[var(--muted)]">
+        <p className="mt-4 text-[12px] leading-5 text-[var(--muted)] tabular-nums">
           {strongestTrendSignal.label}: {formatTrendValue(strongestTrendSignal.current, strongestTrendSignal.key)} vs{" "}
           {formatTrendValue(strongestTrendSignal.baseline, strongestTrendSignal.key)} across{" "}
           {factPack.history.baselineTrades} prior trades.
         </p>
       ) : (
-        <p className="mt-4 font-mono text-[12px] leading-5 text-[var(--muted)]">
+        <p className="mt-4 text-[12px] leading-5 text-[var(--muted)] tabular-nums">
           {factPack.history.baselineTrades} prior trades in {factPack.history.baselineLabel}; trend vote needs more support.
         </p>
       )}
@@ -1208,7 +1208,7 @@ function StarterCoachRead({
           <div className="text-[12px] text-[var(--muted)]">Matched evidence</div>
           <p className="mt-2 text-sm font-semibold leading-6 text-[var(--foreground)]">{topSurprise.title}</p>
           <p className="mt-1 text-sm leading-6 text-[var(--body)]">{topSurprise.description}</p>
-          <p className="mt-2 font-mono text-[12px] leading-5 text-[var(--muted)]">
+          <p className="mt-2 text-[12px] leading-5 text-[var(--muted)] tabular-nums">
             {topSurprise.evidence.join(" ")}
           </p>
         </div>
@@ -1244,19 +1244,19 @@ function StarterCoachRead({
               {savedExperiment ? "Update saved experiment" : "Save experiment"}
             </button>
             {savedExperiment ? (
-              <span className="font-mono text-[12px] text-[var(--muted)]">
+              <span className="text-[12px] text-[var(--muted)]">
                 Saved: {savedExperiment.action}
               </span>
             ) : null}
           </form>
         ) : (
-          <p className="mt-3 font-mono text-[12px] text-[var(--muted)]">
+          <p className="mt-3 text-[12px] text-[var(--muted)]">
             Read-only demo: experiments are shown but not saved.
           </p>
         )}
       </div>
 
-      <div className="mt-5 grid gap-2 font-mono text-[12px] leading-5 text-[var(--muted)] sm:grid-cols-2">
+      <div className="mt-5 grid gap-2 text-[12px] leading-5 text-[var(--muted)] tabular-nums sm:grid-cols-2">
         <span>
           Win rate {formatPercent(factPack.session.winRate)} · breakeven {formatPercent(factPack.session.breakevenWinRate)}
         </span>
@@ -1300,13 +1300,13 @@ function StarterCoachRead({
               </button>
             </form>
             {savedReview ? (
-              <span className="font-mono text-[12px] text-[var(--muted)]">
+              <span className="text-[12px] text-[var(--muted)]">
                 Saved as {savedReview.status}
               </span>
             ) : null}
           </div>
         ) : (
-          <p className="mt-3 max-w-[760px] font-mono text-[12px] leading-5 text-[var(--muted)]">
+          <p className="mt-3 max-w-[760px] text-[12px] leading-5 text-[var(--muted)] tabular-nums">
             Read-only demo: coach reviews are loaded from approved static fixtures,
             not generated live.
           </p>
@@ -1327,7 +1327,7 @@ function StarterCoachRead({
               <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
                 {generatedReview.review.dayVerdict}
               </p>
-              <p className="mt-2 font-mono text-[12px] text-[var(--muted)]">
+              <p className="mt-2 text-[12px] text-[var(--muted)]">
                 {generatedReview.model}
               </p>
             </div>
