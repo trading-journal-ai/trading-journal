@@ -195,6 +195,39 @@ claim, not like a miniature Reports page.
 - Chart-image interpretation.
 - Live intraday trade advice.
 
+## Future scope: weekly & monthly coach recaps
+
+The daily recap is the atom; the same coach-driven, evidence-led model should roll
+up into **weekly** and **monthly** recaps. This is future scope — after the daily
+recap contract ([COACH_REVIEW_SCHEMA_V2.md](COACH_REVIEW_SCHEMA_V2.md)) is real —
+but worth capturing now because the model already points here.
+
+**The storage contract already exists.** `coach_reviews`, `coach_experiments`, and
+`journal_entries` all carry `scope: day | week | month`. So weekly/monthly coach
+reviews need new *content and rollup logic*, not a new data shape.
+
+**Why these are more than longer dailies.** The content spec's pattern ladder
+(session-only → emerging → repeated → established) is inherently multi-session. The
+daily recap deliberately defers most pattern claims ("emerging, not yet a rule");
+**weekly/monthly are where a pattern earns "repeated"/"established," and where a
+carry-forward experiment is finally judged.**
+
+**Weekly recap (coach view).** Did the week's daily focuses/experiments stick (roll
+up carry-forward outcomes)? Which behavior most shaped the week; recurring rule
+breaches vs. clean streaks; best/worst sessions and what separated them;
+process-quality trend across the sessions. Promote or retire one emerging pattern;
+one weekly adjustment.
+
+**Monthly recap (coach view).** Playbook evolution (which candidate rules
+graduated, were revised, or retired); by-setup edge over the month (which setups
+carried vs. leaked); the arc (drawdown/recovery, process quality independent of
+P&L); established patterns; one structural lesson carried into next month.
+
+**Reuses, doesn't reinvent.** Same provenance/voice labels, same progressive
+disclosure, same "what drove the result?" logic at a higher aggregation — weekly
+and monthly are aggregations over the same typed Coach Review objects, feeding the
+same Journal → Coach → Playbook → Dashboard loop at longer cadences.
+
 ## Related documents
 
 - `docs/DATA_MODEL.md` — data-model synthesis and the "definition of finalized"
