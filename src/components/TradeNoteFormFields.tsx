@@ -85,7 +85,7 @@ export default function TradeNoteFormFields({
           name="primaryLabel"
           value={primaryLabel}
           onChange={(event) => setPrimaryLabel(event.target.value)}
-          className="h-10 w-full max-w-64 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:border-[var(--blue)]"
+          className="h-10 w-full max-w-64 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:border-[var(--accent)]"
         >
           <option value="">Optional</option>
           {PRIMARY_TRADE_LABELS.map((option) => (

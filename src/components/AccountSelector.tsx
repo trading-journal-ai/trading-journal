@@ -16,7 +16,7 @@ export default function AccountSelector({
   const router = useRouter();
 
   return (
-    <label className="inline-flex h-10 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--blue)]">
+    <label className="inline-flex h-10 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--accent)]">
       <span className="sr-only">Active account</span>
       <select
         defaultValue={String(activeAccountId)}

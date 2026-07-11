@@ -65,7 +65,7 @@ export default function ImportForm() {
           setDismissedResult(true);
         }}
         disabled={pending}
-        className="inline-flex h-10 cursor-pointer items-center justify-center rounded-md bg-[#58a6ff] px-4 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex h-10 cursor-pointer items-center justify-center rounded-md bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--background)] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {pending ? "Importing..." : "Import"}
       </button>
@@ -149,9 +149,9 @@ function ImportReadyState({ onChooseFile }: { onChooseFile: () => void }) {
       <button
         type="button"
         onClick={onChooseFile}
-        className="group flex min-h-[220px] w-full cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[var(--border)] bg-[var(--panel)]/40 px-6 text-center transition hover:border-[var(--blue)]/70 hover:bg-[var(--panel)]/70"
+        className="group flex min-h-[220px] w-full cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[var(--border)] bg-[var(--panel)]/40 px-6 text-center transition hover:border-[var(--accent)]/70 hover:bg-[var(--panel)]/70"
       >
-        <span className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-2)] text-xl text-[var(--blue)] transition group-hover:scale-105">
+        <span className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-2)] text-xl text-[var(--accent)] transition group-hover:scale-105">
           ↑
         </span>
         <span className="mt-4 text-sm font-semibold text-[var(--foreground)]">
@@ -209,7 +209,7 @@ function ImportProgress({ file }: { file: SelectedFile | null }) {
         <ul className="mt-3 space-y-2 text-sm leading-6 text-[var(--body)]">
           {steps.map((step) => (
             <li key={step} className="flex gap-3">
-              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--blue)]" />
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)]" />
               <span>{step}</span>
             </li>
           ))}
@@ -317,7 +317,7 @@ function ImportSuccessSummary({
         <Link
           href={recapHref}
           onClick={onReviewClick}
-          className="rounded-md bg-[#58a6ff] px-4 py-2 text-sm font-semibold text-black"
+          className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--background)]"
         >
           Open journal review
         </Link>
@@ -344,7 +344,7 @@ function ImportErrorSummary({
         <button
           type="button"
           onClick={onChooseFile}
-          className="cursor-pointer rounded-md bg-[#58a6ff] px-4 py-2 text-sm font-semibold text-black"
+          className="cursor-pointer rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--background)]"
         >
           Choose another CSV
         </button>
