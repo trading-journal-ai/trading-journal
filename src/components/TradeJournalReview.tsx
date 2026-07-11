@@ -939,12 +939,37 @@ function DayReviewSection({
           }`}
         />
         <div className="min-w-0">
-          <div className="mb-4">
+          <div className="mb-5">
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
               <h2 className="text-[24px] font-semibold leading-none tracking-[-0.01em] text-[var(--foreground)]">
                 {monthDayFmt.format(utcDate(day.date))}
               </h2>
               <span className="font-mono text-sm text-[var(--muted)]">{day.label}</span>
+              <span
+                className={`font-mono text-[17px] font-semibold tabular-nums ${pnlClass(day.pnl)}`}
+              >
+                {formatMoney(day.pnl)}
+                {day.pnl > 0 ? " ▲" : day.pnl < 0 ? " ▼" : ""}
+              </span>
+            </div>
+            <div className="mt-3 flex">
+              <span className="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-full bg-[var(--surface-2)] px-4 py-1.5 text-[13px] text-[var(--muted)] tabular-nums">
+                {day.trades} trades
+                <span aria-hidden="true" className="text-[var(--faint)]">·</span>
+                {day.fills} fills
+                {day.accuracy != null ? (
+                  <>
+                    <span aria-hidden="true" className="text-[var(--faint)]">·</span>
+                    {day.accuracy}% win
+                  </>
+                ) : null}
+                {day.profitFactor != null ? (
+                  <>
+                    <span aria-hidden="true" className="text-[var(--faint)]">·</span>
+                    PF {day.profitFactor.toFixed(2)}
+                  </>
+                ) : null}
+              </span>
             </div>
           </div>
 
