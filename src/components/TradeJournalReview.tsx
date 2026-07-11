@@ -1031,12 +1031,12 @@ function FindingColumn({
   const markerColor = tone === "positive" ? "text-[var(--green)]" : "text-[var(--red)]";
   return (
     <div>
-      <div className="text-[16px] font-semibold text-[var(--foreground)]">{label}</div>
-      <ul className="mt-3.5 grid gap-3">
+      <div className="text-[14px] font-semibold text-[var(--foreground)]">{label}</div>
+      <ul className="mt-3 grid gap-2.5">
         {items.map((item, index) => (
           <li
             key={index}
-            className="grid grid-cols-[20px_1fr] text-[15px] leading-6 text-[var(--body)]"
+            className="grid grid-cols-[18px_1fr] text-[13.5px] leading-[1.5] text-[var(--body)]"
           >
             <span className={markerColor}>{marker}</span>
             <span className="[text-wrap:pretty]">{item}</span>
