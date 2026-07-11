@@ -21,7 +21,7 @@ are all cheap *only if* that contract is real.
 
 | Horizon | Owner track (Justin) | Build track |
 |---|---|---|
-| **Now** | Work the [OWNER_TODO ⭐ shortlist](OWNER_TODO.md): define setups, decide playbook storage/identity, raw-file retention | Opportunity-context calculator (data confirmed present) |
+| **Now** | Work the [OWNER_TODO ⭐ shortlist](OWNER_TODO.md): define setups, decide playbook storage/identity, raw-file retention | **AI-first recap prototype** (Phase 1, in review) · Opportunity-context calculator (data confirmed present) |
 | **Next** | Confirm §A decisions; author `EXECUTION.md` | Wire the v2 Coach Review schema; `buildJournalDay()` view-model |
 | **Later** | Recap-flow product questions (§B); docs cleanup (§D) | One canonical recap template → then themes / alt-templates / export |
 
@@ -40,9 +40,25 @@ stopped. This is the "when did we last work on it" trail.
   - Verified extended-hours candle coverage (bars span 04:00–19:59 ET).
   - Built OWNER_TODO (with ⭐ shortlist) and this status doc; swept all 37 docs
     for owner decisions; found no true duplicate docs to delete.
-  - Opened **[PR #26](https://github.com/trading-journal-ai/trading-journal/pull/26)** (docs-only, 2 commits).
-  - **Stopped at:** docs pushed, awaiting owner to work the ⭐ shortlist; build
-    track's next move is the opportunity-context calculator (not yet started).
+  - Opened **[PR #26](https://github.com/trading-journal-ai/trading-journal/pull/26)** (docs-only); merged into main after resolving the rewritten-history conflicts.
+  - Recovered an in-progress **AI-first daily recap prototype** from stashed WIP,
+    verified it renders on the synced main, and branched it as
+    `feat/ai-first-recap-prototype` for review.
+  - **Stopped at:** docs merged; recap prototype in review (Phase 1). Owner to
+    work the ⭐ shortlist; build track's next net-new piece is the
+    opportunity-context calculator (not yet started).
+
+## Active prototype: AI-first daily recap
+
+An exploratory redesign of the daily recap at `/review/journal/ai-first-recap`
+([AiFirstRecapPrototype.tsx](../src/components/review/AiFirstRecapPrototype.tsx)).
+The bet: make the recap **coach-driven and evidence-led** rather than a stack of
+form fields — the trader contributes only the context the data can't know
+(**dictation-first**, minimal structured input), and the Coach turns that plus
+deterministic facts into a verdict, one carry-forward focus, and a small review
+queue. Realizes Phase 1 of [AI_FIRST_DAILY_RECAP_PLAN.md](product/AI_FIRST_DAILY_RECAP_PLAN.md)
+with two seeded scenarios (Controlled Red / Weak Green); static/seeded, no DB or
+live AI yet, by design.
 
 ## Where things live (the map)
 
