@@ -154,6 +154,18 @@ freshness/linking, not merging.
 - [ ] **Capture the chosen visual direction in-repo** — the 1a/1b/1c tokens exist
   only in Claude Design; once C is decided, add the palette/type to `globals.css`
   notes or DESIGN_SYSTEM.
+- [ ] **Reconcile restored `coach/NEXT_BUILD.md` vs `coach/BUILD_TODO.md`** — both
+  were recovered/added around the rewrite; decide which is canonical and fold the
+  other in. (Restored 2026-07-11 from pre-rewrite history.)
+- [ ] **Update or retire `deployment/DEMO_RUNTIME.md`** — restored but **stale**:
+  it describes the Turso demo runtime that `main` removed (demo now reads a bundled
+  SQLite file). Refresh to the current runtime or delete.
+- [ ] **Recapture audit — what else did the `main` history rewrite drop?** The
+  rewrite (to purge sensitive P&L docs) also removed some non-sensitive docs. We
+  recovered `NEXT_BUILD.md` + `DEMO_RUNTIME.md`; **deliberately deleted the P&L
+  research study forever** (real trading numbers, not for a public repo). Do a pass
+  to confirm nothing else valuable was lost. *(This is the "stuff we didn't get
+  captured" note.)*
 
 ## E. Build backlog (our list, not yours — here so it's visible)
 

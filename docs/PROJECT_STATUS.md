@@ -47,6 +47,11 @@ stopped. This is the "when did we last work on it" trail.
   - **Stopped at:** docs merged; recap prototype in review (Phase 1). Owner to
     work the ⭐ shortlist; build track's next net-new piece is the
     opportunity-context calculator (not yet started).
+  - Synced local `main` to the upstream history rewrite; recovered two
+    non-sensitive docs the rewrite dropped (`coach/NEXT_BUILD.md`,
+    `deployment/DEMO_RUNTIME.md`) and **deleted the P&L research study forever**
+    (real trading numbers, unfit for a public repo). Reconcile items logged in
+    [OWNER_TODO §D](OWNER_TODO.md).
 
 ## Active prototype: AI-first daily recap
 
