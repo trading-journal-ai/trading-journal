@@ -914,10 +914,14 @@ function DayReviewSection({
   const bestPrompt = keyTradePrompts.find((prompt) => prompt.label === "Best trade");
   const whatWorked: string[] = [];
   if (bestPrompt && bestPrompt.pnl > 0) {
-    whatWorked.push(`${bestPrompt.symbol} led the session at ${formatMoney(bestPrompt.pnl)}.`);
+    whatWorked.push(`Concentrated on ${bestPrompt.symbol}, the day's strongest trade.`);
   }
-  if (day.accuracy != null) {
-    whatWorked.push(`Win rate held at ${day.accuracy}% across ${day.trades} trades.`);
+  if (
+    coachRead.session.winRate != null &&
+    coachRead.session.breakevenWinRate != null &&
+    coachRead.session.winRate > coachRead.session.breakevenWinRate
+  ) {
+    whatWorked.push("Win rate cleared the breakeven line.");
   }
   coachRead.history.signals
     .filter((signal) => signal.vote > 0)
@@ -926,7 +930,7 @@ function DayReviewSection({
 
   const whatCost: string[] = [];
   if (worstTrade) {
-    whatCost.push(`${worstTrade.symbol} was the day's worst trade at ${formatMoney(worstTrade.pnl)}.`);
+    whatCost.push(`${worstTrade.symbol} was the session's clearest red mark.`);
   }
   coachRead.surprises.slice(0, 2).forEach((surprise) => whatCost.push(surprise.description));
 
