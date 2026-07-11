@@ -930,27 +930,20 @@ function DayReviewSection({
 
   return (
     <section>
-      <div className="grid grid-cols-[8px_minmax(0,1fr)] gap-x-4">
-        <span
-          className={`mt-2.5 size-2 rounded-full ${
-            day.pnl >= 0 ? "bg-[var(--green)]" : "bg-[var(--red)]"
-          }`}
-        />
-        <div className="min-w-0">
-          <div className="mb-5">
+      <div className="min-w-0">
+          <div className="mb-6">
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-              <h2 className="text-[24px] font-semibold leading-none tracking-[-0.01em] text-[var(--foreground)]">
-                {monthDayFmt.format(utcDate(day.date))}
+              <h2 className="text-[38px] font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
+                {day.label}, {monthDayFmt.format(utcDate(day.date))}
               </h2>
-              <span className="text-sm text-[var(--muted)]">{day.label}</span>
               <span
-                className={`font-mono text-[17px] font-semibold tabular-nums ${pnlClass(day.pnl)}`}
+                className={`font-mono text-[19px] font-semibold tabular-nums ${pnlClass(day.pnl)}`}
               >
                 {formatMoney(day.pnl)}
                 {day.pnl > 0 ? " ▲" : day.pnl < 0 ? " ▼" : ""}
               </span>
             </div>
-            <div className="mt-3 flex">
+            <div className="mt-4 flex">
               <span className="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-full bg-[var(--surface-2)] px-4 py-1.5 text-[13px] text-[var(--muted)] tabular-nums">
                 {day.trades} trades
                 <span aria-hidden="true" className="text-[var(--faint)]">·</span>
@@ -1001,7 +994,6 @@ function DayReviewSection({
           <div className="mt-6">
             <KeyTradePrompts prompts={keyTradePrompts} />
           </div>
-        </div>
       </div>
     </section>
   );
@@ -1036,10 +1028,6 @@ function ScopeHeader({
       <div className="h-px bg-[var(--hairline)]" />
     </div>
   );
-}
-
-function todayDisplayDate(range: ReviewRange): string {
-  return (range.days[0]?.day.displayDate ?? range.displayDate).replace(",", "");
 }
 
 function WeekSection({
@@ -1453,23 +1441,9 @@ export default async function TradeJournalReview({
           enableWeekScrollSpy={preset === "month"}
         />
         <div className="mt-8 min-w-0 space-y-8">
-          <header>
-            <h1 className="text-4xl font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
-              Journal
-            </h1>
-          </header>
-
           {preset === "week" ? (
             <ScopeHeader>
               <WeekHeader label={range.title} displayDate={range.displayDate} />
-            </ScopeHeader>
-          ) : null}
-          {preset === "today" ? (
-            <ScopeHeader>
-              <WeekHeader
-                label={range.anchor === currentEtDate() ? "Today" : range.title}
-                displayDate={todayDisplayDate(range)}
-              />
             </ScopeHeader>
           ) : null}
 

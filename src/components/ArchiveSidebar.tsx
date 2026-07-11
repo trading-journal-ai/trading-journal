@@ -91,7 +91,7 @@ export default function ArchiveSidebar({
     <aside className={`hidden md:block md:sticky md:top-24 md:self-start ${offsetClassName}`}>
       <nav
         aria-label={ariaLabel}
-        className="space-y-4 font-mono text-[13px] leading-5 text-[var(--muted)]"
+        className="space-y-4 text-[14px] leading-[2.1] text-[var(--muted)]"
       >
         {topLinks.length > 0 ? (
           <div className="space-y-2 pb-2">
@@ -99,11 +99,7 @@ export default function ArchiveSidebar({
               <Link
                 key={link.key}
                 href={link.href}
-                className={`block ${
-                  link.active
-                    ? "text-[var(--foreground)]"
-                    : "hover:text-[var(--foreground)]"
-                }`}
+                className="block font-semibold text-[var(--accent)] transition-colors hover:text-[var(--accent-strong)]"
               >
                 {link.label}
               </Link>
@@ -119,27 +115,38 @@ export default function ArchiveSidebar({
                 href={month.href}
                 className={`block ${
                   month.active
-                    ? "text-[var(--foreground)]"
-                    : "hover:text-[var(--foreground)]"
+                    ? "text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--faint)]"
+                    : "text-[14px] hover:text-[var(--foreground)]"
                 }`}
               >
                 {month.label}
               </Link>
               {month.active && month.weeks.length > 0 ? (
                 <div className="mt-3 space-y-2 pl-3">
-                  {month.weeks.map((week) => (
-                    <Link
-                      key={week.key}
-                      href={week.href}
-                      className={`block text-[13px] leading-5 ${
-                        (enableWeekScrollSpy ? activeSidebarWeekKey === week.key : week.active)
-                          ? "text-[var(--green)]"
-                          : "hover:text-[var(--foreground)]"
-                      }`}
-                    >
-                      {week.label}
-                    </Link>
-                  ))}
+                  {month.weeks.map((week) => {
+                    const weekActive = enableWeekScrollSpy
+                      ? activeSidebarWeekKey === week.key
+                      : week.active;
+                    return (
+                      <Link
+                        key={week.key}
+                        href={week.href}
+                        className={`flex items-center gap-2.5 text-[14px] ${
+                          weekActive
+                            ? "font-semibold text-[var(--foreground)]"
+                            : "pl-[15px] hover:text-[var(--foreground)]"
+                        }`}
+                      >
+                        {weekActive ? (
+                          <span
+                            aria-hidden="true"
+                            className="h-4 w-[3px] rounded-sm bg-[var(--accent)]"
+                          />
+                        ) : null}
+                        {week.label}
+                      </Link>
+                    );
+                  })}
                 </div>
               ) : null}
             </div>
