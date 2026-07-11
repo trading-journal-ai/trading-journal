@@ -22,7 +22,7 @@ export default function ReviewHeader({
 
   return (
     <header className="space-y-4">
-      <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--muted)]">
+      <div className="text-[13px] font-semibold text-[var(--muted)]">
         {eyebrow}
       </div>
       <div className="space-y-3">
@@ -31,11 +31,11 @@ export default function ReviewHeader({
             <h1 className="text-5xl font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
               {title}
             </h1>
-            <span className="font-mono text-base text-[var(--muted)]">{date}</span>
+            <span className="text-[15px] text-[var(--muted)]">{date}</span>
           </div>
         </div>
         {hasMeta ? (
-          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 font-mono text-[13px] font-medium text-[var(--muted)]">
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-[13px] font-medium text-[var(--muted)] tabular-nums">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               {metrics.map((metric, index) => (
                 <span key={`${metric.label}-${index}`} className="flex items-center gap-x-3">

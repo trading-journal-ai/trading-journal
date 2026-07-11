@@ -27,15 +27,15 @@ type SharedNoteComposerProps = {
 function SetupPatternCues() {
   return (
     <div className="space-y-2">
-      <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-        Setup / Pattern
+      <div className="text-[12px] font-semibold text-[var(--muted)]">
+        Setup / pattern
       </div>
       <div className="flex flex-wrap gap-2">
         {SETUP_PATTERN_CUES.map((cue) => (
           <span
             key={cue.value}
             title="Playbook placeholder"
-            className="inline-flex items-center rounded-full border border-[var(--border)] px-2.5 py-1 font-mono text-[11px] text-[var(--foreground)]"
+            className="inline-flex items-center rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-[11px] text-[var(--foreground)]"
           >
             {cue.label}
           </span>
@@ -117,7 +117,7 @@ export default function SharedNoteComposer({
         <div>
           {actionsSlot}
           {savedLocal ? (
-            <span className="ml-2 align-middle font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--muted)]">
+            <span className="ml-2 align-middle text-[11px] text-[var(--muted)]">
               Saved in this browser
             </span>
           ) : null}

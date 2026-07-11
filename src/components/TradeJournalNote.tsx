@@ -54,7 +54,7 @@ export default function TradeJournalNote({
               {symbol}
             </span>
             {primaryLabel ? (
-              <span className="rounded border border-[var(--border)] px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+              <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--muted)]">
                 {primaryLabel}
               </span>
             ) : null}

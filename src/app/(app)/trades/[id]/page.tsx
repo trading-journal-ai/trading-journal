@@ -141,7 +141,7 @@ export default async function TradeDetailPage({
 
       <div className="mb-0">
         <ReviewHeader
-          eyebrow="Trade Detail"
+          eyebrow="Trade detail"
           title={
             <>
               {trade.symbol}
@@ -178,7 +178,7 @@ export default async function TradeDetailPage({
 
         <aside className="space-y-8">
           <section aria-label="Executions">
-            <div className="mb-5 flex w-full items-center justify-between gap-x-6 border-b border-[var(--hairline)] pb-5 font-mono text-[13px] font-medium text-[var(--muted)]">
+            <div className="mb-5 flex w-full items-center justify-between gap-x-6 border-b border-[var(--hairline)] pb-5 text-[13px] font-medium text-[var(--muted)] tabular-nums">
               {executionStats.map((stat) => (
                 <div key={stat.label} className="inline-flex items-baseline gap-x-2 whitespace-nowrap">
                   <span>{stat.label}</span>
@@ -188,27 +188,27 @@ export default async function TradeDetailPage({
                 </div>
               ))}
             </div>
-            <div className="grid grid-cols-4 gap-x-2 gap-y-2 font-mono text-[12px]">
-              <div className="pb-1 text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Time</div>
-              <div className="pb-1 text-center text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Side</div>
-              <div className="pb-1 text-center text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Shares</div>
-              <div className="pb-1 text-right text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Price</div>
+            <div className="grid grid-cols-4 gap-x-2 gap-y-2 text-[12px]">
+              <div className="pb-1 text-[11px] text-[var(--muted)]">Time</div>
+              <div className="pb-1 text-center text-[11px] text-[var(--muted)]">Side</div>
+              <div className="pb-1 text-center text-[11px] text-[var(--muted)]">Shares</div>
+              <div className="pb-1 text-right text-[11px] text-[var(--muted)]">Price</div>
               {execs.map((e) => (
                 <div key={e.id} className="contents">
-                  <div className="tabular-nums text-[var(--foreground)]">{fmtTime(e.executedAt).slice(0, 5)}</div>
+                  <div className="font-mono tabular-nums text-[var(--foreground)]">{fmtTime(e.executedAt).slice(0, 5)}</div>
                   <div className="text-center" style={{ color: e.side === "buy" ? "var(--green)" : "var(--red)" }}>
                     {e.side.toUpperCase().slice(0, 1)}
                   </div>
-                  <div className="text-center tabular-nums text-[var(--foreground)]">{e.quantity.toLocaleString()}</div>
-                  <div className="text-right tabular-nums text-[var(--foreground)]">{fmtPrice(e.price)}</div>
+                  <div className="text-center font-mono tabular-nums text-[var(--foreground)]">{e.quantity.toLocaleString()}</div>
+                  <div className="text-right font-mono tabular-nums text-[var(--foreground)]">{fmtPrice(e.price)}</div>
                 </div>
               ))}
             </div>
           </section>
 
           <section className="space-y-4">
-            <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-              Trade Note
+            <h2 className="text-[13px] font-semibold text-[var(--accent)]">
+              ✎ Trade note
             </h2>
 
             {notes.length > 0 ? (

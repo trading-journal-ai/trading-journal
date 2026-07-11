@@ -158,7 +158,7 @@ function TradeCycleRail({
             cycles.map((cycle, index) => (
               <article
                 key={cycle.id}
-                className="border-b border-[var(--hairline)] pb-5 font-mono text-[12px] last:border-b-0"
+                className="border-b border-[var(--hairline)] pb-5 text-[12px] last:border-b-0"
               >
                 <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-3 gap-y-1">
                   <h2 className="text-[13px] font-semibold text-[var(--foreground)]">Trade {index + 1}</h2>
@@ -167,18 +167,18 @@ function TradeCycleRail({
                   </span>
                 </div>
                 <div className="mt-4 grid grid-cols-4 gap-x-2 gap-y-1.5">
-                  <div className="pb-0.5 text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Time</div>
-                  <div className="pb-0.5 text-center text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Side</div>
-                  <div className="pb-0.5 text-center text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Shares</div>
-                  <div className="pb-0.5 text-right text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Price</div>
+                  <div className="pb-0.5 text-[11px] text-[var(--muted)]">Time</div>
+                  <div className="pb-0.5 text-center text-[11px] text-[var(--muted)]">Side</div>
+                  <div className="pb-0.5 text-center text-[11px] text-[var(--muted)]">Shares</div>
+                  <div className="pb-0.5 text-right text-[11px] text-[var(--muted)]">Price</div>
                   {cycle.executions.map((execution) => (
                     <div key={execution.id} className="contents">
-                      <div className="tabular-nums text-[var(--foreground)]">{fmtTime(execution.executedAt).slice(0, 5)}</div>
+                      <div className="font-mono tabular-nums text-[var(--foreground)]">{fmtTime(execution.executedAt).slice(0, 5)}</div>
                       <div className="text-center" style={{ color: execution.side.toLowerCase() === "buy" ? "var(--green)" : "var(--red)" }}>
                         {execution.side.toUpperCase().slice(0, 1)}
                       </div>
-                      <div className="text-center tabular-nums text-[var(--foreground)]">{execution.quantity.toLocaleString()}</div>
-                      <div className="text-right tabular-nums text-[var(--foreground)]">{fmtPrice(execution.price)}</div>
+                      <div className="text-center font-mono tabular-nums text-[var(--foreground)]">{execution.quantity.toLocaleString()}</div>
+                      <div className="text-right font-mono tabular-nums text-[var(--foreground)]">{fmtPrice(execution.price)}</div>
                     </div>
                   ))}
                 </div>
@@ -189,7 +189,7 @@ function TradeCycleRail({
                         <Link
                           key={tradeId}
                           href={`/trades/${tradeId}?returnTo=${encodeURIComponent(returnTo)}`}
-                          className="text-[var(--blue)] hover:underline"
+                          className="text-[var(--accent)] hover:underline"
                         >
                           {cycle.tradeIds.length === 1 ? "View trade ->" : `Trade ${tradeIndex + 1} ->`}
                         </Link>
@@ -200,7 +200,7 @@ function TradeCycleRail({
               </article>
             ))
           ) : (
-            <div className="py-1 font-mono text-[13px] text-[var(--muted)]">No trade cycles</div>
+            <div className="py-1 text-[13px] text-[var(--muted)]">No trade cycles</div>
           )}
         </div>
       </section>
@@ -232,18 +232,18 @@ function TickerReviewPanel({
     <section className="mt-6 rounded-md border border-[var(--hairline)] bg-[var(--surface)]/35 px-4 py-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-            Ticker Review
+          <div className="text-[13px] font-semibold text-[var(--muted)]">
+            Ticker review
           </div>
           <h2 className="mt-2 text-lg font-semibold tracking-tight text-[var(--foreground)]">
             How did I trade {symbol}?
           </h2>
         </div>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 font-mono text-[12px] sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[12px] sm:grid-cols-4">
           {stats.map((stat) => (
             <div key={stat.label}>
-              <div className="uppercase tracking-[0.14em] text-[var(--muted)]">{stat.label}</div>
-              <div className={`mt-1 tabular-nums text-[var(--foreground)] ${stat.className ?? ""}`}>{stat.value}</div>
+              <div className="text-[var(--muted)]">{stat.label}</div>
+              <div className={`mt-1 font-mono tabular-nums text-[var(--foreground)] ${stat.className ?? ""}`}>{stat.value}</div>
             </div>
           ))}
         </div>
@@ -264,15 +264,15 @@ function TickerReviewPanel({
       </form>
 
       <div className="mt-5 border-t border-[var(--hairline)] pt-4">
-        <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-          Noted Trades
+        <div className="text-[13px] font-semibold text-[var(--muted)]">
+          Noted trades
         </div>
         {tradeNotes.length > 0 ? (
           <div className="mt-3 space-y-3">
             {tradeNotes.map(({ trade, note: tradeNote, index }) => (
               <article key={tradeNote.id} className="rounded-md border border-[var(--hairline)] px-3 py-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-3">
-                  <div className="font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--foreground)]">
+                  <div className="text-[13px] font-semibold text-[var(--foreground)]">
                     Trade {index + 1}
                   </div>
                   <div className={`font-mono text-[12px] tabular-nums ${pnlClass(netPnl(trade))}`}>
@@ -422,14 +422,14 @@ export default async function TickerDayReviewPage({
       <div className="mb-0 grid gap-8 lg:grid-cols-[minmax(0,1fr)_260px]">
         <div className="min-w-0">
           <ReviewHeader
-            eyebrow="Ticker Review"
+            eyebrow="Ticker review"
             title={symbol}
             date={fmtDate(start)}
             metrics={summaryStats}
             action={(
               <Link
                 href={backHref}
-                className="text-[var(--blue)] hover:underline"
+                className="text-[var(--accent)] hover:underline"
               >
                 {"<-"} Back
               </Link>
