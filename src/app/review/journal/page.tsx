@@ -21,6 +21,12 @@ const wireframes = [
 
 const prototypes = [
   {
+    title: "AI-first daily recap",
+    href: "/review/journal/ai-first-recap",
+    label: "Prototype",
+    body: "Interactive evidence-led recap: lightweight trader context, one Coach focus, explanatory visuals, and a selected-trade review queue.",
+  },
+  {
     title: "Daily recap flow prototype",
     href: "/review/journal/prototype-flow",
     label: "Prototype",
