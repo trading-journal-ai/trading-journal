@@ -532,25 +532,25 @@ function FilterBar({ filters, tagOptions }: { filters: ReportFilters; tagOptions
       <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_1fr_auto]">
         <label className="space-y-1">
           <span className="block text-sm font-semibold text-[var(--muted)]">Symbol</span>
-          <input name="symbol" defaultValue={filters.symbol ?? ""} placeholder="Symbol" className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[#58a6ff]" />
+          <input name="symbol" defaultValue={filters.symbol ?? ""} placeholder="Symbol" className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[var(--accent)]" />
         </label>
         <label className="space-y-1">
           <span className="block text-sm font-semibold text-[var(--muted)]">Tag</span>
-          <select name="tag" defaultValue={filters.tag ?? ""} className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[#58a6ff]">
+          <select name="tag" defaultValue={filters.tag ?? ""} className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[var(--accent)]">
             <option value="">All tags</option>
             {tagOptions.map((tagOption) => <option key={tagOption.name} value={tagOption.name}>{tagOption.name}</option>)}
           </select>
         </label>
         <label className="space-y-1">
           <span className="block text-sm font-semibold text-[var(--muted)]">Side</span>
-          <select name="side" defaultValue={filters.side ?? ""} className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[#58a6ff]">
+          <select name="side" defaultValue={filters.side ?? ""} className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[var(--accent)]">
             <option value="">All sides</option>
             <option value="long">Long</option>
             <option value="short">Short</option>
           </select>
         </label>
         <div className="flex items-end">
-          <button type="submit" className="h-10 rounded-md border border-[#58a6ff] px-3 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--surface)]">Apply</button>
+          <button type="submit" className="h-10 rounded-md border border-[var(--accent)] px-3 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--surface)]">Apply</button>
         </div>
       </div>
     </form>
@@ -664,7 +664,7 @@ function StatsGrid({ sections }: { sections: StatSection[] }) {
         Stats
       </h2>
 
-      <div className="grid gap-[2px] overflow-hidden rounded-md bg-black p-[2px]">
+      <div className="grid gap-[2px] overflow-hidden rounded-md bg-[var(--border)] p-[2px]">
         {rows.map((row, rowIndex) => {
           const precedingCells = rows.slice(0, rowIndex).reduce((sum, current) => sum + current.length, 0);
           return (
@@ -674,7 +674,7 @@ function StatsGrid({ sections }: { sections: StatSection[] }) {
                 return (
                   <div
                     key={stat.label}
-                    className={`flex min-h-14 items-center bg-[#1a2432] px-12 py-3 ${gridCornerClass(cellPosition, cells.length, 2)}`}
+                    className={`flex min-h-14 items-center bg-[var(--surface)] px-12 py-3 ${gridCornerClass(cellPosition, cells.length, 2)}`}
                   >
                     <StatCell stat={stat} />
                   </div>
@@ -693,7 +693,7 @@ function CountChart({ title, buckets }: { title: string; buckets: Bucket[] }) {
   return (
     <section>
       <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">{title}</h2>
-      <div className="mt-4 rounded-[6px] bg-[#1a2432]">
+      <div className="mt-4 rounded-[6px] bg-[var(--surface)]">
         <div className="space-y-4 px-4 py-4">
           {buckets.map((bucket) => {
             const width = bucket.count > 0 ? `${Math.max(2, (bucket.count / max) * 100)}%` : "0%";
@@ -703,7 +703,7 @@ function CountChart({ title, buckets }: { title: string; buckets: Bucket[] }) {
                   <div className="font-medium text-[var(--foreground)]">{bucket.label}</div>
                   <div className="text-right font-semibold text-[var(--foreground)]">{bucket.count.toLocaleString()}</div>
                 </div>
-                <div className="h-2 bg-[#323b46]" style={{ borderRadius: 2 }}>
+                <div className="h-2 bg-[var(--surface-2)]" style={{ borderRadius: 2 }}>
                   <div className="h-2 bg-[var(--green)]" style={{ width, borderRadius: 2 }} />
                 </div>
               </div>
@@ -720,7 +720,7 @@ function PnlChart({ title, buckets }: { title: string; buckets: Bucket[] }) {
   return (
     <section>
       <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">{title}</h2>
-      <div className="mt-4 rounded-[6px] bg-[#1a2432]">
+      <div className="mt-4 rounded-[6px] bg-[var(--surface)]">
         <div className="space-y-4 px-4 py-4">
           {buckets.map((bucket) => {
             const width = bucket.pnl !== 0 ? `${Math.max(2, (Math.abs(bucket.pnl) / maxAbs) * 100)}%` : "0%";
@@ -730,7 +730,7 @@ function PnlChart({ title, buckets }: { title: string; buckets: Bucket[] }) {
                   <div className="font-medium text-[var(--foreground)]">{bucket.label}</div>
                   <div className="text-right font-semibold text-[var(--foreground)]">{fmtMoney(bucket.pnl)}</div>
                 </div>
-                <div className="grid h-2 grid-cols-2 bg-[#323b46]" style={{ borderRadius: 2 }}>
+                <div className="grid h-2 grid-cols-2 bg-[var(--surface-2)]" style={{ borderRadius: 2 }}>
                   <div className="flex justify-end">
                     {bucket.pnl < 0 && <div className="h-2 bg-[var(--red)]" style={{ width, borderRadius: 2 }} />}
                   </div>
@@ -919,13 +919,13 @@ function PerformanceSnapshot({ sections }: { sections: StatSection[] }) {
   return (
     <div className="flex h-full flex-col">
       <h3 className="mb-4 font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">At a glance</h3>
-      <div className="grid flex-1 auto-rows-fr grid-cols-2 gap-[2px] overflow-hidden rounded-md bg-black p-[2px]">
+      <div className="grid flex-1 auto-rows-fr grid-cols-2 gap-[2px] overflow-hidden rounded-md bg-[var(--border)] p-[2px]">
         {stats.map((stat, index) => {
           const countValue = stat.value.match(/^(\d+)\s+\(([^)]+)\)$/);
           return (
             <div
               key={stat.label}
-              className={`flex min-h-24 flex-col justify-center bg-[#1a2432] px-4 py-4 ${gridCornerClass(index, stats.length, 2)}`}
+              className={`flex min-h-24 flex-col justify-center bg-[var(--surface)] px-4 py-4 ${gridCornerClass(index, stats.length, 2)}`}
             >
               <div className="text-xs font-medium leading-snug text-[var(--muted)]">{stat.label}</div>
               <div className="mt-3 font-mono text-xl font-semibold leading-none tabular-nums text-[var(--foreground)]">
@@ -987,7 +987,7 @@ function PnlModule({
           </h2>
           <span
             aria-label="Analytics settings"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] transition-colors group-hover:border-[var(--blue)] group-hover:text-[var(--foreground)]"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--muted)] transition-colors group-hover:border-[var(--accent)] group-hover:text-[var(--foreground)]"
           >
             <AnalyticsSettingsIcon />
           </span>
@@ -1005,8 +1005,8 @@ function PnlModule({
           <h3 className="mb-4 font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">
             Cumulative P&L
           </h3>
-          <div className="flex-1 overflow-hidden rounded-md bg-black p-[2px]">
-            <div className="h-full rounded-md bg-[#1a2432] py-5 pl-0 pr-6">
+          <div className="flex-1 overflow-hidden rounded-md bg-[var(--border)] p-[2px]">
+            <div className="h-full rounded-md bg-[var(--surface)] py-5 pl-0 pr-6">
               <CumulativePnlLine points={points} />
             </div>
           </div>
