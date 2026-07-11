@@ -911,6 +911,25 @@ function DayReviewSection({
     ? topSurprise.description
     : "Clean session — nothing contradicted your baseline. Add the day's context so the coach read can go deeper.";
 
+  const bestPrompt = keyTradePrompts.find((prompt) => prompt.label === "Best trade");
+  const whatWorked: string[] = [];
+  if (bestPrompt && bestPrompt.pnl > 0) {
+    whatWorked.push(`${bestPrompt.symbol} led the session at ${formatMoney(bestPrompt.pnl)}.`);
+  }
+  if (day.accuracy != null) {
+    whatWorked.push(`Win rate held at ${day.accuracy}% across ${day.trades} trades.`);
+  }
+  coachRead.history.signals
+    .filter((signal) => signal.vote > 0)
+    .slice(0, 1)
+    .forEach((signal) => whatWorked.push(`${signal.label} improved versus your baseline.`));
+
+  const whatCost: string[] = [];
+  if (worstTrade) {
+    whatCost.push(`${worstTrade.symbol} was the day's worst trade at ${formatMoney(worstTrade.pnl)}.`);
+  }
+  coachRead.surprises.slice(0, 2).forEach((surprise) => whatCost.push(surprise.description));
+
   return (
     <section>
       <div className="min-w-0">
@@ -959,6 +978,12 @@ function DayReviewSection({
             <p className="mt-3 text-[20px] font-medium leading-[1.55] tracking-[-0.005em] text-[var(--foreground)] [text-wrap:pretty]">
               {verdictText}
             </p>
+            {whatWorked.length > 0 || whatCost.length > 0 ? (
+              <div className="mt-9 grid gap-x-12 gap-y-8 sm:grid-cols-2">
+                <FindingColumn label="What worked" tone="positive" items={whatWorked} />
+                <FindingColumn label="What cost you" tone="negative" items={whatCost} />
+              </div>
+            ) : null}
           </div>
 
           <div className="grid max-w-[665px] gap-6 lg:grid-cols-[minmax(0,1fr)_200px] lg:items-start">
@@ -985,6 +1010,36 @@ function DayReviewSection({
           </div>
       </div>
     </section>
+  );
+}
+
+function FindingColumn({
+  label,
+  tone,
+  items,
+}: {
+  label: string;
+  tone: "positive" | "negative";
+  items: string[];
+}) {
+  if (items.length === 0) return null;
+  const marker = tone === "positive" ? "+" : "−";
+  const markerColor = tone === "positive" ? "text-[var(--green)]" : "text-[var(--red)]";
+  return (
+    <div>
+      <div className="text-[16px] font-semibold text-[var(--foreground)]">{label}</div>
+      <ul className="mt-3.5 grid gap-3">
+        {items.map((item, index) => (
+          <li
+            key={index}
+            className="grid grid-cols-[20px_1fr] text-[15px] leading-6 text-[var(--body)]"
+          >
+            <span className={markerColor}>{marker}</span>
+            <span className="[text-wrap:pretty]">{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
