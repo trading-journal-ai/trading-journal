@@ -896,7 +896,7 @@ function KeyTradePrompts({ prompts }: { prompts: KeyTradePrompt[] }) {
           <a
             key={prompt.key}
             href={prompt.href}
-            className="rounded-md border border-[var(--hairline)] px-3 py-3 transition-colors hover:border-[var(--blue)]"
+            className="rounded-md border border-[var(--hairline)] px-3 py-3 transition-colors hover:border-[var(--accent)]"
           >
             <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
               {prompt.label}
@@ -1110,14 +1110,14 @@ function EmptyReviewState() {
 
 function confidenceClass(label: SessionFactPack["confidence"]["label"]) {
   if (label === "high") return "text-[var(--green)]";
-  if (label === "medium") return "text-[var(--blue)]";
+  if (label === "medium") return "text-[var(--accent)]";
   return "text-[var(--muted)]";
 }
 
 function trendClass(label: SessionFactPack["history"]["trendLabel"]) {
   if (label === "improvement") return "text-[var(--green)]";
   if (label === "deterioration") return "text-[var(--red)]";
-  if (label === "mixed") return "text-[var(--blue)]";
+  if (label === "mixed") return "text-[var(--accent)]";
   return "text-[var(--muted)]";
 }
 
@@ -1241,7 +1241,7 @@ function StarterCoachRead({
             <input type="hidden" name="measure" value={JSON.stringify(experiment.measure)} />
             <button
               type="submit"
-              className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+              className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
             >
               {savedExperiment ? "Update saved experiment" : "Save experiment"}
             </button>
@@ -1286,7 +1286,7 @@ function StarterCoachRead({
               <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
               <button
                 type="submit"
-                className="h-8 rounded-md border border-[var(--blue)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--foreground)] transition-colors hover:bg-[var(--blue)] hover:text-white"
+                className="h-8 rounded-md border border-[var(--foreground)] bg-[var(--foreground)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--background)] transition-opacity hover:opacity-90"
               >
                 {generatedReview ? "Regenerate coach review" : "Ask Coach"}
               </button>
@@ -1296,7 +1296,7 @@ function StarterCoachRead({
               <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
               <button
                 type="submit"
-                className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+                className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
               >
                 {savedReview ? "Refresh draft" : "Save draft"}
               </button>
@@ -1322,7 +1322,7 @@ function StarterCoachRead({
 
         {generatedReview ? (
           <div className="mt-5 space-y-5">
-            <div className="border-l border-[var(--blue)] pl-4">
+            <div className="border-l border-[var(--coach)] pl-4">
               <div className="font-mono text-[11px] uppercase text-[var(--muted)]">
                 {readOnly ? "Static demo coach verdict" : "AI coach verdict"}
               </div>
