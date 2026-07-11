@@ -110,7 +110,7 @@ export default function SharedNoteComposer({
           disabled={disabled}
           defaultValue={initialValue}
           placeholder={placeholder}
-          className="min-h-[128px] w-full resize-y rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-sm leading-6 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:border-[var(--blue)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="min-h-[128px] w-full resize-y rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-sm leading-6 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"
         />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -136,7 +136,7 @@ export default function SharedNoteComposer({
             type={localMode ? "button" : "submit"}
             onClick={localMode ? handleLocalSave : undefined}
             disabled={disabled || pending}
-            className="h-10 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-10 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pending ? pendingLabel : submitLabel}
           </button>

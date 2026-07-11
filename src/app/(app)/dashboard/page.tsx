@@ -113,7 +113,7 @@ function Section({
     <section
       className={`rounded-md border p-5 ${
         emphasis
-          ? "border-[var(--blue)] bg-[var(--surface)]"
+          ? "border-[var(--accent)] bg-[var(--surface)]"
           : "border-[var(--hairline)] bg-transparent"
       } ${className}`}
     >
@@ -128,7 +128,7 @@ function PhaseCard({ mode }: { mode: (typeof phaseModes)[number] }) {
   return (
     <div
       className={`rounded-md border p-4 ${
-        mode.active ? "border-[var(--blue)] bg-[var(--surface)]" : "border-[var(--hairline)]"
+        mode.active ? "border-[var(--accent)] bg-[var(--surface)]" : "border-[var(--hairline)]"
       }`}
     >
       <div className="flex items-center justify-between gap-3">
@@ -163,7 +163,7 @@ function FocusItem({ label, value }: { label: string; value: string }) {
 }
 
 function PulseItem({ label, value, tone }: { label: string; value: string; tone: string }) {
-  const color = tone === "focus" ? "text-[var(--blue)]" : "text-[var(--foreground)]";
+  const color = tone === "focus" ? "text-[var(--accent)]" : "text-[var(--foreground)]";
 
   return (
     <div className="rounded border border-[var(--hairline)] px-3 py-2">
@@ -207,13 +207,13 @@ export default function DashboardPage() {
           <div className="flex flex-wrap gap-2">
             <Link
               href="/journal"
-              className="inline-flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--body)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+              className="inline-flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--body)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
             >
               Open Journal
             </Link>
             <Link
               href="/import"
-              className="inline-flex h-10 items-center rounded-md border border-[var(--blue)] px-3 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface)]"
+              className="inline-flex h-10 items-center rounded-md border border-[var(--accent)] px-3 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface)]"
             >
               Import / refresh
             </Link>
@@ -242,7 +242,7 @@ export default function DashboardPage() {
               ))}
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
-              <button className="h-10 rounded-md border border-[var(--blue)] px-3 text-sm font-semibold text-[var(--foreground)]">
+              <button className="h-10 rounded-md border border-[var(--accent)] px-3 text-sm font-semibold text-[var(--foreground)]">
                 Save check-in to Journal
               </button>
               <button className="h-10 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--body)]">

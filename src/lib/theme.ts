@@ -15,6 +15,20 @@ export function readAppliedTheme(): Theme {
   return isTheme(current) ? current : DEFAULT_THEME;
 }
 
+/**
+ * The persisted theme from localStorage — independent of when ThemeBoot runs,
+ * so controls can sync to it on mount without clobbering it.
+ */
+export function readStoredTheme(): Theme {
+  if (typeof window === "undefined") return DEFAULT_THEME;
+  try {
+    const stored = window.localStorage.getItem("theme");
+    return isTheme(stored) ? stored : DEFAULT_THEME;
+  } catch {
+    return DEFAULT_THEME;
+  }
+}
+
 export function applyTheme(theme: Theme): void {
   document.documentElement.dataset.theme = theme;
   try {

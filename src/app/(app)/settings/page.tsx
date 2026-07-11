@@ -46,7 +46,7 @@ function statusText(state: SetupState) {
 
 function statusClassName(state: SetupState) {
   if (state === "complete") return "border-[var(--green)] text-[var(--green)]";
-  if (state === "attention") return "border-[var(--blue)] text-[var(--blue)]";
+  if (state === "attention") return "border-[var(--accent)] text-[var(--accent)]";
   return "border-[var(--hairline)] text-[var(--muted)]";
 }
 
@@ -157,7 +157,7 @@ function SetupRow({
       </div>
       <Link
         href={href}
-        className="inline-flex h-10 items-center justify-center rounded-md border border-[var(--border)] px-4 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+        className="inline-flex h-10 items-center justify-center rounded-md border border-[var(--border)] px-4 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
       >
         {action}
       </Link>
@@ -244,7 +244,7 @@ export default async function SettingsPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <Link
               href="/import"
-              className="rounded-md border border-[var(--border)] px-4 py-4 transition-colors hover:border-[var(--blue)]"
+              className="rounded-md border border-[var(--border)] px-4 py-4 transition-colors hover:border-[var(--accent)]"
             >
               <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
                 Broker data
@@ -313,7 +313,7 @@ export default async function SettingsPage() {
           <div className="flex flex-wrap gap-3">
             <a
               href="/api/export/trades"
-              className="inline-flex h-10 items-center rounded-md bg-[var(--blue)] px-4 text-sm font-semibold text-black"
+              className="inline-flex h-10 items-center rounded-md bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--background)]"
             >
               Export trades CSV
             </a>

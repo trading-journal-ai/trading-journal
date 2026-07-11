@@ -94,8 +94,8 @@ export default function ReportRangeFilter({
           onClick={toggleOpen}
           className={`flex h-10 items-center gap-2 rounded-md border bg-[var(--surface)] px-4 text-sm font-semibold transition-colors ${
             open || label
-              ? "border-[#58a6ff] text-[var(--foreground)]"
-              : "border-[var(--border)] text-[var(--muted)] hover:border-[#58a6ff]"
+              ? "border-[var(--accent)] text-[var(--foreground)]"
+              : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)]"
           }`}
         >
           <svg
@@ -113,7 +113,7 @@ export default function ReportRangeFilter({
 
         <Link
           href={clearHref}
-          className="flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm text-[var(--muted)] hover:border-[#58a6ff]"
+          className="flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm text-[var(--muted)] hover:border-[var(--accent)]"
         >
           Clear
         </Link>
@@ -128,7 +128,7 @@ export default function ReportRangeFilter({
                 ref={fromInputRef}
                 type="date"
                 defaultValue={from ?? ""}
-                className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:border-[#58a6ff]"
+                className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:border-[var(--accent)]"
               />
             </label>
 
@@ -138,7 +138,7 @@ export default function ReportRangeFilter({
                 ref={toInputRef}
                 type="date"
                 defaultValue={to ?? ""}
-                className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:border-[#58a6ff]"
+                className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:border-[var(--accent)]"
               />
             </label>
 
@@ -146,7 +146,7 @@ export default function ReportRangeFilter({
               <button
                 type="button"
                 onClick={applyRange}
-                className="h-10 rounded-md border border-[#58a6ff] px-3 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--background)]"
+                className="h-10 rounded-md border border-[var(--accent)] px-3 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--background)]"
               >
                 Apply
               </button>
