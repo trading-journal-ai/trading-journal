@@ -541,7 +541,9 @@ export default async function TradesPage({
               return (
                 <RowLink
                   key={t.id}
-                  href={`/trades/${t.id}?returnTo=${encodeURIComponent(currentHref)}`}
+                  href={t.entryAt == null
+                    ? currentHref
+                    : `/trades/review?date=${etDateString(t.entryAt)}&symbol=${t.symbol}&trade=${t.id}&returnTo=${encodeURIComponent(currentHref)}`}
                   className="border-b border-[var(--hairline)] last:border-0 hover:bg-[var(--surface)] cursor-pointer"
                 >
                   <td className="px-3 py-3 whitespace-nowrap">{fmtDate(t.entryAt)}</td>
@@ -550,7 +552,7 @@ export default async function TradesPage({
                       t.symbol
                     ) : (
                       <Link
-                        href={`/trades/review?date=${etDateString(t.entryAt)}&symbol=${t.symbol}&returnTo=${encodeURIComponent(currentHref)}`}
+                        href={`/trades/review?date=${etDateString(t.entryAt)}&symbol=${t.symbol}&trade=${t.id}&returnTo=${encodeURIComponent(currentHref)}`}
                         className="hover:text-[var(--accent)] hover:underline"
                       >
                         {t.symbol}

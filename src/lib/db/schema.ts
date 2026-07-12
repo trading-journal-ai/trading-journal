@@ -171,6 +171,30 @@ export const journalEntries = sqliteTable(
   ],
 );
 
+/** Ticker/day readiness signal for the daily Coach batch. */
+export const tickerReviews = sqliteTable(
+  "ticker_reviews",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    accountId: integer("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    date: text("date").notNull(),
+    symbol: text("symbol").notNull(),
+    status: text("status", { enum: ["ready"] }).notNull().default("ready"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    uniqueIndex("ticker_reviews_account_date_symbol_unq").on(t.accountId, t.date, t.symbol),
+    index("ticker_reviews_account_date_idx").on(t.accountId, t.date),
+  ],
+);
+
 /** Coach-generated experiment saved back into the journal loop. */
 export const coachExperiments = sqliteTable(
   "coach_experiments",

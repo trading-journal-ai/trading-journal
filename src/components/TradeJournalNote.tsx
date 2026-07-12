@@ -12,21 +12,15 @@ import { demoTradeNoteKey } from "@/lib/demoLocalNotes";
 export default function TradeJournalNote({
   noteId,
   tradeId,
-  symbol,
   text,
-  primaryLabel,
+  setupPattern,
   readOnly = false,
-  showHeader = false,
-  showFormHeader = false,
 }: {
   noteId: number;
   tradeId: number;
-  symbol: string;
   text: string;
-  primaryLabel: string | null;
+  setupPattern: string | null;
   readOnly?: boolean;
-  showHeader?: boolean;
-  showFormHeader?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [state, formAction, pending] = useActionState(updateJournalEntryStateAction, null);
@@ -41,29 +35,21 @@ export default function TradeJournalNote({
 
   if (!editing) {
     return (
-      <button
-        type="button"
-        onClick={() => setEditing(true)}
-        data-testid="trade-journal-note"
-        className="block w-full text-left"
-        title="Click to edit"
-      >
-        {showHeader ? (
-          <div className="mb-2 flex min-w-0 items-center gap-2">
-            <span className="text-[15px] font-semibold text-[var(--foreground)]">
-              {symbol}
-            </span>
-            {primaryLabel ? (
-              <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--muted)]">
-                {primaryLabel}
-              </span>
-            ) : null}
-          </div>
+      <div data-testid="trade-journal-note">
+        {setupPattern ? (
+          <div className="mb-2 font-mono text-[11px] text-[var(--muted)]">{setupPattern}</div>
         ) : null}
         <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">
           {displayText || "Add a trade note."}
         </p>
-      </button>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="mt-3 text-[13px] font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]"
+        >
+          Edit note
+        </button>
+      </div>
     );
   }
 
@@ -72,12 +58,10 @@ export default function TradeJournalNote({
       <input type="hidden" name="noteId" value={noteId} />
       <input type="hidden" name="tradeId" value={tradeId} />
       <TradeNoteFormFields
-        symbol={symbol}
-        defaultPrimaryLabel={primaryLabel}
+        defaultSetupPattern={setupPattern}
         defaultText={displayText}
         pending={pending}
         onCancel={() => setEditing(false)}
-        showHeader={showFormHeader}
         localStorageKey={localStorageKey}
         onLocalSave={(value) => {
           setDisplayText(value);
