@@ -65,7 +65,7 @@ export default function ImportForm() {
           setDismissedResult(true);
         }}
         disabled={pending}
-        className="inline-flex h-10 cursor-pointer items-center justify-center rounded-md bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--background)] disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex h-10 cursor-pointer items-center justify-center rounded-md bg-[var(--foreground)] px-4 text-sm font-semibold text-[var(--background)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {pending ? "Importing..." : "Import"}
       </button>
@@ -317,7 +317,7 @@ function ImportSuccessSummary({
         <Link
           href={recapHref}
           onClick={onReviewClick}
-          className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--background)]"
+          className="rounded-md bg-[var(--foreground)] px-4 py-2 text-sm font-semibold text-[var(--background)] transition-opacity hover:opacity-90"
         >
           Open journal review
         </Link>
@@ -344,7 +344,7 @@ function ImportErrorSummary({
         <button
           type="button"
           onClick={onChooseFile}
-          className="cursor-pointer rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--background)]"
+          className="cursor-pointer rounded-md bg-[var(--foreground)] px-4 py-2 text-sm font-semibold text-[var(--background)] transition-opacity hover:opacity-90"
         >
           Choose another CSV
         </button>

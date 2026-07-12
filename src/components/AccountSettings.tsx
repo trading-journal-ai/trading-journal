@@ -78,7 +78,7 @@ export default function AccountSettings({
                     <input type="hidden" name="name" value={editingName} />
                     <button
                       type="submit"
-                      className="h-10 rounded-md bg-[var(--accent)] px-3 text-sm font-semibold text-[var(--background)]"
+                      className="h-10 rounded-md bg-[var(--foreground)] px-3 text-sm font-semibold text-[var(--background)] transition-opacity hover:opacity-90"
                     >
                       Save
                     </button>
@@ -144,7 +144,7 @@ export default function AccountSettings({
         />
         <button
           type="submit"
-          className="h-10 rounded-md bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--background)]"
+          className="h-10 rounded-md bg-[var(--foreground)] px-4 text-sm font-semibold text-[var(--background)] transition-opacity hover:opacity-90"
         >
           Add account
         </button>
