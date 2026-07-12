@@ -171,6 +171,20 @@ export const journalEntries = sqliteTable(
   ],
 );
 
+/** Journal entry <-> Tag join (ticker/day/week/month observations). */
+export const journalEntryTags = sqliteTable(
+  "journal_entry_tags",
+  {
+    journalEntryId: integer("journal_entry_id")
+      .notNull()
+      .references(() => journalEntries.id, { onDelete: "cascade" }),
+    tagId: integer("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.journalEntryId, t.tagId] })],
+);
+
 /** Ticker/day readiness signal for the daily Coach batch. */
 export const tickerReviews = sqliteTable(
   "ticker_reviews",

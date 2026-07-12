@@ -2,18 +2,20 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
-import { addTradeAttachmentAction, setTradeTagAction } from "@/app/journal/actions";
+import { addTradeAttachmentAction, setTickerReviewTagAction, setTradeTagAction } from "@/app/journal/actions";
 
 export type ReviewTagOption = { name: string; uses: number };
 export type ReviewAttachment = { id: number; filePath: string; caption: string | null };
 
 export function TradeTagPicker({
   tradeId,
+  scopeKey,
   selectedTags,
   options,
   readOnly,
 }: {
-  tradeId: number;
+  tradeId?: number;
+  scopeKey?: string;
   selectedTags: string[];
   options: ReviewTagOption[];
   readOnly: boolean;
@@ -60,11 +62,16 @@ export function TradeTagPicker({
     });
 
     const formData = new FormData();
-    formData.set("tradeId", String(tradeId));
+    if (tradeId != null) formData.set("tradeId", String(tradeId));
+    if (scopeKey) formData.set("scopeKey", scopeKey);
     formData.set("tagName", tagName);
     formData.set("selected", String(nextSelected));
     startTransition(async () => {
-      const result = await setTradeTagAction(formData);
+      const result = tradeId != null
+        ? await setTradeTagAction(formData)
+        : scopeKey
+          ? await setTickerReviewTagAction(formData)
+          : { ok: false };
       if (!result.ok) {
         setSelected(new Set(selectedTags));
         return;
@@ -100,9 +107,9 @@ export function TradeTagPicker({
 
       {open ? (
         <div className="absolute left-0 top-[calc(100%+8px)] z-30 max-h-[320px] w-[360px] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-md border border-[var(--border)] bg-[var(--surface)] p-4 shadow-2xl">
-          <label className="sr-only" htmlFor={`trade-${tradeId}-tag-search`}>Search or create tags</label>
+          <label className="sr-only" htmlFor={`${tradeId != null ? `trade-${tradeId}` : `ticker-${scopeKey}`}-tag-search`}>Search or create tags</label>
           <input
-            id={`trade-${tradeId}-tag-search`}
+            id={`${tradeId != null ? `trade-${tradeId}` : `ticker-${scopeKey}`}-tag-search`}
             autoFocus
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -155,6 +162,27 @@ export function TradeTagPicker({
         </div>
       ) : null}
     </div>
+  );
+}
+
+export function TickerReviewTagPicker({
+  scopeKey,
+  selectedTags,
+  options,
+  readOnly,
+}: {
+  scopeKey: string;
+  selectedTags: string[];
+  options: ReviewTagOption[];
+  readOnly: boolean;
+}) {
+  return (
+    <TradeTagPicker
+      scopeKey={scopeKey}
+      selectedTags={selectedTags}
+      options={options}
+      readOnly={readOnly}
+    />
   );
 }
 
