@@ -101,8 +101,8 @@ export default function JournalMonthSelect({
         onClick={() => setOpen((value) => !value)}
         className={`inline-flex h-10 items-center gap-2 rounded-md border px-3 text-sm font-semibold transition-colors ${
           open
-            ? "border-[var(--blue)] text-[var(--foreground)]"
-            : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+            ? "border-[var(--accent)] text-[var(--foreground)]"
+            : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--foreground)]"
         }`}
       >
         <svg
@@ -124,7 +124,7 @@ export default function JournalMonthSelect({
             <button
               type="button"
               onClick={() => setYear((value) => value - 1)}
-              className="h-9 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+              className="h-9 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--foreground)]"
               aria-label="Previous year"
             >
               ←
@@ -133,7 +133,7 @@ export default function JournalMonthSelect({
             <button
               type="button"
               onClick={() => setYear((value) => value + 1)}
-              className="h-9 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+              className="h-9 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--foreground)]"
               aria-label="Next year"
             >
               →
@@ -151,8 +151,8 @@ export default function JournalMonthSelect({
                   onClick={() => setMonth(value)}
                   className={`h-9 rounded-md border px-2 text-sm font-semibold transition-colors ${
                     active
-                      ? "border-[var(--blue)] bg-[var(--background)] text-[var(--foreground)]"
-                      : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+                      ? "border-[var(--accent)] bg-[var(--background)] text-[var(--foreground)]"
+                      : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--foreground)]"
                   }`}
                 >
                   {label.slice(0, 3)}
@@ -164,7 +164,7 @@ export default function JournalMonthSelect({
           <button
             type="button"
             onClick={applyMonth}
-            className="mt-4 h-10 w-full rounded-md border border-[var(--blue)] text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--background)]"
+            className="mt-4 h-10 w-full rounded-md border border-[var(--accent)] text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--background)]"
           >
             Apply
           </button>

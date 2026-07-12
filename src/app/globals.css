@@ -14,6 +14,16 @@
   --green: #1db26b;
   --red: #f05143;
   --blue: #58a6ff;
+  --accent: #58a6ff;
+  --accent-strong: #79b8ff;
+  --action: #242a35;
+  --action-foreground: #f1f4f8;
+  --review-helper-bg: transparent;
+  --coach: #3fb950;
+  --green-chart: #1db26b;
+  --red-chart: #f05143;
+  --green-tint: rgba(29, 178, 107, 0.14);
+  --red-tint: rgba(240, 81, 67, 0.14);
   color-scheme: dark;
 }
 
@@ -31,7 +41,73 @@
   --green: #1db26b;
   --red: #f05143;
   --blue: #0969da;
+  --accent: #0969da;
+  --accent-strong: #0550ae;
+  --action: #24292f;
+  --action-foreground: #ffffff;
+  --review-helper-bg: #f0f2f5;
+  --coach: #1a7f37;
+  --green-chart: #1db26b;
+  --red-chart: #f05143;
+  --green-tint: #dafbe1;
+  --red-tint: #ffebe9;
   color-scheme: light;
+}
+
+/* Daylight — warm light theme (docs/design/themes/daylight-theme-v1.html) */
+:root[data-theme="daylight"] {
+  --background: #fcfaf7;
+  --surface: #ffffff;
+  --surface-2: #f3efe6;
+  --panel: #f6f2ea;
+  --border: #ecebde;
+  --hairline: rgba(33, 30, 24, 0.08);
+  --foreground: #211e18;
+  --body: #4a463e;
+  --muted: #8a8375;
+  --faint: #b0a892;
+  --green: #217a4b;
+  --red: #bc4b38;
+  --blue: #0969da; /* reserved */
+  --accent: #b06e2a;
+  --accent-strong: #c98a2e;
+  --action: #211e18;
+  --action-foreground: #fcfaf7;
+  --review-helper-bg: #f6f2ea;
+  --coach: #2e7d5b;
+  --green-chart: #2c9a63;
+  --red-chart: #c4553f;
+  --green-tint: #e9f2ec;
+  --red-tint: #f8eae5;
+  color-scheme: light;
+}
+
+/* Evening — warm charcoal dark theme (docs/design/themes/evening-theme-v1.html) */
+:root[data-theme="evening"] {
+  --background: #191918;
+  --surface: #222221;
+  --surface-2: #2a2a28;
+  --panel: #2e2e2b;
+  --border: #383835;
+  --hairline: rgba(240, 239, 235, 0.07);
+  --foreground: #f0efeb;
+  --body: #c9c7bf;
+  --muted: #93918a;
+  --faint: #6c6b64;
+  --green: #55b183;
+  --red: #d97a63;
+  --blue: #58a6ff; /* reserved */
+  --accent: #d99a4e;
+  --accent-strong: #d99a4e;
+  --action: #383835;
+  --action-foreground: #f0efeb;
+  --review-helper-bg: transparent;
+  --coach: #6fae8f;
+  --green-chart: #3fa873;
+  --red-chart: #c9604b;
+  --green-tint: #223129;
+  --red-tint: #362824;
+  color-scheme: dark;
 }
 
 @theme inline {

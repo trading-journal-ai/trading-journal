@@ -43,6 +43,13 @@
       "when": 1783040400000,
       "tag": "0005_coach_playbooks_reviews",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1783828268941,
+      "tag": "0006_chunky_purple_man",
+      "breakpoints": true
     }
   ]
 }

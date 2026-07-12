@@ -31,7 +31,7 @@ export default function AccountSettings({
               <input
                 value={editingName}
                 onChange={(event) => setEditingName(event.target.value)}
-                className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--blue)]"
+                className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
                 aria-label={`Rename ${account.name}`}
                 autoFocus
               />
@@ -39,7 +39,7 @@ export default function AccountSettings({
               <div className="flex min-h-10 flex-wrap items-center gap-3">
                 <span className="text-sm font-semibold text-[var(--foreground)]">{account.name}</span>
                 {account.id === activeAccountId ? (
-                  <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--blue)]">
+                  <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
                     Active
                   </span>
                 ) : null}
@@ -57,7 +57,7 @@ export default function AccountSettings({
                   <input type="hidden" name="accountId" value={account.id} />
                   <button
                     type="submit"
-                    className="h-10 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+                    className="h-10 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
                   >
                     Switch
                   </button>
@@ -78,7 +78,7 @@ export default function AccountSettings({
                     <input type="hidden" name="name" value={editingName} />
                     <button
                       type="submit"
-                      className="h-10 rounded-md bg-[var(--blue)] px-3 text-sm font-semibold text-black"
+                      className="h-10 rounded-md bg-[var(--foreground)] px-3 text-sm font-semibold text-[var(--background)] transition-opacity hover:opacity-90"
                     >
                       Save
                     </button>
@@ -89,7 +89,7 @@ export default function AccountSettings({
                       setEditingAccount(null);
                       setEditingName("");
                     }}
-                    className="h-10 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+                    className="h-10 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
                   >
                     Cancel
                   </button>
@@ -101,7 +101,7 @@ export default function AccountSettings({
                     setEditingAccount(account.id);
                     setEditingName(account.name);
                   }}
-                  className="h-10 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+                  className="h-10 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
                 >
                   Edit
                 </button>
@@ -140,11 +140,11 @@ export default function AccountSettings({
           value={newAccountName}
           onChange={(event) => setNewAccountName(event.target.value)}
           placeholder="New account name"
-          className="h-10 min-w-64 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--blue)]"
+          className="h-10 min-w-64 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
         />
         <button
           type="submit"
-          className="h-10 rounded-md bg-[var(--blue)] px-4 text-sm font-semibold text-black"
+          className="h-10 rounded-md bg-[var(--foreground)] px-4 text-sm font-semibold text-[var(--background)] transition-opacity hover:opacity-90"
         >
           Add account
         </button>

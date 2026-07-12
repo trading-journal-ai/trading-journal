@@ -1,13 +1,14 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getActiveAccount } from "@/lib/accountScope";
 import { db, schema } from "@/lib/db";
 import { isDemoReadOnly } from "@/lib/demoMode";
-import {
-  PRIMARY_TRADE_LABELS,
-} from "@/lib/journalLabels";
+import { SETUP_PATTERN_CUES } from "@/lib/journalLabels";
 
 type ScopedNoteState = { ok: boolean };
 type TradeNoteState = { ok: boolean };
@@ -122,6 +123,141 @@ export async function upsertTickerReviewAction(formData: FormData) {
   }
 }
 
+export async function deleteTickerReviewAction(formData: FormData) {
+  if (isDemoReadOnly()) return;
+
+  const scopeKey = String(formData.get("scopeKey") ?? "").trim();
+  const returnTo = String(formData.get("returnTo") ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}:[A-Z0-9.\-]+$/.test(scopeKey)) return;
+
+  const activeAccount = await getActiveAccount();
+  await db
+    .delete(schema.journalEntries)
+    .where(
+      and(
+        eq(schema.journalEntries.scope, "ticker"),
+        eq(schema.journalEntries.scopeKey, scopeKey),
+        eq(schema.journalEntries.accountId, activeAccount.id),
+      ),
+    );
+
+  revalidateJournalLoop();
+  revalidatePath("/trades/review");
+  if (returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+    revalidatePath(returnTo.split("?")[0] || "/journal");
+  }
+}
+
+export async function markTickerReviewReadyAction(formData: FormData) {
+  if (isDemoReadOnly()) return;
+
+  const date = String(formData.get("date") ?? "").trim();
+  const symbol = String(formData.get("symbol") ?? "").trim().toUpperCase();
+  const returnTo = String(formData.get("returnTo") ?? "").trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^[A-Z0-9.\-]+$/.test(symbol)) return;
+
+  const activeAccount = await getActiveAccount();
+  await db
+    .insert(schema.tickerReviews)
+    .values({ accountId: activeAccount.id, date, symbol })
+    .onConflictDoUpdate({
+      target: [schema.tickerReviews.accountId, schema.tickerReviews.date, schema.tickerReviews.symbol],
+      set: { status: "ready", updatedAt: new Date() },
+    });
+
+  revalidateJournalLoop();
+  revalidatePath("/trades/review");
+  if (returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+    revalidatePath(returnTo.split("?")[0] || "/journal");
+  }
+}
+
+async function ownedTradeId(tradeId: number): Promise<number | null> {
+  if (!Number.isInteger(tradeId) || tradeId <= 0) return null;
+  const activeAccount = await getActiveAccount();
+  const trade = await db
+    .select({ id: schema.trades.id })
+    .from(schema.trades)
+    .where(and(eq(schema.trades.id, tradeId), eq(schema.trades.accountId, activeAccount.id)))
+    .limit(1);
+  return trade[0]?.id ?? null;
+}
+
+export async function setTradeTagAction(formData: FormData) {
+  if (isDemoReadOnly()) return { ok: false };
+
+  const tradeId = Number(formData.get("tradeId"));
+  const tagName = String(formData.get("tagName") ?? "").trim().replace(/\s+/g, " ");
+  const selected = String(formData.get("selected")) === "true";
+  if (!(await ownedTradeId(tradeId)) || !tagName || tagName.length > 40) return { ok: false };
+
+  await db.insert(schema.tags).values({ name: tagName }).onConflictDoNothing();
+  const tag = await db
+    .select({ id: schema.tags.id })
+    .from(schema.tags)
+    .where(eq(schema.tags.name, tagName))
+    .limit(1);
+  if (!tag[0]) return { ok: false };
+
+  if (selected) {
+    await db.insert(schema.tradeTags).values({ tradeId, tagId: tag[0].id }).onConflictDoNothing();
+  } else {
+    await db
+      .delete(schema.tradeTags)
+      .where(and(eq(schema.tradeTags.tradeId, tradeId), eq(schema.tradeTags.tagId, tag[0].id)));
+  }
+
+  revalidatePath("/trades/review");
+  revalidatePath(`/trades/${tradeId}`);
+  revalidateJournalLoop();
+  return { ok: true };
+}
+
+const ATTACHMENT_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "audio/mpeg": "mp3",
+  "audio/mp4": "m4a",
+  "audio/webm": "audio.webm",
+};
+
+export async function addTradeAttachmentAction(formData: FormData) {
+  if (isDemoReadOnly()) return { ok: false };
+
+  const tradeId = Number(formData.get("tradeId"));
+  const file = formData.get("file");
+  if (!(await ownedTradeId(tradeId)) || !(file instanceof File) || file.size === 0) return { ok: false };
+  if (file.size > 50 * 1024 * 1024) return { ok: false, error: "Files must be 50 MB or smaller." };
+
+  const extension = ATTACHMENT_EXTENSIONS[file.type];
+  if (!extension) return { ok: false, error: "Use an image, audio, or MP4/WebM recording." };
+
+  const uploadDirectory = path.join(process.cwd(), "public", "uploads", "ticker-review");
+  await mkdir(uploadDirectory, { recursive: true });
+  const filename = `${tradeId}-${randomUUID()}.${extension}`;
+  const filePath = `/uploads/ticker-review/${filename}`;
+  const caption = file.name.slice(0, 160);
+  await writeFile(path.join(uploadDirectory, filename), Buffer.from(await file.arrayBuffer()));
+
+  const inserted = await db
+    .insert(schema.attachments)
+    .values({ tradeId, filePath, caption })
+    .returning({ id: schema.attachments.id });
+
+  revalidatePath("/trades/review");
+  revalidatePath(`/trades/${tradeId}`);
+  revalidateJournalLoop();
+  return {
+    ok: true,
+    attachment: { id: inserted[0].id, filePath, caption },
+  };
+}
+
 export async function saveCoachExperimentAction(formData: FormData) {
   if (isDemoReadOnly()) return;
 
@@ -183,9 +319,9 @@ export async function updateJournalEntryAction(formData: FormData) {
   const noteId = Number(formData.get("noteId"));
   const tradeId = Number(formData.get("tradeId"));
   const note = String(formData.get("note") ?? "").trim();
-  const primaryLabel = String(formData.get("primaryLabel") ?? "").trim();
-  const validPrimaryLabel = PRIMARY_TRADE_LABELS.some((option) => option.value === primaryLabel)
-    ? primaryLabel
+  const setupPattern = String(formData.get("setupPattern") ?? "").trim();
+  const validSetupPattern = SETUP_PATTERN_CUES.some((option) => option.value === setupPattern)
+    ? setupPattern
     : "";
 
   if (!Number.isInteger(noteId) || noteId <= 0) return;
@@ -194,13 +330,14 @@ export async function updateJournalEntryAction(formData: FormData) {
     .update(schema.journalEntries)
     .set({
       lessons: note || null,
-      emotionalState: validPrimaryLabel || null,
+      thesis: validSetupPattern || null,
     })
     .where(eq(schema.journalEntries.id, noteId));
 
   revalidateJournalLoop();
   if (Number.isInteger(tradeId) && tradeId > 0) {
     revalidatePath(`/trades/${tradeId}`);
+    revalidatePath("/trades/review");
   }
 }
 
@@ -219,6 +356,7 @@ export async function deleteJournalEntryAction(formData: FormData) {
   revalidateJournalLoop();
   if (Number.isInteger(tradeId) && tradeId > 0) {
     revalidatePath(`/trades/${tradeId}`);
+    revalidatePath("/trades/review");
   }
 }
 
