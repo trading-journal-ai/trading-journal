@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { deleteTickerReviewAction, markTickerReviewReadyAction, upsertTickerReviewAction } from "@/app/journal/actions";
+import type { DictationStatus } from "@/components/DictationTextarea";
 import SharedNoteComposer from "@/components/SharedNoteComposer";
 import {
   TradeAttachments,
@@ -166,6 +167,17 @@ export default function TickerReviewWorkspace({
   const [editing, setEditing] = useState(() => initialTrade != null || !tickerNote.trim());
   const [hasSavedNote, setHasSavedNote] = useState(() => Boolean(tickerNote.trim()));
   const [isSaving, startSaving] = useTransition();
+  const [dictationBusy, setDictationBusy] = useState(false);
+  const stripVisibleAtDictationStartRef = useRef(true);
+  // While dictating, keep the helper strip in its pre-dictation state so the
+  // layout doesn't jump as live text streams into the note.
+  const showSuggestedStrip = dictationBusy ? stripVisibleAtDictationStartRef.current : !note.trim();
+
+  function handleDictationStatusChange(status: DictationStatus) {
+    const busy = status === "recording" || status === "transcribing";
+    if (busy && !dictationBusy) stripVisibleAtDictationStartRef.current = !note.trim();
+    setDictationBusy(busy);
+  }
   const anchoredTradeIds = useMemo(() => mentionedTradeIds(note, trades), [note, trades]);
   const savedSections = useMemo(() => savedReviewSections(note, trades), [note, trades]);
   const activeTrade = useMemo(() => {
@@ -264,7 +276,7 @@ export default function TickerReviewWorkspace({
             How did I trade {symbol}?
           </h2>
 
-          {!note.trim() && suggestedTrades.length > 0 ? (
+          {showSuggestedStrip && suggestedTrades.length > 0 ? (
             <div className="mt-5 flex flex-wrap items-center gap-3 rounded-md bg-[var(--review-helper-bg)] px-4 py-3">
               <span className="text-[12px] font-semibold text-[var(--muted)]">Worth 30 seconds each</span>
               <span className="text-[13px] tabular-nums text-[var(--body)]">
@@ -312,6 +324,7 @@ export default function TickerReviewWorkspace({
                 placeholder={note.trim() ? `Start with ${symbol} overall. Add a new line for any trade or chart moment you want the Coach to understand.` : ""}
                 submitLabel="Save note"
                 onTextChange={setNote}
+                onDictationStatusChange={handleDictationStatusChange}
                 localStorageKey={readOnly ? `demo:ticker-story:${date}:${symbol}` : undefined}
                 onLocalSave={() => setEditing(false)}
                 primaryAction
@@ -320,8 +333,7 @@ export default function TickerReviewWorkspace({
                 dictationPromptContent={!note.trim() ? (
                   <div>
                     <div className="text-[15px] font-semibold text-[var(--foreground)]">How did {symbol} trade, and how did you trade it?</div>
-                    <div className="mt-1 text-[12px] leading-5 text-[var(--muted)]">Hold to talk — or start typing.</div>
-                    <div className="mt-3 text-[12px] leading-5">
+                    <div className="mt-2 text-[12px] leading-5">
                       <div className="font-medium text-[var(--body)]">Comment on any trade.</div>
                       <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[var(--muted)]">
                         <li>Tap <span className="font-semibold text-[var(--accent)]">+</span> on a row in the trade list.</li>
@@ -430,8 +442,8 @@ export default function TickerReviewWorkspace({
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">Trades</h2>
           </div>
-          <div className="mt-3 grid grid-cols-[0.5fr_1fr_1fr_0.5fr] divide-x divide-[var(--hairline)] border-t border-[var(--hairline)] py-3">
-            <div className="pl-2 pr-2 text-left">
+          <div className="mt-3 grid grid-cols-4 divide-x divide-[var(--hairline)] border-t border-[var(--hairline)] py-3">
+            <div className="px-2 text-center">
               <div className="text-[11px] text-[var(--muted)]">Trades</div>
               <div className="mt-1 text-[15px] font-semibold tabular-nums text-[var(--foreground)]">{trades.length}</div>
             </div>
@@ -443,7 +455,7 @@ export default function TickerReviewWorkspace({
               <div className="whitespace-nowrap text-[11px] text-[var(--muted)]">Profit factor</div>
               <div className="mt-1 text-[15px] font-semibold tabular-nums text-[var(--foreground)]">{tradeSummary.profitFactor}</div>
             </div>
-            <div className="pl-2 pr-4 text-right">
+            <div className="px-2 text-center">
               <div className="whitespace-nowrap text-[11px] text-[var(--muted)]">Total P&amp;L</div>
               <div className={`mt-1 whitespace-nowrap text-[15px] font-semibold tabular-nums ${pnlClass(tradeSummary.totalPnlTone)}`}>{tradeSummary.totalPnl}</div>
             </div>
