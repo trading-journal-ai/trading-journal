@@ -240,6 +240,46 @@ Suggested journal embed:
 This makes the statistical framework part of the feedback loop rather than a
 separate report the trader may never revisit.
 
+### Journal-to-Analytics contract
+
+Journal and Analytics should consume the same deterministic finding objects but
+serve different review jobs:
+
+- **Journal** answers: what mattered today, why it mattered, and what should I
+  do next?
+- **Analytics** answers: how often does this happen, where does it happen, and
+  does the pattern survive a larger sample or different cohort?
+
+The Journal should provide an inline **Explain this** expansion before asking
+the trader to leave the day narrative. That expansion shows the exact trades,
+before/after values, concentration, sample threshold, calculation definition,
+missing-data caveats, and historical window.
+
+When the trader wants broader investigation, **Open in Analytics** should carry
+the finding's complete query context:
+
+- Account and date range.
+- Included trade ids.
+- Ticker, setup, time-window, side, and tag filters.
+- Comparison or counterfactual being discussed.
+- Baseline window and sample threshold.
+
+Analytics opens on the relevant review job rather than its generic landing
+page. A concentration finding opens the supporting Edge/Compare view; a loss or
+give-back finding opens Risk; a historical recurrence opens the relevant trend
+or cohort comparison.
+
+The return path matters as much as the handoff. An Analytics investigation can
+send back:
+
+- A clarified or corrected Coach finding.
+- A saved review question.
+- A measurable experiment.
+- A Playbook candidate.
+
+Analytics does not write directly into the Playbook. It supplies evidence; the
+Coach proposes meaning; the trader approves durable knowledge.
+
 ### Reports Tabs
 
 The report tabs should feed the statistical review:

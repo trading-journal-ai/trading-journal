@@ -407,7 +407,8 @@ for a full write-up on every trade.
 
 ### Trade-Level Review
 
-Triggered from a trade detail page or from a trade note.
+Triggered by selecting a trade in the ticker/day review workspace or from a
+trade citation in the Daily Recap.
 
 Should answer:
 
@@ -736,7 +737,8 @@ Implementation to-do:
 
 ### Phase 3: Trade-Level Coach
 
-- Add a "Review this trade" action to trade detail.
+- Add a "Review this trade" action for the selected trade in the ticker/day
+  review workspace.
 - Feed the model trade data, executions, notes, labels, and candle summary.
 - Return a structured trade review.
 - Store the review as an optional generated note.

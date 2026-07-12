@@ -85,6 +85,27 @@ From [DAILY_RECAP_FLOW.md](product/DAILY_RECAP_FLOW.md) and
 - [ ] Is the setup-quality scale `valid / partial / forced` right?
 - [ ] When you edit the day note *after* the recap generates, should the coach
   read regenerate, flag as stale, or stay put?
+- [ ] **Ticker/day versus individual trade surface** — confirm one ticker/day
+  TradingView workspace as the first-class authoring surface. Individual trades
+  remain selectable/addressable evidence with their own notes and media, but do
+  not require a separate journaling destination. A one-trade ticker must never
+  ask for duplicate ticker and trade context. **(rec: adopt)**
+- [ ] **Selected-trade interaction inside the ticker/day chart** — persistent
+  annotation panel, chart-anchored popover, or lower review drawer? The choice
+  must support dictation, setup/plan fields, screenshots/video, and deep links
+  that reopen the cited trade in context.
+- [ ] **Coach explanation depth** — add `guided / standard / technical` as a
+  preference independent from `supportive / balanced / blunt` tone. The review
+  engine, evidence, confidence, and caveats remain identical. **(rec: adopt)**
+- [ ] **On-demand technical explanation contract** — every analytical finding
+  can expand to included trades, before/after values, concentration, sample
+  threshold, calculation definition, missing-data caveats, and historical
+  comparison; follow-up questions must use deterministic Analytics/review-engine
+  results rather than freeform model arithmetic. **(rec: adopt)**
+- [ ] **Journal-to-Analytics handoff** — confirm that `Open in Analytics`
+  preserves the finding's filters, trade ids, comparison, and baseline window,
+  with a return path for a clarified finding, experiment, or Playbook candidate.
+  **(rec: adopt)**
 
 ## C. Content only you can author (owed work)
 

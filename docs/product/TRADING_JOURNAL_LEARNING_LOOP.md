@@ -41,6 +41,17 @@ Trade evidence
   -> Journal context
   -> Coach context
   -> Dashboard context
+
+Optional investigation branch
+  -> Expand Coach evidence in Journal
+  -> Open the same question in Analytics
+  -> Compare against history / setups / cohorts
+  -> Return a finding or experiment to Journal
+
+Durable learning branch
+  -> Coach proposes a Playbook candidate
+  -> Trader accepts, edits, or dismisses it
+  -> Playbook updates the standards used by future reviews
 ```
 
 The dashboard is not the source of truth. It is the active surface that asks the
@@ -55,6 +66,8 @@ by the coach, and resurfaced by the dashboard.
 | --- | --- | --- |
 | Journal | The durable record: trades, recap, emotions, process notes, check-ins, screenshots/charts, and the human story of the trading day. | Recap context, unresolved patterns, and user-authored carry-forward items into coach review. |
 | Coach | The synthesis layer: what worked, what broke, what mattered, and what to try next. | Coach feedback, experiments, risk cues, and behavior prompts. |
+| Analytics | The investigation layer: validate a Coach finding across a larger period, setup, ticker, time window, or comparison cohort. | Clarified findings, saved questions, and evidence for experiments or Playbook candidates. |
+| Playbook | The user-approved standards layer: setups, rules, examples, exceptions, and review criteria. | The vocabulary and criteria the Coach uses in future reviews. |
 | Dashboard | The reminder layer: the next session's insight, sticky cue, rule, risk guardrail, or unresolved pattern. | The next trading plan. |
 | Dashboard | The live prompt layer: morning plan, midday reset, market read, emotional state, rule reminders, and "should I keep trading?" questions. | Timestamped check-ins and quick notes back into the daily recap. |
 
@@ -67,6 +80,8 @@ moves through Journal, Coach, and Dashboard.
 | --- | --- |
 | Journal reflection | User-authored observations, emotions, process notes, and unresolved patterns become coach context. |
 | Coach feedback | Synthesized lessons become experiments, risk cues, or behavior prompts. |
+| Analytics investigation | A coach claim is tested against a larger sample or different cohort, then returned as stronger, weaker, or inconclusive evidence. |
+| Playbook approval | A repeated, useful finding becomes a trader-approved setup definition, rule, example, or exception. |
 | Dashboard check-ins | In-session answers create fresh context that attaches back to the daily recap. |
 | Dashboard reminders | The most important insight stays visible as a next-session cue. |
 
@@ -83,6 +98,28 @@ loop wherever it helps the user and coach understand the day.
 | Timing, sizing, and hold behavior | Coach pattern detection and current experiment selection. |
 | Charts and screenshots | Journal narrative and trade-specific review. |
 | Statistical patterns and contradictions | Coach synthesis and future focus selection. |
+
+## The Coach Finding Lifecycle
+
+A useful finding should move through explicit states instead of disappearing
+into a recap or silently becoming a rule:
+
+```text
+Observed in one day
+  -> explained in the Coach narrative
+  -> evidence available on demand
+  -> optionally investigated in Analytics
+  -> tracked as session-only / emerging / repeated / established
+  -> proposed as a Playbook candidate
+  -> accepted, edited, or dismissed by the trader
+  -> resurfaced as a Dashboard focus
+  -> tested by the next Journal record
+```
+
+Not every finding travels through the whole lifecycle. Most remain session
+context. Analytics is an optional branch for curiosity and validation, not a
+required post-session ritual. Playbook promotion requires recurrence or strong
+evidence plus explicit trader approval.
 
 ## Data Objects
 
