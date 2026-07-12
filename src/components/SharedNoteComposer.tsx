@@ -22,20 +22,28 @@ type SharedNoteComposerProps = {
   className?: string;
   localStorageKey?: string;
   onLocalSave?: (value: string) => void;
+  onTextChange?: (value: string) => void;
+  primaryAction?: boolean;
+  value?: string;
+  textareaId?: string;
+  textareaClassName?: string;
+  dictationPromptMode?: boolean;
+  dictationPromptContent?: ReactNode;
+  hideActions?: boolean;
 };
 
 function SetupPatternCues() {
   return (
     <div className="space-y-2">
-      <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-        Setup / Pattern
+      <div className="text-[12px] font-semibold text-[var(--muted)]">
+        Setup / pattern
       </div>
       <div className="flex flex-wrap gap-2">
         {SETUP_PATTERN_CUES.map((cue) => (
           <span
             key={cue.value}
             title="Playbook placeholder"
-            className="inline-flex items-center rounded-full border border-[var(--border)] px-2.5 py-1 font-mono text-[11px] text-[var(--foreground)]"
+            className="inline-flex items-center rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-[11px] text-[var(--foreground)]"
           >
             {cue.label}
           </span>
@@ -62,6 +70,14 @@ export default function SharedNoteComposer({
   className = "",
   localStorageKey,
   onLocalSave,
+  onTextChange,
+  primaryAction = false,
+  value,
+  textareaId,
+  textareaClassName,
+  dictationPromptMode = false,
+  dictationPromptContent,
+  hideActions = false,
 }: SharedNoteComposerProps) {
   const [initialValue, setInitialValue] = useState(defaultValue);
   const [savedLocal, setSavedLocal] = useState(false);
@@ -104,25 +120,24 @@ export default function SharedNoteComposer({
         <span className="sr-only">Note</span>
         <DictationTextarea
           key={inputKey}
+          id={textareaId}
           name={name}
           rows={rows}
           autoFocus={autoFocus}
           disabled={disabled}
           defaultValue={initialValue}
+          value={value}
           placeholder={placeholder}
-          className="min-h-[128px] w-full resize-y rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-sm leading-6 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:border-[var(--blue)] disabled:cursor-not-allowed disabled:opacity-60"
+          onValueChange={onTextChange}
+          promptMode={dictationPromptMode}
+          promptContent={dictationPromptContent}
+          className={textareaClassName ?? "min-h-[128px] w-full resize-y rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-sm leading-6 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"}
         />
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          {actionsSlot}
-          {savedLocal ? (
-            <span className="ml-2 align-middle font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--muted)]">
-              Saved in this browser
-            </span>
-          ) : null}
-        </div>
+      {!hideActions ? <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>{savedLocal ? <span className="text-[11px] text-[var(--muted)]">Saved in this browser</span> : null}</div>
         <div className="flex justify-end gap-2">
+          {actionsSlot}
           {onCancel ? (
             <button
               type="button"
@@ -136,12 +151,14 @@ export default function SharedNoteComposer({
             type={localMode ? "button" : "submit"}
             onClick={localMode ? handleLocalSave : undefined}
             disabled={disabled || pending}
-            className="h-10 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+            className={primaryAction
+              ? "h-10 rounded-md bg-[var(--action)] px-4 text-sm font-semibold text-[var(--action-foreground)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              : "h-10 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"}
           >
             {pending ? pendingLabel : submitLabel}
           </button>
         </div>
-      </div>
+      </div> : null}
     </div>
   );
 }

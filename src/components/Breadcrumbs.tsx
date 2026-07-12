@@ -41,7 +41,7 @@ export function originCrumbFromHref(href: string | undefined, fallback = "/trade
 function Crumb({ item, current = false }: { item: BreadcrumbItem; current?: boolean }) {
   const className = current
     ? "text-[var(--foreground)]"
-    : "text-[var(--muted)] transition-colors hover:text-[var(--foreground)]";
+    : "text-[var(--accent)] transition-colors hover:text-[var(--accent-strong)]";
 
   if (!item.href || current) {
     return <span className={className}>{item.label}</span>;
@@ -70,11 +70,11 @@ export default function Breadcrumbs({
   return (
     <nav
       aria-label="Breadcrumb"
-      className={`flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[13px] font-semibold ${className}`}
+      className={`flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px] font-semibold ${className}`}
     >
       <Link
         href={back.href ?? "#"}
-        className="inline-flex items-center gap-2 text-[var(--muted)] transition-colors hover:text-[var(--foreground)]"
+        className="inline-flex items-center gap-2 text-[var(--accent)] transition-colors hover:text-[var(--accent-strong)]"
       >
         <span aria-hidden="true" className="text-base leading-none">
           ‹

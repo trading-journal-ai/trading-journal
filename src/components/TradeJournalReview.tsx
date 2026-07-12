@@ -10,7 +10,6 @@ import { etDateString, etDayRange } from "@/lib/time";
 import ArchiveSidebar, { type ArchiveSidebarMonth } from "@/components/ArchiveSidebar";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
 import InlineImportPrompt from "@/components/InlineImportPrompt";
-import RecapNote from "@/components/RecapNote";
 import TickerReviewRail from "@/components/TickerReviewRail";
 
 export type JournalReviewPreset = "today" | "week" | "month";
@@ -61,12 +60,23 @@ type KeyTradePrompt = {
   href: string;
 };
 
+type WorstTradeCardData = {
+  symbol: string;
+  side: "long" | "short";
+  shares: number;
+  timeRange: string;
+  pnl: number;
+  fills: number;
+  href: string;
+};
+
 type ReviewData = {
   day: ReviewDay;
   tickerRows: TickerRow[];
   pnlPoints: PnlPoint[];
   coachRead: SessionFactPack;
   keyTradePrompts: KeyTradePrompt[];
+  worstTrade: WorstTradeCardData | null;
 };
 
 type ReviewWeek = ReviewSummary & {
@@ -111,14 +121,6 @@ type SavedCoachReview = {
   status: string;
   updatedAt: Date;
   storedReview: CoachStoredReview | null;
-};
-
-type DayRecapContext = {
-  text: string;
-  thesis: string;
-  whatWentWell: string;
-  whatWentWrong: string;
-  emotionalState: string;
 };
 
 const dateFmt = new Intl.DateTimeFormat("en-US", {
@@ -441,7 +443,7 @@ function buildDayData(date: string, trades: TradeRow[], executions: ExecutionRow
       label: "Best trade",
       symbol: bestTrade.trade.symbol,
       pnl: bestTrade.pnl,
-      href: `/trades/${bestTrade.trade.id}?returnTo=${encodeURIComponent(journalReviewHref("/journal", { preset: "today", date }))}`,
+      href: `/trades/review?date=${date}&symbol=${bestTrade.trade.symbol}&trade=${bestTrade.trade.id}&returnTo=${encodeURIComponent(journalReviewHref("/journal", { preset: "today", date }))}`,
     });
   }
   if (worstTrade && worstTrade.trade.id !== bestTrade?.trade.id) {
@@ -450,7 +452,7 @@ function buildDayData(date: string, trades: TradeRow[], executions: ExecutionRow
       label: "Worst trade",
       symbol: worstTrade.trade.symbol,
       pnl: worstTrade.pnl,
-      href: `/trades/${worstTrade.trade.id}?returnTo=${encodeURIComponent(journalReviewHref("/journal", { preset: "today", date }))}`,
+      href: `/trades/review?date=${date}&symbol=${worstTrade.trade.symbol}&trade=${worstTrade.trade.id}&returnTo=${encodeURIComponent(journalReviewHref("/journal", { preset: "today", date }))}`,
     });
   }
   if (biggestTicker && biggestTicker.trades > 1) {
@@ -463,6 +465,23 @@ function buildDayData(date: string, trades: TradeRow[], executions: ExecutionRow
     });
   }
 
+  const dayReturnTo = journalReviewHref("/journal", { preset: "today", date });
+  const worstTradeCard: WorstTradeCardData | null =
+    worstTrade && worstTrade.pnl < 0
+      ? {
+          symbol: worstTrade.trade.symbol,
+          side: worstTrade.trade.side,
+          shares: worstTrade.trade.quantity,
+          timeRange:
+            worstTrade.trade.entryAt != null && worstTrade.trade.exitAt != null
+              ? `${formatTime(worstTrade.trade.entryAt)} – ${formatTime(worstTrade.trade.exitAt)}`
+              : "",
+          pnl: worstTrade.pnl,
+          fills: executionCountByTrade.get(worstTrade.trade.id) ?? 0,
+          href: `/trades/review?date=${date}&symbol=${worstTrade.trade.symbol}&trade=${worstTrade.trade.id}&returnTo=${encodeURIComponent(dayReturnTo)}`,
+        }
+      : null;
+
   return {
     day: {
       date,
@@ -474,6 +493,7 @@ function buildDayData(date: string, trades: TradeRow[], executions: ExecutionRow
     pnlPoints,
     coachRead: buildSessionFactPack(trades),
     keyTradePrompts,
+    worstTrade: worstTradeCard,
   };
 }
 
@@ -727,42 +747,6 @@ async function loadReviewArchive(anchor: string, accountId: number, basePath: st
   return { months, years };
 }
 
-async function loadDayRecaps(accountId: number, dates: string[]): Promise<Map<string, DayRecapContext>> {
-  if (dates.length === 0) return new Map();
-
-  const rows = await db
-    .select({
-      scopeKey: schema.journalEntries.scopeKey,
-      thesis: schema.journalEntries.thesis,
-      whatWentWell: schema.journalEntries.whatWentWell,
-      whatWentWrong: schema.journalEntries.whatWentWrong,
-      emotionalState: schema.journalEntries.emotionalState,
-      lessons: schema.journalEntries.lessons,
-    })
-    .from(schema.journalEntries)
-    .where(
-      and(
-        eq(schema.journalEntries.accountId, accountId),
-        eq(schema.journalEntries.scope, "day"),
-        inArray(schema.journalEntries.scopeKey, dates),
-      ),
-    );
-
-  const recaps = new Map<string, DayRecapContext>();
-  rows.forEach((row) => {
-    if (row.scopeKey) {
-      recaps.set(row.scopeKey, {
-        text: row.lessons ?? "",
-        thesis: row.thesis ?? "",
-        whatWentWell: row.whatWentWell ?? "",
-        whatWentWrong: row.whatWentWrong ?? "",
-        emotionalState: row.emotionalState ?? "",
-      });
-    }
-  });
-  return recaps;
-}
-
 function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoint[] }) {
   const width = 940;
   const height = 440;
@@ -795,11 +779,9 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
   const negativeClipId = `pnlNegativeClip-${day.date}`;
 
   return (
-    <section className="flex h-[380px] flex-col rounded-[6px] bg-[#1a2432] px-4 py-4">
+    <section className="flex h-[380px] flex-col rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-4">
       <div className="mb-1 flex items-center justify-between gap-4">
-        <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-          Daily P&L
-        </h2>
+        <h2 className="text-[15px] font-semibold text-[var(--foreground)]">Daily P&L</h2>
         <span className={`font-mono text-sm font-semibold tabular-nums ${pnlClass(day.pnl)}`}>
           {formatMoney(day.pnl)}
         </span>
@@ -807,12 +789,12 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
       <svg viewBox={`0 0 ${width} ${height}`} className="min-h-0 flex-1" role="img" aria-label="Daily P&L by time of day">
         <defs>
           <linearGradient id={positiveFillId} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="var(--green)" stopOpacity="0.36" />
-            <stop offset="100%" stopColor="var(--green)" stopOpacity="0.08" />
+            <stop offset="0%" stopColor="var(--green-chart)" stopOpacity="0.36" />
+            <stop offset="100%" stopColor="var(--green-chart)" stopOpacity="0.08" />
           </linearGradient>
           <linearGradient id={negativeFillId} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="var(--red)" stopOpacity="0.08" />
-            <stop offset="100%" stopColor="var(--red)" stopOpacity="0.36" />
+            <stop offset="0%" stopColor="var(--red-chart)" stopOpacity="0.08" />
+            <stop offset="100%" stopColor="var(--red-chart)" stopOpacity="0.36" />
           </linearGradient>
           <clipPath id={positiveClipId}>
             <rect x={pad.left} y={pad.top} width={plotW} height={Math.max(0, zeroY - pad.top)} />
@@ -827,9 +809,9 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
             <text
               x={pad.left - 10}
               y={y(tick) + 5}
-              fill="var(--body)"
+              fill="var(--muted)"
               fontFamily="var(--font-mono)"
-              fontSize="20"
+              fontSize="19"
               fontWeight="500"
               textAnchor="end"
             >
@@ -851,7 +833,7 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
         <polyline
           points={line}
           fill="none"
-          stroke="var(--green)"
+          stroke="var(--green-chart)"
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth="2"
@@ -860,7 +842,7 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
         <polyline
           points={line}
           fill="none"
-          stroke="var(--red)"
+          stroke="var(--red-chart)"
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth="2"
@@ -871,9 +853,9 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
             key={`${index}-${pnlPoints[index].time}`}
             x={x(index)}
             y={height - 16}
-            fill="var(--body)"
-            fontFamily="var(--font-mono)"
-            fontSize="20"
+            fill="var(--muted)"
+            fontFamily="var(--font-sans)"
+            fontSize="19"
             fontWeight="500"
             textAnchor="middle"
           >
@@ -890,7 +872,7 @@ function KeyTradePrompts({ prompts }: { prompts: KeyTradePrompt[] }) {
 
   return (
     <section className="max-w-[665px] border-t border-[var(--hairline)] pt-4">
-      <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
+      <div className="text-[14px] font-semibold text-[var(--muted)]">
         Trades to annotate before coach
       </div>
       <div className="mt-3 grid gap-2 sm:grid-cols-3">
@@ -898,9 +880,9 @@ function KeyTradePrompts({ prompts }: { prompts: KeyTradePrompt[] }) {
           <a
             key={prompt.key}
             href={prompt.href}
-            className="rounded-md border border-[var(--hairline)] px-3 py-3 transition-colors hover:border-[var(--blue)]"
+            className="rounded-md border border-[var(--hairline)] px-3 py-3 transition-colors hover:border-[var(--accent)]"
           >
-            <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+            <div className="text-[12px] text-[var(--muted)]">
               {prompt.label}
             </div>
             <div className="mt-2 flex items-baseline justify-between gap-3">
@@ -918,48 +900,94 @@ function KeyTradePrompts({ prompts }: { prompts: KeyTradePrompt[] }) {
 
 function DayReviewSection({
   data,
-  recaps,
   returnTo,
-  readOnly,
 }: {
   data: ReviewData;
-  recaps: Map<string, DayRecapContext>;
   returnTo: string;
-  readOnly: boolean;
 }) {
-  const { day, tickerRows, pnlPoints, keyTradePrompts } = data;
-  const recap = recaps.get(day.date);
+  const { day, tickerRows, pnlPoints, keyTradePrompts, worstTrade, coachRead } = data;
+  const topSurprise = coachRead.surprises[0];
+  const verdictText = topSurprise
+    ? topSurprise.description
+    : "Clean session — nothing contradicted your baseline. Add the day's context so the coach read can go deeper.";
+
+  const bestPrompt = keyTradePrompts.find((prompt) => prompt.label === "Best trade");
+  const whatWorked: string[] = [];
+  if (bestPrompt && bestPrompt.pnl > 0) {
+    whatWorked.push(`Concentrated on ${bestPrompt.symbol}, the day's strongest trade.`);
+  }
+  if (
+    coachRead.session.winRate != null &&
+    coachRead.session.breakevenWinRate != null &&
+    coachRead.session.winRate > coachRead.session.breakevenWinRate
+  ) {
+    whatWorked.push("Win rate cleared the breakeven line.");
+  }
+  coachRead.history.signals
+    .filter((signal) => signal.vote > 0)
+    .slice(0, 1)
+    .forEach((signal) => whatWorked.push(`${signal.label} improved versus your baseline.`));
+
+  const whatCost: string[] = [];
+  if (worstTrade) {
+    whatCost.push(`${worstTrade.symbol} was the session's clearest red mark.`);
+  }
+  coachRead.surprises.slice(0, 2).forEach((surprise) => whatCost.push(surprise.description));
 
   return (
     <section>
-      <div className="grid grid-cols-[8px_minmax(0,1fr)] gap-x-4">
-        <span
-          className={`mt-2.5 size-2 rounded-full ${
-            day.pnl >= 0 ? "bg-[var(--green)]" : "bg-[var(--red)]"
-          }`}
-        />
-        <div className="min-w-0">
-          <div className="mb-4">
+      <div className="min-w-0">
+          <div className="mb-6">
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-              <h2 className="text-[24px] font-semibold leading-none tracking-[-0.01em] text-[var(--foreground)]">
-                {monthDayFmt.format(utcDate(day.date))}
+              <h2 className="text-[32px] font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
+                {day.label}, {monthDayFmt.format(utcDate(day.date))}
               </h2>
-              <span className="font-mono text-sm text-[var(--muted)]">{day.label}</span>
+              <span
+                className={`font-mono text-[15px] font-semibold tabular-nums ${pnlClass(day.pnl)}`}
+              >
+                {formatMoney(day.pnl)}
+                {day.pnl !== 0 ? (
+                  <span className="ml-1 text-[10px]">{day.pnl > 0 ? "▲" : "▼"}</span>
+                ) : null}
+              </span>
+            </div>
+            <div className="mt-4 flex">
+              <span className="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-full bg-[var(--surface-2)] px-4 py-1.5 text-[13px] text-[var(--muted)] tabular-nums">
+                {day.trades} trades
+                <span aria-hidden="true" className="text-[var(--faint)]">·</span>
+                {day.fills} fills
+                {day.accuracy != null ? (
+                  <>
+                    <span aria-hidden="true" className="text-[var(--faint)]">·</span>
+                    {day.accuracy}% win
+                  </>
+                ) : null}
+                {day.profitFactor != null ? (
+                  <>
+                    <span aria-hidden="true" className="text-[var(--faint)]">·</span>
+                    PF {day.profitFactor.toFixed(2)}
+                  </>
+                ) : null}
+              </span>
             </div>
           </div>
 
-          <div className="mb-6 max-w-[665px] text-[15px] leading-6 text-[var(--body)]">
-            <RecapNote
-              scope="day"
-              scopeKey={day.date}
-              text={recap?.text ?? ""}
-              thesis={recap?.thesis ?? ""}
-              whatWentWell={recap?.whatWentWell ?? ""}
-              whatWentWrong={recap?.whatWentWrong ?? ""}
-              emotionalState={recap?.emotionalState ?? ""}
-              placeholder="Add a daily recap: market read, execution quality, emotions, what worked, and what to tighten next session."
-              readOnly={readOnly}
-            />
+          <div className="mb-8 max-w-[720px]">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="text-[13px] font-semibold text-[var(--coach)]">✳ Session verdict</span>
+              <span className="text-[12px] text-[var(--muted)]">
+                Coach · {coachRead.confidence.label} confidence
+              </span>
+            </div>
+            <p className="mt-3 text-[20px] font-medium leading-[1.55] tracking-[-0.005em] text-[var(--foreground)] [text-wrap:pretty]">
+              {verdictText}
+            </p>
+            {whatWorked.length > 0 || whatCost.length > 0 ? (
+              <div className="mt-9 grid gap-x-12 gap-y-8 sm:grid-cols-2">
+                <FindingColumn label="What worked" tone="positive" items={whatWorked} />
+                <FindingColumn label="What cost you" tone="negative" items={whatCost} />
+              </div>
+            ) : null}
           </div>
 
           <div className="grid max-w-[665px] gap-6 lg:grid-cols-[minmax(0,1fr)_200px] lg:items-start">
@@ -975,9 +1003,87 @@ function DayReviewSection({
               pnl={day.pnl}
             />
           </div>
+          {worstTrade ? (
+            <div className="mt-14 max-w-[665px]">
+              <WorstTradeCard trade={worstTrade} />
+            </div>
+          ) : null}
+
           <div className="mt-6">
             <KeyTradePrompts prompts={keyTradePrompts} />
           </div>
+      </div>
+    </section>
+  );
+}
+
+function FindingColumn({
+  label,
+  tone,
+  items,
+}: {
+  label: string;
+  tone: "positive" | "negative";
+  items: string[];
+}) {
+  if (items.length === 0) return null;
+  const marker = tone === "positive" ? "+" : "−";
+  const markerColor = tone === "positive" ? "text-[var(--green)]" : "text-[var(--red)]";
+  return (
+    <div>
+      <div className="text-[14px] font-semibold text-[var(--foreground)]">{label}</div>
+      <ul className="mt-3 grid gap-2.5">
+        {items.map((item, index) => (
+          <li
+            key={index}
+            className="grid grid-cols-[18px_1fr] text-[13.5px] leading-[1.5] text-[var(--body)]"
+          >
+            <span className={markerColor}>{marker}</span>
+            <span className="[text-wrap:pretty]">{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function WorstTradeCard({ trade }: { trade: WorstTradeCardData }) {
+  return (
+    <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2 border-b border-[var(--hairline)] px-5 py-4">
+        <span className="text-[20px] font-semibold text-[var(--foreground)]">{trade.symbol}</span>
+        <span className="text-[13.5px] text-[var(--muted)]">
+          {trade.side === "short" ? "Short" : "Long"} · {trade.shares.toLocaleString()}{" "}
+          {trade.shares === 1 ? "share" : "shares"}
+          {trade.timeRange ? ` · ${trade.timeRange}` : ""}
+        </span>
+        <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-0.5 text-[12px] text-[var(--muted)]">
+          ⇣ Imported
+        </span>
+        <span className="rounded-full bg-[var(--red-tint)] px-2.5 py-0.5 text-[12px] font-semibold text-[var(--red)]">
+          Worst trade
+        </span>
+        <span className="ml-auto font-mono text-[17px] font-semibold tabular-nums text-[var(--red)]">
+          {formatMoney(trade.pnl)}
+          <span className="ml-1 text-[10px]">▼</span>
+        </span>
+      </div>
+      <div className="grid gap-6 px-5 py-5 md:grid-cols-[minmax(0,1fr)_280px]">
+        <div>
+          <div className="text-[13px] font-semibold text-[var(--accent)]">✎ Your note</div>
+          <p className="mt-2.5 text-[15px] leading-6 text-[var(--body)] [text-wrap:pretty]">
+            Worst trade of the day — the one to inspect closely. Was the entry late, was the stop
+            respected, and did this loss influence the next trade?
+          </p>
+          <a
+            href={trade.href}
+            className="mt-4 inline-block text-[13px] font-semibold text-[var(--accent)] transition-colors hover:text-[var(--accent-strong)]"
+          >
+            Executions &amp; calculations ({trade.fills} {trade.fills === 1 ? "fill" : "fills"}) →
+          </a>
+        </div>
+        <div className="grid min-h-[150px] place-items-center rounded-md bg-[repeating-linear-gradient(-45deg,var(--surface-2)_0_12px,var(--panel)_12px_24px)]">
+          <span className="text-[13px] text-[var(--muted)]">1-min chart · {trade.symbol}</span>
         </div>
       </div>
     </section>
@@ -992,7 +1098,7 @@ function WeekHeader({
   displayDate: string;
 }) {
   return (
-    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-sm font-semibold text-[var(--muted)]">
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm font-semibold text-[var(--muted)]">
       <h2 className="text-sm font-semibold leading-none">
         {label}
       </h2>
@@ -1015,17 +1121,11 @@ function ScopeHeader({
   );
 }
 
-function todayDisplayDate(range: ReviewRange): string {
-  return (range.days[0]?.day.displayDate ?? range.displayDate).replace(",", "");
-}
-
 function WeekSection({
   week,
-  recaps,
   returnTo,
 }: {
   week: ReviewWeek;
-  recaps: Map<string, DayRecapContext>;
   returnTo: string;
 }) {
   return (
@@ -1036,13 +1136,7 @@ function WeekSection({
 
       <div className="space-y-12">
         {week.days.map((dayData) => (
-          <DayReviewSection
-            key={dayData.day.date}
-            data={dayData}
-            recaps={recaps}
-            returnTo={returnTo}
-            readOnly={isDemoReadOnly()}
-          />
+          <DayReviewSection key={dayData.day.date} data={dayData} returnTo={returnTo} />
         ))}
       </div>
     </section>
@@ -1087,14 +1181,14 @@ function EmptyReviewState() {
 
 function confidenceClass(label: SessionFactPack["confidence"]["label"]) {
   if (label === "high") return "text-[var(--green)]";
-  if (label === "medium") return "text-[var(--blue)]";
+  if (label === "medium") return "text-[var(--accent)]";
   return "text-[var(--muted)]";
 }
 
 function trendClass(label: SessionFactPack["history"]["trendLabel"]) {
   if (label === "improvement") return "text-[var(--green)]";
   if (label === "deterioration") return "text-[var(--red)]";
-  if (label === "mixed") return "text-[var(--blue)]";
+  if (label === "mixed") return "text-[var(--accent)]";
   return "text-[var(--muted)]";
 }
 
@@ -1135,35 +1229,33 @@ function StarterCoachRead({
   return (
     <section className="pt-2">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h2 className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">
-          Starter Coach Read
-        </h2>
-        <span className={`font-mono text-[12px] font-semibold uppercase ${confidenceClass(factPack.confidence.label)}`}>
+        <h2 className="text-[13px] font-semibold text-[var(--coach)]">✳ Coach read</h2>
+        <span className={`text-[12px] font-semibold ${confidenceClass(factPack.confidence.label)}`}>
           {factPack.confidence.label} confidence
         </span>
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-4">
         <div className="border-t border-[var(--hairline)] pt-3">
-          <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Distribution</div>
+          <div className="text-[12px] text-[var(--muted)]">Distribution</div>
           <div className="mt-1 text-sm font-semibold text-[var(--foreground)]">
             {factPack.robustness.distributionLabel}
           </div>
         </div>
         <div className="border-t border-[var(--hairline)] pt-3">
-          <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Mechanism</div>
+          <div className="text-[12px] text-[var(--muted)]">Mechanism</div>
           <div className="mt-1 text-sm font-semibold text-[var(--foreground)]">
             {factPack.mechanism.label}
           </div>
         </div>
         <div className="border-t border-[var(--hairline)] pt-3">
-          <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Math basis</div>
+          <div className="text-[12px] text-[var(--muted)]">Math basis</div>
           <div className="mt-1 text-sm font-semibold text-[var(--foreground)]">
             {factPack.confidence.riskModel === "r-multiple" ? "R-multiple" : "Dollar fallback"}
           </div>
         </div>
         <div className="border-t border-[var(--hairline)] pt-3">
-          <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Trend</div>
+          <div className="text-[12px] text-[var(--muted)]">Trend</div>
           <div className={`mt-1 text-sm font-semibold ${trendClass(factPack.history.trendLabel)}`}>
             {factPack.history.trendLabel}
           </div>
@@ -1171,23 +1263,23 @@ function StarterCoachRead({
       </div>
 
       {strongestTrendSignal ? (
-        <p className="mt-4 font-mono text-[12px] leading-5 text-[var(--muted)]">
+        <p className="mt-4 text-[12px] leading-5 text-[var(--muted)] tabular-nums">
           {strongestTrendSignal.label}: {formatTrendValue(strongestTrendSignal.current, strongestTrendSignal.key)} vs{" "}
           {formatTrendValue(strongestTrendSignal.baseline, strongestTrendSignal.key)} across{" "}
           {factPack.history.baselineTrades} prior trades.
         </p>
       ) : (
-        <p className="mt-4 font-mono text-[12px] leading-5 text-[var(--muted)]">
+        <p className="mt-4 text-[12px] leading-5 text-[var(--muted)] tabular-nums">
           {factPack.history.baselineTrades} prior trades in {factPack.history.baselineLabel}; trend vote needs more support.
         </p>
       )}
 
       {topSurprise ? (
         <div className="mt-5 border-l border-[var(--hairline)] pl-4">
-          <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Matched evidence</div>
+          <div className="text-[12px] text-[var(--muted)]">Matched evidence</div>
           <p className="mt-2 text-sm font-semibold leading-6 text-[var(--foreground)]">{topSurprise.title}</p>
           <p className="mt-1 text-sm leading-6 text-[var(--body)]">{topSurprise.description}</p>
-          <p className="mt-2 font-mono text-[12px] leading-5 text-[var(--muted)]">
+          <p className="mt-2 text-[12px] leading-5 text-[var(--muted)] tabular-nums">
             {topSurprise.evidence.join(" ")}
           </p>
         </div>
@@ -1199,7 +1291,7 @@ function StarterCoachRead({
       )}
 
       <div className="mt-5 border-t border-[var(--hairline)] pt-4">
-        <div className="font-mono text-[11px] uppercase text-[var(--muted)]">One thing to try</div>
+        <div className="text-[12px] text-[var(--muted)]">One thing to try</div>
         <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
           <span className="font-semibold">{experiment.action}</span>
         </p>
@@ -1218,24 +1310,24 @@ function StarterCoachRead({
             <input type="hidden" name="measure" value={JSON.stringify(experiment.measure)} />
             <button
               type="submit"
-              className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+              className="h-8 rounded-md border border-[var(--border)] px-3 text-[12px] font-semibold text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
             >
               {savedExperiment ? "Update saved experiment" : "Save experiment"}
             </button>
             {savedExperiment ? (
-              <span className="font-mono text-[12px] text-[var(--muted)]">
+              <span className="text-[12px] text-[var(--muted)]">
                 Saved: {savedExperiment.action}
               </span>
             ) : null}
           </form>
         ) : (
-          <p className="mt-3 font-mono text-[12px] text-[var(--muted)]">
+          <p className="mt-3 text-[12px] text-[var(--muted)]">
             Read-only demo: experiments are shown but not saved.
           </p>
         )}
       </div>
 
-      <div className="mt-5 grid gap-2 font-mono text-[12px] leading-5 text-[var(--muted)] sm:grid-cols-2">
+      <div className="mt-5 grid gap-2 text-[12px] leading-5 text-[var(--muted)] tabular-nums sm:grid-cols-2">
         <span>
           Win rate {formatPercent(factPack.session.winRate)} · breakeven {formatPercent(factPack.session.breakevenWinRate)}
         </span>
@@ -1251,7 +1343,7 @@ function StarterCoachRead({
       ) : null}
 
       <div className="mt-5 border-t border-[var(--hairline)] pt-4">
-        <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Coach review payload</div>
+        <div className="text-[12px] text-[var(--muted)]">Coach review payload</div>
         <p className="mt-2 max-w-[760px] text-sm leading-6 text-[var(--body)]">
           This uses the exact context package: playbook, rubric, deterministic facts,
           daily context, and annotated trade notes.
@@ -1263,7 +1355,7 @@ function StarterCoachRead({
               <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
               <button
                 type="submit"
-                className="h-8 rounded-md border border-[var(--blue)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--foreground)] transition-colors hover:bg-[var(--blue)] hover:text-white"
+                className="h-8 rounded-md border border-[var(--foreground)] bg-[var(--foreground)] px-3 text-[12px] font-semibold text-[var(--background)] transition-opacity hover:opacity-90"
               >
                 {generatedReview ? "Regenerate coach review" : "Ask Coach"}
               </button>
@@ -1273,19 +1365,19 @@ function StarterCoachRead({
               <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
               <button
                 type="submit"
-                className="h-8 rounded-md border border-[var(--border)] px-3 font-mono text-[12px] font-semibold uppercase text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+                className="h-8 rounded-md border border-[var(--border)] px-3 text-[12px] font-semibold text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
               >
                 {savedReview ? "Refresh draft" : "Save draft"}
               </button>
             </form>
             {savedReview ? (
-              <span className="font-mono text-[12px] text-[var(--muted)]">
+              <span className="text-[12px] text-[var(--muted)]">
                 Saved as {savedReview.status}
               </span>
             ) : null}
           </div>
         ) : (
-          <p className="mt-3 max-w-[760px] font-mono text-[12px] leading-5 text-[var(--muted)]">
+          <p className="mt-3 max-w-[760px] text-[12px] leading-5 text-[var(--muted)] tabular-nums">
             Read-only demo: coach reviews are loaded from approved static fixtures,
             not generated live.
           </p>
@@ -1299,14 +1391,14 @@ function StarterCoachRead({
 
         {generatedReview ? (
           <div className="mt-5 space-y-5">
-            <div className="border-l border-[var(--blue)] pl-4">
-              <div className="font-mono text-[11px] uppercase text-[var(--muted)]">
+            <div className="border-l border-[var(--coach)] pl-4">
+              <div className="text-[12px] text-[var(--muted)]">
                 {readOnly ? "Static demo coach verdict" : "AI coach verdict"}
               </div>
               <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
                 {generatedReview.review.dayVerdict}
               </p>
-              <p className="mt-2 font-mono text-[12px] text-[var(--muted)]">
+              <p className="mt-2 text-[12px] text-[var(--muted)]">
                 {generatedReview.model}
               </p>
             </div>
@@ -1318,13 +1410,13 @@ function StarterCoachRead({
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Key trade to study</div>
+                <div className="text-[12px] text-[var(--muted)]">Key trade to study</div>
                 <p className="mt-2 text-sm leading-6 text-[var(--body)]">
                   {generatedReview.review.keyTradeToStudy.symbol ?? "Trade"}: {generatedReview.review.keyTradeToStudy.reason}
                 </p>
               </div>
               <div>
-                <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Behavior pattern</div>
+                <div className="text-[12px] text-[var(--muted)]">Behavior pattern</div>
                 <p className="mt-2 text-sm leading-6 text-[var(--body)]">
                   {generatedReview.review.behaviorPattern}
                 </p>
@@ -1332,14 +1424,14 @@ function StarterCoachRead({
             </div>
 
             <div className="border-t border-[var(--hairline)] pt-4">
-              <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Statistical read</div>
+              <div className="text-[12px] text-[var(--muted)]">Statistical read</div>
               <p className="mt-2 text-sm leading-6 text-[var(--body)]">
                 {generatedReview.review.statisticalRead}
               </p>
             </div>
 
             <div className="border-t border-[var(--hairline)] pt-4">
-              <div className="font-mono text-[11px] uppercase text-[var(--muted)]">Coach experiment</div>
+              <div className="text-[12px] text-[var(--muted)]">Coach experiment</div>
               <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
                 <span className="font-semibold">{generatedReview.review.oneExperiment.action}</span>
               </p>
@@ -1364,7 +1456,7 @@ function StarterCoachRead({
 function CoachReviewList({ title, items }: { title: string; items: string[] }) {
   return (
     <div>
-      <div className="font-mono text-[11px] uppercase text-[var(--muted)]">{title}</div>
+      <div className="text-[12px] text-[var(--muted)]">{title}</div>
       {items.length > 0 ? (
         <ul className="mt-2 space-y-2 text-sm leading-6 text-[var(--body)]">
           {items.map((item) => (
@@ -1403,8 +1495,7 @@ export default async function TradeJournalReview({
     loadReviewArchive(archiveAnchor, accountId, basePath, month),
   ]);
   const reviewScope = reviewScopeFor(range.preset, rangeForPreset(range.preset, range.anchor));
-  const [recaps, savedExperiment, savedReview] = await Promise.all([
-    loadDayRecaps(accountId, range.days.map((day) => day.day.date)),
+  const [savedExperiment, savedReview] = await Promise.all([
     loadSavedCoachExperiment(accountId, reviewScope),
     loadSavedCoachReview(accountId, reviewScope),
   ]);
@@ -1432,23 +1523,9 @@ export default async function TradeJournalReview({
           enableWeekScrollSpy={preset === "month"}
         />
         <div className="mt-8 min-w-0 space-y-8">
-          <header>
-            <h1 className="text-4xl font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
-              Journal
-            </h1>
-          </header>
-
           {preset === "week" ? (
             <ScopeHeader>
               <WeekHeader label={range.title} displayDate={range.displayDate} />
-            </ScopeHeader>
-          ) : null}
-          {preset === "today" ? (
-            <ScopeHeader>
-              <WeekHeader
-                label={range.anchor === currentEtDate() ? "Today" : range.title}
-                displayDate={todayDisplayDate(range)}
-              />
             </ScopeHeader>
           ) : null}
 
@@ -1457,23 +1534,17 @@ export default async function TradeJournalReview({
           ) : preset === "month" ? (
             <div className="space-y-14">
               {range.weeks.map((week) => (
-                <WeekSection key={week.key} week={week} recaps={recaps} returnTo={currentHref} />
+                <WeekSection key={week.key} week={week} returnTo={currentHref} />
               ))}
             </div>
           ) : preset === "week" ? (
             <div className="space-y-12">
               {range.days.map((dayData) => (
-                <DayReviewSection
-                  key={dayData.day.date}
-                  data={dayData}
-                  recaps={recaps}
-                  returnTo={currentHref}
-                  readOnly={readOnly}
-                />
+                <DayReviewSection key={dayData.day.date} data={dayData} returnTo={currentHref} />
               ))}
             </div>
           ) : (
-            <DayReviewSection data={range.days[0]} recaps={recaps} returnTo={currentHref} readOnly={readOnly} />
+            <DayReviewSection data={range.days[0]} returnTo={currentHref} />
           )}
 
           {range.trades > 0 ? (

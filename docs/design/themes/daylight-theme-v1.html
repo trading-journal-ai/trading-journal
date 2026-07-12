@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#fcfaf7;color:#4a463e;font-family:'Geist',system-ui,sans-serif}
+a{color:#b06e2a;text-decoration:none}
+a:hover{color:#8f5720}
+</style>
+</helmet>
+
+<div style="max-width:880px;margin:0 auto;padding:64px 40px 120px">
+
+<header>
+  <div style="font-size:13px;font-weight:600;color:#8a8375">Trading Journal AI · Theme package · July 2026</div>
+  <h1 style="margin:14px 0 0;font-size:38px;font-weight:600;letter-spacing:-0.03em;color:#211e18">Daylight — v1</h1>
+  <p style="margin:14px 0 0;max-width:640px;font-size:15px;line-height:1.7">The warm light theme settled in <a href="Journal Visual Directions.dc.html#5a">5a</a> / <a href="Journal Visual Directions.dc.html#6a">6a</a> / <a href="Journal Visual Directions.dc.html#6b">6b</a>, packaged for production. Tokens below map 1:1 onto the existing <span style="font-family:'Geist Mono',monospace;font-size:13px">globals.css</span> variables so it can ship as <span style="font-family:'Geist Mono',monospace;font-size:13px">data-theme="daylight"</span>. Typography and layout rules live in the <a href="Type & Spacing Guide.dc.html">Type &amp; Spacing Guide</a>; this document adds the color tokens and component conventions.</p>
+</header>
+
+<section style="margin-top:56px">
+  <h2 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-0.01em;color:#211e18">Core tokens</h2>
+  <p style="margin:10px 0 0;font-size:14px;color:#8a8375">Existing variable names → Daylight values.</p>
+  <div style="margin-top:16px;display:grid;gap:5px;font-size:13.5px">
+    <div style="display:grid;grid-template-columns:20px 170px 130px 1fr;gap:12px;align-items:center"><span style="width:16px;height:16px;border-radius:4px;background:#fcfaf7;outline:1px solid rgba(0,0,0,.12)"></span><span style="font-family:'Geist Mono',monospace;color:#6b6558">--background</span><span style="font-family:'Geist Mono',monospace;color:#8a8375">#FCFAF7</span><span style="color:#8a8375">warm cream ground</span></div>
+    <div style="display:grid;grid-template-columns:20px 170px 130px 1fr;gap:12px;align-items:center"><span style="width:16px;height:16px;border-radius:4px;background:#ffffff;outline:1px solid rgba(0,0,0,.12)"></span><span style="font-family:'Geist Mono',monospace;color:#6b6558">--surface</span><span style="font-family:'Geist Mono',monospace;color:#8a8375">#FFFFFF</span><span style="color:#8a8375">cards: charts, trade cards, inputs</span></div>
+    <div style="display:grid;grid-template-columns:20px 170px 130px 1fr;gap:12px;align-items:center"><span style="width:16px;height:16px;border-radius:4px;background:#f3efe6"></span><span style="font-family:'Geist Mono',monospace;color:#6b6558">--surface-2</span><span style="font-family:'Geist Mono',monospace;color:#8a8375">#F3EFE6</span><span style="color:#8a8375">tinted fills: pills, tags, buttons, selected rows</span></div>
+    <div style="display:grid;grid-template-columns:20px 170px 130px 1fr;gap:12px;align-items:center"><span style="width:16px;height:16px;border-radius:4px;background:#f6f2ea"></span><span style="font-family:'Geist Mono',monospace;color:#6b6558">--panel</span><span style="font-family:'Geist Mono',monospace;color:#8a8375">#F6F2EA</span><span style="color:#8a8375">hover surface, recap block</span></div>
+    <div style="display:grid;grid-template-columns:20px 170px 130px 1fr;gap:12px;align-items:center"><span style="width:16px;height:16px;border-radius:4px;background:#ecebde"></span><span style="font-family:'Geist Mono',monospace;color:#6b6558">--border</span><span style="font-family:'Geist Mono',monospace;color:#8a8375">#ECEBDE</span><span style="color:#8a8375">card borders — controls use fills, not borders</span></div>
+    <div style="display:grid;grid-template-columns:20px 170px 130px 1fr;gap:12px;align-items:center"><span style="width:16px;height:16px;border-radius:4px;background:#efe9dd"></span><span style="font-family:'Geist Mono',monospace;color:#6b6558">--hairline</span><span style="font-family:'Geist Mono',monospace;color:#8a8375">#EFE9DD</span><span style="color:#8a8375">dividers inside cards only</span></div>
+    <div style="display:grid;grid-template-columns:20px 170px 130px 1fr;gap:12px;align-items:center"><span style="width:16px;height:16px;border-radius:4px;background:#211e18"></span><span style="font-family:'Geist Mono',monospace;color:#6b6558">--foreground</span><span style="font-family:'Geist Mono',monospace;color:#8a8375">#211E18</span><span style="color:#8a8375">warm ink — headings, primary buttons, selected pills</span></div>
+    <div style="display:grid;grid-template-columns:20px 170px 130px 1fr;gap:12px;align-items:center"><span style="width:16px;height:16px;border-radius:4px;background:#4a463e"></span><span style="font-family:'Geist Mono',monospace;color:#6b6558">--body</span><span style="font-family:'Geist Mono',monospace;color:#8a8375">#4A463E</span><span style="color:#8a8375">prose, notes, list items</span></div>
+    <div style="display:grid;grid-template-columns:20px 170px 130px 1fr;gap:12px;align-items:center"><span style="width:16px;height:16px;border-radius:4px;background:#8a8375"></span><span style="font-family:'Geist Mono',monospace;color:#6b6558">--muted</span><span style="font-family:'Geist Mono',monospace;color:#8a8375">#8A8375</span><span style="color:#8a8375">metadata, nav rest state, chart axis</span></div>
+    <div style="display:grid;grid-template-columns:20px 170px 130px 1fr;gap:12px;align-items:center"><span style="width:16px;height:16px;border-radius:4px;background:#b0a892"></span><span style="font-family:'Geist Mono',monospace;color:#6b6558">--faint</span><span style="font-family:'Geist Mono',monospace;color:#8a8375">#B0A892</span><span style="color:#8a8375">placeholders, timestamps, separators (#D5CDBC for dots)</span></div>
+    <div style="display:grid;grid-template-columns:20px 170px 130px 1fr;gap:12px;align-items:center"><span style="width:16px;height:16px;border-radius:4px;background:#217a4b"></span><span style="font-family:'Geist Mono',monospace;color:#6b6558">--green</span><span style="font-family:'Geist Mono',monospace;color:#8a8375">#217A4B</span><span style="color:#8a8375">positive text · #2C9A63 chart lines · #E9F2EC tint</span></div>
+    <div style="display:grid;grid-template-columns:20px 170px 130px 1fr;gap:12px;align-items:center"><span style="width:16px;height:16px;border-radius:4px;background:#bc4b38"></span><span style="font-family:'Geist Mono',monospace;color:#6b6558">--red</span><span style="font-family:'Geist Mono',monospace;color:#8a8375">#BC4B38</span><span style="color:#8a8375">negative text · #C4553F chart lines · #F8EAE5 tint</span></div>
+    <div style="display:grid;grid-template-columns:20px 170px 130px 1fr;gap:12px;align-items:center"><span style="width:16px;height:16px;border-radius:4px;background:#b06e2a"></span><span style="font-family:'Geist Mono',monospace;color:#6b6558">--accent (new)</span><span style="font-family:'Geist Mono',monospace;color:#8a8375">#B06E2A</span><span style="color:#8a8375">amber: links, active nav (#C98A2E tick), ✎ you, focus ring</span></div>
+    <div style="display:grid;grid-template-columns:20px 170px 130px 1fr;gap:12px;align-items:center"><span style="width:16px;height:16px;border-radius:4px;background:#2e7d5b"></span><span style="font-family:'Geist Mono',monospace;color:#6b6558">--coach (new)</span><span style="font-family:'Geist Mono',monospace;color:#8a8375">#2E7D5B</span><span style="color:#8a8375">✳ coach voice label + left rule (#7CAE94)</span></div>
+  </div>
+  <p style="margin:18px 0 0;font-size:13.5px;line-height:1.65;color:#8a8375;max-width:640px"><span style="font-family:'Geist Mono',monospace;font-size:12.5px">--blue</span> has no role in Daylight screens shown so far — amber is the working accent. Keep it reserved for Dashboard when that surface is themed.</p>
+</section>
+
+<section style="margin-top:56px">
+  <h2 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-0.01em;color:#211e18">Drop-in CSS</h2>
+  <div style="margin-top:14px;background:#fff;border:1px solid #ecebde;border-radius:8px;padding:18px 22px;font-family:'Geist Mono',monospace;font-size:12.5px;line-height:1.8;color:#4a463e;white-space:pre">:root[data-theme="daylight"] {
+  --background: #fcfaf7;
+  --surface: #ffffff;
+  --surface-2: #f3efe6;
+  --panel: #f6f2ea;
+  --border: #ecebde;
+  --hairline: rgba(33, 30, 24, 0.08);
+  --foreground: #211e18;
+  --body: #4a463e;
+  --muted: #8a8375;
+  --faint: #b0a892;
+  --green: #217a4b;
+  --red: #bc4b38;
+  --blue: #0969da; /* reserved */
+  --accent: #b06e2a;
+  --accent-strong: #c98a2e;
+  --coach: #2e7d5b;
+  --green-chart: #2c9a63;
+  --red-chart: #c4553f;
+  --green-tint: #e9f2ec;
+  --red-tint: #f8eae5;
+  color-scheme: light;
+}</div>
+</section>
+
+<section style="margin-top:56px">
+  <h2 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-0.01em;color:#211e18">Evening — companion dark theme</h2>
+  <p style="margin:10px 0 0;max-width:640px;font-size:14px;line-height:1.65;color:#8a8375">Same structure and type, colors only (<a href="Journal Visual Directions.dc.html#7a">7a</a>). Warm charcoal, never black — the dark side of the same ink family.</p>
+  <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;font-size:12px;font-family:'Geist Mono',monospace">
+    <span style="display:grid;gap:4px;width:112px"><span style="height:40px;border-radius:5px;background:#191918"></span><span style="color:#8a8375">#191918 bg</span></span>
+    <span style="display:grid;gap:4px;width:112px"><span style="height:40px;border-radius:5px;background:#222221"></span><span style="color:#8a8375">#222221 surface</span></span>
+    <span style="display:grid;gap:4px;width:112px"><span style="height:40px;border-radius:5px;background:#2a2a28"></span><span style="color:#8a8375">#2A2A28 tint</span></span>
+    <span style="display:grid;gap:4px;width:112px"><span style="height:40px;border-radius:5px;background:#383835"></span><span style="color:#8a8375">#383835 border</span></span>
+    <span style="display:grid;gap:4px;width:112px"><span style="height:40px;border-radius:5px;background:#f0efeb"></span><span style="color:#8a8375">#F0EFEB ink</span></span>
+    <span style="display:grid;gap:4px;width:112px"><span style="height:40px;border-radius:5px;background:#d99a4e"></span><span style="color:#8a8375">#D99A4E accent</span></span>
+    <span style="display:grid;gap:4px;width:112px"><span style="height:40px;border-radius:5px;background:#55b183"></span><span style="color:#8a8375">#55B183 green</span></span>
+    <span style="display:grid;gap:4px;width:112px"><span style="height:40px;border-radius:5px;background:#d97a63"></span><span style="color:#8a8375">#D97A63 red</span></span>
+  </div>
+  <div style="margin-top:16px;background:#fff;border:1px solid #ecebde;border-radius:8px;padding:18px 22px;font-family:'Geist Mono',monospace;font-size:12.5px;line-height:1.8;color:#4a463e;white-space:pre">:root[data-theme="evening"] {
+  --background: #191918;
+  --surface: #222221;
+  --surface-2: #2a2a28;
+  --panel: #2e2e2b;
+  --border: #383835;
+  --hairline: rgba(240, 239, 235, 0.07);
+  --foreground: #f0efeb;
+  --body: #c9c7bf;
+  --muted: #93918a;
+  --faint: #6c6b64;
+  --green: #55b183;
+  --red: #d97a63;
+  --blue: #58a6ff; /* reserved */
+  --accent: #d99a4e;
+  --accent-strong: #d99a4e;
+  --coach: #6fae8f;
+  --green-chart: #3fa873;
+  --red-chart: #c9604b;
+  --green-tint: #223129;
+  --red-tint: #362824;
+  color-scheme: dark;
+}</div>
+  <p style="margin:14px 0 0;max-width:640px;font-size:13.5px;line-height:1.65;color:#8a8375">In Evening the primary button inverts: ivory ink fill with dark text. Everything else keeps its role.</p>
+</section>
+
+<section style="margin-top:56px">
+  <h2 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-0.01em;color:#211e18">Component conventions</h2>
+  <ul style="margin:14px 0 0;padding-left:20px;max-width:660px;font-size:15px;line-height:1.8;color:#4a463e">
+    <li><strong style="color:#211e18">Cards</strong> — white on cream, 1px <span style="font-family:'Geist Mono',monospace;font-size:13px">--border</span>, 8px radius, no shadows. Hairlines only inside cards.</li>
+    <li><strong style="color:#211e18">Controls</strong> — no borders: tinted <span style="font-family:'Geist Mono',monospace;font-size:13px">--surface-2</span> fills for tags/secondary buttons/shell controls; ink-solid <span style="font-family:'Geist Mono',monospace;font-size:13px">--foreground</span> for the primary action and selected pills. 6px radius; full-round for pills/tags.</li>
+    <li><strong style="color:#211e18">Page header lockup</strong> — breadcrumb · 40px gap · date (15px muted) · title 38px with the P&amp;L (19px mono) beside it · one stats pill. No repeated figures below.</li>
+    <li><strong style="color:#211e18">Voice labels</strong> — 13px/600 + glyph: ✳ coach (<span style="font-family:'Geist Mono',monospace;font-size:13px">--coach</span>), ✎ you (<span style="font-family:'Geist Mono',monospace;font-size:13px">--accent</span>), ⇣ imported (muted pill), ƒ calculated (muted). User recap sits on <span style="font-family:'Geist Mono',monospace;font-size:13px">--panel</span> when subordinate.</li>
+    <li><strong style="color:#211e18">Status pills</strong> — tinted, never bordered: Best setup on <span style="font-family:'Geist Mono',monospace;font-size:13px">--green-tint</span>, Worst trade on <span style="font-family:'Geist Mono',monospace;font-size:13px">--red-tint</span>.</li>
+    <li><strong style="color:#211e18">Charts</strong> — <span style="font-family:'Geist Mono',monospace;font-size:13px">--green-chart</span>/<span style="font-family:'Geist Mono',monospace;font-size:13px">--red-chart</span> for series, grid on #F3EFE6, axis text muted 12–13px sans (not mono), entry/exit markers labeled in words.</li>
+    <li><strong style="color:#211e18">Figures</strong> — Geist Mono 600 tabular, always signed, ▲/▼ when standing alone; each figure appears once per view.</li>
+  </ul>
+</section>
+
+<section style="margin-top:56px;border-top:1px solid #ecebde;padding-top:32px">
+  <h2 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-0.01em;color:#211e18">Rollout notes</h2>
+  <ol style="margin:14px 0 0;padding-left:20px;max-width:660px;font-size:15px;line-height:1.8;color:#4a463e">
+    <li>Ship as <span style="font-family:'Geist Mono',monospace;font-size:13px">data-theme="daylight"</span> alongside the existing dark and light themes — no component changes needed for the tokens to take.</li>
+    <li>The bigger wins are structural and can land incrementally: the header lockup, the stats pill, sentence-case labels replacing mono eyebrows, and borderless controls.</li>
+    <li>Amber accent replaces blue within Journal/Trades surfaces; audit link and focus-ring styles when switching.</li>
+    <li>Contrast check: body #4A463E on #FCFAF7 ≈ 8.7:1, muted #8A8375 ≈ 3.6:1 (fine at 13px+ for metadata; don't use for smaller text). Green/red text tokens both ≥ 4.5:1 on white and cream.</li>
+  </ol>
+</section>
+
+</div>
+
+</x-dc>
+</body>
+</html>

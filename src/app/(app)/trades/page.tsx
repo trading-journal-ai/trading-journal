@@ -415,7 +415,7 @@ export default async function TradesPage({
         ? "bg-[var(--surface-2)] text-[var(--foreground)]"
         : "text-[var(--muted)] hover:text-[var(--foreground)]"
     }`;
-  const navButtonClass = "flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[#58a6ff] hover:text-[var(--foreground)]";
+  const navButtonClass = "flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--foreground)]";
   const disabledNavButtonClass = "flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] opacity-40";
 
   return (
@@ -461,7 +461,7 @@ export default async function TradesPage({
               name="symbol"
               defaultValue={filters.symbol ?? ""}
               placeholder="Symbol"
-              className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[#58a6ff]"
+              className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[var(--accent)]"
             />
           </label>
 
@@ -470,7 +470,7 @@ export default async function TradesPage({
             <select
               name="tag"
               defaultValue={filters.tag ?? ""}
-              className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[#58a6ff]"
+              className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[var(--accent)]"
             >
               <option value="">All tags</option>
               {tagOptions.map((tagOption) => (
@@ -486,7 +486,7 @@ export default async function TradesPage({
             <select
               name="side"
               defaultValue={filters.side ?? ""}
-              className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[#58a6ff]"
+              className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[var(--accent)]"
             >
               <option value="">All sides</option>
               <option value="long">Long</option>
@@ -497,7 +497,7 @@ export default async function TradesPage({
           <div className="flex items-end">
             <button
               type="submit"
-              className="h-10 rounded-md border border-[#58a6ff] px-3 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--surface)]"
+              className="h-10 rounded-md border border-[var(--accent)] px-3 text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--surface)]"
             >
               Apply
             </button>
@@ -512,8 +512,8 @@ export default async function TradesPage({
         <span className="text-sm font-semibold text-[var(--muted)]">{summary.detail}</span>
       </div>
 
-      <div className="overflow-x-auto border-y border-[var(--hairline)] bg-[#1a2432]">
-        <table className="w-full bg-[#1a2432] text-sm">
+      <div className="overflow-x-auto border-y border-[var(--hairline)] bg-[var(--surface)]">
+        <table className="w-full bg-[var(--surface)] text-sm">
           <thead style={{ backgroundColor: "var(--background)" }}>
             <tr className="border-b border-[var(--hairline)] text-left font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
               <th className="px-3 py-3 font-semibold whitespace-nowrap"><SortHeader label="Date" sort="date" filters={filters} /></th>
@@ -541,7 +541,9 @@ export default async function TradesPage({
               return (
                 <RowLink
                   key={t.id}
-                  href={`/trades/${t.id}?returnTo=${encodeURIComponent(currentHref)}`}
+                  href={t.entryAt == null
+                    ? currentHref
+                    : `/trades/review?date=${etDateString(t.entryAt)}&symbol=${t.symbol}&trade=${t.id}&returnTo=${encodeURIComponent(currentHref)}`}
                   className="border-b border-[var(--hairline)] last:border-0 hover:bg-[var(--surface)] cursor-pointer"
                 >
                   <td className="px-3 py-3 whitespace-nowrap">{fmtDate(t.entryAt)}</td>
@@ -550,8 +552,8 @@ export default async function TradesPage({
                       t.symbol
                     ) : (
                       <Link
-                        href={`/trades/review?date=${etDateString(t.entryAt)}&symbol=${t.symbol}&returnTo=${encodeURIComponent(currentHref)}`}
-                        className="hover:text-[var(--blue)] hover:underline"
+                        href={`/trades/review?date=${etDateString(t.entryAt)}&symbol=${t.symbol}&trade=${t.id}&returnTo=${encodeURIComponent(currentHref)}`}
+                        className="hover:text-[var(--accent)] hover:underline"
                       >
                         {t.symbol}
                       </Link>
@@ -607,8 +609,8 @@ export default async function TradesPage({
                     href={filterHref(filters, { page: item })}
                     className={`flex h-10 min-w-10 items-center justify-center rounded-md border px-3 text-sm font-semibold ${
                       item === page
-                        ? "border-[#58a6ff] bg-[var(--surface)] text-[var(--foreground)]"
-                        : "border-[var(--border)] text-[var(--muted)] hover:border-[#58a6ff] hover:text-[var(--foreground)]"
+                        ? "border-[var(--accent)] bg-[var(--surface)] text-[var(--foreground)]"
+                        : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--foreground)]"
                     }`}
                   >
                     {item}
@@ -644,7 +646,7 @@ export default async function TradesPage({
               <select
                 name="perPage"
                 defaultValue={String(filters.perPage)}
-                className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[#58a6ff]"
+                className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
               >
                 {PAGE_SIZE_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -655,7 +657,7 @@ export default async function TradesPage({
             </label>
             <button
               type="submit"
-              className="h-10 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[#58a6ff] hover:text-[var(--foreground)]"
+              className="h-10 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--foreground)]"
             >
               Apply
             </button>

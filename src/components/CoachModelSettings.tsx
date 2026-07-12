@@ -115,7 +115,7 @@ export default function CoachModelSettings({
           type="button"
           aria-expanded={open}
           onClick={() => setOpen((value) => !value)}
-          className="h-10 rounded-md border border-[var(--border)] px-4 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+          className="h-10 rounded-md border border-[var(--border)] px-4 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
         >
           {open ? "Close" : status.openAiConfigured ? "Open" : "Add model"}
         </button>
@@ -135,8 +135,8 @@ export default function CoachModelSettings({
                   className={[
                     "min-h-[124px] rounded-md border px-4 py-3 text-left transition-colors",
                     selected
-                      ? "border-[var(--blue)] bg-[var(--surface)]"
-                      : "border-[var(--border)] hover:border-[var(--blue)]",
+                      ? "border-[var(--accent)] bg-[var(--surface)]"
+                      : "border-[var(--border)] hover:border-[var(--accent)]",
                   ].join(" ")}
                 >
                   <div className="flex items-start justify-between gap-3">
