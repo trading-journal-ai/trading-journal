@@ -3,22 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { db, schema } from "@/lib/db";
 import { getActiveAccount } from "@/lib/accountScope";
-import {
-  PRIMARY_TRADE_LABELS,
-} from "@/lib/journalLabels";
+import { SETUP_PATTERN_CUES } from "@/lib/journalLabels";
 
 export async function addTradeNoteAction(formData: FormData) {
   const tradeId = Number(formData.get("tradeId"));
   const note = String(formData.get("note") ?? "").trim();
-  const primaryLabel = String(formData.get("primaryLabel") ?? "").trim();
-  const validPrimaryLabel = PRIMARY_TRADE_LABELS.some((option) => option.value === primaryLabel)
-    ? primaryLabel
+  const setupPattern = String(formData.get("setupPattern") ?? "").trim();
+  const validSetupPattern = SETUP_PATTERN_CUES.some((option) => option.value === setupPattern)
+    ? setupPattern
     : "";
 
   if (
     !Number.isInteger(tradeId) ||
     tradeId <= 0 ||
-    (!note && !validPrimaryLabel)
+    (!note && !validSetupPattern)
   ) {
     return;
   }
@@ -28,9 +26,10 @@ export async function addTradeNoteAction(formData: FormData) {
     accountId: activeAccount.id,
     tradeId,
     lessons: note || null,
-    emotionalState: validPrimaryLabel || null,
+    thesis: validSetupPattern || null,
   });
 
   revalidatePath(`/trades/${tradeId}`);
+  revalidatePath("/trades/review");
   revalidatePath("/journal");
 }

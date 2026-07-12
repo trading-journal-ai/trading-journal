@@ -443,7 +443,7 @@ function buildDayData(date: string, trades: TradeRow[], executions: ExecutionRow
       label: "Best trade",
       symbol: bestTrade.trade.symbol,
       pnl: bestTrade.pnl,
-      href: `/trades/${bestTrade.trade.id}?returnTo=${encodeURIComponent(journalReviewHref("/journal", { preset: "today", date }))}`,
+      href: `/trades/review?date=${date}&symbol=${bestTrade.trade.symbol}&trade=${bestTrade.trade.id}&returnTo=${encodeURIComponent(journalReviewHref("/journal", { preset: "today", date }))}`,
     });
   }
   if (worstTrade && worstTrade.trade.id !== bestTrade?.trade.id) {
@@ -452,7 +452,7 @@ function buildDayData(date: string, trades: TradeRow[], executions: ExecutionRow
       label: "Worst trade",
       symbol: worstTrade.trade.symbol,
       pnl: worstTrade.pnl,
-      href: `/trades/${worstTrade.trade.id}?returnTo=${encodeURIComponent(journalReviewHref("/journal", { preset: "today", date }))}`,
+      href: `/trades/review?date=${date}&symbol=${worstTrade.trade.symbol}&trade=${worstTrade.trade.id}&returnTo=${encodeURIComponent(journalReviewHref("/journal", { preset: "today", date }))}`,
     });
   }
   if (biggestTicker && biggestTicker.trades > 1) {
@@ -478,7 +478,7 @@ function buildDayData(date: string, trades: TradeRow[], executions: ExecutionRow
               : "",
           pnl: worstTrade.pnl,
           fills: executionCountByTrade.get(worstTrade.trade.id) ?? 0,
-          href: `/trades/${worstTrade.trade.id}?returnTo=${encodeURIComponent(dayReturnTo)}`,
+          href: `/trades/review?date=${date}&symbol=${worstTrade.trade.symbol}&trade=${worstTrade.trade.id}&returnTo=${encodeURIComponent(dayReturnTo)}`,
         }
       : null;
 

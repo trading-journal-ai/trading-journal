@@ -12,9 +12,14 @@ export type ChartCandle = {
 };
 
 export type ChartMarker = {
+  id?: number;
   t: number; // epoch seconds
   price: number;
   side: "buy" | "sell";
+  quantity?: number;
+  tradeNumber?: number;
+  pnl?: number;
+  perShare?: number;
 };
 
 const W = 900;

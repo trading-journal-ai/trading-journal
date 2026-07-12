@@ -8,18 +8,22 @@ import { demoTradeNoteKey } from "@/lib/demoLocalNotes";
 
 export default function TradeNoteComposer({
   tradeId,
-  symbol,
   readOnly = false,
+  initiallyOpen = false,
+  triggerLabel = "+ Add trade context",
 }: {
   tradeId: number;
-  symbol: string;
   readOnly?: boolean;
+  initiallyOpen?: boolean;
+  triggerLabel?: string;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initiallyOpen);
   const localStorageKey = readOnly ? demoTradeNoteKey(tradeId) : undefined;
   const [localText, setLocalText] = useLocalStorageText(localStorageKey, "");
 
-  if (!open && localText) {
+  const isOpen = open || initiallyOpen;
+
+  if (!isOpen && localText) {
     return (
       <button
         type="button"
@@ -36,7 +40,7 @@ export default function TradeNoteComposer({
     );
   }
 
-  if (!open) {
+  if (!isOpen) {
     return (
       <button
         type="button"
@@ -45,7 +49,7 @@ export default function TradeNoteComposer({
         title="Click to add a trade note"
       >
         <p className="text-[13px] font-semibold text-[var(--accent)]">
-          + Add a trade note
+          {triggerLabel}
         </p>
         <p className="mt-3 max-w-[28rem] text-sm leading-6 text-[var(--muted)]">
           Setup quality, execution, rules followed or broken, emotions, and what
@@ -59,8 +63,7 @@ export default function TradeNoteComposer({
     <form action={addTradeNoteAction}>
       <input type="hidden" name="tradeId" value={tradeId} />
       <TradeNoteFormFields
-        symbol={symbol}
-        defaultPrimaryLabel={null}
+        defaultSetupPattern={null}
         defaultText={localText}
         onCancel={() => setOpen(false)}
         localStorageKey={localStorageKey}
