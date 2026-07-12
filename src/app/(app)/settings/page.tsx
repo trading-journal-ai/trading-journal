@@ -313,7 +313,7 @@ export default async function SettingsPage() {
           <div className="flex flex-wrap gap-3">
             <a
               href="/api/export/trades"
-              className="inline-flex h-10 items-center rounded-md bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--background)]"
+              className="inline-flex h-10 items-center rounded-md bg-[var(--foreground)] px-4 text-sm font-semibold text-[var(--background)] transition-opacity hover:opacity-90"
             >
               Export trades CSV
             </a>
