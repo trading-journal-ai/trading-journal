@@ -61,7 +61,7 @@ make a specific recommendation legible at a glance.
 | Rule integrity | Compact clean / breach / not-evaluable rail | Rule scorecard |
 | Repeated pattern | Five-session recurrence strip | Historical examples |
 | Opportunity at entry | Annotated chart thumbnail: entry, VWAP, high, exit | Trade chart |
-| Review queue | Session timeline highlighting 2–4 trades | Trade detail |
+| Review queue | Session timeline highlighting 2–4 trades | Ticker/day chart with cited trade selected |
 
 Do not use generic metric cards where a sentence and one proof visual do more
 work. Analytics remains the place to explore the wider data landscape.
