@@ -12,9 +12,14 @@ export type ChartCandle = {
 };
 
 export type ChartMarker = {
+  id?: number;
   t: number; // epoch seconds
   price: number;
   side: "buy" | "sell";
+  quantity?: number;
+  tradeNumber?: number;
+  pnl?: number;
+  perShare?: number;
 };
 
 const W = 900;
@@ -383,10 +388,7 @@ export default function TradeChart({
     setTargetViewport(nextViewport);
   };
 
-  const shellClass =
-    variant === "review"
-      ? "overflow-hidden rounded-[6px] bg-[#1a2432]"
-      : "overflow-hidden rounded-[6px] border border-[var(--border)] bg-[var(--surface)]";
+  const shellClass = "overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]";
 
   return (
     <div className={shellClass}>
@@ -444,7 +446,7 @@ export default function TradeChart({
         {/* volume */}
         {visibleEntries.map(({ candle: c, index: i }) => {
           const up = c.c >= c.o;
-          const color = up ? "var(--green)" : "var(--red)";
+          const color = up ? "var(--green-chart)" : "var(--red-chart)";
           const barY = volumeY(c.vol);
           return (
             <rect
@@ -462,7 +464,7 @@ export default function TradeChart({
         {/* candles */}
         {visibleEntries.map(({ candle: c, index: i }) => {
           const up = c.c >= c.o;
-          const color = up ? "var(--green)" : "var(--red)";
+          const color = up ? "var(--green-chart)" : "var(--red-chart)";
           const bodyTop = y(Math.max(c.o, c.c));
           const bodyH = Math.max(1, Math.abs(y(c.o) - y(c.c)));
           return (
@@ -494,8 +496,8 @@ export default function TradeChart({
             <polygon
               key={i}
               points={pts}
-              fill={buy ? "#00ff7f" : "#ff3b3b"}
-              stroke="rgba(255,255,255,0.85)"
+              fill={buy ? "var(--green)" : "var(--red)"}
+              stroke="var(--surface)"
               strokeWidth={0.8}
             />
           );
@@ -504,7 +506,7 @@ export default function TradeChart({
       <div className="border-t border-[var(--hairline)] px-4 py-3">
         <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
           <label className="block">
-            <span className="mb-1 flex items-center justify-between font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+            <span className="mb-1 flex items-center justify-between text-[11px] font-semibold text-[var(--muted)]">
               Pan speed
               <span className="tracking-normal">{motion.pan}</span>
             </span>
@@ -515,11 +517,11 @@ export default function TradeChart({
               step="5"
               value={motion.pan}
               onChange={(event) => setMotion((current) => ({ ...current, pan: Number(event.target.value) }))}
-              className="w-full accent-[var(--blue)]"
+              className="w-full accent-[var(--accent)]"
             />
           </label>
           <label className="block">
-            <span className="mb-1 flex items-center justify-between font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+            <span className="mb-1 flex items-center justify-between text-[11px] font-semibold text-[var(--muted)]">
               Zoom speed
               <span className="tracking-normal">{motion.zoom}</span>
             </span>
@@ -530,11 +532,11 @@ export default function TradeChart({
               step="5"
               value={motion.zoom}
               onChange={(event) => setMotion((current) => ({ ...current, zoom: Number(event.target.value) }))}
-              className="w-full accent-[var(--blue)]"
+              className="w-full accent-[var(--accent)]"
             />
           </label>
           <label className="block">
-            <span className="mb-1 flex items-center justify-between font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+            <span className="mb-1 flex items-center justify-between text-[11px] font-semibold text-[var(--muted)]">
               Easing
               <span className="tracking-normal">{motion.ease}</span>
             </span>
@@ -545,13 +547,13 @@ export default function TradeChart({
               step="1"
               value={motion.ease}
               onChange={(event) => setMotion((current) => ({ ...current, ease: Number(event.target.value) }))}
-              className="w-full accent-[var(--blue)]"
+              className="w-full accent-[var(--accent)]"
             />
           </label>
           <button
             type="button"
             onClick={resetViewport}
-            className="h-9 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]"
+            className="h-9 rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
           >
             Reset
           </button>

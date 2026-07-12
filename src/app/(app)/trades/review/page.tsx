@@ -1,35 +1,18 @@
-import Link from "next/link";
-import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
-import { upsertTickerReviewAction } from "@/app/journal/actions";
+import { and, asc, count, eq, gte, inArray, lte } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getActiveAccount } from "@/lib/accountScope";
 import { getCandles } from "@/lib/candles";
 import { fallbackCandlesFromExecutions } from "@/lib/candles/fallback";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
-import SharedNoteComposer from "@/components/SharedNoteComposer";
 import LightweightTradeChart from "@/components/LightweightTradeChart";
 import ReviewHeader from "@/components/ReviewHeader";
-import { fmtDate, fmtMoney, fmtPrice } from "@/lib/format";
+import TickerReviewWorkspace from "@/components/TickerReviewWorkspace";
+import { fmtDate, fmtMoney } from "@/lib/format";
 import { isDemoReadOnly } from "@/lib/demoMode";
-import { demoTickerNoteKey } from "@/lib/demoLocalNotes";
 import { netPnl } from "@/lib/pnl";
-import { etDayRange, etDateString } from "@/lib/time";
+import { etDayRange, etDateString, reviewSessionRange } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
-
-type ExecutionRow = typeof schema.executions.$inferSelect;
-type TradeRow = typeof schema.trades.$inferSelect;
-type JournalEntryRow = typeof schema.journalEntries.$inferSelect;
-type TradeCycle = {
-  id: string;
-  executions: ExecutionRow[];
-  openedAt: number;
-  closedAt: number | null;
-  pnl: number | null;
-  sharesTraded: number;
-  netQuantity: number;
-  tradeIds: number[];
-};
 
 const timeFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/New_York",
@@ -39,13 +22,28 @@ const timeFmt = new Intl.DateTimeFormat("en-US", {
   hour12: false,
 });
 const fmtTime = (t: number) => timeFmt.format(new Date(t * 1000));
+const DEFAULT_REVIEW_TAGS = ["No setup", "VWAP reclaim", "HOD retest", "Late entry", "EMA rail", "Extension chase"];
 
 function formatTradeTime(value: number | null): string {
   return value == null ? "--:--" : fmtTime(value).slice(0, 5);
 }
 
-function journalNoteBody(note: JournalEntryRow): string {
-  return note.lessons || note.thesis || "No note text.";
+function formatHoldDuration(entryAt: number | null, exitAt: number | null): string | null {
+  if (entryAt == null || exitAt == null) return null;
+  const seconds = Math.max(0, exitAt - entryAt);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (minutes < 60) return `${minutes}m ${remainingSeconds.toString().padStart(2, "0")}s`;
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+}
+
+function formatSignedMoney(value: number): string {
+  return `${value > 0 ? "+" : ""}${fmtMoney(value)}`;
+}
+
+function formatLedgerPrice(value: number | null): string {
+  return value == null ? "—" : `$${value.toFixed(2)}`;
 }
 
 function tickerReviewKey(date: string, symbol: string): string {
@@ -59,244 +57,15 @@ function safeReturnTo(value: string | undefined, fallback: string): string {
   return value?.startsWith("/") && !value.startsWith("//") ? value : fallback;
 }
 
-function pnlClass(value: number | null): string {
-  if (value == null) return "text-[var(--muted)]";
-  if (value > 0) return "text-[var(--green)]";
-  if (value < 0) return "text-[var(--red)]";
-  return "text-[var(--muted)]";
-}
-
-function executionSignedQuantity(execution: ExecutionRow): number {
-  const quantity = Math.abs(Number(execution.quantity) || 0);
-  const side = execution.side.toLowerCase();
-
-  if (side === "buy") return quantity;
-  if (side === "sell") return -quantity;
-  return 0;
-}
-
-function executionCashflow(execution: ExecutionRow): number {
-  const quantity = Math.abs(Number(execution.quantity) || 0);
-  const price = Number(execution.price) || 0;
-  const side = execution.side.toLowerCase();
-
-  if (side === "buy") return -quantity * price;
-  if (side === "sell") return quantity * price;
-  return 0;
-}
-
-function buildTradeCycles(executions: ExecutionRow[]): TradeCycle[] {
-  const cycles: TradeCycle[] = [];
-  let current: TradeCycle | null = null;
-  let position = 0;
-  let cashflow = 0;
-
-  executions.forEach((execution, index) => {
-    if (!current) {
-      current = {
-        id: `cycle-${index}`,
-        executions: [],
-        openedAt: execution.executedAt,
-        closedAt: null,
-        pnl: null,
-        sharesTraded: 0,
-        netQuantity: 0,
-        tradeIds: [],
-      };
-      position = 0;
-      cashflow = 0;
-    }
-
-    const quantity = Math.abs(Number(execution.quantity) || 0);
-    position += executionSignedQuantity(execution);
-    cashflow += executionCashflow(execution);
-
-    current.executions.push(execution);
-    current.sharesTraded += quantity;
-    current.netQuantity = position;
-    if (execution.tradeId != null && !current.tradeIds.includes(execution.tradeId)) {
-      current.tradeIds.push(execution.tradeId);
-    }
-
-    if (Math.abs(position) < 0.000001) {
-      current.closedAt = execution.executedAt;
-      current.pnl = cashflow;
-      cycles.push(current);
-      current = null;
-    }
-  });
-
-  if (current) {
-    cycles.push(current);
-  }
-
-  return cycles;
-}
-
-function tradeReviewHref(date: string, symbol: string, backHref: string): string {
-  return `/trades/review?date=${date}&symbol=${symbol}&returnTo=${encodeURIComponent(backHref)}`;
-}
-
-function TradeCycleRail({
-  cycles,
-  date,
-  symbol,
-  backHref,
-}: {
-  cycles: TradeCycle[];
-  date: string;
-  symbol: string;
-  backHref: string;
-}) {
-  const returnTo = tradeReviewHref(date, symbol, backHref);
-
-  return (
-    <aside className="w-full lg:w-[260px] lg:justify-self-end">
-      <section className="h-auto px-1 py-1 lg:h-[480px]">
-        <div className="h-full space-y-5 overflow-y-auto pr-1 pt-1">
-          {cycles.length > 0 ? (
-            cycles.map((cycle, index) => (
-              <article
-                key={cycle.id}
-                className="border-b border-[var(--hairline)] pb-5 font-mono text-[12px] last:border-b-0"
-              >
-                <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-3 gap-y-1">
-                  <h2 className="text-[13px] font-semibold text-[var(--foreground)]">Trade {index + 1}</h2>
-                  <span className={`justify-self-end text-right text-[13px] font-semibold tabular-nums ${pnlClass(cycle.pnl)}`}>
-                    {cycle.pnl == null ? "Open" : fmtMoney(cycle.pnl)}
-                  </span>
-                </div>
-                <div className="mt-4 grid grid-cols-4 gap-x-2 gap-y-1.5">
-                  <div className="pb-0.5 text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Time</div>
-                  <div className="pb-0.5 text-center text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Side</div>
-                  <div className="pb-0.5 text-center text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Shares</div>
-                  <div className="pb-0.5 text-right text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Price</div>
-                  {cycle.executions.map((execution) => (
-                    <div key={execution.id} className="contents">
-                      <div className="tabular-nums text-[var(--foreground)]">{fmtTime(execution.executedAt).slice(0, 5)}</div>
-                      <div className="text-center" style={{ color: execution.side.toLowerCase() === "buy" ? "var(--green)" : "var(--red)" }}>
-                        {execution.side.toUpperCase().slice(0, 1)}
-                      </div>
-                      <div className="text-center tabular-nums text-[var(--foreground)]">{execution.quantity.toLocaleString()}</div>
-                      <div className="text-right tabular-nums text-[var(--foreground)]">{fmtPrice(execution.price)}</div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4">
-                  {cycle.tradeIds.length > 0 ? (
-                    <div className="flex flex-wrap gap-x-2 gap-y-1">
-                      {cycle.tradeIds.map((tradeId, tradeIndex) => (
-                        <Link
-                          key={tradeId}
-                          href={`/trades/${tradeId}?returnTo=${encodeURIComponent(returnTo)}`}
-                          className="text-[var(--blue)] hover:underline"
-                        >
-                          {cycle.tradeIds.length === 1 ? "View trade ->" : `Trade ${tradeIndex + 1} ->`}
-                        </Link>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </article>
-            ))
-          ) : (
-            <div className="py-1 font-mono text-[13px] text-[var(--muted)]">No trade cycles</div>
-          )}
-        </div>
-      </section>
-    </aside>
-  );
-}
-
-function TickerReviewPanel({
-  date,
-  symbol,
-  note,
-  tradeNotes,
-  stats,
-  returnTo,
-  readOnly,
-}: {
-  date: string;
-  symbol: string;
-  note: JournalEntryRow | null;
-  tradeNotes: { trade: TradeRow; note: JournalEntryRow; index: number }[];
-  stats: { label: string; value: string; className?: string }[];
-  returnTo: string;
-  readOnly: boolean;
-}) {
-  const placeholder = `How did I trade ${symbol}? What was the setup, where did I chase, and what should I repeat or avoid next time?`;
-  const scopeKey = tickerReviewKey(date, symbol);
-
-  return (
-    <section className="mt-6 rounded-md border border-[var(--hairline)] bg-[var(--surface)]/35 px-4 py-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-            Ticker Review
-          </div>
-          <h2 className="mt-2 text-lg font-semibold tracking-tight text-[var(--foreground)]">
-            How did I trade {symbol}?
-          </h2>
-        </div>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 font-mono text-[12px] sm:grid-cols-4">
-          {stats.map((stat) => (
-            <div key={stat.label}>
-              <div className="uppercase tracking-[0.14em] text-[var(--muted)]">{stat.label}</div>
-              <div className={`mt-1 tabular-nums text-[var(--foreground)] ${stat.className ?? ""}`}>{stat.value}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <form action={upsertTickerReviewAction} className="mt-4">
-        <input type="hidden" name="scopeKey" value={scopeKey} />
-        <input type="hidden" name="returnTo" value={returnTo} />
-        <SharedNoteComposer
-          name="body"
-          defaultValue={note?.lessons ?? ""}
-          placeholder={placeholder}
-          submitLabel="Save ticker review"
-          helper="Use this for the pattern across the ticker. Individual trade notes show below when present."
-          showSetupPatternCues
-          localStorageKey={readOnly ? demoTickerNoteKey(scopeKey) : undefined}
-        />
-      </form>
-
-      <div className="mt-5 border-t border-[var(--hairline)] pt-4">
-        <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-          Noted Trades
-        </div>
-        {tradeNotes.length > 0 ? (
-          <div className="mt-3 space-y-3">
-            {tradeNotes.map(({ trade, note: tradeNote, index }) => (
-              <article key={tradeNote.id} className="rounded-md border border-[var(--hairline)] px-3 py-3">
-                <div className="flex flex-wrap items-baseline justify-between gap-3">
-                  <div className="font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--foreground)]">
-                    Trade {index + 1}
-                  </div>
-                  <div className={`font-mono text-[12px] tabular-nums ${pnlClass(netPnl(trade))}`}>
-                    {formatTradeTime(trade.entryAt)} · {fmtMoney(netPnl(trade) ?? 0)}
-                  </div>
-                </div>
-                <p className="mt-2 text-sm leading-6 text-[var(--body)]">{journalNoteBody(tradeNote)}</p>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-            No individual trade notes yet. Add notes on specific trades and they will surface here as evidence.
-          </p>
-        )}
-      </div>
-    </section>
-  );
+function pnlTone(value: number | null): "positive" | "negative" | "neutral" {
+  if (value == null || value === 0) return "neutral";
+  return value > 0 ? "positive" : "negative";
 }
 
 export default async function TickerDayReviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string; symbol?: string; returnTo?: string }>;
+  searchParams: Promise<{ date?: string; symbol?: string; trade?: string; returnTo?: string }>;
 }) {
   const params = await searchParams;
   const date = validDate(params.date);
@@ -333,9 +102,9 @@ export default async function TickerDayReviewPage({
           .select()
           .from(schema.executions)
           .where(inArray(schema.executions.tradeId, tradeIds))
-          .orderBy(asc(schema.executions.executedAt))
+          .orderBy(asc(schema.executions.executedAt), asc(schema.executions.id))
       : [];
-  const [tickerReviewNote, tradeNoteRows] = await Promise.all([
+  const [tickerReviewNote, tickerReviewState, tagOptions, tradeTagRows, attachmentRows] = await Promise.all([
     db
       .select()
       .from(schema.journalEntries)
@@ -347,25 +116,44 @@ export default async function TickerDayReviewPage({
         ),
       )
       .limit(1),
+    db
+      .select({ id: schema.tickerReviews.id })
+      .from(schema.tickerReviews)
+      .where(
+        and(
+          eq(schema.tickerReviews.accountId, activeAccount.id),
+          eq(schema.tickerReviews.date, date),
+          eq(schema.tickerReviews.symbol, symbol),
+        ),
+      )
+      .limit(1),
+    db
+      .select({
+        id: schema.tags.id,
+        name: schema.tags.name,
+        uses: count(schema.tradeTags.tradeId),
+      })
+      .from(schema.tags)
+      .leftJoin(schema.tradeTags, eq(schema.tradeTags.tagId, schema.tags.id))
+      .groupBy(schema.tags.id)
+      .orderBy(asc(schema.tags.name)),
+    tradeIds.length > 0
+      ? db
+          .select({ tradeId: schema.tradeTags.tradeId, name: schema.tags.name })
+          .from(schema.tradeTags)
+          .innerJoin(schema.tags, eq(schema.tags.id, schema.tradeTags.tagId))
+          .where(inArray(schema.tradeTags.tradeId, tradeIds))
+      : Promise.resolve([]),
     tradeIds.length > 0
       ? db
           .select()
-          .from(schema.journalEntries)
-          .where(
-            and(
-              eq(schema.journalEntries.accountId, activeAccount.id),
-              eq(schema.journalEntries.scope, "trade"),
-              inArray(schema.journalEntries.tradeId, tradeIds),
-            ),
-          )
+          .from(schema.attachments)
+          .where(inArray(schema.attachments.tradeId, tradeIds))
+          .orderBy(asc(schema.attachments.id))
       : Promise.resolve([]),
   ]);
 
-  const firstAt = execs[0]?.executedAt ?? trades[0]?.entryAt ?? start;
-  const lastAt = execs.at(-1)?.executedAt ?? trades.at(-1)?.exitAt ?? firstAt;
-  const pad = 20 * 60;
-  const candleFrom = firstAt - pad;
-  const candleTo = lastAt + pad;
+  const { start: candleFrom, end: candleTo } = reviewSessionRange(date);
   const { candles, error } = await getCandles(symbol, candleFrom, candleTo);
   const chartCandles = candles.length > 0 ? candles : fallbackCandlesFromExecutions(execs, candleFrom, candleTo);
 
@@ -375,40 +163,68 @@ export default async function TickerDayReviewPage({
   const wins = tradePnls.filter((pnl) => pnl > 0).length;
   const losses = tradePnls.filter((pnl) => pnl < 0).length;
   const counted = wins + losses;
-  const tradeCycles = buildTradeCycles(execs);
   const tradeLabel = trades.length === 1 ? "trade" : "trades";
   const shareLabel = totalShares === 1 ? "share" : "shares";
-  const currentHref = tradeReviewHref(date, symbol, backHref);
   const readOnly = isDemoReadOnly();
-  const tradeIndexById = new Map(trades.map((trade, index) => [trade.id, index]));
   const tradeById = new Map(trades.map((trade) => [trade.id, trade]));
-  const tradeNotes = tradeNoteRows
-    .flatMap((note) => {
-      if (note.tradeId == null) return [];
-      const trade = tradeById.get(note.tradeId);
-      const index = tradeIndexById.get(note.tradeId);
-      if (!trade || index == null) return [];
-      return [{ trade, note, index }];
-    })
-    .sort((a, b) => a.index - b.index);
+  const executionCountByTradeId = new Map<number, number>();
+  for (const execution of execs) {
+    if (execution.tradeId == null) continue;
+    executionCountByTradeId.set(execution.tradeId, (executionCountByTradeId.get(execution.tradeId) ?? 0) + 1);
+  }
+  const tradeNumberById = new Map(trades.map((trade, index) => [trade.id, index + 1]));
+  const tradePnlById = new Map(trades.map((trade) => [trade.id, netPnl(trade)]));
+  const tradePerShareById = new Map(trades.map((trade) => {
+    const tradePnl = tradePnlById.get(trade.id);
+    return [trade.id, tradePnl == null || trade.quantity === 0 ? null : tradePnl / Math.abs(trade.quantity)];
+  }));
+  const requestedTradeId = Number(params.trade);
+  const initialTradeId = Number.isInteger(requestedTradeId) && tradeById.has(requestedTradeId)
+    ? requestedTradeId
+    : null;
+  const workspaceTrades = trades.map((trade, index) => {
+    const tradePnl = tradePnlById.get(trade.id) ?? null;
+    const perShare = tradePerShareById.get(trade.id) ?? null;
+    return {
+      id: trade.id,
+      number: index + 1,
+      entryTime: formatTradeTime(trade.entryAt),
+      shares: Math.abs(trade.quantity).toLocaleString("en-US"),
+      executions: (executionCountByTradeId.get(trade.id) ?? 0).toLocaleString("en-US"),
+      entryPrice: formatLedgerPrice(trade.avgEntryPrice),
+      exitPrice: formatLedgerPrice(trade.avgExitPrice),
+      holdDuration: formatHoldDuration(trade.entryAt, trade.exitAt),
+      pnl: tradePnl == null ? "Open" : fmtMoney(tradePnl),
+      pnlValue: tradePnl,
+      pnlTone: pnlTone(tradePnl),
+      perShare: perShare == null ? "—" : formatSignedMoney(perShare),
+      perShareValue: perShare,
+      perShareTone: pnlTone(perShare),
+      tags: tradeTagRows.filter((row) => row.tradeId === trade.id).map((row) => row.name),
+      attachments: attachmentRows
+        .filter((attachment) => attachment.tradeId === trade.id)
+        .map((attachment) => ({
+          id: attachment.id,
+          filePath: attachment.filePath,
+          caption: attachment.caption,
+        })),
+    };
+  });
 
   const summaryStats = [
     { label: `${trades.length.toLocaleString()} ${tradeLabel}` },
     { label: `${totalShares.toLocaleString()} ${shareLabel}` },
     { label: counted === 0 ? "— win" : `${Math.round((wins / counted) * 100)}% win` },
-    { label: `P&L ${fmtMoney(totalPnl)}`, className: pnlClass(totalPnl) },
-  ];
-  const tickerReviewStats = [
-    { label: "Trades", value: trades.length.toLocaleString() },
-    { label: "Executions", value: execs.length.toLocaleString() },
-    { label: "First", value: formatTradeTime(firstAt) },
-    { label: "Last", value: formatTradeTime(lastAt) },
   ];
   const originCrumb = originCrumbFromHref(backHref, "/trades");
   const isJournalOrigin = originCrumb.label === "Journal";
   const isCalendarOrigin = originCrumb.label === "Calendar";
   const sectionCrumbs = originCrumb.label === "Trades" || isJournalOrigin || isCalendarOrigin ? [] : [{ label: "Trades", href: "/trades" }];
   const breadcrumbCurrent = symbol;
+  const tagOptionMap = new Map(tagOptions.map((tag) => [tag.name, { name: tag.name, uses: tag.uses }]));
+  for (const tagName of DEFAULT_REVIEW_TAGS) {
+    if (!tagOptionMap.has(tagName)) tagOptionMap.set(tagName, { name: tagName, uses: 0 });
+  }
 
   return (
     <div className="mx-auto max-w-[1280px]">
@@ -419,35 +235,37 @@ export default async function TickerDayReviewPage({
         className="mb-12"
       />
 
-      <div className="mb-0 grid gap-8 lg:grid-cols-[minmax(0,1fr)_260px]">
+      <div className="mb-0">
         <div className="min-w-0">
           <ReviewHeader
-            eyebrow="Ticker Review"
             title={symbol}
             date={fmtDate(start)}
+            pnl={{ value: totalPnl, formatted: `${totalPnl > 0 ? "+" : ""}${fmtMoney(totalPnl)}` }}
             metrics={summaryStats}
-            action={(
-              <Link
-                href={backHref}
-                className="text-[var(--blue)] hover:underline"
-              >
-                {"<-"} Back
-              </Link>
-            )}
           />
         </div>
       </div>
 
-      <section className="mb-8 grid gap-8 pt-5 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
+      <section className="mb-8 pt-5">
         <div className="min-w-0">
           {chartCandles.length > 0 ? (
             <LightweightTradeChart
               candles={chartCandles}
               enableFullscreen
+              initialFocusTime={trades[0]?.entryAt ?? undefined}
               markers={execs.map((execution) => ({
+                id: execution.id,
                 t: execution.executedAt,
                 price: execution.price,
                 side: execution.side as "buy" | "sell",
+                quantity: execution.quantity,
+                tradeNumber: execution.tradeId == null ? undefined : tradeNumberById.get(execution.tradeId),
+                pnl: execution.side === "sell" && execution.tradeId != null
+                  ? tradePnlById.get(execution.tradeId) ?? undefined
+                  : undefined,
+                perShare: execution.side === "sell" && execution.tradeId != null
+                  ? tradePerShareById.get(execution.tradeId) ?? undefined
+                  : undefined,
               }))}
             />
           ) : error ? (
@@ -457,17 +275,19 @@ export default async function TickerDayReviewPage({
           ) : (
             <LightweightTradeChart candles={[]} markers={[]} />
           )}
-          <TickerReviewPanel
+          <TickerReviewWorkspace
+            key={`${date}:${symbol}:${tickerReviewNote[0]?.lessons ?? ""}`}
             date={date}
             symbol={symbol}
-            note={tickerReviewNote[0] ?? null}
-            tradeNotes={tradeNotes}
-            stats={tickerReviewStats}
-            returnTo={currentHref}
+            returnTo={backHref}
+            tickerNote={tickerReviewNote[0]?.lessons ?? ""}
+            trades={workspaceTrades}
+            availableTags={[...tagOptionMap.values()]}
+            readyForCoach={tickerReviewState.length > 0}
             readOnly={readOnly}
+            initialTradeId={initialTradeId}
           />
         </div>
-        <TradeCycleRail cycles={tradeCycles} date={date} symbol={symbol} backHref={backHref} />
       </section>
     </div>
   );

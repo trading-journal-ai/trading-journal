@@ -2,32 +2,26 @@
 
 import { useState } from "react";
 
-type Theme = "dark" | "light";
-
-function getInitialTheme(): Theme {
-  if (typeof document === "undefined") return "dark";
-  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
-}
+import { THEMES, type Theme, readAppliedTheme, applyTheme } from "@/lib/theme";
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const [theme, setTheme] = useState<Theme>(readAppliedTheme);
 
-  function toggleTheme() {
-    const nextTheme = theme === "dark" ? "light" : "dark";
+  function cycleTheme() {
+    const nextTheme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
     setTheme(nextTheme);
-    document.documentElement.dataset.theme = nextTheme;
-    localStorage.setItem("theme", nextTheme);
+    applyTheme(nextTheme);
   }
 
   return (
     <button
       type="button"
-      onClick={toggleTheme}
-      className="inline-flex items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--blue)]"
-      aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+      onClick={cycleTheme}
+      className="inline-flex items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-semibold capitalize text-[var(--foreground)] transition-colors hover:border-[var(--accent)]"
+      aria-label="Switch theme"
       suppressHydrationWarning
     >
-      {theme === "dark" ? "Light" : "Dark"}
+      {theme}
     </button>
   );
 }

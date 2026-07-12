@@ -8,6 +8,7 @@
 
 export const SOURCE_TZ = "America/Los_Angeles"; // TOS export wall-clock zone
 export const MARKET_TZ = "America/New_York"; // US equities session zone
+export const REVIEW_SESSION_WINDOW = { start: "07:00:00", end: "20:00:00" } as const;
 
 type TZParts = {
   year: number;
@@ -95,4 +96,12 @@ export function etDayRange(date: string): { start: number; end: number } {
   const start = Math.round(zonedDateTimeToUtcMs(date, "00:00:00", MARKET_TZ) / 1000);
   // +26h covers DST; callers use it as an upper bound for "same ET day".
   return { start, end: start + 26 * 3600 };
+}
+
+/** Epoch-seconds bounds for the chart window used by ticker/day review. */
+export function reviewSessionRange(date: string): { start: number; end: number } {
+  return {
+    start: Math.round(zonedDateTimeToUtcMs(date, REVIEW_SESSION_WINDOW.start, MARKET_TZ) / 1000),
+    end: Math.round(zonedDateTimeToUtcMs(date, REVIEW_SESSION_WINDOW.end, MARKET_TZ) / 1000),
+  };
 }

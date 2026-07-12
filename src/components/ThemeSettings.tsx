@@ -2,28 +2,26 @@
 
 import { useEffect, useState } from "react";
 
-type Theme = "dark" | "light";
-
-function getInitialTheme(): Theme {
-  if (typeof document === "undefined") return "dark";
-  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
-}
+import { THEMES, DEFAULT_THEME, type Theme, readStoredTheme, applyTheme } from "@/lib/theme";
 
 export default function ThemeSettings() {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  // Start from the default so SSR and first client render agree, then sync to
+  // the persisted theme on mount WITHOUT re-applying it (applying here would
+  // clobber a non-default theme before ThemeBoot has restored it).
+  const [theme, setTheme] = useState<Theme>(DEFAULT_THEME);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem("theme", theme);
-  }, [theme]);
+    setTheme(readStoredTheme());
+  }, []);
 
   function updateTheme(nextTheme: Theme) {
     setTheme(nextTheme);
+    applyTheme(nextTheme);
   }
 
   return (
     <div className="inline-flex h-10 items-center rounded-md border border-[var(--border)] p-1">
-      {(["dark", "light"] as const).map((option) => {
+      {THEMES.map((option) => {
         const active = theme === option;
         return (
           <button
@@ -36,6 +34,7 @@ export default function ThemeSettings() {
                 : "text-[var(--muted)] hover:text-[var(--foreground)]"
             }`}
             aria-pressed={active}
+            suppressHydrationWarning
           >
             {option}
           </button>

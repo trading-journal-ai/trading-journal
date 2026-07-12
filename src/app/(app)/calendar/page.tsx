@@ -191,7 +191,7 @@ function emptyState() {
       <h1 className="text-xl font-semibold tracking-tight">Calendar</h1>
       <p className="text-sm text-[var(--muted)] mt-2">
         No trades yet.{" "}
-        <Link href="/import" className="text-[#58a6ff] hover:underline">
+        <Link href="/import" className="text-[var(--accent)] hover:underline">
           Import a ThinkorSwim statement
         </Link>{" "}
         to populate the calendar.
@@ -216,7 +216,7 @@ function NavButton({ href, children }: { href: string; children: React.ReactNode
   return (
     <Link
       href={href}
-      className="flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[#58a6ff]"
+      className="flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[var(--accent)]"
     >
       {children}
     </Link>
@@ -292,7 +292,7 @@ function MonthView({
           ))}
         </div>
 
-        <div className="grid grid-cols-6 overflow-hidden rounded-[6px] bg-black gap-[2px]">
+        <div className="grid grid-cols-6 overflow-hidden rounded-[6px] bg-[var(--border)] gap-[2px]">
           {weeks.map((week, weekIndex) => (
             <Fragment key={weekIndex}>
               {week.days.map((day) => {
@@ -306,7 +306,7 @@ function MonthView({
                   day.date <= lastTradeDate;
                 const content = (
                   <div
-                    className={`flex h-full min-h-36 flex-col bg-[#1a2432] p-4 ${
+                    className={`flex h-full min-h-36 flex-col bg-[var(--surface)] p-4 ${
                       day.inMonth ? "" : "opacity-30"
                     }`}
                   >
@@ -334,16 +334,16 @@ function MonthView({
                   <Link
                     key={day.date}
                     href={`/journal?date=${day.date}&returnTo=${encodeURIComponent(currentCalendarHref)}`}
-                    className="block bg-[#1a2432]"
+                    className="block bg-[var(--surface)]"
                   >
                     {content}
                   </Link>
                 ) : (
-                  <div key={day.date} className="bg-[#1a2432]">{content}</div>
+                  <div key={day.date} className="bg-[var(--surface)]">{content}</div>
                 );
               })}
 
-              <div className="flex min-h-36 flex-col bg-[#1a2432] p-4">
+              <div className="flex min-h-36 flex-col bg-[var(--surface)] p-4">
                 <span className="text-sm font-semibold leading-none text-[var(--foreground)]">
                   Week {weekIndex + 1}
                 </span>
@@ -394,7 +394,7 @@ function MiniMonth({
   return (
     <Link
       href={calendarHref({ ...params, m: ym, view: undefined, y: undefined })}
-      className="block rounded-[6px] bg-[#1a2432] p-5 ring-1 ring-transparent transition-shadow hover:ring-[#58a6ff]"
+      className="block rounded-[6px] bg-[var(--surface)] p-5 ring-1 ring-transparent transition-shadow hover:ring-[var(--accent)]"
     >
       <div className="mb-4 flex items-baseline justify-between">
         <span className="text-lg font-semibold">{monthShortFmt.format(new Date(Date.UTC(year, month - 1, 1)))}</span>

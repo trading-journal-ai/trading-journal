@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Patrick_Hand_SC, Permanent_Marker } from "next/font/google";
 import ThemeBoot from "@/components/ThemeBoot";
+import { DEFAULT_THEME } from "@/lib/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -67,6 +68,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
+      data-theme={DEFAULT_THEME}
       className={`${geistSans.variable} ${geistMono.variable} ${permanentMarker.variable} ${patrickHandSc.variable} h-full antialiased`}
       suppressHydrationWarning
     >

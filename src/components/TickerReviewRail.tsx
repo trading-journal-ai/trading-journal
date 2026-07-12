@@ -51,7 +51,7 @@ export default function TickerReviewRail({
                 key={row.symbol}
                 href={row.href}
                 aria-current={row.active ? "page" : undefined}
-                className={`group relative block rounded-sm focus:outline-none focus:ring-2 focus:ring-[var(--blue)] before:absolute before:inset-x-0 before:inset-y-0 before:rounded-sm before:bg-[var(--surface)] before:opacity-0 before:transition-opacity hover:before:opacity-100 focus:before:opacity-100 ${
+                className={`group relative block rounded-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] before:absolute before:inset-x-0 before:inset-y-0 before:rounded-sm before:bg-[var(--surface)] before:opacity-0 before:transition-opacity hover:before:opacity-100 focus:before:opacity-100 ${
                   row.active ? "text-[var(--foreground)]" : ""
                 }`}
               >
