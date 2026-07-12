@@ -16,6 +16,11 @@ data/*.db
 data/*.db-*
 data/evals/
 data/uploads/
+# user-uploaded trade evidence served by the app
+public/uploads/
+# SQLite temp files for the tracked demo db
+samples/demo/*.db-shm
+samples/demo/*.db-wal
 # real broker exports used as parser fixtures
 data/samples/
 
