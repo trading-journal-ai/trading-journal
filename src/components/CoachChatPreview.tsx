@@ -227,7 +227,7 @@ export default function CoachChatPreview({
             className={[
               "mb-3 flex flex-wrap items-center justify-between gap-3 rounded-md border px-4 py-3",
               activity.tone === "active"
-                ? "border-[var(--blue)] bg-[color-mix(in_srgb,var(--blue)_7%,transparent)]"
+                ? "border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_7%,transparent)]"
                 : "border-[var(--hairline)] bg-transparent",
             ].join(" ")}
             aria-live="polite"
@@ -242,9 +242,9 @@ export default function CoachChatPreview({
             </div>
             {activity.tone === "active" ? (
               <div className="flex items-center gap-1.5" aria-hidden="true">
-                <span className="size-1.5 rounded-full bg-[var(--blue)] opacity-40" />
-                <span className="size-1.5 rounded-full bg-[var(--blue)] opacity-70" />
-                <span className="size-1.5 rounded-full bg-[var(--blue)]" />
+                <span className="size-1.5 rounded-full bg-[var(--accent)] opacity-40" />
+                <span className="size-1.5 rounded-full bg-[var(--accent)] opacity-70" />
+                <span className="size-1.5 rounded-full bg-[var(--accent)]" />
               </div>
             ) : null}
           </div>
@@ -259,7 +259,7 @@ export default function CoachChatPreview({
             onDictationComplete={onDictationComplete}
             placeholder="What happened, what are you feeling, and are you still trading?"
             rows={4}
-            className="min-h-[116px] w-full resize-y rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm leading-6 text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--faint)] focus:border-[var(--blue)]"
+            className="min-h-[116px] w-full resize-y rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm leading-6 text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--faint)] focus:border-[var(--accent)]"
           />
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm leading-6 text-[var(--muted)]">
@@ -268,7 +268,7 @@ export default function CoachChatPreview({
             <button
               type="submit"
               disabled={!draft.trim() || isPending || dictationStatus === "transcribing"}
-              className="h-10 rounded-md border border-[var(--blue)] px-5 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface)] disabled:cursor-not-allowed disabled:border-[var(--border)] disabled:text-[var(--faint)]"
+              className="h-10 rounded-md border border-[var(--accent)] px-5 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface)] disabled:cursor-not-allowed disabled:border-[var(--border)] disabled:text-[var(--faint)]"
             >
               {dictationStatus === "transcribing" ? "Transcribing" : isPending ? "Sending" : "Send"}
             </button>
@@ -287,7 +287,7 @@ export default function CoachChatPreview({
               type="button"
               onClick={() => sendMessage(prompt)}
               disabled={isPending}
-              className="rounded-md border border-[var(--hairline)] px-4 py-3 text-left text-sm leading-5 text-[var(--body)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md border border-[var(--hairline)] px-4 py-3 text-left text-sm leading-5 text-[var(--body)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {prompt}
             </button>

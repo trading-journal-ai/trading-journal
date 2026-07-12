@@ -8,6 +8,7 @@ import { fallbackCandlesFromExecutions } from "@/lib/candles/fallback";
 import LightweightTradeChart from "@/components/LightweightTradeChart";
 import ReviewHeader from "@/components/ReviewHeader";
 import { fmtDate, fmtMoney } from "@/lib/format";
+import { etDateString } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -61,15 +62,19 @@ export default async function LightweightPrototypePage({
   return (
     <div className="mx-auto max-w-[1180px] space-y-8">
       <div className="font-mono text-[13px] text-[var(--muted)]">
-        <Link href={`/trades/${trade.id}`} className="text-[var(--blue)] hover:underline">
-          Current trade detail
+        <Link
+          href={trade.entryAt == null
+            ? "/trades"
+            : `/trades/review?date=${etDateString(trade.entryAt)}&symbol=${trade.symbol}&trade=${trade.id}`}
+          className="text-[var(--blue)] hover:underline"
+        >
+          Ticker review
         </Link>
         <span className="px-2">/</span>
         Lightweight Charts prototype
       </div>
 
       <ReviewHeader
-        eyebrow="Chart Prototype"
         title={trade.symbol}
         date={fmtDate(trade.entryAt)}
         metrics={[

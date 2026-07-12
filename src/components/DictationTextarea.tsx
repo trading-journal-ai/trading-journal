@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject, TextareaHTMLAttributes } from "react";
+import type { ReactNode, RefObject, TextareaHTMLAttributes } from "react";
 import { useEffect, useRef, useState } from "react";
 
 export type DictationStatus = "idle" | "recording" | "transcribing" | "unsupported";
@@ -15,6 +15,8 @@ type DictationTextareaProps = Omit<
   onDictationStatusChange?: (status: DictationStatus) => void;
   onDictationComplete?: (value: string, transcript: string) => void;
   onDictationStop?: () => void;
+  promptMode?: boolean;
+  promptContent?: ReactNode;
 };
 
 type BrowserWindowWithAudioContext = Window &
@@ -212,12 +214,17 @@ export default function DictationTextarea({
   onDictationStatusChange,
   onDictationComplete,
   onDictationStop,
+  promptMode = false,
+  promptContent,
   disabled = false,
   className,
+  onFocus,
+  onBlur,
   ...props
 }: DictationTextareaProps) {
   const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue);
   const [status, setStatus] = useState<DictationStatus>("idle");
+  const [focused, setFocused] = useState(false);
   const [error, setError] = useState("");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -235,6 +242,7 @@ export default function DictationTextarea({
   const valueRef = useRef(defaultValue);
   const mountedRef = useRef(false);
   const value = controlledValue ?? uncontrolledValue;
+  const showPrompt = promptMode && !value && !focused;
 
   function updateValue(nextValue: string) {
     if (controlledValue === undefined) setUncontrolledValue(nextValue);
@@ -530,9 +538,24 @@ export default function DictationTextarea({
           disabled={disabled}
           value={value}
           onChange={(event) => updateValue(event.target.value)}
-          className={`${className ?? ""} block pb-13 pr-12`}
+          onFocus={(event) => {
+            setFocused(true);
+            onFocus?.(event);
+          }}
+          onBlur={(event) => {
+            setFocused(false);
+            onBlur?.(event);
+          }}
+          className={`${className ?? ""} block ${showPrompt ? "pl-28 pr-6 pt-8" : "pb-13 pr-12"}`}
         />
-        <VoiceActivityIndicator status={status} elapsedSeconds={elapsedSeconds} canvasRef={waveformCanvasRef} />
+        {showPrompt && promptContent ? (
+          <div className="pointer-events-none absolute inset-y-0 left-28 right-6 flex items-center">
+            {promptContent}
+          </div>
+        ) : null}
+        {!showPrompt || status !== "idle" ? (
+          <VoiceActivityIndicator status={status} elapsedSeconds={elapsedSeconds} canvasRef={waveformCanvasRef} />
+        ) : null}
         <span className="sr-only" aria-live="polite">
           {status === "recording" ? "Recording dictation" : status === "transcribing" ? "Transcribing dictation" : ""}
         </span>
@@ -544,7 +567,9 @@ export default function DictationTextarea({
           disabled={unavailable || status === "transcribing"}
           aria-pressed={status === "recording"}
           title={buttonLabel}
-          className={`absolute bottom-3 right-3 inline-flex size-8 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+          className={`absolute inline-flex items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+            showPrompt ? "left-6 top-1/2 size-16 -translate-y-1/2 bg-[var(--action)] text-[var(--action-foreground)]" : "bottom-3 right-3 size-8"
+          } ${
             status === "recording"
               ? "bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)] text-[var(--foreground)]"
               : status === "transcribing"
@@ -552,7 +577,7 @@ export default function DictationTextarea({
               : "text-[var(--muted)] hover:text-[var(--foreground)]"
           }`}
         >
-          {status === "recording" ? <StopIcon /> : <MicIcon />}
+          <span className={showPrompt ? "scale-150" : ""}>{status === "recording" ? <StopIcon /> : <MicIcon />}</span>
         </button>
       </div>
       {error ? (

@@ -19,7 +19,7 @@ export default function InlineImportPrompt({ readOnly = false }: { readOnly?: bo
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="cursor-pointer font-mono text-[13px] font-semibold text-[#58a6ff] hover:underline"
+        className="cursor-pointer font-mono text-[13px] font-semibold text-[var(--accent)] hover:underline"
       >
         Import trades
       </button>
