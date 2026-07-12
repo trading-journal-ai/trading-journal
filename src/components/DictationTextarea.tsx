@@ -18,6 +18,7 @@ type DictationTextareaProps = Omit<
   onDictationStop?: () => void;
   promptMode?: boolean;
   promptContent?: ReactNode;
+  contextualMic?: boolean;
 };
 
 type BrowserWindowWithAudioContext = Window &
@@ -262,6 +263,7 @@ export default function DictationTextarea({
   onDictationStop,
   promptMode = false,
   promptContent,
+  contextualMic = false,
   disabled = false,
   className,
   placeholder,
@@ -671,7 +673,7 @@ export default function DictationTextarea({
         : "Start dictation";
 
   return (
-    <div className="space-y-2">
+    <div className="group/dictation space-y-2">
       <div className="relative">
         <textarea
           {...props}
@@ -754,7 +756,7 @@ export default function DictationTextarea({
                 : status === "transcribing"
                   ? "bg-[var(--surface)] text-[var(--muted)]"
                 : "text-[var(--muted)] hover:text-[var(--foreground)]"
-            }`}
+            } ${contextualMic && status === "idle" ? "pointer-events-none opacity-0 group-focus-within/dictation:pointer-events-auto group-focus-within/dictation:opacity-100" : ""}`}
           >
             {status === "recording" ? <StopIcon /> : <MicIcon />}
           </button>

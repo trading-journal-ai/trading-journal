@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
-import { deleteTickerReviewAction, markTickerReviewReadyAction, upsertTickerReviewAction } from "@/app/journal/actions";
-import type { DictationStatus } from "@/components/DictationTextarea";
+import { useMemo, useState, useTransition } from "react";
+import { deleteTickerReviewAction, upsertTickerReviewAction } from "@/app/journal/actions";
+import DictationTextarea, { type DictationStatus } from "@/components/DictationTextarea";
 import SharedNoteComposer from "@/components/SharedNoteComposer";
 import {
   TradeAttachments,
+  TickerReviewTagPicker,
   TradeTagPicker,
   type ReviewAttachment,
   type ReviewTagOption,
@@ -138,14 +139,32 @@ function savedReviewSections(note: string, trades: TickerReviewTrade[]): SavedRe
   return sections;
 }
 
+function serializeReviewSections(sections: SavedReviewSection[]) {
+  return sections
+    .map((section) => {
+      const body = section.body;
+      if (section.kind === "overall") return body;
+      if (section.kind === "trade") {
+        const time = section.time ? ` · @${section.time}` : "";
+        return `@trade${section.tradeNumber}${time}${body ? `\n${body}` : ""}`;
+      }
+      return `@${section.time}${body ? `\n${body}` : ""}`;
+    })
+    .filter(Boolean)
+    // A single newline is enough to place the next section anchor at the start
+    // of a line. Extra separator lines would be parsed back into the preceding
+    // body and grow on every edit.
+    .join("\n");
+}
+
 export default function TickerReviewWorkspace({
   date,
   symbol,
   returnTo,
   tickerNote,
+  tickerTags,
   trades,
   availableTags,
-  readyForCoach,
   readOnly,
   initialTradeId = null,
 }: {
@@ -153,9 +172,9 @@ export default function TickerReviewWorkspace({
   symbol: string;
   returnTo: string;
   tickerNote: string;
+  tickerTags: string[];
   trades: TickerReviewTrade[];
   availableTags: ReviewTagOption[];
-  readyForCoach: boolean;
   readOnly: boolean;
   initialTradeId?: number | null;
 }) {
@@ -165,30 +184,19 @@ export default function TickerReviewWorkspace({
     return initialTrade ? appendTradeAnchor(normalizedNote, initialTrade) : normalizedNote;
   });
   const [editing, setEditing] = useState(() => initialTrade != null || !tickerNote.trim());
+  const [editingTradeNumber, setEditingTradeNumber] = useState<number | null>(() => initialTrade?.number ?? null);
+  const [overallHeaderVisible, setOverallHeaderVisible] = useState(() => Boolean(tickerNote.trim()));
+  const [activeSectionIndex, setActiveSectionIndex] = useState<number | null>(null);
   const [hasSavedNote, setHasSavedNote] = useState(() => Boolean(tickerNote.trim()));
   const [isSaving, startSaving] = useTransition();
-  const [dictationBusy, setDictationBusy] = useState(false);
-  const stripVisibleAtDictationStartRef = useRef(true);
-  // While dictating, keep the helper strip in its pre-dictation state so the
-  // layout doesn't jump as live text streams into the note.
-  const showSuggestedStrip = dictationBusy ? stripVisibleAtDictationStartRef.current : !note.trim();
-
-  function handleDictationStatusChange(status: DictationStatus) {
-    const busy = status === "recording" || status === "transcribing";
-    if (busy && !dictationBusy) stripVisibleAtDictationStartRef.current = !note.trim();
-    setDictationBusy(busy);
-  }
+  // Keep the suggested best/worst shortcuts available for the entire edit
+  // session instead of removing them as soon as the first words are entered.
+  const showSuggestedStrip = editing;
   const anchoredTradeIds = useMemo(() => mentionedTradeIds(note, trades), [note, trades]);
   const savedSections = useMemo(() => savedReviewSections(note, trades), [note, trades]);
-  const activeTrade = useMemo(() => {
-    let activeTradeNumber: number | null = null;
-    for (const match of note.matchAll(/@(?:trade)?(\d+)(?![\d:])/gi)) {
-      activeTradeNumber = Number(match[1]);
-    }
-    return activeTradeNumber == null
-      ? undefined
-      : trades.find((trade) => trade.number === activeTradeNumber);
-  }, [note, trades]);
+  const activeTrade = editingTradeNumber == null
+    ? undefined
+    : trades.find((trade) => trade.number === editingTradeNumber);
   const suggestedTrades = useMemo(() => {
     const closedTrades = trades.filter((trade) => trade.pnlValue != null);
     if (closedTrades.length === 0) return [];
@@ -224,15 +232,22 @@ export default function TickerReviewWorkspace({
     };
   }, [trades]);
 
-  function openNote() {
+  function openNote(tradeNumber: number | null = null) {
+    setEditingTradeNumber(tradeNumber);
     setEditing(true);
-    requestAnimationFrame(() => document.getElementById("ticker-review-note")?.focus());
+    const editorId = hasSavedNote
+      ? tradeNumber == null ? "ticker-review-overall-editor" : `ticker-review-trade-${tradeNumber}-editor`
+      : "ticker-review-note";
+    requestAnimationFrame(() => document.getElementById(editorId)?.focus());
   }
 
-  function focusNoteAtEnd() {
+  function focusNoteAtEnd(tradeNumber?: number) {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        const textarea = document.getElementById("ticker-review-note") as HTMLTextAreaElement | null;
+        const editorId = hasSavedNote && tradeNumber != null
+          ? `ticker-review-trade-${tradeNumber}-editor`
+          : "ticker-review-note";
+        const textarea = document.getElementById(editorId) as HTMLTextAreaElement | null;
         if (!textarea) return;
         const end = textarea.value.length;
         textarea.focus();
@@ -243,8 +258,24 @@ export default function TickerReviewWorkspace({
 
   function addTradeMoment(trade: TickerReviewTrade) {
     setNote((current) => appendTradeAnchor(current, trade));
+    setEditingTradeNumber(trade.number);
     setEditing(true);
-    focusNoteAtEnd();
+    focusNoteAtEnd(trade.number);
+  }
+
+  function handleDictationStatusChange(status: DictationStatus) {
+    if (status === "recording" || status === "transcribing") {
+      setOverallHeaderVisible(true);
+    }
+  }
+
+  function updateSectionBody(sectionIndex: number, body: string) {
+    setNote((current) => {
+      const sections = savedReviewSections(current, trades);
+      if (!sections[sectionIndex]) return current;
+      sections[sectionIndex] = { ...sections[sectionIndex], body };
+      return serializeReviewSections(sections);
+    });
   }
 
   function saveNote(formData: FormData) {
@@ -263,6 +294,7 @@ export default function TickerReviewWorkspace({
     startSaving(async () => {
       await deleteTickerReviewAction(formData);
       setNote("");
+      setOverallHeaderVisible(false);
       setHasSavedNote(false);
       setEditing(false);
     });
@@ -299,10 +331,119 @@ export default function TickerReviewWorkspace({
                 event.preventDefault();
                 saveNote(new FormData(event.currentTarget));
               }}
-              className={`mt-5 ${activeTrade ? "rounded-md border border-[var(--border)] bg-[var(--surface)]/35 px-5 py-5" : ""}`}
+              className={hasSavedNote ? "mt-5" : `mt-5 ${activeTrade ? "rounded-md border border-[var(--border)] bg-[var(--surface)]/35 px-5 py-5" : ""}`}
             >
               <input type="hidden" name="scopeKey" value={`${date}:${symbol}`} />
               <input type="hidden" name="returnTo" value={returnTo} />
+              {hasSavedNote ? (
+                <>
+                  <input type="hidden" name="body" value={note} />
+                  <div
+                    className="overflow-hidden rounded-md border border-[var(--border)] bg-[var(--surface)]"
+                    onBlurCapture={(event) => {
+                      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                        setActiveSectionIndex(null);
+                      }
+                    }}
+                  >
+                    {savedSections.map((section, index) => {
+                      const editorClassName = "min-h-[84px] w-full resize-none border-0 bg-transparent px-0 py-2 text-[15px] leading-7 text-[var(--body)] outline-none [field-sizing:content] placeholder:text-[var(--muted)]";
+                      const sectionClassName = `px-5 py-5 transition-[background-color,opacity] duration-150 ${
+                        activeSectionIndex == null
+                          ? "opacity-100"
+                          : activeSectionIndex === index
+                            ? "bg-transparent opacity-100"
+                            : "bg-[var(--background)] opacity-75"
+                      }`;
+
+                      if (section.kind === "overall") return (
+                        <section key={`edit-overall-${index}`} className={sectionClassName} onFocusCapture={() => setActiveSectionIndex(index)}>
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            <h3 className="text-[15px] font-semibold text-[var(--foreground)]">The ticker overall</h3>
+                            <TickerReviewTagPicker
+                              scopeKey={`${date}:${symbol}`}
+                              selectedTags={tickerTags}
+                              options={availableTags}
+                              readOnly={readOnly}
+                            />
+                          </div>
+                          <DictationTextarea
+                            id="ticker-review-overall-editor"
+                            value={section.body}
+                            onValueChange={(body) => updateSectionBody(index, body)}
+                            rows={Math.max(2, section.body.split("\n").length)}
+                            placeholder="Add your overall note…"
+                            contextualMic
+                            className={editorClassName}
+                          />
+                        </section>
+                      );
+
+                      if (section.kind === "trade") {
+                        const trade = trades.find((candidate) => candidate.number === section.tradeNumber);
+                        return (
+                          <section key={`edit-trade-${section.tradeNumber}-${index}`} className={sectionClassName} onFocusCapture={() => setActiveSectionIndex(index)}>
+                            <div className="flex flex-wrap items-center gap-2.5">
+                              <h3 className="text-[15px] font-semibold text-[var(--foreground)]">Trade {section.tradeNumber}</h3>
+                              {section.time ? <span className="font-mono text-[12px] text-[var(--accent)]">entry @{section.time}</span> : null}
+                              {trade ? <span className={`font-mono text-[13px] font-semibold tabular-nums ${pnlClass(trade.pnlTone)}`}>{trade.pnl}</span> : null}
+                              {trade ? <TradeTagPicker tradeId={trade.id} selectedTags={trade.tags} options={availableTags} readOnly={readOnly} /> : null}
+                            </div>
+                            <DictationTextarea
+                              id={`ticker-review-trade-${section.tradeNumber}-editor`}
+                              value={section.body}
+                              onValueChange={(body) => updateSectionBody(index, body)}
+                              rows={Math.max(2, section.body.split("\n").length)}
+                              placeholder={`Add a note for Trade ${section.tradeNumber}…`}
+                              contextualMic
+                              className={editorClassName}
+                            />
+                            {trade ? <TradeAttachments tradeId={trade.id} attachments={trade.attachments} readOnly={readOnly} /> : null}
+                          </section>
+                        );
+                      }
+
+                      return (
+                        <section key={`edit-moment-${section.time}-${index}`} className={sectionClassName} onFocusCapture={() => setActiveSectionIndex(index)}>
+                          <div className="flex flex-wrap items-baseline gap-2">
+                            <h3 className="text-[15px] font-semibold text-[var(--foreground)]">Chart moment</h3>
+                            <span className="font-mono text-[12px] text-[var(--accent)]">@{section.time}</span>
+                          </div>
+                          <DictationTextarea
+                            id={`ticker-review-moment-${section.time}-editor`}
+                            value={section.body}
+                            onValueChange={(body) => updateSectionBody(index, body)}
+                            rows={Math.max(2, section.body.split("\n").length)}
+                            placeholder="Add a note for this chart moment…"
+                            contextualMic
+                            className={editorClassName}
+                          />
+                        </section>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-4 flex justify-end gap-2">
+                    {!readOnly ? (
+                      <button
+                        type="button"
+                        onClick={deleteNote}
+                        disabled={isSaving}
+                        className="h-10 rounded-md px-3 text-sm text-[var(--red)] hover:bg-[color-mix(in_srgb,var(--red)_10%,transparent)]"
+                      >
+                        Delete note
+                      </button>
+                    ) : null}
+                    <button
+                      type="submit"
+                      disabled={readOnly || isSaving}
+                      className="h-10 rounded-md bg-[var(--action)] px-4 text-sm font-semibold text-[var(--action-foreground)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isSaving ? "Saving…" : "Save note"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
               {activeTrade ? (
                 <div className="mb-4 flex flex-wrap items-center gap-2.5">
                   <h3 className="text-[15px] font-semibold text-[var(--foreground)]">Trade {activeTrade.number}</h3>
@@ -311,6 +452,16 @@ export default function TickerReviewWorkspace({
                   <TradeTagPicker
                     tradeId={activeTrade.id}
                     selectedTags={activeTrade.tags}
+                    options={availableTags}
+                    readOnly={readOnly}
+                  />
+                </div>
+              ) : overallHeaderVisible || note.trim() ? (
+                <div className="mb-4 flex flex-wrap items-center gap-2.5">
+                  <h3 className="text-[15px] font-semibold text-[var(--foreground)]">The ticker overall</h3>
+                  <TickerReviewTagPicker
+                    scopeKey={`${date}:${symbol}`}
+                    selectedTags={tickerTags}
                     options={availableTags}
                     readOnly={readOnly}
                   />
@@ -355,16 +506,26 @@ export default function TickerReviewWorkspace({
                   </button>
                 ) : undefined}
               />
+                </>
+              )}
             </form>
           ) : savedSections.length > 0 ? (
-            <div className="mt-6 space-y-5">
+            <div className="mt-4 rounded-md border border-[var(--border)] bg-[var(--surface)]">
               {savedSections.map((section, index) => {
                 if (section.kind === "overall") return (
-                <section key={`overall-${index}`} className="rounded-md border border-[var(--border)] bg-[var(--surface)]/35 px-5 py-5">
+                <section key={`overall-${index}`} className="px-5 py-5">
                   <div className="flex flex-wrap items-baseline justify-between gap-3">
-                    <h3 className="text-[15px] font-semibold text-[var(--foreground)]">The ticker overall</h3>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <h3 className="text-[15px] font-semibold text-[var(--foreground)]">The ticker overall</h3>
+                      <TickerReviewTagPicker
+                        scopeKey={`${date}:${symbol}`}
+                        selectedTags={tickerTags}
+                        options={availableTags}
+                        readOnly={readOnly}
+                      />
+                    </div>
                     {index === 0 ? (
-                      <button type="button" onClick={openNote} className="text-[13px] font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]">Edit note</button>
+                      <button type="button" onClick={() => openNote()} className="text-[13px] font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]">Edit note</button>
                     ) : null}
                   </div>
                   <p className="mt-2 whitespace-pre-wrap text-[15px] leading-7 text-[var(--body)]">{section.body.trim()}</p>
@@ -374,7 +535,7 @@ export default function TickerReviewWorkspace({
                 if (section.kind === "trade") {
                   const trade = trades.find((candidate) => candidate.number === section.tradeNumber);
                   return (
-                <section key={`trade-${section.tradeNumber}-${index}`} className="rounded-md border border-[var(--border)] bg-[var(--surface)]/35 px-5 py-5">
+                <section key={`trade-${section.tradeNumber}-${index}`} className="px-5 py-5">
                   <div className="flex flex-wrap items-baseline justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2.5">
                       <h3 className="text-[15px] font-semibold text-[var(--foreground)]">Trade {section.tradeNumber}</h3>
@@ -383,7 +544,7 @@ export default function TickerReviewWorkspace({
                       {trade ? <TradeTagPicker tradeId={trade.id} selectedTags={trade.tags} options={availableTags} readOnly={readOnly} /> : null}
                     </div>
                     {index === 0 ? (
-                      <button type="button" onClick={openNote} className="text-[13px] font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]">Edit note</button>
+                      <button type="button" onClick={() => openNote(section.tradeNumber)} className="text-[13px] font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]">Edit note</button>
                     ) : null}
                   </div>
                   {section.body.trim() ? (
@@ -395,14 +556,14 @@ export default function TickerReviewWorkspace({
                 }
 
                 return (
-                <section key={`moment-${section.time}-${index}`} className="rounded-md border border-[var(--border)] bg-[var(--surface)]/35 px-5 py-5">
+                <section key={`moment-${section.time}-${index}`} className="px-5 py-5">
                   <div className="flex flex-wrap items-baseline justify-between gap-3">
                     <div className="flex flex-wrap items-baseline gap-2">
                       <h3 className="text-[15px] font-semibold text-[var(--foreground)]">Chart moment</h3>
                       <span className="font-mono text-[12px] text-[var(--accent)]">@{section.time}</span>
                     </div>
                     {index === 0 ? (
-                      <button type="button" onClick={openNote} className="text-[13px] font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]">Edit note</button>
+                      <button type="button" onClick={() => openNote()} className="text-[13px] font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]">Edit note</button>
                     ) : null}
                   </div>
                   {section.body.trim() ? (
@@ -416,25 +577,6 @@ export default function TickerReviewWorkspace({
 
         </section>
 
-        <form action={markTickerReviewReadyAction} className="mt-10 flex flex-wrap items-center gap-3 border-t border-[var(--hairline)] pt-6">
-          <input type="hidden" name="date" value={date} />
-          <input type="hidden" name="symbol" value={symbol} />
-          <input type="hidden" name="returnTo" value={returnTo} />
-          <p className="text-[12px] leading-5 text-[var(--muted)]">
-            {!hasSavedNote
-              ? "Enabled once there’s a note."
-              : readyForCoach
-              ? "This ticker will be included the next time you run the day-level Coach review."
-              : "Done marks this ticker reviewed. You can still edit the note later."}
-          </p>
-          <button
-            type="submit"
-            disabled={readOnly || readyForCoach || editing || !hasSavedNote}
-            className={`ml-auto h-10 rounded-md bg-[var(--action)] px-4 text-sm font-semibold text-[var(--action-foreground)] transition-opacity hover:opacity-90 disabled:cursor-default ${readyForCoach ? "disabled:bg-[var(--green)] disabled:text-[var(--background)]" : "disabled:bg-[var(--surface-2)] disabled:text-[var(--muted)] disabled:opacity-60"}`}
-          >
-            {readyForCoach ? `${symbol} ready for Coach` : `Done reviewing ${symbol}`}
-          </button>
-        </form>
       </div>
 
       <aside className="lg:sticky lg:top-6" aria-label="Trades">
@@ -442,7 +584,7 @@ export default function TickerReviewWorkspace({
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">Trades</h2>
           </div>
-          <div className="mt-3 grid grid-cols-4 divide-x divide-[var(--hairline)] border-t border-[var(--hairline)] py-3">
+          <div className="mt-3 grid grid-cols-4 divide-x divide-[var(--hairline)] border-t border-[var(--hairline)] bg-[var(--surface)] py-3">
             <div className="px-2 text-center">
               <div className="text-[11px] text-[var(--muted)]">Trades</div>
               <div className="mt-1 text-[15px] font-semibold tabular-nums text-[var(--foreground)]">{trades.length}</div>
@@ -460,7 +602,7 @@ export default function TickerReviewWorkspace({
               <div className={`mt-1 whitespace-nowrap text-[15px] font-semibold tabular-nums ${pnlClass(tradeSummary.totalPnlTone)}`}>{tradeSummary.totalPnl}</div>
             </div>
           </div>
-          <div className="divide-y divide-[var(--hairline)] border-y border-[var(--hairline)]">
+          <div className="divide-y divide-[var(--hairline)] border-y border-[var(--hairline)] bg-[var(--surface)]">
             <div className="grid grid-cols-[minmax(0,1fr)_28px] items-center gap-1 px-1 py-2 text-[11px] font-semibold text-[var(--muted)]">
               <div className="grid grid-cols-[0.9fr_0.8fr_0.65fr_1.55fr_1fr_0.8fr_1fr] gap-x-2 px-1">
                 <span>Trade</span>
