@@ -21,6 +21,12 @@ const wireframes = [
 
 const prototypes = [
   {
+    title: "Coach recap spine",
+    href: "/review/journal/coach-recap-spine",
+    label: "Prototype",
+    body: "Import-ready evidence flows into one coach-first recap: generated feedback, playbook alignment, targeted questions, and progressively disclosed analytics.",
+  },
+  {
     title: "AI-first daily recap",
     href: "/review/journal/ai-first-recap",
     label: "Prototype",

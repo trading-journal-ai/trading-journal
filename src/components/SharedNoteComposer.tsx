@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import DictationTextarea from "@/components/DictationTextarea";
+import DictationTextarea, { type DictationStatus } from "@/components/DictationTextarea";
 import { SETUP_PATTERN_CUES } from "@/lib/journalLabels";
 
 type SharedNoteComposerProps = {
@@ -30,6 +30,7 @@ type SharedNoteComposerProps = {
   dictationPromptMode?: boolean;
   dictationPromptContent?: ReactNode;
   hideActions?: boolean;
+  onDictationStatusChange?: (status: DictationStatus) => void;
 };
 
 function SetupPatternCues() {
@@ -78,12 +79,25 @@ export default function SharedNoteComposer({
   dictationPromptMode = false,
   dictationPromptContent,
   hideActions = false,
+  onDictationStatusChange,
 }: SharedNoteComposerProps) {
   const [initialValue, setInitialValue] = useState(defaultValue);
   const [savedLocal, setSavedLocal] = useState(false);
+  const [dictationBusy, setDictationBusy] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const actionsHiddenAtDictationStartRef = useRef(hideActions);
   const inputKey = `${localStorageKey ?? "server"}:${initialValue}`;
   const localMode = Boolean(localStorageKey);
+  // Freeze the actions row in its pre-dictation state while recording, so
+  // streamed live text doesn't pop the row in (or out) mid-dictation.
+  const actionsHidden = dictationBusy ? actionsHiddenAtDictationStartRef.current : hideActions;
+
+  function handleDictationStatusChange(status: DictationStatus) {
+    const busy = status === "recording" || status === "transcribing";
+    if (busy && !dictationBusy) actionsHiddenAtDictationStartRef.current = hideActions;
+    setDictationBusy(busy);
+    onDictationStatusChange?.(status);
+  }
 
   useEffect(() => {
     // Hydrate browser-local demo notes after mount; localStorage is not available during SSR.
@@ -129,12 +143,13 @@ export default function SharedNoteComposer({
           value={value}
           placeholder={placeholder}
           onValueChange={onTextChange}
+          onDictationStatusChange={handleDictationStatusChange}
           promptMode={dictationPromptMode}
           promptContent={dictationPromptContent}
           className={textareaClassName ?? "min-h-[128px] w-full resize-y rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-sm leading-6 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"}
         />
       </div>
-      {!hideActions ? <div className="flex flex-wrap items-center justify-between gap-3">
+      {!actionsHidden ? <div className="flex flex-wrap items-center justify-between gap-3">
         <div>{savedLocal ? <span className="text-[11px] text-[var(--muted)]">Saved in this browser</span> : null}</div>
         <div className="flex justify-end gap-2">
           {actionsSlot}
