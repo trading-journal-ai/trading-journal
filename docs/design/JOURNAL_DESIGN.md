@@ -58,10 +58,10 @@ Journal notes exist at four levels:
 - Day: the core review unit. Captures market read, plan quality, execution,
   emotions, what worked, and what to fix tomorrow.
 - Trade: a focused note attached to a specific trade. Trade notes surface under
-  the matching day and link back to the trade detail chart.
+  the matching day and reopen the ticker/day chart with that trade selected.
 
-Trade notes should not live only inside the trade detail page. They should roll
-up into the daily journal automatically.
+Trade notes are authored inside the ticker/day review workspace and roll up into
+the daily journal automatically.
 
 ## Trade Note Labels
 
@@ -137,15 +137,28 @@ Custom tags should be managed separately from the current visual cleanup work.
 They will affect trade notes, journal editing, trade log filtering, reports, and
 future AI review, so this should be handled as a focused Part 2 feature.
 
-## Trade Note UI
+## Ticker/Day Review Workspace
 
-Trade detail page:
+Treat the individual trade as selectable evidence, not as a required third
+navigation level. The trader should be able to review and document every trade
+for a ticker from one robust ticker/day chart.
 
-- User writes or edits a trade note under the chart/executions.
-- User chooses one primary trade label.
-- User can optionally attach setup/pattern context.
-- User can dictate the note and edit the transcript before saving.
-- Saving the note updates the trade detail page and the journal rollup.
+- The chart shows the full review session and every entry/exit marker.
+- Selecting a trade keeps the user on the same surface and reveals that trade's
+  executions, setup, intended trigger, invalidation, plan-adherence judgment,
+  note, screenshots, and video.
+- Ticker-level context describes the session thesis, important levels, and the
+  sequence across multiple attempts.
+- Trade-specific context remains linked to the selected trade id for coach
+  evidence and historical analysis.
+- A one-trade ticker does not get a duplicate ticker note and trade note. The
+  selected trade is the ticker story.
+- Links from the Journal open this workspace with the relevant trade selected.
+  The individual trade route may remain an implementation/deep-link detail, but
+  it should not feel like a separate journaling product.
+
+This is an information-architecture decision before it is a layout decision:
+retain ticker and trade scopes in data, but expose one authoring surface.
 
 Journal page:
 
@@ -155,7 +168,7 @@ Journal page:
   - note body
   - setup/pattern context when present
   - AI-suggested process/emotion signals only when useful
-  - link back to trade
+  - link to the ticker/day chart with the cited trade selected
 - In reading mode, edit controls should stay hidden.
 - Clicking the note can enter editing mode.
 
@@ -166,10 +179,20 @@ The daily note is the heart of the journal.
 Daily view should show:
 
 - Day header and date.
-- Day metrics: trade count, win rate, profit factor, P&L.
-- Daily recap text.
-- Trade notes for selected/high-signal trades.
-- Compact ticker P&L module on the right.
+- Coach narrative: how the trader did, what mattered, how it relates to their
+  history, and what should change next.
+- One carry-forward focus for the next session.
+- The trader's day-level context when it adds information that no ticker or
+  trade annotation can provide.
+- A compact result line rather than a competing analytics section.
+- Two to four cited ticker/trade evidence items that support the narrative or
+  still need context.
+- Quiet access to the full day record: ticker/day workspaces, remaining trades,
+  media, calculations, and analytics.
+
+The root Journal page should not reproduce the ticker/day workspace. It should
+surface only the evidence the Coach used, the context still missing, and the
+lesson that carries forward.
 
 Daily note prompts:
 
@@ -213,7 +236,8 @@ Part 2 should focus on authoring, not layout.
 Build order:
 
 1. Define canonical label/tag constants in one shared module.
-2. Reuse those constants on trade detail and journal edit forms.
+2. Reuse those constants in the ticker/day selected-trade editor and journal
+   edit forms.
 3. Replace duplicated hard-coded select options.
 4. Add primary label editing for trade notes.
 5. Add setup/pattern selection where it improves review.
