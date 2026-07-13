@@ -34,3 +34,6 @@ Key product-area specs referenced by the data model:
 - [`product/COACH_RECAP_CONTENT_SPEC.md`](product/COACH_RECAP_CONTENT_SPEC.md):
   Trading Coach + Daily Recap content design specification (Rev 2) — coach content
   objects, progressive disclosure, and product decisions.
+- [`product/COMPETITIVE_ANALYSIS.md`](product/COMPETITIVE_ANALYSIS.md): current
+  trading-journal landscape, user-friction hypotheses, TradeNote deep dive,
+  product position, and the evaluation needed to prove the coaching loop.
