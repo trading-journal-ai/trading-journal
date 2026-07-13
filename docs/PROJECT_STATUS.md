@@ -23,7 +23,7 @@ are all cheap *only if* that contract is real.
 |---|---|---|
 | **Now** | Work the [OWNER_TODO ⭐ shortlist](OWNER_TODO.md): define setups, decide playbook storage/identity, raw-file retention | **AI-first recap prototype** (Phase 1, in review) · Opportunity-context calculator (data confirmed present) |
 | **Next** | Confirm §A decisions; author `EXECUTION.md` | Wire the v2 Coach Review schema; `buildJournalDay()` view-model |
-| **Later** | Recap-flow product questions (§B); docs cleanup (§D) | One canonical recap template → then themes / alt-templates / export |
+| **Later** | Recap-flow product questions (§B); docs cleanup (§D) | One canonical recap template → then themes / alt-templates / export · weekly & monthly coach recaps (idea — [plan](product/AI_FIRST_DAILY_RECAP_PLAN.md#future-scope-weekly--monthly-coach-recaps); schema already scoped) |
 
 Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
