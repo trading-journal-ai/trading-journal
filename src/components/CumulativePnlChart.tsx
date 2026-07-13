@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 export type PnlPoint = { label: string; value: number };
 export type PnlSeries = { points: PnlPoint[]; trades: number };
@@ -17,7 +17,18 @@ function money(v: number): string {
   })}`;
 }
 
-function Chart({ series, period }: { series: PnlSeries; period: string }) {
+export function PnlSeriesChart({
+  series,
+  period,
+  splitTone = false,
+  filled = false,
+}: {
+  series: PnlSeries;
+  period: string;
+  splitTone?: boolean;
+  filled?: boolean;
+}) {
+  const chartId = useId().replaceAll(":", "");
   if (series.trades === 0) {
     return (
       <div className="h-[200px] flex items-center justify-center text-sm text-[var(--muted)]">
@@ -47,9 +58,21 @@ function Chart({ series, period }: { series: PnlSeries; period: string }) {
   const last = vals[vals.length - 1] ?? 0;
   const color = last >= 0 ? "var(--green)" : "var(--red)";
   const line = pts.map((p, i) => `${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(" ");
+  const zeroY = y(0);
+  const area = `${x(0).toFixed(1)},${zeroY.toFixed(1)} ${line} ${x(pts.length - 1).toFixed(1)},${zeroY.toFixed(1)}`;
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Cumulative P&L">
+      {splitTone ? (
+        <defs>
+          <clipPath id={`${chartId}-positive`}>
+            <rect x={PAD.left} y={PAD.top} width={plotW} height={Math.max(0, zeroY - PAD.top)} />
+          </clipPath>
+          <clipPath id={`${chartId}-negative`}>
+            <rect x={PAD.left} y={zeroY} width={plotW} height={Math.max(0, H - PAD.bottom - zeroY)} />
+          </clipPath>
+        </defs>
+      ) : null}
       {ticks.map((t, i) => (
         <g key={i}>
           <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke="var(--hairline)" strokeWidth={1} />
@@ -66,7 +89,44 @@ function Chart({ series, period }: { series: PnlSeries; period: string }) {
           {pts[idx]?.label}
         </text>
       ))}
-      <polyline points={line} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+      {splitTone ? (
+        <>
+          {filled ? (
+            <>
+              <polygon
+                points={area}
+                fill="var(--green-tint)"
+                clipPath={`url(#${chartId}-positive)`}
+              />
+              <polygon
+                points={area}
+                fill="var(--red-tint)"
+                clipPath={`url(#${chartId}-negative)`}
+              />
+            </>
+          ) : null}
+          <polyline
+            points={line}
+            fill="none"
+            stroke="var(--green)"
+            strokeWidth={2}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            clipPath={`url(#${chartId}-positive)`}
+          />
+          <polyline
+            points={line}
+            fill="none"
+            stroke="var(--red)"
+            strokeWidth={2}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            clipPath={`url(#${chartId}-negative)`}
+          />
+        </>
+      ) : (
+        <polyline points={line} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+      )}
     </svg>
   );
 }
@@ -103,7 +163,7 @@ export default function CumulativePnlChart({
           ))}
         </div>
       </div>
-      <Chart series={series} period={tab} />
+      <PnlSeriesChart series={series} period={tab} />
     </section>
   );
 }

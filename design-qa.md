@@ -354,3 +354,59 @@ The supplied source screenshots and browser-rendered implementation captures wer
 - Verify the same flow at a mobile breakpoint.
 
 final result: passed
+
+---
+
+# Coach recap spine design QA
+
+- Source visual truth: `/Users/justin/.codex/generated_images/019f58d5-bb93-7161-bc70-2e19d4be0215/exec-02f05185-fc9e-4987-9d48-6ac12aae8291.png`.
+- Implementation: `http://localhost:3000/review/journal/coach-recap-spine`.
+- Implementation screenshots: `/private/tmp/trading-journal-codex-qa-019f58d5/coach-recap-qa/01-ready.png`, `/private/tmp/trading-journal-codex-qa-019f58d5/coach-recap-qa/02-generated-with-evidence.png`, `/private/tmp/trading-journal-codex-qa-019f58d5/coach-recap-qa/03-mobile-ready.png`, `/private/tmp/trading-journal-codex-qa-019f58d5/coach-recap-qa/06-post-fix-980x1000.png`, and `/private/tmp/trading-journal-codex-qa-019f58d5/coach-recap-qa/07-chart-region.png`.
+- Viewports: desktop `1280 × 720`, matched visual frame `980 × 1000`, and mobile `390 × 844`.
+- Compared states: ready to generate, generated recap, answered coach question, and open/closed evidence drawer.
+
+## Full-view comparison evidence
+
+The selected Film Room concept and the final browser captures were opened together. The implementation preserves the concept's coach-first hierarchy, Deep theme, day header, cumulative P&L plus ticker rail, qualitative playbook alignment, prioritized review moments, one experiment, and advanced evidence disclosure. The review-only header and the pre-generation state are intentional prototype additions required to demonstrate the revised product flow.
+
+## Focused region comparison evidence
+
+The chart/ticker and playbook-alignment region was captured separately in `07-chart-region.png`. It confirms the negative P&L path is red, positive P&L path is green, ticker values retain semantic color, and the alignment strip keeps the source's open ledger rhythm.
+
+## Findings
+
+- No remaining P0/P1/P2 differences.
+- P3: the implementation uses the app's Geist typography and existing chart axis density instead of reproducing the generated mock's exact font rendering and three-tick axis. This is intentional design-system alignment.
+- P3: the recap is longer than the source because the requested targeted follow-up question is an inline workflow rather than an action link. Progressive disclosure keeps the advanced evidence collapsed by default.
+
+## Comparison history
+
+### Pass 1 — semantic chart tone
+
+- Finding: the reused cumulative chart colored the entire line green because the final session P&L was positive, making the early drawdown look positive.
+- Severity: P2 because trading meaning was encoded incorrectly.
+- Fix: added optional split-tone and fill behavior to the shared chart, enabled only for this recap preview.
+
+### Pass 2 — post-fix evidence
+
+- `07-chart-region.png` shows the drawdown in red, the recovery in green, semantic area fills, and the ticker rail in the same rendered state.
+- Browser console: no warnings or errors.
+- Desktop document width matched the viewport with no horizontal overflow.
+- Mobile document width matched `390px` with no horizontal overflow.
+
+## Interaction proof
+
+- `Generate recap` transitions from the source-readiness screen to the synthesized coach feedback.
+- The coach answer field enables `Update recap`; submitting an answer shows the revised judgment and records that the answer is saved back to PFSA trade context.
+- The evidence drawer opens to robustness, economics, and trend-vote details.
+- Page identity, non-blank state, framework overlay check, and console health passed.
+
+## Fidelity surfaces
+
+- Fonts and typography: app-standard Geist sans/mono roles, readable body sizes, compact mono evidence labels, and source-like hierarchy.
+- Spacing and layout rhythm: open sections, hairlines before boxes, restrained radii, and dense-but-readable trading rows.
+- Colors and visual tokens: Deep theme tokens, red/green reserved for outcomes, blue reserved for actions and focus.
+- Image and asset fidelity: no source imagery was required; the existing app-native cumulative P&L chart was reused and extended instead of replaced with placeholder artwork.
+- Copy and content: recap copy separates process from outcome, cites playbook and note sources, and asks only for context that could change the coach judgment.
+
+final result: passed
