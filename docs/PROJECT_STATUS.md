@@ -44,6 +44,11 @@ stopped. This is the "when did we last work on it" trail.
   - Recovered an in-progress **AI-first daily recap prototype** from stashed WIP,
     verified it renders on the synced main, and branched it as
     `feat/ai-first-recap-prototype` for review.
+  - Captured the next IA decisions: ticker/day is the single trade-authoring
+    workspace; analytical Coach claims have an on-demand technical explanation;
+    Journal and Analytics share finding/query context; explanation depth is
+    independent from Coach tone; findings can move through explicit Analytics,
+    Playbook, Dashboard, and next-Journal feedback loops.
   - **Stopped at:** docs merged; recap prototype in review (Phase 1). Owner to
     work the ⭐ shortlist; build track's next net-new piece is the
     opportunity-context calculator (not yet started).

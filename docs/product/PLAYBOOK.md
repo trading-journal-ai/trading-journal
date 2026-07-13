@@ -89,6 +89,37 @@ the playbook emerge from real review:
 - Coach review compares intention, evidence, and rules.
 - Dashboard cues bring the current lesson back before the next session.
 
+## From Coach Finding To Playbook Knowledge
+
+The Coach should help develop the Playbook without being allowed to rewrite it.
+Use a promotion ladder:
+
+```text
+Session observation
+  -> Coach finding with evidence
+  -> Optional Analytics validation
+  -> Playbook candidate
+  -> Trader accepts / edits / dismisses
+  -> Active setup, rule, example, or exception
+  -> Dashboard rehearsal
+  -> New Journal evidence
+```
+
+A candidate should identify:
+
+- What kind of knowledge it proposes: setup, execution rule, risk guardrail,
+  positive example, avoid example, or exception.
+- The trades, notes, charts, and calculations supporting it.
+- Whether it is session-only, emerging, repeated, or established.
+- Evidence that contradicts it.
+- The proposed wording and where it changes future review criteria.
+- A review or expiration date when the idea is still experimental.
+
+The Coach may suggest; Analytics may strengthen or weaken the evidence; only
+the trader can approve the durable Playbook change. Future Coach reviews then
+use that approved language and criteria, closing the loop instead of starting
+from generic advice each day.
+
 ## Product Thesis
 
 The playbook should become a living artifact, not a static document.

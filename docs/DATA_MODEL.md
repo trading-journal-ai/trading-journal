@@ -253,7 +253,8 @@ composed of:
 - Session header + key-facts strip (≤4 facts) — calculated
 - User day note (`journal_entries`, day scope) — ✎ you
 - Coach Review section (§6b objects) — ✳ coach
-- Review queue (2–4 trades) — coach-selected, links to trade detail
+- Review queue (2–4 trades) — coach-selected, opens the ticker/day workspace
+  with the cited trade selected
 - Supporting facts / evidence (collapsed) — calculated
 - Playbook + Dashboard handoffs — approved-knowledge
 
@@ -316,7 +317,7 @@ the data contract.
 2. **Session-structure UI label** → "What drove the result?"; internal object
    stays `session_structure`.
 3. **Opportunity UI label** → "Was the opportunity still there?"; compact
-   "Opportunity at entry" in trade detail.
+   "Opportunity at entry" for the selected trade in the ticker/day workspace.
 4. ★ **Min sample for session structure** → compute always; present a
    classification only at ≥5 closed trades.
 5. **Market-data resolution** → 1-min OHLCV + executions for v1 (we have

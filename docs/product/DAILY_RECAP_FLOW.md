@@ -126,7 +126,10 @@ Suggested hierarchy:
 3. **Trade evidence**
    - Imported trades, P&L, ticker sidebar, and chart/execution links.
    - Ticker-level rows should link to the stock/day review.
-   - Individual trades remain deeper drilldowns for detailed trade notes.
+   - Individual trades remain selectable evidence inside the ticker/day chart.
+     Selecting a marker reveals trade-specific notes, setup/plan context,
+     executions, screenshots, and video without requiring another journaling
+     destination.
 
 4. **Trader thoughts**
    - User-authored context before asking the coach.

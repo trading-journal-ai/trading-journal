@@ -156,7 +156,7 @@ Define:
 - What appears by default
 - What is collapsed
 - What opens in a drawer
-- What links to trade detail
+- What opens the ticker/day workspace with a cited trade selected
 - What can be promoted to Playbook
 - What can be carried to Dashboard
 
@@ -1045,11 +1045,14 @@ Each rule and setup should link back to:
 - Revision history
 - Active or retired status
 
-### Trade detail
+### Ticker/day review with a selected trade
 
-Trade-specific coach content should stay close to the chart and executions.
+Trade-specific coach content should stay close to the full-session ticker chart
+and executions. A trade is a selectable evidence state inside the ticker/day
+workspace, not a required third navigation level.
 
-The session recap should summarize the finding and link to the trade rather than reproducing the complete analysis.
+The session recap should summarize the finding and open the ticker/day workspace
+with the cited trade selected rather than reproducing the complete analysis.
 
 ---
 
@@ -1153,6 +1156,49 @@ The user should be able to inspect:
 - Why the coach chose its wording
 
 The experience should be easy by default and rigorous on demand.
+
+### On-demand technical explanation
+
+Every analytical coach claim should have a consistent technical expansion. The
+default narrative stays human; opening **Explain this** reveals the complete
+basis without forcing the trader into a separate report first.
+
+The expanded explanation includes:
+
+- Included trades and excluded trades.
+- Before/after values used in a comparison.
+- Concentration percentage or contribution share.
+- Minimum sample threshold and whether it was met.
+- Calculation definition in plain language, with the internal term available.
+- Missing-data caveats.
+- Historical comparison window and sample size.
+- Evidence references back to the ticker/day chart and selected trades.
+
+The interaction should support three depths:
+
+1. **Read the conclusion** — the short Coach narrative.
+2. **Inspect the proof** — deterministic values, sources, and caveats expanded
+   inline.
+3. **Investigate further** — ask the Coach a follow-up or open the same question
+   in Analytics with its date range, tickers, trades, and comparison preserved.
+
+An interactive follow-up may ask for a different time window, cohort, setup, or
+counterfactual. The language model must not perform new arithmetic from prose.
+It requests or consumes another deterministic review-engine/Analytics result,
+then explains that result with the same provenance and confidence rules.
+
+Useful follow-up actions include:
+
+- `Why does this matter?`
+- `Show the trades behind this`
+- `Compare with my last 20 sessions`
+- `Is this specific to this setup?`
+- `Open in Analytics`
+- `Turn this into a Playbook candidate`
+
+Technical expansion is not a dead end. A useful investigation can become a
+corrected Coach finding, a user-approved Playbook candidate, or a measurable
+carry-forward experiment. It never becomes a permanent rule automatically.
 
 ---
 
@@ -1409,11 +1455,18 @@ Allow users to configure:
 - Preferred top metrics
 - Grade visibility
 - Coach tone
+- Explanation depth: guided, standard, or technical
 - Review depth
 - Rule severity
 - Maximum surfaced trades
 - Experiment duration
 - P&L visibility
+
+Coach tone and explanation depth are independent. Tone changes whether the
+delivery is supportive, balanced, or blunt. Explanation depth changes
+vocabulary, assumed knowledge, and the amount of technical context shown by
+default. Neither setting changes facts, evidence, thresholds, confidence, or
+the availability of the full technical explanation.
 
 ---
 

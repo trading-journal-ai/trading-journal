@@ -38,6 +38,10 @@ rules/setups     fact pack                one artifact under day P&L
   confirm or correction sharpens the playbook definition over time.
 - **Feeds:** by-setup segmentation in the fact pack, evidence quotes in the
   recap, and pattern memory such as "third chase note this month."
+- **Surface rule:** a trade remains an addressable evidence object, but it does
+  not need its own first-class journaling destination. The trader should select
+  the trade on the ticker/day chart and add or edit its context in that same
+  workspace.
 
 ### Ticker/Day Note
 
@@ -49,6 +53,30 @@ rules/setups     fact pack                one artifact under day P&L
 - **Captured:** prose, with optional setup chips when the pattern was thematic.
 - **Feeds:** day-note draft and the coach's mechanism read, such as ticker
   concentration.
+
+### Ticker/Day Review Is the Authoring Surface
+
+Proposed IA direction: use one ticker/day workspace for both ticker context and
+trade-specific annotations. Do not make the trader navigate through
+`day -> ticker -> trade detail` to document a decision.
+
+- Show the full review-session TradingView chart with every trade marked.
+- Let the trader zoom, pan, and select an individual trade marker or execution
+  cluster without leaving the chart.
+- Keep ticker-level prose for the overall thesis, levels, and the pattern across
+  multiple attempts.
+- When a trade is selected, expose its setup, intended trigger, invalidation,
+  plan-adherence judgment, note, screenshots, and video inline.
+- Save trade-specific context against the trade id so the coach can cite it,
+  even though the user authors it inside the ticker/day workspace.
+- If the ticker has one trade, skip a separate ticker note. The selected trade
+  is the ticker story; do not ask the trader to document it twice.
+- Deep links from the Daily Recap should open the ticker/day workspace with the
+  cited trade selected and centered, not require a separate trade-detail page.
+
+This removes a navigation level without flattening the evidence model. Ticker
+and trade remain useful scopes for attribution; only ticker/day remains a
+first-class review surface.
 
 ### Day Note
 
@@ -141,7 +169,7 @@ phrase, note link, confidence, and a correction path.
    be good setup/bad setup/not a setup?
 2. When the trader edits the day note after the recap generates, does the
    coach's read regenerate, or annotate the diff?
-3. Does the ticker/day note collapse into a "trade group" note when trade
-   grouping improves, or stay a first-class surface?
+3. Should the ticker/day chart use a persistent annotation panel, an anchored
+   chart popover, or a lower review drawer when a trade is selected?
 4. How much of the recap is visible before any notes exist? Coach read from data
    alone should still work. Notes upgrade it, never gate it.

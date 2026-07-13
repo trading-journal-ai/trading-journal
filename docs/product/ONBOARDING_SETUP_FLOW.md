@@ -310,14 +310,29 @@ Purpose: tune how the app talks back to the trader.
 Suggested fields:
 
 - Coach strictness: supportive, balanced, blunt.
+- Explanation depth: guided, standard, technical.
+- Review length: concise, normal, deep.
 - Primary focus: overtrading, chasing, sizing, early exits, revenge trading,
   rule adherence, setup selectivity.
 - Review cadence: trade, day, week, month.
 - Default action style: one experiment, checklist, or direct rule.
 - Topics to avoid or de-emphasize.
 
-The coach should never hide evidence because of tone settings. Tone changes the
-delivery, not the facts.
+The coach should never hide evidence because of tone or depth settings. Tone
+changes the delivery, not the facts. Explanation depth changes vocabulary and
+how much technical context is initially visible:
+
+- **Guided:** explain terms and prioritize risk, plan adherence, and basic
+  process.
+- **Standard:** use common trading language with selective numbers and personal
+  baseline comparisons.
+- **Technical:** assume analytical fluency and use compact concepts such as R,
+  expectancy, concentration, MFE/MAE, and cohort comparisons when supported.
+
+Every mode retains the same deterministic evidence, confidence, caveats, and
+on-demand technical explanation. Experience level may suggest a starting mode,
+but the trader controls it independently; experience and preferred explanation
+style are not the same thing.
 
 ### Market Data
 
