@@ -2,6 +2,7 @@
 
 import type { ReactNode, RefObject, TextareaHTMLAttributes } from "react";
 import { useEffect, useRef, useState } from "react";
+import { normalizeSpokenMentions } from "@/lib/dictation";
 
 export type DictationStatus = "idle" | "recording" | "transcribing" | "unsupported";
 
@@ -17,12 +18,58 @@ type DictationTextareaProps = Omit<
   onDictationStop?: () => void;
   promptMode?: boolean;
   promptContent?: ReactNode;
+  contextualMic?: boolean;
 };
 
 type BrowserWindowWithAudioContext = Window &
   typeof globalThis & {
     webkitAudioContext?: typeof AudioContext;
   };
+
+type SpeechRecognitionEventLike = {
+  results: ArrayLike<ArrayLike<{ transcript: string }>>;
+};
+
+type SpeechRecognitionLike = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  start: () => void;
+  abort: () => void;
+};
+
+type WindowWithSpeechRecognition = Window &
+  typeof globalThis & {
+    SpeechRecognition?: new () => SpeechRecognitionLike;
+    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+  };
+
+type LivePreview = {
+  origin: string;
+  sep: string;
+  folded: string;
+  current: string;
+  active: boolean;
+};
+
+function speechRecognitionConstructor() {
+  if (typeof window === "undefined") return null;
+  const browserWindow = window as WindowWithSpeechRecognition;
+  return browserWindow.SpeechRecognition ?? browserWindow.webkitSpeechRecognition ?? null;
+}
+
+function livePreviewText(preview: LivePreview) {
+  if (preview.folded && preview.current) return `${preview.folded} ${preview.current}`;
+  return preview.folded || preview.current;
+}
+
+function livePreviewValue(preview: LivePreview) {
+  const text = livePreviewText(preview);
+  return text ? `${preview.origin}${preview.sep}${text}` : preview.origin;
+}
 
 const AUDIO_MIME_TYPES = [
   "audio/webm;codecs=opus",
@@ -216,8 +263,10 @@ export default function DictationTextarea({
   onDictationStop,
   promptMode = false,
   promptContent,
+  contextualMic = false,
   disabled = false,
   className,
+  placeholder,
   onFocus,
   onBlur,
   ...props
@@ -241,8 +290,12 @@ export default function DictationTextarea({
   const recordingStartedAtRef = useRef(0);
   const valueRef = useRef(defaultValue);
   const mountedRef = useRef(false);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const livePreviewRef = useRef<LivePreview | null>(null);
+  const lastLiveTranscriptRef = useRef("");
+  const transcribeBaseRef = useRef<string | null>(null);
   const value = controlledValue ?? uncontrolledValue;
-  const showPrompt = promptMode && !value && !focused;
+  const showPrompt = promptMode && !value && !focused && status === "idle";
 
   function updateValue(nextValue: string) {
     if (controlledValue === undefined) setUncontrolledValue(nextValue);
@@ -291,6 +344,76 @@ export default function DictationTextarea({
     stopStream(streamRef.current);
     streamRef.current = null;
     mediaRecorderRef.current = null;
+  }
+
+  // Live transcription preview: the browser's SpeechRecognition streams interim
+  // text into the field while recording; the local transcription service still
+  // produces the authoritative transcript on stop (and replaces the preview).
+  function startLivePreview() {
+    const SpeechRecognitionClass = speechRecognitionConstructor();
+    if (!SpeechRecognitionClass) return;
+
+    const origin = valueRef.current;
+    const preview: LivePreview = {
+      origin,
+      sep: origin && !/\s$/.test(origin) ? "\n\n" : "",
+      folded: "",
+      current: "",
+      active: true,
+    };
+    livePreviewRef.current = preview;
+    lastLiveTranscriptRef.current = "";
+
+    const recognition = new SpeechRecognitionClass();
+    recognition.lang = typeof navigator !== "undefined" && navigator.language ? navigator.language : "en-US";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.onresult = (event) => {
+      if (!preview.active || !mountedRef.current) return;
+      let text = "";
+      for (let index = 0; index < event.results.length; index += 1) {
+        text += event.results[index][0]?.transcript ?? "";
+      }
+      preview.current = normalizeSpokenMentions(text.trim());
+      lastLiveTranscriptRef.current = livePreviewText(preview);
+      updateValue(livePreviewValue(preview));
+    };
+    recognition.onend = () => {
+      if (!preview.active || recognitionRef.current !== recognition) return;
+      // Chrome ends recognition after silence; fold what we have and restart
+      // so the preview survives pauses for as long as the recording runs.
+      if (preview.current) {
+        preview.folded = livePreviewText(preview);
+        preview.current = "";
+      }
+      try {
+        recognition.start();
+      } catch {
+        // Preview stops here; the recording and final transcription continue.
+      }
+    };
+    recognition.onerror = () => {
+      // Non-fatal: the recording continues and the final transcript still lands.
+    };
+    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+    } catch {
+      livePreviewRef.current = null;
+      recognitionRef.current = null;
+    }
+  }
+
+  function stopLivePreview() {
+    const preview = livePreviewRef.current;
+    const recognition = recognitionRef.current;
+    livePreviewRef.current = null;
+    recognitionRef.current = null;
+    if (preview) preview.active = false;
+    recognition?.abort();
+    // The final transcript should be inserted relative to the text as it was
+    // before the preview streamed in — not on top of the preview text.
+    transcribeBaseRef.current = preview ? preview.origin : null;
   }
 
   function startAudioMeter(stream: MediaStream) {
@@ -377,16 +500,22 @@ export default function DictationTextarea({
         throw new Error("Transcription returned an invalid response.");
       }
 
-      const transcript = data.text.trim();
+      const transcript = normalizeSpokenMentions(data.text.trim());
       if (!transcript) throw new Error("No speech was detected.");
 
       const textarea = textareaRef.current;
-      const current = valueRef.current;
-      const appendToEnd = document.activeElement !== textarea;
+      const previewBase = transcribeBaseRef.current;
+      transcribeBaseRef.current = null;
+      // When a live preview streamed text in, insert relative to the pre-preview
+      // text (replacing the preview); cursor offsets belong to the preview text,
+      // so always append in that case.
+      const current = previewBase ?? valueRef.current;
+      const appendToEnd = previewBase !== null || document.activeElement !== textarea;
       const start = textarea?.selectionStart ?? current.length;
       const end = textarea?.selectionEnd ?? start;
       const insertion = transcriptInsertion({ current, transcript, start, end, appendToEnd });
 
+      lastLiveTranscriptRef.current = "";
       updateValue(insertion.value);
       onDictationComplete?.(insertion.value, transcript);
       requestAnimationFrame(() => {
@@ -397,7 +526,12 @@ export default function DictationTextarea({
       setElapsedSeconds(0);
       resetWaveform();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Dictation failed.");
+      transcribeBaseRef.current = null;
+      // If the live preview captured text, it is already in the field — keep it
+      // rather than losing the dictation with the failed transcription.
+      const keptLiveTranscript = lastLiveTranscriptRef.current !== "";
+      const message = caught instanceof Error ? caught.message : "Dictation failed.";
+      setError(keptLiveTranscript ? `${message} Kept the live transcript.` : message);
       setStatus("idle");
       setElapsedSeconds(0);
       resetWaveform();
@@ -426,6 +560,10 @@ export default function DictationTextarea({
       stopStream(streamRef.current);
       streamRef.current = null;
       mediaRecorderRef.current = null;
+      if (livePreviewRef.current) livePreviewRef.current.active = false;
+      livePreviewRef.current = null;
+      recognitionRef.current?.abort();
+      recognitionRef.current = null;
     };
   }, []);
 
@@ -466,6 +604,8 @@ export default function DictationTextarea({
         if (event.data.size > 0) chunksRef.current.push(event.data);
       };
       recorder.onerror = () => {
+        stopLivePreview();
+        transcribeBaseRef.current = null;
         cleanupRecordingResources();
         if (!mountedRef.current) return;
         setError("Recording failed.");
@@ -479,6 +619,7 @@ export default function DictationTextarea({
 
         if (!mountedRef.current) return;
         if (blob.size === 0) {
+          transcribeBaseRef.current = null;
           setError("No audio was recorded.");
           setStatus("idle");
           setElapsedSeconds(0);
@@ -492,6 +633,7 @@ export default function DictationTextarea({
       startAudioMeter(stream);
       startRecordingTimer();
       recorder.start();
+      startLivePreview();
       setStatus("recording");
     } catch (caught) {
       cleanupRecordingResources();
@@ -507,6 +649,7 @@ export default function DictationTextarea({
     if (!recorder || recorder.state === "inactive") return;
 
     setError("");
+    stopLivePreview();
     setStatus("transcribing");
     onDictationStop?.();
     recorder.stop();
@@ -530,14 +673,34 @@ export default function DictationTextarea({
         : "Start dictation";
 
   return (
-    <div className="space-y-2">
+    <div className="group/dictation space-y-2">
       <div className="relative">
         <textarea
           {...props}
           ref={textareaRef}
           disabled={disabled}
           value={value}
-          onChange={(event) => updateValue(event.target.value)}
+          placeholder={status === "idle" ? placeholder : undefined}
+          onChange={(event) => {
+            const nextValue = event.target.value;
+            const preview = livePreviewRef.current;
+            if (preview?.active) {
+              // Manual edits during dictation move the preview's insertion
+              // point so recognition keeps appending after the user's text.
+              const text = livePreviewText(preview);
+              if (text && nextValue.endsWith(text)) {
+                preview.origin = nextValue.slice(0, nextValue.length - text.length);
+                preview.sep = "";
+              } else {
+                preview.origin = nextValue;
+                preview.sep = nextValue && !/\s$/.test(nextValue) ? "\n\n" : "";
+                preview.folded = "";
+                preview.current = "";
+                lastLiveTranscriptRef.current = "";
+              }
+            }
+            updateValue(nextValue);
+          }}
           onFocus={(event) => {
             setFocused(true);
             onFocus?.(event);
@@ -546,39 +709,58 @@ export default function DictationTextarea({
             setFocused(false);
             onBlur?.(event);
           }}
-          className={`${className ?? ""} block ${showPrompt ? "pl-28 pr-6 pt-8" : "pb-13 pr-12"}`}
+          className={`${className ?? ""} block pb-13 ${showPrompt ? "pl-6 pr-32" : "pr-12"}`}
         />
         {showPrompt && promptContent ? (
-          <div className="pointer-events-none absolute inset-y-0 left-28 right-6 flex items-center">
+          <div className="pointer-events-none absolute inset-y-0 left-6 right-32 flex items-center">
             {promptContent}
           </div>
         ) : null}
-        {!showPrompt || status !== "idle" ? (
+        {!showPrompt ? (
           <VoiceActivityIndicator status={status} elapsedSeconds={elapsedSeconds} canvasRef={waveformCanvasRef} />
         ) : null}
         <span className="sr-only" aria-live="polite">
           {status === "recording" ? "Recording dictation" : status === "transcribing" ? "Transcribing dictation" : ""}
         </span>
-        <button
-          type="button"
-          aria-label={buttonLabel}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={handleDictationClick}
-          disabled={unavailable || status === "transcribing"}
-          aria-pressed={status === "recording"}
-          title={buttonLabel}
-          className={`absolute inline-flex items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-            showPrompt ? "left-6 top-1/2 size-16 -translate-y-1/2 bg-[var(--action)] text-[var(--action-foreground)]" : "bottom-3 right-3 size-8"
-          } ${
-            status === "recording"
-              ? "bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)] text-[var(--foreground)]"
-              : status === "transcribing"
-                ? "bg-[var(--surface)] text-[var(--muted)]"
-              : "text-[var(--muted)] hover:text-[var(--foreground)]"
-          }`}
-        >
-          <span className={showPrompt ? "scale-150" : ""}>{status === "recording" ? <StopIcon /> : <MicIcon />}</span>
-        </button>
+        {showPrompt ? (
+          <div className="absolute right-6 top-1/2 flex -translate-y-1/2 flex-col items-center gap-2">
+            <button
+              type="button"
+              aria-label={buttonLabel}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={handleDictationClick}
+              disabled={unavailable}
+              title={buttonLabel}
+              className="inline-flex size-16 items-center justify-center rounded-full bg-[var(--action)] text-[var(--action-foreground)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span className="scale-150"><MicIcon /></span>
+            </button>
+            <span className="pointer-events-none text-center text-[11px] leading-4 text-[var(--muted)]">
+              Hold to talk
+              <br />
+              or start typing
+            </span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            aria-label={buttonLabel}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={handleDictationClick}
+            disabled={unavailable || status === "transcribing"}
+            aria-pressed={status === "recording"}
+            title={buttonLabel}
+            className={`absolute bottom-3 right-3 inline-flex size-8 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+              status === "recording"
+                ? "bg-[var(--red-tint)] text-[var(--red)] hover:opacity-90"
+                : status === "transcribing"
+                  ? "bg-[var(--surface)] text-[var(--muted)]"
+                : "text-[var(--muted)] hover:text-[var(--foreground)]"
+            } ${contextualMic && status === "idle" ? "pointer-events-none opacity-0 group-focus-within/dictation:pointer-events-auto group-focus-within/dictation:opacity-100" : ""}`}
+          >
+            {status === "recording" ? <StopIcon /> : <MicIcon />}
+          </button>
+        )}
       </div>
       {error ? (
         <div aria-live="polite" className="text-xs leading-5 text-[var(--red)]">

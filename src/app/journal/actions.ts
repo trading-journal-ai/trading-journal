@@ -214,6 +214,68 @@ export async function setTradeTagAction(formData: FormData) {
   return { ok: true };
 }
 
+export async function setTickerReviewTagAction(formData: FormData) {
+  if (isDemoReadOnly()) return { ok: false };
+
+  const scopeKey = String(formData.get("scopeKey") ?? "").trim();
+  const tagName = String(formData.get("tagName") ?? "").trim().replace(/\s+/g, " ");
+  const selected = String(formData.get("selected")) === "true";
+  if (!/^\d{4}-\d{2}-\d{2}:[A-Z0-9.\-]+$/.test(scopeKey) || !tagName || tagName.length > 40) {
+    return { ok: false };
+  }
+
+  const activeAccount = await getActiveAccount();
+  const existing = await db
+    .select({ id: schema.journalEntries.id })
+    .from(schema.journalEntries)
+    .where(
+      and(
+        eq(schema.journalEntries.accountId, activeAccount.id),
+        eq(schema.journalEntries.scope, "ticker"),
+        eq(schema.journalEntries.scopeKey, scopeKey),
+      ),
+    )
+    .limit(1);
+
+  let journalEntryId = existing[0]?.id;
+  if (!journalEntryId) {
+    const inserted = await db
+      .insert(schema.journalEntries)
+      .values({ accountId: activeAccount.id, scope: "ticker", scopeKey })
+      .returning({ id: schema.journalEntries.id });
+    journalEntryId = inserted[0]?.id;
+  }
+  if (!journalEntryId) return { ok: false };
+
+  await db.insert(schema.tags).values({ name: tagName }).onConflictDoNothing();
+  const tag = await db
+    .select({ id: schema.tags.id })
+    .from(schema.tags)
+    .where(eq(schema.tags.name, tagName))
+    .limit(1);
+  if (!tag[0]) return { ok: false };
+
+  if (selected) {
+    await db
+      .insert(schema.journalEntryTags)
+      .values({ journalEntryId, tagId: tag[0].id })
+      .onConflictDoNothing();
+  } else {
+    await db
+      .delete(schema.journalEntryTags)
+      .where(
+        and(
+          eq(schema.journalEntryTags.journalEntryId, journalEntryId),
+          eq(schema.journalEntryTags.tagId, tag[0].id),
+        ),
+      );
+  }
+
+  revalidatePath("/trades/review");
+  revalidateJournalLoop();
+  return { ok: true };
+}
+
 const ATTACHMENT_EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",

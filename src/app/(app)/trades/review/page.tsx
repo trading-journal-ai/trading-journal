@@ -104,7 +104,7 @@ export default async function TickerDayReviewPage({
           .where(inArray(schema.executions.tradeId, tradeIds))
           .orderBy(asc(schema.executions.executedAt), asc(schema.executions.id))
       : [];
-  const [tickerReviewNote, tickerReviewState, tagOptions, tradeTagRows, attachmentRows] = await Promise.all([
+  const [tickerReviewNote, tagOptions, tradeTagRows, tickerTagRows, attachmentRows] = await Promise.all([
     db
       .select()
       .from(schema.journalEntries)
@@ -113,17 +113,6 @@ export default async function TickerDayReviewPage({
           eq(schema.journalEntries.accountId, activeAccount.id),
           eq(schema.journalEntries.scope, "ticker"),
           eq(schema.journalEntries.scopeKey, tickerReviewKey(date, symbol)),
-        ),
-      )
-      .limit(1),
-    db
-      .select({ id: schema.tickerReviews.id })
-      .from(schema.tickerReviews)
-      .where(
-        and(
-          eq(schema.tickerReviews.accountId, activeAccount.id),
-          eq(schema.tickerReviews.date, date),
-          eq(schema.tickerReviews.symbol, symbol),
         ),
       )
       .limit(1),
@@ -144,6 +133,18 @@ export default async function TickerDayReviewPage({
           .innerJoin(schema.tags, eq(schema.tags.id, schema.tradeTags.tagId))
           .where(inArray(schema.tradeTags.tradeId, tradeIds))
       : Promise.resolve([]),
+    db
+      .select({ name: schema.tags.name })
+      .from(schema.journalEntryTags)
+      .innerJoin(schema.tags, eq(schema.tags.id, schema.journalEntryTags.tagId))
+      .innerJoin(schema.journalEntries, eq(schema.journalEntries.id, schema.journalEntryTags.journalEntryId))
+      .where(
+        and(
+          eq(schema.journalEntries.accountId, activeAccount.id),
+          eq(schema.journalEntries.scope, "ticker"),
+          eq(schema.journalEntries.scopeKey, tickerReviewKey(date, symbol)),
+        ),
+      ),
     tradeIds.length > 0
       ? db
           .select()
@@ -281,9 +282,9 @@ export default async function TickerDayReviewPage({
             symbol={symbol}
             returnTo={backHref}
             tickerNote={tickerReviewNote[0]?.lessons ?? ""}
+            tickerTags={tickerTagRows.map((row) => row.name)}
             trades={workspaceTrades}
             availableTags={[...tagOptionMap.values()]}
-            readyForCoach={tickerReviewState.length > 0}
             readOnly={readOnly}
             initialTradeId={initialTradeId}
           />
