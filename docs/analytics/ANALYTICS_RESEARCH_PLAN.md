@@ -229,6 +229,10 @@ Journal should surface a smaller version of the same review at the day/week/mont
 level. The user should not have to leave their reflection flow to see the most
 important statistical finding.
 
+The visual exploration for combining comparisons, indicator overlays, key
+moments, and Day / Week / Month / Year scopes is captured in
+[`JOURNAL_COMPARE_INDICATORS_KEY_MOMENTS.md`](../product/JOURNAL_COMPARE_INDICATORS_KEY_MOMENTS.md).
+
 Suggested journal embed:
 
 - One-line verdict: broad green, outlier-carried, tail-caused, churn-heavy,
