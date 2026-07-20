@@ -60,6 +60,7 @@ async function insertExecutions(
           executedAt: e.executedAt,
           fees: e.fees,
           posEffect: e.posEffect,
+          brokerOrderKey: e.brokerOrderKey,
           importBatchId: batchId,
           sourceRowHash: e.sourceRowHash,
         })),

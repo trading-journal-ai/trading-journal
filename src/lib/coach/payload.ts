@@ -1,4 +1,5 @@
 import type { SessionFactPack } from "@/lib/coach/reviewEngine";
+import type { CoachTradeExecutionFacts } from "@/lib/executionAnalysis";
 
 export type CoachReviewTradeContext = {
   id: number;
@@ -15,6 +16,7 @@ export type CoachReviewTradeContext = {
   note: string | null;
   processTags: string[];
   emotionTags: string[];
+  executionAnalysis: CoachTradeExecutionFacts | null;
 };
 
 export type CoachReviewHumanContext = {
@@ -75,7 +77,7 @@ export function buildCoachReviewPayload({
     trades,
     instructions: {
       role: "Post-trade review coach. Review completed trades only. Do not give live trade calls.",
-      numericBoundary: "Use deterministicFacts for every number. Do not calculate, infer, or modify numeric claims.",
+      numericBoundary: "Use deterministicFacts and trades[].executionAnalysis for every number. Do not calculate, infer, or modify numeric claims.",
       outputContract: [
         "dayVerdict",
         "whatMatchedPlaybook",

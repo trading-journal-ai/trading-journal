@@ -13,13 +13,12 @@ import {
   type UTCTimestamp,
 } from "lightweight-charts";
 import type { ChartCandle, ChartMarker } from "@/components/TradeChart";
+import type { AnalyzedTradeExecution, TradeExecutionAnalysis } from "@/lib/executionAnalysis";
 
-export type SelectedTradeSummary = {
-  entryPrice: string;
-  exitPrice: string;
+export type TradeChartSummary = {
+  tradeNumber: number;
+  executionAnalysis: TradeExecutionAnalysis;
   holdDuration: string | null;
-  pnl: string;
-  pnlTone: "positive" | "negative" | "neutral";
   shares: string;
 };
 
@@ -31,8 +30,7 @@ type LightweightTradeChartProps = {
   focusMinutesBefore?: number;
   initialFocusTime?: number;
   chartHeightClass?: string;
-  selectedTradeNumber?: number;
-  selectedTradeSummary?: SelectedTradeSummary;
+  tradeSummaries?: TradeChartSummary[];
 };
 
 type InteractiveLightweightTradeChartProps = LightweightTradeChartProps & {
@@ -49,6 +47,13 @@ type MarkerPoint = {
 type ChartSize = {
   width: number;
   height: number;
+};
+
+type TradeGuide = {
+  badgeX: number;
+  badgeY: number;
+  point: MarkerPoint;
+  summary: TradeChartSummary;
 };
 
 const chartTimeFormatter = new Intl.DateTimeFormat("en-US", {
@@ -114,35 +119,98 @@ function formatExecutionPrice(price: number) {
   });
 }
 
-function formatExecutionPnl(pnl: number) {
-  const sign = pnl > 0 ? "+" : pnl < 0 ? "-" : "";
-  return sign + "$" + Math.abs(pnl).toLocaleString("en-US", {
+function formatRealizedPnl(value: number) {
+  const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+  return `${sign}$${Math.abs(value).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  });
-}
-
-function markerTooltipTitle(marker: ChartMarker) {
-  const trade = marker.tradeNumber == null ? "Trade" : `Trade ${marker.tradeNumber}`;
-  const side = marker.side === "buy" ? "Buy" : "Sell";
-  return `${trade} · ${side}`;
+  })}`;
 }
 
 function markerTooltipDetail(marker: ChartMarker) {
-  if (marker.side === "sell" && marker.perShare != null && marker.pnl != null) {
-    return `${formatExecutionPnl(marker.perShare)}/share\n${formatExecutionPnl(marker.pnl)}`;
-  }
-
   const quantity = Math.abs(marker.quantity ?? 0);
-  return `${quantity.toLocaleString("en-US")} @ $${formatExecutionPrice(marker.price)}`;
+  const action = marker.side === "buy" ? "Buy" : "Sell";
+  const execution = `${action} ${quantity.toLocaleString("en-US")} at $${formatExecutionPrice(marker.price)}`;
+  if (!marker.addedAgainstPosition) return execution;
+  const behavior = marker.side === "buy"
+    ? "Averaged down"
+    : "Averaged up";
+  return `${execution}\n${behavior}`;
 }
 
 function markerTooltipLabel(marker: ChartMarker) {
-  const title = markerTooltipTitle(marker).replace(" · ", ", ");
-  if (marker.side === "sell" && marker.perShare != null && marker.pnl != null) {
-    return `${title}, ${formatExecutionPnl(marker.perShare)} per share, ${formatExecutionPnl(marker.pnl)} total`;
+  const trade = marker.tradeNumber == null ? "Trade" : `Trade ${marker.tradeNumber}`;
+  return `${trade}, ${markerTooltipDetail(marker).replace("\n", ", ")}`;
+}
+
+type CompactExecutionRow = AnalyzedTradeExecution | { overflowCount: number };
+
+function compactExecutionRows(executions: AnalyzedTradeExecution[]): CompactExecutionRow[] {
+  if (executions.length <= 6) return executions;
+  return [
+    ...executions.slice(0, 3),
+    { overflowCount: executions.length - 5 },
+    ...executions.slice(-2),
+  ];
+}
+
+function ExecutionGlyph({
+  lifecycle,
+  side,
+}: {
+  lifecycle?: ChartMarker["executionLifecycle"];
+  side: ChartMarker["side"];
+}) {
+  const color = side === "buy" ? "var(--green-chart)" : "var(--red-chart)";
+  const boundary = lifecycle == null || lifecycle === "open" || lifecycle === "close";
+  return (
+    <svg aria-hidden="true" className="h-2.5 w-2.5 shrink-0" viewBox="0 0 12 12">
+      {boundary ? (
+        <polygon
+          fill={color}
+          points={side === "buy" ? "6,1 1,11 11,11" : "1,1 11,1 6,11"}
+        />
+      ) : (
+        <circle cx="6" cy="6" fill={color} r="4" />
+      )}
+    </svg>
+  );
+}
+
+function tradeGuidesForSummaries(
+  markerPoints: MarkerPoint[],
+  summaries: TradeChartSummary[],
+  chartWidth: number,
+): TradeGuide[] {
+  const earliestPointByTrade = new Map<number, MarkerPoint>();
+  for (const point of markerPoints) {
+    const tradeNumber = point.marker.tradeNumber;
+    if (tradeNumber == null) continue;
+    const earliest = earliestPointByTrade.get(tradeNumber);
+    if (!earliest || point.marker.t < earliest.marker.t) {
+      earliestPointByTrade.set(tradeNumber, point);
+    }
   }
-  return `${title}, ${markerTooltipDetail(marker)}`;
+
+  const lastBadgeXByLane: number[] = [];
+  return summaries
+    .flatMap((summary) => {
+      const point = earliestPointByTrade.get(summary.tradeNumber);
+      return point ? [{ point, summary }] : [];
+    })
+    .sort((left, right) => left.point.marker.t - right.point.marker.t)
+    .map(({ point, summary }) => {
+      const badgeX = Math.min(Math.max(15, point.x), Math.max(15, chartWidth - 15));
+      let lane = lastBadgeXByLane.findIndex((lastBadgeX) => badgeX - lastBadgeX >= 34);
+      if (lane === -1) lane = lastBadgeXByLane.length;
+      lastBadgeXByLane[lane] = badgeX;
+      return {
+        badgeX,
+        badgeY: 20 + lane * 30,
+        point,
+        summary,
+      };
+    });
 }
 
 function candlePriceFormat(candles: ChartCandle[]) {
@@ -208,8 +276,7 @@ function InteractiveLightweightTradeChart({
   focusMinutesBefore = 20,
   markers,
   initialFocusTime,
-  selectedTradeNumber,
-  selectedTradeSummary,
+  tradeSummaries = [],
   chartHeightClass = "h-[520px]",
   footerAction,
 }: InteractiveLightweightTradeChartProps) {
@@ -219,30 +286,31 @@ function InteractiveLightweightTradeChart({
   const [markerPoints, setMarkerPoints] = useState<MarkerPoint[]>([]);
   const [chartSize, setChartSize] = useState<ChartSize>({ width: 0, height: 520 });
   const [activeMarkerKey, setActiveMarkerKey] = useState<string | null>(null);
-  const [selectedTradeCardOpen, setSelectedTradeCardOpen] = useState(false);
+  const [activeTradeNumber, setActiveTradeNumber] = useState<number | null>(null);
   const [themeKey, setThemeKey] = useState(0);
   const activeMarker = activeMarkerKey == null
     ? undefined
     : markerPoints.find((point) => point.key === activeMarkerKey);
-  const selectedTradeGuide = selectedTradeNumber == null
+  const tradeGuides = tradeGuidesForSummaries(markerPoints, tradeSummaries, chartSize.width);
+  const activeTradeGuide = activeTradeNumber == null
     ? undefined
-    : markerPoints
-        .filter((point) => point.marker.tradeNumber === selectedTradeNumber)
-        .reduce<MarkerPoint | undefined>((earliest, point) => (
-          !earliest || point.marker.t < earliest.marker.t ? point : earliest
-        ), undefined);
-  const selectedTradeCardId = selectedTradeNumber == null ? undefined : `selected-trade-${selectedTradeNumber}-summary`;
-  const activeMarkerTitle = activeMarker ? markerTooltipTitle(activeMarker.marker) : "";
-  const activeMarkerDetail = activeMarker ? markerTooltipDetail(activeMarker.marker) : "";
-  const activeMarkerShowsOutcome = activeMarker?.marker.side === "sell"
-    && activeMarker.marker.perShare != null
-    && activeMarker.marker.pnl != null;
-  const activeMarkerDetailWidth = activeMarkerDetail
-    .split("\n")
-    .reduce((longest, line) => Math.max(longest, line.length * 6.65), 0);
+    : tradeGuides.find((guide) => guide.summary.tradeNumber === activeTradeNumber);
+  const activeTradeCardId = activeTradeNumber == null ? undefined : `trade-${activeTradeNumber}-summary`;
+  const activeMarkerTitle = activeMarker
+    ? `${activeMarker.marker.side === "buy" ? "Buy" : "Sell"} ${Math.abs(activeMarker.marker.quantity ?? 0).toLocaleString("en-US")}`
+    : "";
+  const activeMarkerHasBehavior = activeMarker?.marker.addedAgainstPosition === true;
+  const activeMarkerPrice = activeMarker ? `$${formatExecutionPrice(activeMarker.marker.price)}` : "";
+  const activeMarkerBehavior = activeMarkerHasBehavior
+    ? activeMarker?.marker.side === "buy" ? "Avg down" : "Avg up"
+    : "";
+  const activeMarkerDetailWidth = Math.max(
+    activeMarkerPrice.length * 6.65,
+    activeMarkerBehavior.length * 6.65,
+  );
   const estimatedTooltipWidth = Math.min(
-    Math.max(108, Math.ceil(Math.max(activeMarkerTitle.length * 6.2, activeMarkerDetailWidth) + 24)),
-    Math.max(108, chartSize.width - 16),
+    Math.max(72, Math.ceil(Math.max(activeMarkerTitle.length * 6.2, activeMarkerDetailWidth) + 24)),
+    Math.max(72, chartSize.width - 16),
   );
 
   useEffect(() => {
@@ -252,15 +320,15 @@ function InteractiveLightweightTradeChart({
   }, []);
 
   useEffect(() => {
-    if (activeMarkerKey == null && !selectedTradeCardOpen) return undefined;
+    if (activeMarkerKey == null && activeTradeNumber == null) return undefined;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       setActiveMarkerKey(null);
-      setSelectedTradeCardOpen(false);
+      setActiveTradeNumber(null);
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [activeMarkerKey, selectedTradeCardOpen]);
+  }, [activeMarkerKey, activeTradeNumber]);
 
   const candleData = useMemo<CandlestickData[]>(
     () =>
@@ -436,7 +504,7 @@ function InteractiveLightweightTradeChart({
       chart.remove();
       chartRef.current = null;
       setActiveMarkerKey(null);
-      setSelectedTradeCardOpen(false);
+      setActiveTradeNumber(null);
       setMarkerPoints([]);
     };
   }, [candleData, candles, focusMinutesAfter, focusMinutesBefore, initialFocusTime, markers, themeKey]);
@@ -447,7 +515,7 @@ function InteractiveLightweightTradeChart({
         className={`relative w-full ${chartHeightClass}`}
         onPointerDown={() => {
           setActiveMarkerKey(null);
-          setSelectedTradeCardOpen(false);
+          setActiveTradeNumber(null);
         }}
       >
         <div ref={containerRef} className="relative z-0 h-full w-full" />
@@ -459,71 +527,80 @@ function InteractiveLightweightTradeChart({
           viewBox={`0 0 ${chartSize.width} ${chartSize.height}`}
           width={chartSize.width}
         >
-          {selectedTradeGuide ? (
-            <g>
-              <line
-                x1={selectedTradeGuide.x}
-                x2={selectedTradeGuide.x}
-                y1={35}
-                y2={Math.max(28, chartSize.height - 30)}
-                stroke="var(--blue)"
-                strokeDasharray="3 4"
-                strokeLinecap="round"
-                strokeOpacity="0.72"
-                strokeWidth="1.5"
-              />
-              <circle
-                aria-describedby={selectedTradeCardOpen ? selectedTradeCardId : undefined}
-                aria-label={`Trade ${selectedTradeNumber} overall summary`}
-                className="pointer-events-auto cursor-help focus:outline-none focus-visible:stroke-[var(--foreground)]"
-                cx={Math.min(Math.max(15, selectedTradeGuide.x), Math.max(15, chartSize.width - 15))}
-                cy={20}
-                fill="var(--blue)"
-                onBlur={() => setSelectedTradeCardOpen(false)}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setActiveMarkerKey(null);
-                  setSelectedTradeCardOpen(true);
-                }}
-                onFocus={() => {
-                  setActiveMarkerKey(null);
-                  setSelectedTradeCardOpen(true);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter" && event.key !== " ") return;
-                  event.preventDefault();
-                  setActiveMarkerKey(null);
-                  setSelectedTradeCardOpen((current) => !current);
-                }}
-                onMouseEnter={() => {
-                  setActiveMarkerKey(null);
-                  setSelectedTradeCardOpen(true);
-                }}
-                onMouseLeave={() => setSelectedTradeCardOpen(false)}
-                onPointerDown={(event) => event.stopPropagation()}
-                r={selectedTradeCardOpen ? 14 : 13}
-                role="button"
-                stroke="var(--surface)"
-                strokeWidth="2"
-                tabIndex={0}
-              />
-              <text
-                x={Math.min(Math.max(15, selectedTradeGuide.x), Math.max(15, chartSize.width - 15))}
-                y={23.5}
-                fill="var(--action-foreground)"
-                fontFamily="var(--font-mono)"
-                fontSize="10"
-                fontWeight="700"
-                pointerEvents="none"
-                textAnchor="middle"
-              >
-                T{selectedTradeNumber}
-              </text>
-            </g>
-          ) : null}
+          {tradeGuides.map((guide) => {
+            const tradeNumber = guide.summary.tradeNumber;
+            const cardOpen = activeTradeNumber === tradeNumber;
+            const cardId = `trade-${tradeNumber}-summary`;
+
+            return (
+              <g key={`trade-guide-${tradeNumber}`}>
+                <line
+                  x1={guide.point.x}
+                  x2={guide.point.x}
+                  y1={guide.badgeY + 15}
+                  y2={Math.max(guide.badgeY + 18, chartSize.height - 30)}
+                  stroke="var(--blue)"
+                  strokeDasharray="3 4"
+                  strokeLinecap="round"
+                  strokeOpacity="0.72"
+                  strokeWidth="1.5"
+                />
+                <circle
+                  aria-describedby={cardOpen ? cardId : undefined}
+                  aria-label={`Trade ${tradeNumber} execution summary`}
+                  className="pointer-events-auto cursor-pointer focus:outline-none focus-visible:stroke-[var(--foreground)]"
+                  cx={guide.badgeX}
+                  cy={guide.badgeY}
+                  fill="var(--blue)"
+                  onBlur={() => setActiveTradeNumber((current) => current === tradeNumber ? null : current)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setActiveMarkerKey(null);
+                    setActiveTradeNumber(tradeNumber);
+                  }}
+                  onFocus={() => {
+                    setActiveMarkerKey(null);
+                    setActiveTradeNumber(tradeNumber);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
+                    setActiveMarkerKey(null);
+                    setActiveTradeNumber((current) => current === tradeNumber ? null : tradeNumber);
+                  }}
+                  onMouseEnter={() => {
+                    setActiveMarkerKey(null);
+                    setActiveTradeNumber(tradeNumber);
+                  }}
+                  onMouseLeave={() => setActiveTradeNumber((current) => current === tradeNumber ? null : current)}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  r={cardOpen ? 14 : 13}
+                  role="button"
+                  stroke="var(--surface)"
+                  strokeWidth="2"
+                  tabIndex={0}
+                />
+                <text
+                  x={guide.badgeX}
+                  y={guide.badgeY + 3.5}
+                  fill="var(--action-foreground)"
+                  fontFamily="var(--font-mono)"
+                  fontSize="10"
+                  fontWeight="700"
+                  pointerEvents="none"
+                  textAnchor="middle"
+                >
+                  T{tradeNumber}
+                </text>
+              </g>
+            );
+          })}
           {markerPoints.map((marker, index) => {
             const s = 5;
             const buy = marker.marker.side === "buy";
+            const boundary = marker.marker.executionLifecycle == null
+              || marker.marker.executionLifecycle === "open"
+              || marker.marker.executionLifecycle === "close";
             const points = buy
               ? `${marker.x},${marker.y - 1} ${marker.x - s},${marker.y + 7} ${marker.x + s},${marker.y + 7}`
               : `${marker.x},${marker.y + 1} ${marker.x - s},${marker.y - 7} ${marker.x + s},${marker.y - 7}`;
@@ -531,13 +608,24 @@ function InteractiveLightweightTradeChart({
 
             return (
               <g key={`${marker.key}-${index}`}>
-                <polygon
-                  points={points}
-                  fill={buy ? "#22c55e" : "#ef4444"}
-                  stroke="#ffffff"
-                  strokeLinejoin="round"
-                  strokeWidth={1.2}
-                />
+                {boundary ? (
+                  <polygon
+                    points={points}
+                    fill={buy ? "var(--execution-buy)" : "var(--execution-sell)"}
+                    stroke="var(--surface)"
+                    strokeLinejoin="round"
+                    strokeWidth={1.2}
+                  />
+                ) : (
+                  <circle
+                    cx={marker.x}
+                    cy={marker.y}
+                    fill={buy ? "var(--execution-buy)" : "var(--execution-sell)"}
+                    r={4.5}
+                    stroke="var(--surface)"
+                    strokeWidth={1.2}
+                  />
+                )}
                 {interactive ? (
                   <circle
                     aria-label={markerTooltipLabel(marker.marker)}
@@ -548,21 +636,21 @@ function InteractiveLightweightTradeChart({
                     onBlur={() => setActiveMarkerKey(null)}
                     onClick={(event) => {
                       event.stopPropagation();
-                      setSelectedTradeCardOpen(false);
+                      setActiveTradeNumber(null);
                       setActiveMarkerKey((current) => current === marker.key ? null : marker.key);
                     }}
                     onFocus={() => {
-                      setSelectedTradeCardOpen(false);
+                      setActiveTradeNumber(null);
                       setActiveMarkerKey(marker.key);
                     }}
                     onKeyDown={(event) => {
                       if (event.key !== "Enter" && event.key !== " ") return;
                       event.preventDefault();
-                      setSelectedTradeCardOpen(false);
+                      setActiveTradeNumber(null);
                       setActiveMarkerKey((current) => current === marker.key ? null : marker.key);
                     }}
                     onMouseEnter={() => {
-                      setSelectedTradeCardOpen(false);
+                      setActiveTradeNumber(null);
                       setActiveMarkerKey(marker.key);
                     }}
                     onMouseLeave={() => setActiveMarkerKey(null)}
@@ -578,81 +666,98 @@ function InteractiveLightweightTradeChart({
             );
           })}
         </svg>
-        {selectedTradeCardOpen && selectedTradeGuide && selectedTradeSummary ? (
+        {activeTradeGuide && activeTradeCardId ? (
           <div
-            id={selectedTradeCardId}
+            id={activeTradeCardId}
             role="tooltip"
-            className="pointer-events-none absolute top-10 z-20 w-[248px] max-w-[calc(100%-16px)] rounded-md border border-[var(--border)] bg-[var(--surface)] px-3.5 py-3 shadow-xl"
+            className="pointer-events-none absolute z-20 w-[228px] max-w-[calc(100%-16px)] rounded-md border border-[var(--border)] bg-[var(--surface)] px-3.5 py-3 shadow-xl"
             style={{
               left: Math.min(
-                Math.max(8, selectedTradeGuide.x - 124),
-                Math.max(8, chartSize.width - 256),
+                Math.max(8, activeTradeGuide.badgeX - 114),
+                Math.max(8, chartSize.width - 236),
               ),
+              top: activeTradeGuide.badgeY + 20,
             }}
           >
             <div className="flex items-baseline justify-between gap-3">
-              <div className="text-[12px] font-semibold text-[var(--foreground)]">Trade {selectedTradeNumber}</div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--blue)]">Overall trade</div>
+              <div className="shrink-0 text-[12px] font-semibold text-[var(--foreground)]">
+                Trade {activeTradeGuide.summary.tradeNumber}
+              </div>
+              <div className="flex shrink-0 items-baseline gap-1.5 font-mono text-[11px] tabular-nums text-[var(--muted)]">
+                <span>{activeTradeGuide.summary.shares} shares</span>
+                <span aria-hidden="true">·</span>
+                <span>{activeTradeGuide.summary.holdDuration ?? "Open"}</span>
+              </div>
             </div>
-            <div className="mt-1 font-mono text-[11px] tabular-nums text-[var(--muted)]">
-              {selectedTradeSummary.shares} shares · {selectedTradeSummary.holdDuration ?? "Open"}
-            </div>
-            <div className="mt-3 grid grid-cols-3 gap-3 border-t border-[var(--hairline)] pt-2.5 font-mono tabular-nums">
-              <div>
-                <div className="text-[9px] uppercase tracking-[0.08em] text-[var(--muted)]">Entry</div>
-                <div className="mt-1 text-[11px] font-semibold text-[var(--foreground)]">{selectedTradeSummary.entryPrice}</div>
-              </div>
-              <div>
-                <div className="text-[9px] uppercase tracking-[0.08em] text-[var(--muted)]">Exit</div>
-                <div className="mt-1 text-[11px] font-semibold text-[var(--foreground)]">{selectedTradeSummary.exitPrice}</div>
-              </div>
-              <div>
-                <div className="text-[9px] uppercase tracking-[0.08em] text-[var(--muted)]">Total</div>
-                <div className={`mt-1 text-[11px] font-semibold ${
-                  selectedTradeSummary.pnlTone === "positive"
-                    ? "text-[var(--green)]"
-                    : selectedTradeSummary.pnlTone === "negative"
-                      ? "text-[var(--red)]"
-                      : "text-[var(--muted)]"
-                }`}>{selectedTradeSummary.pnl}</div>
-              </div>
+            <div className="mt-2.5 space-y-1.5 border-t border-[var(--hairline)] pt-2.5 font-mono text-[11px] tabular-nums">
+              {compactExecutionRows(activeTradeGuide.summary.executionAnalysis.executions).map((row, index) => (
+                "overflowCount" in row ? (
+                  <div key={`overflow-${row.overflowCount}`} className="pl-[18px] text-[10px] text-[var(--muted)]">
+                    +{row.overflowCount} intermediate executions
+                  </div>
+                ) : (
+                  <div
+                    key={row.id ?? `${row.side}-${row.executedAt}-${index}`}
+                    className="grid grid-cols-[12px_30px_minmax(20px,1fr)_auto_50px] items-center gap-x-1"
+                  >
+                    <ExecutionGlyph lifecycle={row.lifecycle} side={row.side} />
+                    <span className={`font-semibold ${row.side === "buy" ? "text-[var(--green-chart)]" : "text-[var(--red-chart)]"}`}>
+                      {row.side === "buy" ? "Buy" : "Sell"}
+                    </span>
+                    <span className="text-[var(--body)]">{row.quantity.toLocaleString("en-US")}</span>
+                    <span
+                      className={`text-right ${
+                        row.realizedPnl == null
+                          ? ""
+                          : row.realizedPnl > 0
+                            ? "text-[var(--green)]"
+                            : row.realizedPnl < 0
+                              ? "text-[var(--red)]"
+                              : "text-[var(--muted)]"
+                      }`}
+                    >
+                      {row.realizedPnl == null ? null : formatRealizedPnl(row.realizedPnl)}
+                    </span>
+                    <span className="text-right font-semibold text-[var(--foreground)]">
+                      ${formatExecutionPrice(row.price)}
+                    </span>
+                  </div>
+                )
+              ))}
             </div>
           </div>
         ) : null}
         {activeMarker ? (
           <div
             role="tooltip"
-            className="pointer-events-none absolute z-20 w-max max-w-[calc(100%-16px)] rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 shadow-xl"
+            className="pointer-events-none absolute z-20 w-max max-w-[calc(100%-16px)] rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 shadow-xl"
             style={{
               left: Math.min(
                 Math.max(8, activeMarker.x - estimatedTooltipWidth / 2),
                 Math.max(8, chartSize.width - estimatedTooltipWidth - 8),
               ),
-              top: activeMarker.y > (activeMarkerShowsOutcome ? 82 : 64)
-                ? activeMarker.y - (activeMarkerShowsOutcome ? 76 : 58)
+              top: activeMarker.y > (activeMarkerHasBehavior ? 82 : 64)
+                ? activeMarker.y - (activeMarkerHasBehavior ? 76 : 58)
                 : activeMarker.y + 14,
             }}
           >
-            <div className="text-[11px] font-semibold text-[var(--foreground)]">
-              {activeMarkerTitle}
+            <div className={`flex items-center justify-end gap-1.5 font-mono text-[11px] font-semibold tabular-nums ${
+              activeMarker.marker.side === "buy" ? "text-[var(--green-chart)]" : "text-[var(--red-chart)]"
+            }`}>
+              <ExecutionGlyph
+                lifecycle={activeMarker.marker.executionLifecycle}
+                side={activeMarker.marker.side}
+              />
+              <span>{activeMarker.marker.side === "buy" ? "Buy" : "Sell"}</span>
+              <span>{Math.abs(activeMarker.marker.quantity ?? 0).toLocaleString("en-US")}</span>
             </div>
-            <div className="mt-1 whitespace-nowrap font-mono text-[11px] tabular-nums text-[var(--body)]">
-              {activeMarkerShowsOutcome ? (
-                <div className="space-y-0.5">
-                  <div className={activeMarker.marker.perShare! > 0 ? "text-[var(--green)]" : activeMarker.marker.perShare! < 0 ? "text-[var(--red)]" : "text-[var(--muted)]"}>
-                    {formatExecutionPnl(activeMarker.marker.perShare!)}/share
-                  </div>
-                  <div className={activeMarker.marker.pnl! > 0 ? "text-[var(--green)]" : activeMarker.marker.pnl! < 0 ? "text-[var(--red)]" : "text-[var(--muted)]"}>
-                    {formatExecutionPnl(activeMarker.marker.pnl!)}
-                  </div>
+            <div className="mt-1 whitespace-nowrap text-right font-mono text-[11px] tabular-nums text-[var(--muted)]">
+              ${formatExecutionPrice(activeMarker.marker.price)}
+              {activeMarkerHasBehavior ? (
+                <div className="mt-0.5 text-[10px] text-[var(--red-chart)]">
+                  {activeMarker.marker.side === "buy" ? "Avg down" : "Avg up"}
                 </div>
-              ) : (
-                <>
-                  {Math.abs(activeMarker.marker.quantity ?? 0).toLocaleString("en-US")}{" "}
-                  <span className="text-[var(--muted)]">@</span>{" "}
-                  ${formatExecutionPrice(activeMarker.marker.price)}
-                </>
-              )}
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -733,8 +838,7 @@ export default function LightweightTradeChart(props: LightweightTradeChartProps)
                 focusMinutesBefore={props.focusMinutesBefore}
                 initialFocusTime={props.initialFocusTime}
                 markers={props.markers}
-                selectedTradeNumber={props.selectedTradeNumber}
-                selectedTradeSummary={props.selectedTradeSummary}
+                tradeSummaries={props.tradeSummaries}
                 chartHeightClass="h-[calc(100vh-9rem)]"
               />
             </div>

@@ -17,6 +17,7 @@ export type ParsedExecution = {
   executedAt: number; // epoch seconds (UTC)
   posEffect: string | null; // "TO OPEN" | "TO CLOSE"
   fees: number;
+  brokerOrderKey: string | null; // hashed Cash Balance REF #; raw broker value is not persisted
   sourceRowHash: string;
 };
 
@@ -54,22 +55,29 @@ function sliceSection(lines: string[], header: string): string[][] {
 }
 
 /**
- * Build a lookup of fees from the Cash Balance section, keyed by
- * `symbol|epochSeconds|absQty|price` (best-effort join to trade-history rows).
+ * Build a lookup of fees and broker order references from the Cash Balance
+ * section, keyed by `symbol|epochSeconds|absQty|price` (best-effort join to
+ * trade-history rows).
  */
-function buildFeeIndex(lines: string[]): Map<string, { sum: number; n: number }> {
+function buildCashBalanceIndex(
+  lines: string[],
+): Map<string, { feeSum: number; count: number; brokerOrderKeys: Set<string> }> {
   // sum + count per key, so identical fills split the fee instead of each
   // claiming the full summed amount (which double-counts duplicates).
-  const fees = new Map<string, { sum: number; n: number }>();
+  const entries = new Map<
+    string,
+    { feeSum: number; count: number; brokerOrderKeys: Set<string> }
+  >();
   const idx = lines.findIndex((l) => l.trim() === "Cash Balance");
-  if (idx === -1) return fees;
+  if (idx === -1) return entries;
   const headers = parseCsvLine(lines[idx + 1]);
   const col = (name: string) => headers.indexOf(name);
   const iDate = col("DATE");
   const iTime = col("TIME");
   const iDesc = col("DESCRIPTION");
   const iMisc = col("Misc Fees");
-  if (iDate < 0 || iTime < 0 || iDesc < 0) return fees;
+  const iRef = col("REF #");
+  if (iDate < 0 || iTime < 0 || iDesc < 0) return entries;
 
   for (let i = idx + 2; i < lines.length; i += 1) {
     const line = lines[i];
@@ -89,10 +97,20 @@ function buildFeeIndex(lines: string[]): Map<string, { sum: number; n: number }>
     const epoch = tosWallClockToEpochSeconds(date, c[iTime] ?? "");
     const misc = Math.abs(parseNumber(c[iMisc]) ?? 0);
     const key = `${symbol.toUpperCase()}|${epoch}|${qty}|${price}`;
-    const prev = fees.get(key) ?? { sum: 0, n: 0 };
-    fees.set(key, { sum: prev.sum + misc, n: prev.n + 1 });
+    const prev = entries.get(key) ?? {
+      feeSum: 0,
+      count: 0,
+      brokerOrderKeys: new Set<string>(),
+    };
+    const rawRef = iRef >= 0
+      ? (c[iRef] ?? "").trim().replace(/^="(.*)"$/, "$1")
+      : "";
+    if (rawRef) prev.brokerOrderKeys.add(hashRow(["tos-order", rawRef]));
+    prev.feeSum += misc;
+    prev.count += 1;
+    entries.set(key, prev);
   }
-  return fees;
+  return entries;
 }
 
 function hashRow(parts: (string | number)[]): string {
@@ -115,8 +133,9 @@ export function parseTosStatement(csv: string): ParsedExecution[] {
   const iNet = col("Net Price");
   const iPos = col("Pos Effect");
 
-  const feeIndex = buildFeeIndex(lines);
+  const cashBalanceIndex = buildCashBalanceIndex(lines);
   const out: ParsedExecution[] = [];
+  const ambiguousOrderOccurrences = new Map<string, number>();
 
   for (const c of rows) {
     const execTime = c[iExec];
@@ -129,8 +148,22 @@ export function parseTosStatement(csv: string): ParsedExecution[] {
     const executedAt = tosWallClockToEpochSeconds(date, time);
     const side = (c[iSide] ?? "").toUpperCase() === "SELL" ? "sell" : "buy";
     const posEffect = (c[iPos] ?? "").trim() || null;
-    const feeEntry = feeIndex.get(`${symbol}|${executedAt}|${qty}|${price}`);
-    const fees = feeEntry ? feeEntry.sum / feeEntry.n : 0;
+    const cashBalanceKey = `${symbol}|${executedAt}|${qty}|${price}`;
+    const cashBalanceEntry = cashBalanceIndex.get(cashBalanceKey);
+    const fees = cashBalanceEntry
+      ? cashBalanceEntry.feeSum / cashBalanceEntry.count
+      : 0;
+    let brokerOrderKey: string | null = null;
+    if (cashBalanceEntry?.brokerOrderKeys.size === 1) {
+      brokerOrderKey = [...cashBalanceEntry.brokerOrderKeys][0];
+    } else if (cashBalanceEntry && cashBalanceEntry.brokerOrderKeys.size > 1) {
+      // Multiple broker references match the same fill signature. We cannot
+      // safely assign a specific reference, so issue stable per-row keys that
+      // keep these fills separate and disable timestamp fallback grouping.
+      const occurrence = ambiguousOrderOccurrences.get(cashBalanceKey) ?? 0;
+      ambiguousOrderOccurrences.set(cashBalanceKey, occurrence + 1);
+      brokerOrderKey = hashRow(["tos-ambiguous-order", cashBalanceKey, occurrence]);
+    }
 
     out.push({
       symbol,
@@ -140,6 +173,7 @@ export function parseTosStatement(csv: string): ParsedExecution[] {
       executedAt,
       posEffect,
       fees,
+      brokerOrderKey,
       sourceRowHash: "", // assigned below (per-occurrence)
     });
   }

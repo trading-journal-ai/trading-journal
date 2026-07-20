@@ -6,6 +6,7 @@ import { db, schema } from "@/lib/db";
 import { getCandles } from "@/lib/candles";
 import { fallbackCandlesFromExecutions } from "@/lib/candles/fallback";
 import { fmtMoney } from "@/lib/format";
+import { analyzeTradeExecutions } from "@/lib/executionAnalysis";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { netPnl } from "@/lib/pnl";
 import { etDayRange, etDateString, reviewSessionRange } from "@/lib/time";
@@ -137,10 +138,27 @@ export async function loadInlineTradeReview({
   ]);
 
   const executionCountByTradeId = new Map<number, number>();
+  const executionsByTradeId = new Map<number, typeof executions>();
   for (const execution of executions) {
     if (execution.tradeId == null) continue;
     executionCountByTradeId.set(execution.tradeId, (executionCountByTradeId.get(execution.tradeId) ?? 0) + 1);
+    executionsByTradeId.set(execution.tradeId, [...(executionsByTradeId.get(execution.tradeId) ?? []), execution]);
   }
+  const executionAnalysisByTradeId = new Map(trades.map((trade) => [
+    trade.id,
+    analyzeTradeExecutions(
+      trade.side,
+      (executionsByTradeId.get(trade.id) ?? []).map((execution) => ({
+        id: execution.id,
+        executedAt: execution.executedAt,
+        price: execution.price,
+        quantity: execution.quantity,
+        side: execution.side,
+        posEffect: execution.posEffect,
+        brokerOrderKey: execution.brokerOrderKey,
+      })),
+    ),
+  ]));
 
   const tradeNumberById = new Map(trades.map((trade, index) => [trade.id, index + 1]));
   const tradePnlById = new Map(trades.map((trade) => [trade.id, netPnl(trade)]));
@@ -167,6 +185,7 @@ export async function loadInlineTradeReview({
       perShare: perShare == null ? "—" : formatSignedMoney(perShare),
       perShareValue: perShare,
       perShareTone: pnlTone(perShare),
+      executionAnalysis: executionAnalysisByTradeId.get(trade.id),
       tags: tradeTagRows.filter((row) => row.tradeId === trade.id).map((row) => row.name),
       attachments: attachmentRows
         .filter((attachment) => attachment.tradeId === trade.id)
@@ -194,20 +213,18 @@ export async function loadInlineTradeReview({
     candles,
     initialFocusTime: selectedTrade.entryAt ?? undefined,
     initialTradeId: tradeId,
-    markers: executions.map((execution) => ({
-      id: execution.id,
-      t: execution.executedAt,
-      price: execution.price,
-      side: execution.side as "buy" | "sell",
-      quantity: execution.quantity,
-      tradeNumber: execution.tradeId == null ? undefined : tradeNumberById.get(execution.tradeId),
-      pnl: execution.side === "sell" && execution.tradeId != null
-        ? tradePnlById.get(execution.tradeId) ?? undefined
-        : undefined,
-      perShare: execution.side === "sell" && execution.tradeId != null
-        ? tradePerShareById.get(execution.tradeId) ?? undefined
-        : undefined,
-    })),
+    markers: trades.flatMap((trade) => (
+      (executionAnalysisByTradeId.get(trade.id)?.executions ?? []).map((execution) => ({
+        id: execution.id,
+        t: execution.executedAt,
+        price: execution.price,
+        side: execution.side,
+        quantity: execution.quantity,
+        tradeNumber: tradeNumberById.get(trade.id),
+        executionLifecycle: execution.lifecycle,
+        addedAgainstPosition: execution.addedAgainstPosition,
+      }))
+    )),
     readOnly: isDemoReadOnly(),
     tickerNote: tickerReviewNote[0]?.lessons ?? "",
     tickerTags: tickerTagRows.map((row) => row.name),
