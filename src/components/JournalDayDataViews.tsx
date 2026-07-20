@@ -208,10 +208,10 @@ export default function JournalDayDataViews({
               role="tab"
               aria-selected={scope === item}
               onClick={() => selectScope(item)}
-              className={`-mb-px border-b-2 px-4 py-3.5 capitalize transition-colors ${
+              className={`-mb-px cursor-pointer border-b-2 px-4 py-3.5 capitalize transition-colors ${
                 scope === item
                   ? "border-[var(--foreground)] text-[var(--foreground)]"
-                  : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
+                  : "border-transparent text-[var(--muted)] hover:border-[var(--muted)] hover:text-[var(--foreground)]"
               }`}
             >
               {item}
@@ -227,10 +227,10 @@ export default function JournalDayDataViews({
               role="tab"
               aria-selected={view === item.key}
               onClick={() => setView(item.key)}
-              className={`min-h-8 whitespace-nowrap rounded-full px-3.5 text-[12.5px] font-semibold transition-colors ${
+              className={`min-h-8 cursor-pointer whitespace-nowrap rounded-full px-3.5 text-[12.5px] font-semibold transition-colors ${
                 view === item.key
                   ? "bg-[var(--foreground)] text-[var(--background)]"
-                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                  : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]"
               }`}
             >
               {item.label}
@@ -283,12 +283,15 @@ function DayViews({
   if (view === "trades") {
     return (
       <div role="tabpanel">
-        <MetricGrid>
-          <Metric label="Trades" value={String(summary.trades)} />
-          <Metric label="Accuracy" value={percent(summary.accuracy)} />
-          <Metric label="Profit factor" value={ratio(summary.profitFactor)} />
-          <Metric label="Total P&L" value={money(summary.pnl)} className={pnlClass(summary.pnl)} />
-        </MetricGrid>
+        <div aria-label="Trade summary" className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1 font-mono text-[13px] tabular-nums text-[var(--muted)]">
+          <span><span className="font-semibold text-[var(--foreground)]">{summary.trades}</span> trades</span>
+          <span aria-hidden="true" className="text-[var(--faint)]">·</span>
+          <span><span className="font-semibold text-[var(--foreground)]">{percent(summary.accuracy)}</span> accuracy</span>
+          <span aria-hidden="true" className="text-[var(--faint)]">·</span>
+          <span>PF <span className="font-semibold text-[var(--foreground)]">{ratio(summary.profitFactor)}</span></span>
+          <span aria-hidden="true" className="text-[var(--faint)]">·</span>
+          <span className={`font-semibold ${pnlClass(summary.pnl)}`}>{money(summary.pnl)} total</span>
+        </div>
         <TradeTable date={date} returnTo={returnTo} tradeRows={tradeRows} />
         <p className="mt-3 text-[12px] text-[var(--muted)]">
           {summary.taggedTrades} of {summary.trades} trades have structured tag context. Missing setup or tag data stays visible instead of being inferred.
@@ -510,7 +513,7 @@ function TradeTable({
                       type="button"
                       aria-controls={panelId}
                       aria-expanded={expanded && !closing}
-                      className="inline-flex items-center gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                      className="inline-flex cursor-pointer items-center gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                     >
                       <span aria-hidden="true" className={`text-[10px] text-[var(--accent)] transition-transform ${expanded && !closing ? "rotate-90" : ""}`}>›</span>
                       <span>{trade.time}</span>
