@@ -1,9 +1,10 @@
 # Competitive Analysis: Trading Journals And Coaching
 
-> Status: **Working brief v1** · Last updated: 2026-07-12
+> Status: **Working brief v2** · Last updated: 2026-07-13
 > Scope: Tradervue, TradeZella, TraderSync, TradesViz, Edgewonk, TradeNote,
-> Close the Trade, and Trading Discipline Lab, plus selected architecture and
-> workflow research. Public product pages, documentation, repositories, and
+> Close the Trade, Trading Discipline Lab, and adjacent pre-trade platform
+> TradeFrame, plus selected architecture and workflow research. Public product
+> pages, documentation, repositories, user-provided product screenshots, and
 > limited public user anecdotes were reviewed.
 
 ## Executive Read
@@ -78,10 +79,196 @@ form to complete.
 | [TradeNote](https://tradenote.co/project-overview.html) | Open-source, self-hosted journal focused on privacy, simplicity, analytics, diary, screenshots, and playbook. | Satisfaction marking and qualitative context, but no evidence of a generated coaching loop in the reviewed docs. | Local ownership and privacy are validated needs, but they are not a moat by themselves. |
 | [Close the Trade](https://www.closethetrade.com/) | Voice reflection paired with fill data, behavioral pattern detection, and an explicit improvement narrative. | AI compares the trader's stated thesis with executions and exposes behavioral patterns with confidence. | This is the closest direct articulation of the same user problem. Our distinction must come from playbook grading, reconstruction rigor, cited evidence, and experiment follow-through. |
 | [Trading Discipline Lab](https://www.tradingdisciplinelab.com/) | Deterministic behavior signals, rule simulation, playbook adherence, and weekly discipline review. | Ranks quantitative signals, keeps discipline labels separate, and feeds grounded results into an AI action plan and account-level chat. | This is the closest public end-to-end learning loop found so far. The architecture itself is not a moat; correctness, evidence, interaction quality, and longitudinal usefulness must differentiate us. |
+| [TradeFrame](https://tradeframe.io/) | Pre-trade market intelligence: discovery, multi-step AI analysis, structured entries/targets/stops, tracked setups, alerts, and a personal track record. | Measures tracked ideas and planned-versus-realized R:R, but the public material reviewed does not show broker-fill reconstruction, reflective journaling, or playbook-based behavior coaching. | This is an adjacent workflow competitor, not a direct journal benchmark. It raises the bar for capturing intent before entry and preserving the handoff from plan to outcome. |
 
 Feature and pricing claims are time-sensitive and should be rechecked before
 being used in external marketing. Competitor-owned comparison pages are useful
 for understanding positioning, not as neutral proof of superiority.
+
+## TradeFrame Adjacent Deep Dive
+
+TradeFrame is not primarily a trading journal. It positions itself as a market
+intelligence command center that compresses research and moves a trader through
+six stages:
+
+```text
+discover -> analyze -> decide -> track -> notify -> measure
+```
+
+The public workflow starts with market pulse, smart-money signals, screeners,
+watchlists, and AI analysis. It then produces a directional verdict,
+confidence, tiered entries, profit targets, an invalidation stop, and R:R.
+Tracked setups are monitored and later measured through win rate, planned-
+versus-realized R:R, hypothetical P&L, and edge by strategy.
+
+That makes TradeFrame strategically relevant even though it does not compete
+for the same core post-session job. It owns the trader's **decision context
+before entry**. This project is designed to own the **execution truth and
+learning loop after the session**. The seam between those moments is where the
+comparison becomes useful.
+
+### Comparative workflow
+
+| Dimension | TradeFrame | Trading Journal AI | Product response |
+| --- | --- | --- | --- |
+| Primary moment | Before and during a swing-trade decision. | After execution, with next-session carry-forward. | Preserve the post-trade focus; do not become a scanner or signal service. |
+| Main evidence | Market data, filings, catalysts, screeners, portfolio context, and AI synthesis. | Broker fills, candles, trader notes, declared risk, and versioned playbook rules. | Make evidence provenance visible and keep calculated facts separate from interpretation. |
+| Primary output | Verdict, confidence, entries, targets, stop, and R:R. | Session verdict, process assessment, supporting evidence, and one experiment. | Avoid live directional recommendations. Grade the trader's own plan instead. |
+| Commitment object | A tracked setup with monitored levels. | A plan snapshot, executed trade, accepted experiment, and carry-forward cue. | Treat pre-trade intent as an immutable object that can be compared with actual behavior. |
+| Outcome tracking | Public positioning emphasizes hypothetical setup performance and planned-versus-realized R:R. | Actual broker executions, reconciliation, behavior signals, and longitudinal experiment status. | Lead with actual execution truth and explain where intent or market evidence is missing. |
+| Trust risk | AI-generated market conviction can look authoritative unless source age, assumptions, and uncertainty remain visible. | AI coaching can sound authoritative unless each conclusion cites deterministic facts and contradictory evidence. | Use the same trust pattern everywhere: source, timestamp, calculation, confidence, and limits. |
+
+### The closer analogy: Decision Engine vs. Review Engine
+
+The strongest comparison is not TradeFrame's whole product against this whole
+product. It is **TradeFrame's pre-trade Decision Engine against this project's
+post-trade Review Engine**. They are mirror systems on opposite sides of the
+execution event:
+
+```text
+market evidence -> Trade Decision Engine -> declared plan
+                                              |
+                                         execution
+                                              |
+broker truth + trader context -> Review Engine -> learning + next experiment
+```
+
+Both products reduce many evidence streams into one higher-level conclusion.
+The difference is the question being answered:
+
+- **Decision Engine:** Is this trade worth taking, and under what plan?
+- **Review Engine:** What actually drove the result, did execution match the
+  plan and playbook, and what behavior should be tested next?
+
+TradeFrame presents its engine as multi-step AI reasoning: Personal Market
+Analyst, Technical Chart Breakdown, Strategy Simulator, News Impact Analyzer,
+and Trade Decision Synthesis. The equivalent post-trade system can be expressed
+as a staged Review Engine:
+
+| TradeFrame Decision Engine | Post-trade Review Engine analogue | Current foundation |
+| --- | --- | --- |
+| Personal Market Analyst | Session and opportunity context review | Daily context, candidate-quality snapshot, notes, and market read. |
+| Technical Chart Breakdown | Execution and price-action audit | Fills, candle alignment, entry/exit chart, levels, and future MAE/MFE. |
+| Strategy Simulator | Plan/playbook alignment and counterfactual review | Versioned playbook, deterministic rule grading, trim tests, and policy compiler. |
+| News Impact Analyzer | Catalyst and regime context | User-captured catalyst/regime context with source and timestamp; intentionally not a live news engine. |
+| Interactive RSI/MACD/volume charts | Inspectable execution evidence | Computed indicators, volume, levels, fills, and review markers sharing one data source. |
+| Trade Decision Synthesis | Evidence-gated Review Synthesis | Session verdict, dominant mechanism, contradiction, confidence, and one experiment. |
+
+This is useful product framing, but the implementation should not copy
+"multi-step AI reasoning" literally. The Review Engine's specialist stages
+should be typed, inspectable computations wherever possible. The LLM belongs at
+the final synthesis boundary, narrating evidence it did not calculate.
+
+The existing deterministic pipeline already supports this model:
+
+```text
+reconstruct -> measure -> stress-test -> compare -> diagnose -> synthesize
+```
+
+The product opportunity is to make that pipeline legible in the interface. A
+review can show which stages completed, what each contributed, which evidence
+was missing, and why the final verdict has its stated confidence. This gives
+the Review Engine the perceived depth of TradeFrame's Decision Engine without
+turning hidden model reasoning into a trust claim.
+
+### What the screenshots do well
+
+The user-provided Market Brief and IPO Pipeline captures show a consistent
+editorial pattern:
+
+- A strong top-level synthesis appears before supporting modules.
+- Section labels make a long, dense page skimmable.
+- Repeated card anatomy supports fast comparison across symbols and events.
+- Accent rails and restrained color help users distinguish content types.
+- A final bias or key-takeaway block closes the page with an explicit answer.
+
+This is a good information architecture lesson for the Daily Recap: lead with
+the conclusion, then show facts, evidence, review items, and carry-forward. The
+user should not have to interpret a dashboard before learning what mattered.
+
+### What not to copy
+
+The same screenshots reveal risks that conflict with this project's design and
+trust principles:
+
+- Large stacks of similarly weighted cards make priority decay as the page
+  continues.
+- Dense prose, small uppercase metadata, and muted gray text create likely
+  contrast and zoom-resilience risks. These are screenshot-based observations;
+  keyboard behavior, semantics, and actual contrast ratios were not tested.
+- Accent colors sometimes carry category or status meaning without an obvious
+  non-color equivalent.
+- Market snapshot, smart money, setups, catalysts, and bias share one surface,
+  which is efficient for research but too broad for a reflective journal.
+- A polished recommendation block can make an uncertain synthesis feel more
+  settled than its underlying evidence warrants.
+
+The journal should stay more type-led and open: fewer filled cards, stronger
+section spacing, explicit evidence links, and red/green reserved for trading
+outcomes rather than general content taxonomy.
+
+### Product opportunities created by the comparison
+
+#### 1. Add an immutable pre-trade plan snapshot, not a signal engine
+
+Capture only the trader's own intent:
+
+- Symbol, setup, directional thesis, and confidence.
+- Planned entry zone or tiers, structural invalidation, targets, and risk.
+- Market regime, catalyst, or external research link when relevant.
+- Source and timestamp for imported or pasted context.
+
+The coach can later compare planned and actual behavior without claiming that
+the application generated the trade idea.
+
+#### 2. Make plan-versus-actual a first-class review
+
+TradeFrame validates the appeal of planned-versus-realized R:R. This project
+can make that comparison more credible by using actual fills and preserving the
+original plan:
+
+```text
+planned entry / stop / size / target
+                  vs
+actual fills / max size / exit / realized R
+                  ->
+playbook alignment + evidence-backed explanation
+```
+
+Do not reduce the comparison to P&L. Include whether the entry, size, stop,
+adds, and exit management matched the declared plan.
+
+#### 3. Borrow the briefing hierarchy for the recap
+
+A compact recap can follow this order:
+
+1. Session verdict and process-versus-outcome state.
+2. Evidence snapshot with only the facts that explain the verdict.
+3. Review queue: the one or two trades that deserve inspection.
+4. Relevant market/session context supplied by the trader.
+5. One current experiment and the next-session cue.
+
+This adopts TradeFrame's synthesis-first strength without importing its market-
+research breadth.
+
+#### 4. Keep market context lightweight and user-controlled
+
+TradeFrame validates demand for a morning command center, but the current
+Dashboard boundary remains correct. The first version should not add IPO feeds,
+smart-money rankings, screeners, or live directional bias. A compact manual
+market-context strip is enough: regime, catalysts, names in play, and risk
+posture. External research can be linked or snapshotted with provenance.
+
+### Strategic conclusion
+
+TradeFrame's strongest promise is **conviction before entry**. This project's
+strongest defensible promise remains **truth and behavior change after
+execution**. The opportunity is not to match TradeFrame feature-for-feature;
+it is to preserve the trader's pre-trade intent well enough that the post-trade
+coach can answer a question TradeFrame's public workflow does not clearly own:
+
+> Did you execute the plan you believed in, and what should change the next
+> time this setup appears?
 
 ## External Architecture Validation: Claude Trade-Review Video
 
@@ -298,9 +485,9 @@ explicit GPL-compatible licensing decision and review.
 
 ## Proposed Product Position
 
-> A private, playbook-driven trading coach that turns your fills and reflection
-> into one evidence-backed conclusion and one measurable next-session
-> experiment.
+> A private, playbook-driven post-trade Review Engine that turns broker truth
+> and reflection into one evidence-backed conclusion and one measurable next-
+> session experiment.
 
 ### What is not the moat
 
@@ -557,10 +744,12 @@ For each product, record:
 7. Whether the product checks that action in a later session.
 
 TradeNote, TradesViz, Close the Trade, and Trading Discipline Lab are the
-highest-priority benchmarks: TradeNote for the local journal foundation,
+highest-priority direct benchmarks: TradeNote for the local journal foundation,
 TradesViz for analytics plus AI, Close the Trade for voice/context paired with
 executions, and Trading Discipline Lab for deterministic rule simulation and
-the longitudinal discipline loop.
+the longitudinal discipline loop. TradeFrame is a lower-priority journal
+benchmark but a high-priority reference for pre-trade intent capture,
+synthesis-first briefing, and plan-to-outcome continuity.
 
 ## Opportunity Map
 
@@ -568,6 +757,12 @@ the longitudinal discipline loop.
 
 - Keep the recap prototype focused on conclusion, evidence, one question, and
   one experiment.
+- Make the Review Engine stages legible in the product: reconstruct, measure,
+  stress-test, compare, diagnose, and synthesize, including missing-evidence
+  states.
+- Define the minimum immutable pre-trade plan snapshot needed to compare intent
+  with actual fills: setup, entry zone, invalidation, size/risk, target, source,
+  and timestamp.
 - Make import confidence and calculation provenance visible where they affect a
   conclusion.
 - Define the minimum structured playbook rule that can be graded reliably.
@@ -609,7 +804,8 @@ the longitudinal discipline loop.
   [Edgewonk](https://edgewonk.com/),
   [TradeNote](https://tradenote.co/key-features.html),
   [Close the Trade](https://www.closethetrade.com/), and
-  [Trading Discipline Lab](https://www.tradingdisciplinelab.com/).
+  [Trading Discipline Lab](https://www.tradingdisciplinelab.com/), plus the
+  adjacent [TradeFrame](https://tradeframe.io/) product and pricing page.
 - TradeNote's public
   [project documentation](https://tradenote.co/project-overview.html),
   [diary/playbook documentation](https://tradenote.co/diary-playbook.html), and

@@ -410,3 +410,262 @@ The chart/ticker and playbook-alignment region was captured separately in `07-ch
 - Copy and content: recap copy separates process from outcome, cites playbook and note sources, and asks only for context that could change the coach judgment.
 
 final result: passed
+
+
+---
+
+# Design QA — journal data-exploration wireframe
+
+## Source visual truth
+
+- `/Users/justin/Downloads/exports/wireframe-1a-page-before.png`
+- `/Users/justin/Downloads/exports/wireframe-1b-page-after.png`
+- `/Users/justin/Downloads/exports/wireframe-1c-coach-feed.png`
+- `/Users/justin/Downloads/exports/wireframe-2a-day-inventory.png`
+- `/Users/justin/Downloads/exports/wireframe-2b-week-inventory.png`
+- `/Users/justin/Downloads/exports/wireframe-2c-month-inventory.png`
+- `/Users/justin/Downloads/exports/wireframe-3a-day.png`
+- `/Users/justin/Downloads/exports/wireframe-3b-week.png`
+- `/Users/justin/Downloads/exports/wireframe-3c-month.png`
+
+## Implementation evidence
+
+- `/tmp/journal-data-wireframe-qa/01-before-day-pnl-viewport.png`
+- `/tmp/journal-data-wireframe-qa/02-month-risk-contract.png`
+- `/tmp/journal-data-wireframe-qa/03-after-review.png`
+- `/tmp/journal-data-wireframe-qa/04-coach-feed.png`
+- `/tmp/journal-data-wireframe-qa/05-mobile-before.png`
+- `/tmp/journal-data-wireframe-qa/06-mobile-month-risk.png`
+- `/tmp/journal-data-wireframe-qa/07-day-pnl-module.png`
+- `/tmp/journal-data-wireframe-qa/08-week-edge-module.png`
+- Route: `http://localhost:3001/preview/journal`
+
+## Viewports and states
+
+- Desktop: 1100 × 900; before review, generated review, Coach feed, Day P&L, Week Edge, and Month Risk with data contract.
+- Mobile: 390 × 844; before review and Month Risk.
+- Mobile geometry: `scrollWidth: 390`, `clientWidth: 390`.
+
+## Full-view comparison evidence
+
+The source and implementation captures were opened together in five paired comparison inputs:
+
+- Day module: `wireframe-3a-day.png` with `07-day-pnl-module.png`.
+- Week module: `wireframe-3b-week.png` with `08-week-edge-module.png`.
+- Month module: `wireframe-3c-month.png` with `02-month-risk-contract.png`.
+- Coach feed: `wireframe-1c-coach-feed.png` with `04-coach-feed.png`.
+- Page-before hierarchy: `wireframe-1a-page-before.png` with `01-before-day-pnl-viewport.png`.
+
+The implementation preserves the source’s warm paper canvas, dark surround, dashed neutral modules, orange active/review accents, green generated-state accents, uppercase mono labels, compact segmented controls, and intentionally low-fidelity density. The source presents four module states side by side; the implementation intentionally turns them into one interactive module because the prototype’s purpose is to inspect each data view at readable size.
+
+## Focused-region comparison evidence
+
+- The Day P&L focused capture confirms the source’s chart-plus-ticker split is retained with representative values and note state.
+- The Week Edge capture confirms the centered expectancy concept is represented as signed, directly labeled bars with sample size and PF in each row.
+- The Month Risk capture confirms six risk metrics plus the wide rule-simulation block, while the data-contract drawer remains subordinate.
+- The Coach feed capture confirms reverse chronological session entries with one highlighted weekly read.
+- Mobile captures confirm the page-state controls and 3 × 4 module controls remain visible without page-level horizontal overflow.
+
+## Findings
+
+- P0: none.
+- P1: none remaining.
+- P2: none remaining.
+- P3: the prototype masthead is an exploration aid not present in the source. It is intentionally retained so reviewers understand that visual polish is not the decision being requested.
+- P3: simple DOM bars replace production chart geometry. This is intentional; values, labels, caveats, and interaction states are the prototype contract.
+- No raster/image assets were required. All visible marks are data-bound interface elements, not substitutes for source imagery.
+
+## Comparison history
+
+### Pass 1 — URL hydration
+
+- Finding: URL-derived scope/view state initialized differently on the server and client, producing a hydration error after reload.
+- Severity: P1 because shared links could briefly render the wrong view and the development overlay reported a broken state.
+- Fix: parse and validate `page`, `scope`, and `view` in the server page, then pass matching initial state and payload into the client component.
+
+### Pass 2 — post-fix verification
+
+- A clean browser tab loaded `?page=before&scope=day&view=pnl` with the correct Day P&L heading and no console warnings or errors.
+- All 12 preview endpoint combinations returned HTTP 200.
+- Generate review, Coach feed, Month Risk, and data-contract interactions passed.
+- Desktop and mobile comparison captures show no remaining P0/P1/P2 mismatch.
+
+## Fidelity surfaces
+
+- Fonts and typography: Geist sans and mono reproduce the source’s plain body copy, strong mono labels, tabular figures, and low-fidelity hierarchy.
+- Spacing and layout rhythm: the implementation keeps dashed blocks, restrained radii, open internal spacing, and clear separation between page-level interpretation and the data module.
+- Colors and visual tokens: warm neutrals dominate; green/red communicate outcomes with signed text; orange marks active review and caveat states.
+- Image quality and assets: the source set contains no required product imagery, logos, illustrations, or non-standard icons. The prototype uses data-bound bars, rows, heat cells, and tables.
+- Copy and content: the page states and all 12 views map to the source inventories, with representative values, sample labels, deterministic takeaways, and explicit statistical caveats.
+
+## Primary interactions tested
+
+- Page states: Before review, After review, Coach feed.
+- Scope controls: Day, Week, Month.
+- View controls: all 12 payload combinations; representative UI transitions for Day P&L, Week Edge, and Month Risk.
+- Generate Coach review.
+- Show/hide data contract.
+- URL-backed `page`, `scope`, and `view` state.
+- Mobile controls and body-width behavior.
+- Browser console after the hydration fix: no warnings or errors.
+
+## Final result
+
+passed
+
+---
+
+# Journal day data views — production slice QA
+
+- Implementation: `http://localhost:3001/journal?date=2026-07-14`.
+- Source behavior: `/Users/justin/Downloads/Daily Recap (standalone).html`.
+- Production contract: `docs/product/JOURNAL_COMPARE_INDICATORS_KEY_MOMENTS.md`.
+- Viewports checked: desktop application viewport and mobile 390 × 844.
+
+## Evidence
+
+- The production route rendered the existing live account data for July 14:
+  14 trades, 36 fills, 69% accuracy, 2.05 PF, and +$6.38 net P&L.
+- Day P&L, Trades, Process, and Coach tabs were exercised in the in-app browser.
+- Trades exposed live time, symbol, side/size, hold, setup coverage, tag coverage,
+  and P&L without inventing missing context.
+- Add/Edit ticker-note affordances, Coach-context progress, scoped day-note entry,
+  draft/generate actions, no-trade state, and safe generation-error copy rendered.
+- Mobile capture showed no page-level horizontal overflow in the new module.
+- Browser console warnings and errors: none.
+
+## Findings
+
+- P0: none.
+- P1: none.
+- P2: none found in functional and responsive browser checks.
+- P3: Market Context is intentionally an explicit unavailable state until the
+  immutable Stock Info daily-summary contract is connected.
+- P3: Week Alignment cannot score opportunity fit until the immutable Stock
+  Info daily-summary contract is connected.
+- P3: Month Horizon currently compares the selected month with the existing
+  prior-30-day baseline; 60d, 90d, and YTD remain a follow-on query contract.
+
+## Source-capture caveat
+
+The in-app browser security policy blocked direct `file://` capture of the
+standalone HTML. Its source, interaction state machine, labels, and styles were
+inspected and mapped directly, but a same-viewport, side-by-side raster
+comparison against the HTML could not be completed in the approved browser.
+
+## Comparison history
+
+### Pass 2 — restore the standalone HTML hierarchy
+
+- Moved Market Context below the session verdict and beside Process Read on
+  desktop; Process Read now stacks Aligned above Unresolved.
+- Restored the HTML control language: underlined Day/Week/Month tabs, dark
+  pill-selected data views, open interpretation columns, white bordered metric
+  cards, a bordered trade ledger, and stacked Process cards.
+- Preserved production data, note affordances, URL navigation, and Coach state.
+- Rendered evidence:
+  `/Users/justin/.codex/visualizations/2026/07/17/019f70c1-0c45-7db3-8b75-3bfa8af92f06/journal-html-match-desktop.png`,
+  `/Users/justin/.codex/visualizations/2026/07/17/019f70c1-0c45-7db3-8b75-3bfa8af92f06/journal-html-match-trades.png`,
+  and
+  `/Users/justin/.codex/visualizations/2026/07/17/019f70c1-0c45-7db3-8b75-3bfa8af92f06/journal-html-match-mobile.png`.
+- Desktop and 390 × 844 mobile checks passed with no browser console warnings
+  or errors. Market Context appears once and remains outside the active data
+  view.
+
+### Pass 3 — widen the production reading column
+
+- Increased the desktop Journal frame from 905px to 1040px and the main review
+  column from 665px to 800px, matching the more open proportions of the visual
+  comp while retaining the archive rail.
+- The interpretation row, data module, key-trade prompts, and review card now
+  share the wider measure. Long-form Coach copy keeps its narrower readable
+  line length.
+- The medium breakpoint now uses a flexible main column instead of forcing the
+  desktop width. Browser checks confirmed no horizontal overflow at 1280px,
+  768px, or 390px.
+- Rendered evidence:
+  `/Users/justin/.codex/visualizations/2026/07/17/019f70c1-0c45-7db3-8b75-3bfa8af92f06/journal-wider-desktop.png`.
+
+### Pass 4 — activate the production 3 × 4 matrix
+
+- Replaced Week and Month navigation links with in-place scope tabs. The
+  selected scope and view now remain visibly active and are mirrored in the
+  Journal URL.
+- Verified all 12 production combinations: Day P&L/Trades/Process/Coach; Week
+  P&L/Edge/Alignment/Coach; Month P&L/Horizon/Risk/Coach.
+- Scope changes reset to P&L, matching the exploration prototype. The selected
+  day remains the page anchor.
+- Week and Month render live range data. Missing Stock Info context and longer
+  horizon queries remain explicit evidence boundaries rather than mock values.
+- Desktop and 390 × 844 checks passed without horizontal overflow or console
+  errors.
+- Rendered evidence:
+  `/Users/justin/.codex/visualizations/2026/07/17/019f70c1-0c45-7db3-8b75-3bfa8af92f06/journal-day-scope-production.png`,
+  `/Users/justin/.codex/visualizations/2026/07/17/019f70c1-0c45-7db3-8b75-3bfa8af92f06/journal-month-risk-production.png`,
+  and
+  `/Users/justin/.codex/visualizations/2026/07/17/019f70c1-0c45-7db3-8b75-3bfa8af92f06/journal-month-risk-mobile.png`.
+
+## Final result
+
+blocked
+
+---
+
+# V5 data-visualization vocabulary design QA
+
+- Source visual truth: `/Users/justin/.codex/generated_images/019f7644-90aa-7b33-9abe-b155adebfc72/exec-0357f86d-b69f-4ed2-b6e2-a4f6f8e28c96.png`.
+- Implementation: `http://localhost:3001/preview/data-viz/v5`.
+- Implementation screenshot: `/private/tmp/trading-journal-v5-desktop.png`.
+- Side-by-side comparison: `/private/tmp/trading-journal-v5-comparison.png`.
+- Viewports: desktop 1440 × 1059; mobile 390 × 844.
+- Compared state: V5 overview with Move Field selected on T-3501; mobile overview, Move Field, and month list.
+
+## Full-view comparison evidence
+
+The source concept and browser-rendered V5 implementation were combined in one comparison image. The implementation retains the source’s warm paper surface, mono metadata, hairline structure, direct labels, neutral market context, green/red trade outcomes, and blue persistent-selection state. The larger vertical rhythm and separate specimens are intentional: the user selected a vocabulary exploration, not the source concept’s finished dashboard composition.
+
+## Focused-region comparison evidence
+
+The Move Field is legible in the combined image at the same desktop viewport. It preserves the source concept’s high–low envelope, close path, opportunity thresholds, scanner timing, execution spans, volume context, and selected-trade label. No raster imagery or non-standard product assets were required; all drawn marks encode data.
+
+## Findings
+
+- P0: none.
+- P1: none.
+- P2: none remaining.
+- P3: the V5 masthead is intentionally more editorial than the compact source dashboard so reviewers understand the four independent vocabulary families before evaluating them.
+- P3: reconstructed scanner moments are visibly labeled as prototype evidence; immutable relative-volume history is not fabricated.
+
+## Comparison history
+
+### Pass 1 — late-day label clipping
+
+- Finding: the selected T-3504 outcome label extended past the right edge of the Move Field.
+- Severity: P2 because a valid persistent selection lost part of its direct label.
+- Fix: right-edge labels now reverse their text anchor and render inside the plot.
+
+### Pass 2 — post-fix responsive verification
+
+- Desktop and mobile pages rendered without framework overlays or console warnings/errors.
+- The Move Field and Excursion Range retain swipeable wide canvases at 390px while keeping essential summaries outside the plot.
+- Mobile geometry passed with `scrollWidth: 390` and `clientWidth: 390`.
+- Persistent trade selection updated Result and MFE Captured; missing-coverage selection produced the explicit no-inference message.
+
+## Fidelity surfaces
+
+- Fonts and typography: Geist sans and mono preserve the app’s established type roles, tabular figures, direct labels, and readable hierarchy.
+- Spacing and layout rhythm: open sections and hairlines replace nested cards; dense marks stay inside their specimens with generous separation between families.
+- Colors and visual tokens: warm neutral tokens dominate; green/red carry signed outcome and favorable/adverse meaning; blue is reserved for focus and selection.
+- Image quality and assets: the page uses crisp SVG data marks. No source logo, illustration, icon, or photographic asset was replaced with a code approximation.
+- Copy and content: each specimen leads with a review question, explains the evidence, names its use case and mobile behavior, and exposes the relevant data caveat.
+
+## Primary interactions tested
+
+- Persistent Move Field trade selection, including a losing late-day trade.
+- Explicit missing-scanner-coverage state in the monthly lens.
+- Desktop page identity, meaningful DOM content, framework-overlay absence, console health, and screenshot evidence.
+- Mobile responsive layout and page-level overflow at 390 × 844.
+
+## Final result
+
+passed

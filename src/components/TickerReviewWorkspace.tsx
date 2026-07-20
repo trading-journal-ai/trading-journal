@@ -385,8 +385,6 @@ export default function TickerReviewWorkspace({
                           <section key={`edit-trade-${section.tradeNumber}-${index}`} className={sectionClassName} onFocusCapture={() => setActiveSectionIndex(index)}>
                             <div className="flex flex-wrap items-center gap-2.5">
                               <h3 className="text-[15px] font-semibold text-[var(--foreground)]">Trade {section.tradeNumber}</h3>
-                              {section.time ? <span className="font-mono text-[12px] text-[var(--accent)]">entry @{section.time}</span> : null}
-                              {trade ? <span className={`font-mono text-[13px] font-semibold tabular-nums ${pnlClass(trade.pnlTone)}`}>{trade.pnl}</span> : null}
                               {trade ? <TradeTagPicker tradeId={trade.id} selectedTags={trade.tags} options={availableTags} readOnly={readOnly} /> : null}
                             </div>
                             <DictationTextarea
@@ -447,8 +445,6 @@ export default function TickerReviewWorkspace({
               {activeTrade ? (
                 <div className="mb-4 flex flex-wrap items-center gap-2.5">
                   <h3 className="text-[15px] font-semibold text-[var(--foreground)]">Trade {activeTrade.number}</h3>
-                  <span className="font-mono text-[12px] text-[var(--accent)]">entry @{activeTrade.entryTime}</span>
-                  <span className={`font-mono text-[13px] font-semibold tabular-nums ${pnlClass(activeTrade.pnlTone)}`}>{activeTrade.pnl}</span>
                   <TradeTagPicker
                     tradeId={activeTrade.id}
                     selectedTags={activeTrade.tags}
@@ -539,8 +535,6 @@ export default function TickerReviewWorkspace({
                   <div className="flex flex-wrap items-baseline justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2.5">
                       <h3 className="text-[15px] font-semibold text-[var(--foreground)]">Trade {section.tradeNumber}</h3>
-                      {section.time ? <span className="font-mono text-[12px] text-[var(--accent)]">entry @{section.time}</span> : null}
-                      {trade ? <span className={`font-mono text-[13px] font-semibold tabular-nums ${pnlClass(trade.pnlTone)}`}>{trade.pnl}</span> : null}
                       {trade ? <TradeTagPicker tradeId={trade.id} selectedTags={trade.tags} options={availableTags} readOnly={readOnly} /> : null}
                     </div>
                     {index === 0 ? (

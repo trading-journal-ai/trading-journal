@@ -2,7 +2,7 @@
 
 > Packaged: 2026-07-17
 >
-> Status: Product inspiration captured; no UI implementation started
+> Status: Interactive V1 data-exploration prototype implemented and under review
 >
 > Start here when continuing this work on another machine.
 
@@ -103,24 +103,28 @@ Relevant implementation starting points:
 
 ## Recommended Next Step
 
-Create one low-fidelity interaction concept using real Journal data shapes
-before changing production code. Show:
+Use the low-fidelity interaction concept at `/preview/journal` to finish the V1
+data contract before changing production Journal code. The current prototype
+shows:
 
-- A quiet configuration toolbar.
-- Trend and Bars toggles.
-- One primary measure and one comparison.
-- Two or three distinct key-moment markers.
-- Day / Week / Month / Year scope controls.
-- The written takeaway and **Open in Analytics** path.
+- Before-review, after-review, and reverse-chronological Coach-feed states.
+- Day / Week / Month scope controls across 12 question-led views.
+- Representative bars, rows, tables, rule checks, heat cells, and Coach reads.
+- One visible evidence takeaway, data caveats, and a typed mock contract per
+  view.
+- An **Open in Analytics** path that preserves scope and active view.
 - Desktop and narrow-screen control behavior.
 
-Use the prototype to answer the naming, placement, first comparison, and Day
-axis questions. If implementation is requested immediately, keep the first diff
-small and reuse existing chart and segmented-control patterns.
+The dated V1 surface audit, Market Context model, stock-selection distinctions,
+catalyst caveat, Stock Info integration finding, and acceptance criteria now
+live in
+[`JOURNAL_COMPARE_INDICATORS_KEY_MOMENTS.md`](../../JOURNAL_COMPARE_INDICATORS_KEY_MOMENTS.md#2026-07-18-v1-data-decision).
+Use that section as the source of truth for the next prototype and production
+decisions.
 
 ## Current Repository State
 
-At packaging time:
+At the original packaging time:
 
 - The canonical concept note had been added.
 - The Analytics research plan had been updated with a link to it.
@@ -129,6 +133,20 @@ At packaging time:
   changed for this concept.
 - No dependency was added.
 - Verification was not required for the documentation and image-only changes.
+
+Since packaging:
+
+- `/preview/journal` now recreates the page-before, page-after, and Coach-feed
+  wireframe states.
+- The data module exposes 12 URL-backed views across Day, Week, and Month.
+- Typed mock endpoints document sources, fields, parameters, and caveats.
+- Market Context is now a first-class day-level framing layer.
+- Week Tilt was renamed Week Alignment to avoid inferring emotion from
+  mechanical behavior.
+- R-dependent and advanced risk claims were reduced where current data coverage
+  is insufficient.
+- The prototype remains isolated from production routes and does not change the
+  database schema.
 
 There were pre-existing unrelated working-tree changes to `.env.example` and
 `next-env.d.ts`; they are not part of this handoff and should remain untouched.
