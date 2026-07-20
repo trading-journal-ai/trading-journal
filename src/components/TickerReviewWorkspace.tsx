@@ -167,6 +167,7 @@ export default function TickerReviewWorkspace({
   availableTags,
   readOnly,
   initialTradeId = null,
+  compact = false,
 }: {
   date: string;
   symbol: string;
@@ -177,6 +178,7 @@ export default function TickerReviewWorkspace({
   availableTags: ReviewTagOption[];
   readOnly: boolean;
   initialTradeId?: number | null;
+  compact?: boolean;
 }) {
   const initialTrade = initialTradeId == null ? undefined : trades.find((trade) => trade.id === initialTradeId);
   const [note, setNote] = useState(() => {
@@ -194,6 +196,11 @@ export default function TickerReviewWorkspace({
   const showSuggestedStrip = editing;
   const anchoredTradeIds = useMemo(() => mentionedTradeIds(note, trades), [note, trades]);
   const savedSections = useMemo(() => savedReviewSections(note, trades), [note, trades]);
+  const visibleSavedSections = savedSections
+    .map((section, index) => ({ section, index }))
+    .filter(({ section }) => !compact || (
+      section.kind === "trade" && section.tradeNumber === initialTrade?.number
+    ));
   const activeTrade = editingTradeNumber == null
     ? undefined
     : trades.find((trade) => trade.number === editingTradeNumber);
@@ -301,14 +308,20 @@ export default function TickerReviewWorkspace({
   }
 
   return (
-    <section className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_560px] lg:items-start">
+    <section className={compact ? "min-w-0" : "mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_560px] lg:items-start"}>
       <div className="min-w-0">
-        <section className="border-t border-[var(--hairline)] pt-6" aria-labelledby="ticker-review-heading">
-          <h2 id="ticker-review-heading" className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
-            How did I trade {symbol}?
-          </h2>
+        <section
+          className={compact ? "min-w-0" : "border-t border-[var(--hairline)] pt-6"}
+          aria-label={compact ? "Trade note" : undefined}
+          aria-labelledby={compact ? undefined : "ticker-review-heading"}
+        >
+          {!compact ? (
+            <h2 id="ticker-review-heading" className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
+              How did I trade {symbol}?
+            </h2>
+          ) : null}
 
-          {showSuggestedStrip && suggestedTrades.length > 0 ? (
+          {!compact && showSuggestedStrip && suggestedTrades.length > 0 ? (
             <div className="mt-5 flex flex-wrap items-center gap-3 rounded-md bg-[var(--review-helper-bg)] px-4 py-3">
               <span className="text-[12px] font-semibold text-[var(--muted)]">Worth 30 seconds each</span>
               <span className="text-[13px] tabular-nums text-[var(--body)]">
@@ -331,24 +344,24 @@ export default function TickerReviewWorkspace({
                 event.preventDefault();
                 saveNote(new FormData(event.currentTarget));
               }}
-              className={hasSavedNote ? "mt-5" : `mt-5 ${activeTrade ? "rounded-md border border-[var(--border)] bg-[var(--surface)]/35 px-5 py-5" : ""}`}
+              className={compact ? "mt-0" : hasSavedNote ? "mt-5" : `mt-5 ${activeTrade ? "rounded-md border border-[var(--border)] bg-[var(--surface)]/35 px-5 py-5" : ""}`}
             >
               <input type="hidden" name="scopeKey" value={`${date}:${symbol}`} />
               <input type="hidden" name="returnTo" value={returnTo} />
-              {hasSavedNote ? (
+              {hasSavedNote || compact ? (
                 <>
                   <input type="hidden" name="body" value={note} />
                   <div
-                    className="overflow-hidden rounded-md border border-[var(--border)] bg-[var(--surface)]"
+                    className={`${compact ? "overflow-visible" : "overflow-hidden"} rounded-md border border-[var(--border)] bg-[var(--surface)]`}
                     onBlurCapture={(event) => {
                       if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
                         setActiveSectionIndex(null);
                       }
                     }}
                   >
-                    {savedSections.map((section, index) => {
-                      const editorClassName = "min-h-[84px] w-full resize-none border-0 bg-transparent px-0 py-2 text-[15px] leading-7 text-[var(--body)] outline-none [field-sizing:content] placeholder:text-[var(--muted)]";
-                      const sectionClassName = `px-5 py-5 transition-[background-color,opacity] duration-150 ${
+                    {visibleSavedSections.map(({ section, index }) => {
+                      const editorClassName = `${compact ? "min-h-[132px]" : "min-h-[84px]"} w-full resize-none border-0 bg-transparent px-0 py-2 text-[15px] leading-7 text-[var(--body)] outline-none [field-sizing:content] placeholder:text-[var(--muted)]`;
+                      const sectionClassName = `${compact ? "px-4 py-4 sm:px-5" : "px-5 py-5"} transition-[background-color,opacity] duration-150 ${
                         activeSectionIndex == null
                           ? "opacity-100"
                           : activeSectionIndex === index
@@ -383,10 +396,8 @@ export default function TickerReviewWorkspace({
                         const trade = trades.find((candidate) => candidate.number === section.tradeNumber);
                         return (
                           <section key={`edit-trade-${section.tradeNumber}-${index}`} className={sectionClassName} onFocusCapture={() => setActiveSectionIndex(index)}>
-                            <div className="flex flex-wrap items-center gap-2.5">
-                              <h3 className="text-[15px] font-semibold text-[var(--foreground)]">Trade {section.tradeNumber}</h3>
-                              {section.time ? <span className="font-mono text-[12px] text-[var(--accent)]">entry @{section.time}</span> : null}
-                              {trade ? <span className={`font-mono text-[13px] font-semibold tabular-nums ${pnlClass(trade.pnlTone)}`}>{trade.pnl}</span> : null}
+                            <div className={`flex flex-wrap items-center gap-2.5 ${compact ? "mb-1" : ""}`}>
+                              {!compact ? <h3 className="text-[15px] font-semibold text-[var(--foreground)]">Trade {section.tradeNumber}</h3> : null}
                               {trade ? <TradeTagPicker tradeId={trade.id} selectedTags={trade.tags} options={availableTags} readOnly={readOnly} /> : null}
                             </div>
                             <DictationTextarea
@@ -394,11 +405,11 @@ export default function TickerReviewWorkspace({
                               value={section.body}
                               onValueChange={(body) => updateSectionBody(index, body)}
                               rows={Math.max(2, section.body.split("\n").length)}
-                              placeholder={`Add a note for Trade ${section.tradeNumber}…`}
+                              placeholder={compact ? "Add a note about this trade…" : `Add a note for Trade ${section.tradeNumber}…`}
                               contextualMic
                               className={editorClassName}
                             />
-                            {trade ? <TradeAttachments tradeId={trade.id} attachments={trade.attachments} readOnly={readOnly} /> : null}
+                            {!compact && trade ? <TradeAttachments tradeId={trade.id} attachments={trade.attachments} readOnly={readOnly} /> : null}
                           </section>
                         );
                       }
@@ -423,7 +434,7 @@ export default function TickerReviewWorkspace({
                     })}
                   </div>
                   <div className="mt-4 flex justify-end gap-2">
-                    {!readOnly ? (
+                    {!compact && !readOnly ? (
                       <button
                         type="button"
                         onClick={deleteNote}
@@ -447,8 +458,6 @@ export default function TickerReviewWorkspace({
               {activeTrade ? (
                 <div className="mb-4 flex flex-wrap items-center gap-2.5">
                   <h3 className="text-[15px] font-semibold text-[var(--foreground)]">Trade {activeTrade.number}</h3>
-                  <span className="font-mono text-[12px] text-[var(--accent)]">entry @{activeTrade.entryTime}</span>
-                  <span className={`font-mono text-[13px] font-semibold tabular-nums ${pnlClass(activeTrade.pnlTone)}`}>{activeTrade.pnl}</span>
                   <TradeTagPicker
                     tradeId={activeTrade.id}
                     selectedTags={activeTrade.tags}
@@ -509,9 +518,9 @@ export default function TickerReviewWorkspace({
                 </>
               )}
             </form>
-          ) : savedSections.length > 0 ? (
+          ) : visibleSavedSections.length > 0 ? (
             <div className="mt-4 rounded-md border border-[var(--border)] bg-[var(--surface)]">
-              {savedSections.map((section, index) => {
+              {visibleSavedSections.map(({ section, index }) => {
                 if (section.kind === "overall") return (
                 <section key={`overall-${index}`} className="px-5 py-5">
                   <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -538,19 +547,17 @@ export default function TickerReviewWorkspace({
                 <section key={`trade-${section.tradeNumber}-${index}`} className="px-5 py-5">
                   <div className="flex flex-wrap items-baseline justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2.5">
-                      <h3 className="text-[15px] font-semibold text-[var(--foreground)]">Trade {section.tradeNumber}</h3>
-                      {section.time ? <span className="font-mono text-[12px] text-[var(--accent)]">entry @{section.time}</span> : null}
-                      {trade ? <span className={`font-mono text-[13px] font-semibold tabular-nums ${pnlClass(trade.pnlTone)}`}>{trade.pnl}</span> : null}
+                      {!compact ? <h3 className="text-[15px] font-semibold text-[var(--foreground)]">Trade {section.tradeNumber}</h3> : null}
                       {trade ? <TradeTagPicker tradeId={trade.id} selectedTags={trade.tags} options={availableTags} readOnly={readOnly} /> : null}
                     </div>
-                    {index === 0 ? (
+                    {compact || index === 0 ? (
                       <button type="button" onClick={() => openNote(section.tradeNumber)} className="text-[13px] font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]">Edit note</button>
                     ) : null}
                   </div>
                   {section.body.trim() ? (
                     <p className="mt-2 whitespace-pre-wrap text-[15px] leading-7 text-[var(--body)]">{section.body.trim()}</p>
                   ) : null}
-                  {trade ? <TradeAttachments tradeId={trade.id} attachments={trade.attachments} readOnly={readOnly} /> : null}
+                  {!compact && trade ? <TradeAttachments tradeId={trade.id} attachments={trade.attachments} readOnly={readOnly} /> : null}
                 </section>
                   );
                 }
@@ -579,7 +586,7 @@ export default function TickerReviewWorkspace({
 
       </div>
 
-      <aside className="lg:sticky lg:top-6" aria-label="Trades">
+      {!compact ? <aside className="lg:sticky lg:top-6" aria-label="Trades">
         <div className="border-t border-[var(--hairline)] pt-6">
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">Trades</h2>
@@ -652,7 +659,7 @@ export default function TickerReviewWorkspace({
             <p><span className="font-semibold text-[var(--accent)]">+</span> add a note · <span className="font-semibold text-[var(--accent)]">✎</span> edit note</p>
           </div>
         </div>
-      </aside>
+      </aside> : null}
     </section>
   );
 }

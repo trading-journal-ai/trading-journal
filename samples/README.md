@@ -29,11 +29,12 @@ The goal is for a new contributor to run:
 npm install
 DB_PATH=data/tradingjournaldemo.db npm run db:migrate
 npm run demo:paper
-DB_PATH=data/tradingjournaldemo.db npm run dev
+DB_PATH=data/tradingjournaldemo.db npm run dev:start
 ```
 
-Then open `http://localhost:3000` and see the journal, calendar, trades, and
-reports working with demo trades and seeded notes.
+Then open the localhost URL printed in the terminal (normally
+`http://localhost:4317`) and see the journal, calendar, trades, and reports
+working with demo trades and seeded notes.
 
 If they also want candlestick charts, they need a server-side Massive API key in
 `.env.local`, then:

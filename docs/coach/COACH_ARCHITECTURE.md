@@ -13,6 +13,7 @@ persisted. This is the runtime/systems companion to the content pillars:
 | Statistical pillar (*was it real*) | [`STATISTICAL_REVIEW.md`](../analytics/STATISTICAL_REVIEW.md) | done |
 | Deterministic engine spec | [`REVIEW_ENGINE_SPEC.md`](../analytics/REVIEW_ENGINE_SPEC.md) | done (v0.1) |
 | Candidate quality (Five Pillars of Stock Selection) | [`ANALYTICS_RESEARCH_PLAN.md`](../analytics/ANALYTICS_RESEARCH_PLAN.md) | research |
+| Price-action evidence | [`PRICE_ACTION_QUALITY_MODEL.md`](../analytics/PRICE_ACTION_QUALITY_MODEL.md) | working vocabulary |
 | Working build list | [`BUILD_TODO.md`](BUILD_TODO.md) | active |
 
 The five-pillar stock-selection framework is an *input* to the coach (quality of
@@ -111,6 +112,7 @@ from both layers; it never calculates.
 [context] playbook markdown (compiled from DB, versioned)
           + current self-assessment (claims labeled with verification status)
           + deterministic fact pack (REVIEW_ENGINE_SPEC — immutable numbers)
+          + entry-time price-action read (quality + phase + participation)
           + level map: calculated + user-marked levels (LEVELS.md)
           + candidate-quality snapshot (five-pillar read, if captured)
           + daily context form + trader notes/dictation (day, ticker, trade)

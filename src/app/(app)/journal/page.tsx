@@ -2,6 +2,7 @@ import TradeJournalReview, {
   journalReviewHref,
   parseJournalReviewSearchParams,
 } from "@/components/TradeJournalReview";
+import type { JournalDataScope, JournalDataView } from "@/components/JournalDayDataViews";
 import { getActiveAccount } from "@/lib/accountScope";
 import { db, schema } from "@/lib/db";
 import { etDateString } from "@/lib/time";
@@ -30,6 +31,22 @@ function hasExplicitJournalRange(params: {
   month?: string;
 }) {
   return Boolean(params.date || params.preset || params.from || params.month);
+}
+
+function journalDataState(scope: string | undefined, view: string | undefined): {
+  scope: JournalDataScope;
+  view: JournalDataView;
+} {
+  const selectedScope: JournalDataScope = scope === "week" || scope === "month" ? scope : "day";
+  const allowedViews: Record<JournalDataScope, JournalDataView[]> = {
+    day: ["pnl", "trades", "process", "coach"],
+    week: ["pnl", "edge", "alignment", "coach"],
+    month: ["pnl", "horizon", "risk", "coach"],
+  };
+  const selectedView = allowedViews[selectedScope].includes(view as JournalDataView)
+    ? (view as JournalDataView)
+    : "pnl";
+  return { scope: selectedScope, view: selectedView };
 }
 
 async function latestJournalDate(accountId: number): Promise<string | undefined> {
@@ -65,6 +82,8 @@ export default async function JournalPage({
     preset?: string;
     from?: string;
     month?: string;
+    scope?: string;
+    view?: string;
     returnTo?: string;
   }>;
 }) {
@@ -78,6 +97,7 @@ export default async function JournalPage({
     date: params.date ?? defaultDate,
   });
   const returnTo = appendReturnTo(journalReviewHref("/journal", filters), params.returnTo);
+  const dataState = journalDataState(params.scope, params.view);
 
   return (
     <TradeJournalReview
@@ -86,6 +106,8 @@ export default async function JournalPage({
       returnTo={returnTo}
       backHref={params.returnTo}
       accountId={activeAccount.id}
+      initialDataScope={dataState.scope}
+      initialDataView={dataState.view}
     />
   );
 }
