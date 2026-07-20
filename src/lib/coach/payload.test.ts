@@ -50,12 +50,14 @@ describe("buildCoachReviewPayload", () => {
         note: "Clean entry.",
         processTags: ["Followed plan"],
         emotionTags: ["Calm"],
+        executionAnalysis: null,
       }],
     });
 
     expect(payload.version).toBe(1);
     expect(payload.deterministicFacts.session.netPnl).toBe(100);
     expect(payload.instructions.numericBoundary).toContain("deterministicFacts");
+    expect(payload.instructions.numericBoundary).toContain("executionAnalysis");
     expect(payload.instructions.outputContract).toContain("oneExperiment");
   });
 });

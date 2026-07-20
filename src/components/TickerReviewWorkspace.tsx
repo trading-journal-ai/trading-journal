@@ -11,6 +11,7 @@ import {
   type ReviewAttachment,
   type ReviewTagOption,
 } from "@/components/TickerReviewTradeExtras";
+import type { TradeExecutionAnalysis } from "@/lib/executionAnalysis";
 
 export type TickerReviewTrade = {
   id: number;
@@ -27,6 +28,7 @@ export type TickerReviewTrade = {
   perShare: string;
   perShareValue: number | null;
   perShareTone: "positive" | "negative" | "neutral";
+  executionAnalysis?: TradeExecutionAnalysis;
   tags: string[];
   attachments: ReviewAttachment[];
 };
@@ -614,7 +616,7 @@ export default function TickerReviewWorkspace({
               <div className="grid grid-cols-[0.9fr_0.8fr_0.65fr_1.55fr_1fr_0.8fr_1fr] gap-x-2 px-1">
                 <span>Trade</span>
                 <span className="text-center">Shares</span>
-                <span className="text-center">Exec</span>
+                <span className="text-center">Fills</span>
                 <span className="text-center">Entry / exit</span>
                 <span className="text-center">Per share</span>
                 <span className="text-center">Held</span>

@@ -130,15 +130,12 @@ export default function InlineTradeReviewPanel({
             focusMinutesBefore={12}
             initialFocusTime={data.initialFocusTime}
             markers={data.markers}
-            selectedTradeNumber={selectedTrade?.number}
-            selectedTradeSummary={selectedTrade ? {
-              entryPrice: selectedTrade.entryPrice,
-              exitPrice: selectedTrade.exitPrice,
+            tradeSummaries={selectedTrade?.executionAnalysis ? [{
+              tradeNumber: selectedTrade.number,
+              executionAnalysis: selectedTrade.executionAnalysis,
               holdDuration: selectedTrade.holdDuration,
-              pnl: selectedTrade.pnl,
-              pnlTone: selectedTrade.pnlTone,
               shares: selectedTrade.shares,
-            } : undefined}
+            }] : undefined}
           />
         ) : (
           <div className="grid h-[400px] place-items-center border-y border-[var(--hairline)] px-6 text-center text-sm text-[var(--muted)]">

@@ -13,6 +13,7 @@ import { generateCoachReview } from "@/lib/coach/openai";
 import { buildSessionFactPack } from "@/lib/coach/reviewEngine";
 import { db, schema } from "@/lib/db";
 import { isDemoReadOnly } from "@/lib/demoMode";
+import { analyzeTradeExecutions, coachTradeExecutionFacts } from "@/lib/executionAnalysis";
 import { decodeJournalTags } from "@/lib/journalLabels";
 import { netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
@@ -256,16 +257,30 @@ async function buildCoachReviewPayloadForScope({
     .limit(1);
   const trades = await loadTradesForCoachPayload(accountId, scope, scopeKey);
   const tradeIds = trades.map((trade) => trade.id);
-  const notes = tradeIds.length === 0 ? [] : await db
-    .select()
-    .from(schema.journalEntries)
-    .where(
-      and(
-        eq(schema.journalEntries.accountId, accountId),
-        inArray(schema.journalEntries.tradeId, tradeIds),
-      ),
-    );
+  const [notes, executions] = tradeIds.length === 0
+    ? [[], []]
+    : await Promise.all([
+        db
+          .select()
+          .from(schema.journalEntries)
+          .where(
+            and(
+              eq(schema.journalEntries.accountId, accountId),
+              inArray(schema.journalEntries.tradeId, tradeIds),
+            ),
+          ),
+        db
+          .select()
+          .from(schema.executions)
+          .where(inArray(schema.executions.tradeId, tradeIds))
+          .orderBy(asc(schema.executions.executedAt), asc(schema.executions.id)),
+      ]);
   const noteByTradeId = new Map(notes.flatMap((note) => (note.tradeId == null ? [] : [[note.tradeId, note]])));
+  const executionsByTradeId = new Map<number, typeof executions>();
+  for (const execution of executions) {
+    if (execution.tradeId == null) continue;
+    executionsByTradeId.set(execution.tradeId, [...(executionsByTradeId.get(execution.tradeId) ?? []), execution]);
+  }
   const humanContext: CoachReviewHumanContext = {
     recap: recapRow?.lessons ?? "",
     intent: recapRow?.thesis ?? "",
@@ -275,6 +290,21 @@ async function buildCoachReviewPayloadForScope({
   };
   const tradeContexts: CoachReviewTradeContext[] = trades.map((trade) => {
     const note = noteByTradeId.get(trade.id);
+    const tradeExecutions = executionsByTradeId.get(trade.id) ?? [];
+    const executionAnalysis = tradeExecutions.length === 0
+      ? null
+      : coachTradeExecutionFacts(analyzeTradeExecutions(
+          trade.side,
+          tradeExecutions.map((execution) => ({
+            id: execution.id,
+            executedAt: execution.executedAt,
+            price: execution.price,
+            quantity: execution.quantity,
+            side: execution.side,
+            posEffect: execution.posEffect,
+            brokerOrderKey: execution.brokerOrderKey,
+          })),
+        ));
     return {
       id: trade.id,
       symbol: trade.symbol,
@@ -290,6 +320,7 @@ async function buildCoachReviewPayloadForScope({
       note: note?.lessons ?? null,
       processTags: decodeJournalTags(note?.whatWentWell ?? null),
       emotionTags: decodeJournalTags(note?.whatWentWrong ?? null),
+      executionAnalysis,
     };
   });
   return buildCoachReviewPayload({

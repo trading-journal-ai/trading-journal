@@ -43,6 +43,53 @@ describe("parseTosStatement", () => {
     expect(tmde!.quantity).toBe(100);
     expect(tmde!.price).toBe(4.52);
   });
+
+  it("attaches the same opaque broker order key to partial fills sharing a REF #", () => {
+    const statement = [
+      "Cash Balance",
+      "DATE,TIME,TYPE,REF #,DESCRIPTION,Misc Fees,Commissions & Fees,AMOUNT,BALANCE",
+      "7/14/26,04:18:04,TRD,7001,BOT +88 NXTC @10.64,,,0,0",
+      "7/14/26,04:18:04,TRD,7001,BOT +12 NXTC @10.64,,,0,0",
+      "7/14/26,04:18:09,TRD,7002,SOLD -100 NXTC @10.74,,,0,0",
+      "",
+      "Account Trade History",
+      ",Exec Time,Spread,Side,Qty,Pos Effect,Symbol,Type,Price,Net Price,Order Type",
+      ",7/14/26 04:18:04,STOCK,BUY,+88,TO OPEN,NXTC,STOCK,10.64,10.64,LMT",
+      ",7/14/26 04:18:04,STOCK,BUY,+12,TO OPEN,NXTC,STOCK,10.64,10.64,LMT",
+      ",7/14/26 04:18:09,STOCK,SELL,-100,TO CLOSE,NXTC,STOCK,10.74,10.74,LMT",
+    ].join("\n");
+
+    const executions = parseTosStatement(statement);
+    const buys = executions.filter((execution) => execution.side === "buy");
+    const sell = executions.find((execution) => execution.side === "sell");
+
+    expect(buys).toHaveLength(2);
+    expect(buys[0]?.brokerOrderKey).toBeTruthy();
+    expect(buys[0]?.brokerOrderKey).toBe(buys[1]?.brokerOrderKey);
+    expect(buys[0]?.brokerOrderKey).not.toContain("7001");
+    expect(sell?.brokerOrderKey).toBeTruthy();
+    expect(sell?.brokerOrderKey).not.toBe(buys[0]?.brokerOrderKey);
+  });
+
+  it("keeps identical fill signatures separate when multiple REF values are ambiguous", () => {
+    const statement = [
+      "Cash Balance",
+      "DATE,TIME,TYPE,REF #,DESCRIPTION,Misc Fees,Commissions & Fees,AMOUNT,BALANCE",
+      "7/14/26,04:18:04,TRD,1001,BOT +10 NXTC @10.64,,,0,0",
+      "7/14/26,04:18:04,TRD,1002,BOT +10 NXTC @10.64,,,0,0",
+      "",
+      "Account Trade History",
+      ",Exec Time,Spread,Side,Qty,Pos Effect,Symbol,Type,Price,Net Price,Order Type",
+      ",7/14/26 04:18:04,STOCK,BUY,+10,TO OPEN,NXTC,STOCK,10.64,10.64,LMT",
+      ",7/14/26 04:18:04,STOCK,BUY,+10,TO OPEN,NXTC,STOCK,10.64,10.64,LMT",
+    ].join("\n");
+
+    const executions = parseTosStatement(statement);
+    expect(executions).toHaveLength(2);
+    expect(executions[0]?.brokerOrderKey).toBeTruthy();
+    expect(executions[1]?.brokerOrderKey).toBeTruthy();
+    expect(executions[0]?.brokerOrderKey).not.toBe(executions[1]?.brokerOrderKey);
+  });
 });
 
 describe("matchTrades", () => {
