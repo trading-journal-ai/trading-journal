@@ -6,6 +6,27 @@ import LightweightTradeChart from "@/components/LightweightTradeChart";
 import TickerReviewWorkspace from "@/components/TickerReviewWorkspace";
 import type { InlineTradeReviewData } from "@/lib/inlineTradeReview";
 
+const LOAD_ERROR_MESSAGE = "Could not load this trade review.";
+
+function isInlineTradeReviewData(value: unknown): value is InlineTradeReviewData {
+  if (!value || typeof value !== "object") return false;
+  const payload = value as Record<string, unknown>;
+  return Array.isArray(payload.availableTags)
+    && Array.isArray(payload.candles)
+    && typeof payload.initialTradeId === "number"
+    && Array.isArray(payload.markers)
+    && typeof payload.readOnly === "boolean"
+    && typeof payload.tickerNote === "string"
+    && Array.isArray(payload.tickerTags)
+    && Array.isArray(payload.trades);
+}
+
+function errorMessageFromPayload(value: unknown): string {
+  if (!value || typeof value !== "object") return LOAD_ERROR_MESSAGE;
+  const error = (value as Record<string, unknown>).error;
+  return typeof error === "string" && error.trim() ? error : LOAD_ERROR_MESSAGE;
+}
+
 export default function InlineTradeReviewPanel({
   date,
   onClose,
@@ -31,13 +52,23 @@ export default function InlineTradeReviewPanel({
       signal: controller.signal,
     })
       .then(async (response) => {
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error ?? "Could not load this trade review.");
-        setData(payload as InlineTradeReviewData);
+        const responseText = await response.text();
+        let payload: unknown = null;
+        if (responseText) {
+          try {
+            payload = JSON.parse(responseText);
+          } catch {
+            throw new Error(LOAD_ERROR_MESSAGE);
+          }
+        }
+
+        if (!response.ok) throw new Error(errorMessageFromPayload(payload));
+        if (!isInlineTradeReviewData(payload)) throw new Error(LOAD_ERROR_MESSAGE);
+        setData(payload);
       })
       .catch((requestError: unknown) => {
         if (controller.signal.aborted) return;
-        setError(requestError instanceof Error ? requestError.message : "Could not load this trade review.");
+        setError(requestError instanceof Error ? requestError.message : LOAD_ERROR_MESSAGE);
       });
 
     return () => controller.abort();
