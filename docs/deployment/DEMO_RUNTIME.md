@@ -107,6 +107,19 @@ MASSIVE_API_KEY=unset
 OPENAI_API_KEY=unset
 ```
 
+To temporarily expose the unlisted data-visualization feedback gallery at
+`/preview/data-viz`, set the server-side build environment variable below and
+redeploy:
+
+```text
+ENABLE_DATA_VIZ_PREVIEWS=true
+```
+
+The gallery is disabled by default, returns `404` when disabled, and emits
+`noindex`/`nofollow` metadata when enabled. The flag is not authentication;
+anyone with the URL can open the gallery while it is enabled. Remove the
+variable (or set it to `false`) and redeploy when feedback collection ends.
+
 Hosted demo must not require public live API calls. It should render from seeded
 database content and cached/fallback market data.
 

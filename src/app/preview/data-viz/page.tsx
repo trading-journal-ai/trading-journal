@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { dataVizPreviewRoutes, type DataVizPreviewRoute } from "@/lib/preview/dataVizPreviewRoutes";
 
 const studyGroups: Array<{
@@ -53,8 +52,6 @@ function StudyRow({ study }: { study: DataVizPreviewRoute }) {
 }
 
 export default function DataVizIndexPage() {
-  if (process.env.NODE_ENV === "production") notFound();
-
   return (
     <main className="min-h-screen bg-[image:var(--page-bg)] text-[var(--foreground)]">
       <div className="mx-auto w-full max-w-[1240px] px-5 pb-24 pt-8 sm:px-8 sm:pt-12 lg:px-12">
