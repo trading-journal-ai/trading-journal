@@ -14,6 +14,15 @@ import {
 } from "lightweight-charts";
 import type { ChartCandle, ChartMarker } from "@/components/TradeChart";
 
+export type SelectedTradeSummary = {
+  entryPrice: string;
+  exitPrice: string;
+  holdDuration: string | null;
+  pnl: string;
+  pnlTone: "positive" | "negative" | "neutral";
+  shares: string;
+};
+
 type LightweightTradeChartProps = {
   candles: ChartCandle[];
   markers: ChartMarker[];
@@ -23,6 +32,7 @@ type LightweightTradeChartProps = {
   initialFocusTime?: number;
   chartHeightClass?: string;
   selectedTradeNumber?: number;
+  selectedTradeSummary?: SelectedTradeSummary;
 };
 
 type InteractiveLightweightTradeChartProps = LightweightTradeChartProps & {
@@ -199,6 +209,7 @@ function InteractiveLightweightTradeChart({
   markers,
   initialFocusTime,
   selectedTradeNumber,
+  selectedTradeSummary,
   chartHeightClass = "h-[520px]",
   footerAction,
 }: InteractiveLightweightTradeChartProps) {
@@ -208,6 +219,7 @@ function InteractiveLightweightTradeChart({
   const [markerPoints, setMarkerPoints] = useState<MarkerPoint[]>([]);
   const [chartSize, setChartSize] = useState<ChartSize>({ width: 0, height: 520 });
   const [activeMarkerKey, setActiveMarkerKey] = useState<string | null>(null);
+  const [selectedTradeCardOpen, setSelectedTradeCardOpen] = useState(false);
   const [themeKey, setThemeKey] = useState(0);
   const activeMarker = activeMarkerKey == null
     ? undefined
@@ -219,6 +231,7 @@ function InteractiveLightweightTradeChart({
         .reduce<MarkerPoint | undefined>((earliest, point) => (
           !earliest || point.marker.t < earliest.marker.t ? point : earliest
         ), undefined);
+  const selectedTradeCardId = selectedTradeNumber == null ? undefined : `selected-trade-${selectedTradeNumber}-summary`;
   const activeMarkerTitle = activeMarker ? markerTooltipTitle(activeMarker.marker) : "";
   const activeMarkerDetail = activeMarker ? markerTooltipDetail(activeMarker.marker) : "";
   const activeMarkerShowsOutcome = activeMarker?.marker.side === "sell"
@@ -239,13 +252,15 @@ function InteractiveLightweightTradeChart({
   }, []);
 
   useEffect(() => {
-    if (activeMarkerKey == null) return undefined;
+    if (activeMarkerKey == null && !selectedTradeCardOpen) return undefined;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setActiveMarkerKey(null);
+      if (event.key !== "Escape") return;
+      setActiveMarkerKey(null);
+      setSelectedTradeCardOpen(false);
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [activeMarkerKey]);
+  }, [activeMarkerKey, selectedTradeCardOpen]);
 
   const candleData = useMemo<CandlestickData[]>(
     () =>
@@ -421,6 +436,7 @@ function InteractiveLightweightTradeChart({
       chart.remove();
       chartRef.current = null;
       setActiveMarkerKey(null);
+      setSelectedTradeCardOpen(false);
       setMarkerPoints([]);
     };
   }, [candleData, candles, focusMinutesAfter, focusMinutesBefore, initialFocusTime, markers, themeKey]);
@@ -429,7 +445,10 @@ function InteractiveLightweightTradeChart({
     <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
       <div
         className={`relative w-full ${chartHeightClass}`}
-        onPointerDown={() => setActiveMarkerKey(null)}
+        onPointerDown={() => {
+          setActiveMarkerKey(null);
+          setSelectedTradeCardOpen(false);
+        }}
       >
         <div ref={containerRef} className="relative z-0 h-full w-full" />
         <svg
@@ -441,35 +460,61 @@ function InteractiveLightweightTradeChart({
           width={chartSize.width}
         >
           {selectedTradeGuide ? (
-            <g aria-label={`Selected Trade ${selectedTradeNumber}`} role="img">
+            <g>
               <line
                 x1={selectedTradeGuide.x}
                 x2={selectedTradeGuide.x}
-                y1={12}
+                y1={35}
                 y2={Math.max(28, chartSize.height - 30)}
-                stroke="var(--accent)"
+                stroke="var(--blue)"
                 strokeDasharray="3 4"
                 strokeLinecap="round"
                 strokeOpacity="0.72"
                 strokeWidth="1.5"
               />
-              <rect
-                x={Math.min(Math.max(4, selectedTradeGuide.x - 13), Math.max(4, chartSize.width - 30))}
-                y={7}
-                width={26}
-                height={18}
-                rx={4}
-                fill="var(--surface)"
-                stroke="var(--accent)"
-                strokeWidth="1"
+              <circle
+                aria-describedby={selectedTradeCardOpen ? selectedTradeCardId : undefined}
+                aria-label={`Trade ${selectedTradeNumber} overall summary`}
+                className="pointer-events-auto cursor-help focus:outline-none focus-visible:stroke-[var(--foreground)]"
+                cx={Math.min(Math.max(15, selectedTradeGuide.x), Math.max(15, chartSize.width - 15))}
+                cy={20}
+                fill="var(--blue)"
+                onBlur={() => setSelectedTradeCardOpen(false)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setActiveMarkerKey(null);
+                  setSelectedTradeCardOpen(true);
+                }}
+                onFocus={() => {
+                  setActiveMarkerKey(null);
+                  setSelectedTradeCardOpen(true);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter" && event.key !== " ") return;
+                  event.preventDefault();
+                  setActiveMarkerKey(null);
+                  setSelectedTradeCardOpen((current) => !current);
+                }}
+                onMouseEnter={() => {
+                  setActiveMarkerKey(null);
+                  setSelectedTradeCardOpen(true);
+                }}
+                onMouseLeave={() => setSelectedTradeCardOpen(false)}
+                onPointerDown={(event) => event.stopPropagation()}
+                r={selectedTradeCardOpen ? 14 : 13}
+                role="button"
+                stroke="var(--surface)"
+                strokeWidth="2"
+                tabIndex={0}
               />
               <text
-                x={Math.min(Math.max(17, selectedTradeGuide.x), Math.max(17, chartSize.width - 17))}
-                y={19.5}
-                fill="var(--accent)"
+                x={Math.min(Math.max(15, selectedTradeGuide.x), Math.max(15, chartSize.width - 15))}
+                y={23.5}
+                fill="var(--action-foreground)"
                 fontFamily="var(--font-mono)"
                 fontSize="10"
-                fontWeight="600"
+                fontWeight="700"
+                pointerEvents="none"
                 textAnchor="middle"
               >
                 T{selectedTradeNumber}
@@ -503,15 +548,23 @@ function InteractiveLightweightTradeChart({
                     onBlur={() => setActiveMarkerKey(null)}
                     onClick={(event) => {
                       event.stopPropagation();
+                      setSelectedTradeCardOpen(false);
                       setActiveMarkerKey((current) => current === marker.key ? null : marker.key);
                     }}
-                    onFocus={() => setActiveMarkerKey(marker.key)}
+                    onFocus={() => {
+                      setSelectedTradeCardOpen(false);
+                      setActiveMarkerKey(marker.key);
+                    }}
                     onKeyDown={(event) => {
                       if (event.key !== "Enter" && event.key !== " ") return;
                       event.preventDefault();
+                      setSelectedTradeCardOpen(false);
                       setActiveMarkerKey((current) => current === marker.key ? null : marker.key);
                     }}
-                    onMouseEnter={() => setActiveMarkerKey(marker.key)}
+                    onMouseEnter={() => {
+                      setSelectedTradeCardOpen(false);
+                      setActiveMarkerKey(marker.key);
+                    }}
                     onMouseLeave={() => setActiveMarkerKey(null)}
                     onPointerDown={(event) => event.stopPropagation()}
                     r={10}
@@ -525,6 +578,47 @@ function InteractiveLightweightTradeChart({
             );
           })}
         </svg>
+        {selectedTradeCardOpen && selectedTradeGuide && selectedTradeSummary ? (
+          <div
+            id={selectedTradeCardId}
+            role="tooltip"
+            className="pointer-events-none absolute top-10 z-20 w-[248px] max-w-[calc(100%-16px)] rounded-md border border-[var(--border)] bg-[var(--surface)] px-3.5 py-3 shadow-xl"
+            style={{
+              left: Math.min(
+                Math.max(8, selectedTradeGuide.x - 124),
+                Math.max(8, chartSize.width - 256),
+              ),
+            }}
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              <div className="text-[12px] font-semibold text-[var(--foreground)]">Trade {selectedTradeNumber}</div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--blue)]">Overall trade</div>
+            </div>
+            <div className="mt-1 font-mono text-[11px] tabular-nums text-[var(--muted)]">
+              {selectedTradeSummary.shares} shares · {selectedTradeSummary.holdDuration ?? "Open"}
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-3 border-t border-[var(--hairline)] pt-2.5 font-mono tabular-nums">
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.08em] text-[var(--muted)]">Entry</div>
+                <div className="mt-1 text-[11px] font-semibold text-[var(--foreground)]">{selectedTradeSummary.entryPrice}</div>
+              </div>
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.08em] text-[var(--muted)]">Exit</div>
+                <div className="mt-1 text-[11px] font-semibold text-[var(--foreground)]">{selectedTradeSummary.exitPrice}</div>
+              </div>
+              <div>
+                <div className="text-[9px] uppercase tracking-[0.08em] text-[var(--muted)]">Total</div>
+                <div className={`mt-1 text-[11px] font-semibold ${
+                  selectedTradeSummary.pnlTone === "positive"
+                    ? "text-[var(--green)]"
+                    : selectedTradeSummary.pnlTone === "negative"
+                      ? "text-[var(--red)]"
+                      : "text-[var(--muted)]"
+                }`}>{selectedTradeSummary.pnl}</div>
+              </div>
+            </div>
+          </div>
+        ) : null}
         {activeMarker ? (
           <div
             role="tooltip"
@@ -640,6 +734,7 @@ export default function LightweightTradeChart(props: LightweightTradeChartProps)
                 initialFocusTime={props.initialFocusTime}
                 markers={props.markers}
                 selectedTradeNumber={props.selectedTradeNumber}
+                selectedTradeSummary={props.selectedTradeSummary}
                 chartHeightClass="h-[calc(100vh-9rem)]"
               />
             </div>

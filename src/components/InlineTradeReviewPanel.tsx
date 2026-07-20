@@ -108,6 +108,8 @@ export default function InlineTradeReviewPanel({
     );
   }
 
+  const selectedTrade = data.trades.find((trade) => trade.id === data.initialTradeId);
+
   return (
     <section aria-label={`${symbol} inline trade review`} className="px-4 py-4 sm:px-5 sm:py-5">
       <div className="mb-2 flex items-center justify-between gap-4">
@@ -128,7 +130,15 @@ export default function InlineTradeReviewPanel({
             focusMinutesBefore={12}
             initialFocusTime={data.initialFocusTime}
             markers={data.markers}
-            selectedTradeNumber={data.trades.find((trade) => trade.id === data.initialTradeId)?.number}
+            selectedTradeNumber={selectedTrade?.number}
+            selectedTradeSummary={selectedTrade ? {
+              entryPrice: selectedTrade.entryPrice,
+              exitPrice: selectedTrade.exitPrice,
+              holdDuration: selectedTrade.holdDuration,
+              pnl: selectedTrade.pnl,
+              pnlTone: selectedTrade.pnlTone,
+              shares: selectedTrade.shares,
+            } : undefined}
           />
         ) : (
           <div className="grid h-[400px] place-items-center border-y border-[var(--hairline)] px-6 text-center text-sm text-[var(--muted)]">
