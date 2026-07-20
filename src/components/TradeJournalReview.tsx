@@ -1339,8 +1339,10 @@ function DayReviewSection({
           {showDataViews && comparisonData ? <div className="max-w-[800px]">
             <JournalDayDataViews
               comparisons={comparisonData}
+              date={day.date}
               initialScope={initialDataScope}
               initialView={initialDataView}
+              returnTo={returnTo}
               summary={{
                 trades: day.trades,
                 accuracy: day.accuracy,

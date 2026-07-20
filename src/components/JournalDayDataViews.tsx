@@ -1,6 +1,16 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import dynamic from "next/dynamic";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+
+const InlineTradeReviewPanel = dynamic(() => import("@/components/InlineTradeReviewPanel"), {
+  ssr: false,
+  loading: () => (
+    <div className="grid min-h-[360px] place-items-center px-6 py-8 text-sm text-[var(--muted)]">
+      Loading trade review…
+    </div>
+  ),
+});
 
 export type JournalDataScope = "day" | "week" | "month";
 export type JournalDataView = "pnl" | "trades" | "process" | "edge" | "alignment" | "horizon" | "risk" | "coach";
@@ -149,6 +159,8 @@ export default function JournalDayDataViews({
   coach,
   summary,
   comparisons,
+  date,
+  returnTo,
 }: {
   initialScope?: JournalDataScope;
   initialView?: JournalDataView;
@@ -164,6 +176,8 @@ export default function JournalDayDataViews({
     taggedTrades: number;
   };
   comparisons: JournalComparisonData;
+  date: string;
+  returnTo: string;
 }) {
   const [scope, setScope] = useState<JournalDataScope>(initialScope);
   const [view, setView] = useState<JournalDataView>(
@@ -234,6 +248,8 @@ export default function JournalDayDataViews({
             processFacts={processFacts}
             coach={coach}
             summary={summary}
+            date={date}
+            returnTo={returnTo}
           />
         ) : null}
         {scope === "week" ? <WeekViews view={view} data={comparisons.week} /> : null}
@@ -250,6 +266,8 @@ function DayViews({
   processFacts,
   coach,
   summary,
+  date,
+  returnTo,
 }: {
   view: JournalDataView;
   pnlContent: ReactNode;
@@ -257,6 +275,8 @@ function DayViews({
   processFacts: JournalDayProcessFact[];
   coach: JournalCoachSummary;
   summary: { trades: number; accuracy: number | null; profitFactor: number | null; pnl: number; taggedTrades: number };
+  date: string;
+  returnTo: string;
 }) {
   if (view === "pnl") return <div role="tabpanel">{pnlContent}</div>;
 
@@ -269,7 +289,7 @@ function DayViews({
           <Metric label="Profit factor" value={ratio(summary.profitFactor)} />
           <Metric label="Total P&L" value={money(summary.pnl)} className={pnlClass(summary.pnl)} />
         </MetricGrid>
-        <TradeTable tradeRows={tradeRows} />
+        <TradeTable date={date} returnTo={returnTo} tradeRows={tradeRows} />
         <p className="mt-3 text-[12px] text-[var(--muted)]">
           {summary.taggedTrades} of {summary.trades} trades have structured tag context. Missing setup or tag data stays visible instead of being inferred.
         </p>
@@ -421,12 +441,110 @@ function SessionTable({ rows, showActivity = false }: { rows: JournalSessionRow[
   );
 }
 
-function TradeTable({ tradeRows }: { tradeRows: JournalDayTradeRow[] }) {
+function TradeTable({
+  date,
+  returnTo,
+  tradeRows,
+}: {
+  date: string;
+  returnTo: string;
+  tradeRows: JournalDayTradeRow[];
+}) {
+  const [expandedTradeId, setExpandedTradeId] = useState<number | null>(null);
+  const [closingTradeId, setClosingTradeId] = useState<number | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+  }, []);
+
+  function clearCloseTimer() {
+    if (!closeTimerRef.current) return;
+    clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = null;
+  }
+
+  function closeTrade(tradeId: number) {
+    clearCloseTimer();
+    setClosingTradeId(tradeId);
+    closeTimerRef.current = setTimeout(() => {
+      setExpandedTradeId((current) => current === tradeId ? null : current);
+      setClosingTradeId((current) => current === tradeId ? null : current);
+      closeTimerRef.current = null;
+    }, 200);
+  }
+
+  function toggleTrade(tradeId: number) {
+    if (expandedTradeId === tradeId) {
+      if (closingTradeId === tradeId) {
+        clearCloseTimer();
+        setClosingTradeId(null);
+      } else {
+        closeTrade(tradeId);
+      }
+      return;
+    }
+
+    clearCloseTimer();
+    setClosingTradeId(null);
+    setExpandedTradeId(tradeId);
+  }
+
   return (
     <div className="mt-3 overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface)]">
       <table className="w-full min-w-[610px] border-collapse text-left text-[12px]">
         <thead className="text-[var(--muted)]"><tr className="border-b border-[var(--hairline)]"><th className="px-4 py-3 font-medium">Time</th><th className="px-2 py-3 font-medium">Symbol</th><th className="px-2 py-3 font-medium">Side / shares</th><th className="px-2 py-3 font-medium">Held</th><th className="px-2 py-3 font-medium">Setup</th><th className="px-2 py-3 font-medium">Context</th><th className="px-4 py-3 text-right font-medium">P&L</th></tr></thead>
-        <tbody>{tradeRows.map((trade) => <tr key={trade.id} className="border-b border-[var(--hairline)] text-[var(--body)]"><td className="px-4 py-3 font-mono tabular-nums">{trade.time}</td><td className="px-2 py-3 font-semibold text-[var(--foreground)]">{trade.symbol}</td><td className="px-2 py-3 capitalize">{trade.side} · {trade.quantity.toLocaleString()}</td><td className="px-2 py-3 font-mono tabular-nums">{trade.hold}</td><td className="px-2 py-3">{trade.setup ?? "Not captured"}</td><td className="px-2 py-3">{trade.tagged ? "Tagged" : "Needs context"}</td><td className={`px-4 py-3 text-right font-mono tabular-nums ${pnlClass(trade.pnl)}`}>{money(trade.pnl)}</td></tr>)}</tbody>
+        <tbody>
+          {tradeRows.map((trade) => {
+            const expanded = expandedTradeId === trade.id;
+            const closing = closingTradeId === trade.id;
+            const panelId = `inline-trade-review-${trade.id}`;
+            return (
+              <Fragment key={trade.id}>
+                <tr
+                  className={`cursor-pointer border-b border-[var(--hairline)] text-[var(--body)] transition-colors hover:bg-[var(--surface-2)] ${expanded && !closing ? "bg-[var(--surface-2)]" : ""}`}
+                  onClick={() => toggleTrade(trade.id)}
+                >
+                  <td className="px-4 py-3 font-mono tabular-nums">
+                    <button
+                      type="button"
+                      aria-controls={panelId}
+                      aria-expanded={expanded && !closing}
+                      className="inline-flex items-center gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                    >
+                      <span aria-hidden="true" className={`text-[10px] text-[var(--accent)] transition-transform ${expanded && !closing ? "rotate-90" : ""}`}>›</span>
+                      <span>{trade.time}</span>
+                      <span className="sr-only">Review {trade.symbol} trade</span>
+                    </button>
+                  </td>
+                  <td className="px-2 py-3 font-semibold text-[var(--foreground)]">{trade.symbol}</td>
+                  <td className="px-2 py-3 capitalize">{trade.side} · {trade.quantity.toLocaleString()}</td>
+                  <td className="px-2 py-3 font-mono tabular-nums">{trade.hold}</td>
+                  <td className="px-2 py-3">{trade.setup ?? "Not captured"}</td>
+                  <td className="px-2 py-3">{trade.tagged ? "Tagged" : "Needs context"}</td>
+                  <td className={`px-4 py-3 text-right font-mono tabular-nums ${pnlClass(trade.pnl)}`}>{money(trade.pnl)}</td>
+                </tr>
+                {expanded ? (
+                  <tr id={panelId}>
+                    <td colSpan={7} className="border-b border-[var(--border)] bg-[var(--background)] p-0">
+                      <div className={`inline-trade-disclosure ${closing ? "inline-trade-disclosure--closing" : ""}`}>
+                        <div className="inline-trade-disclosure__content">
+                          <InlineTradeReviewPanel
+                            date={date}
+                            onClose={() => closeTrade(trade.id)}
+                            returnTo={returnTo}
+                            symbol={trade.symbol}
+                            tradeId={trade.id}
+                          />
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ) : null}
+              </Fragment>
+            );
+          })}
+        </tbody>
       </table>
     </div>
   );
