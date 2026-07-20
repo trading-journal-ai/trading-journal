@@ -205,3 +205,43 @@ body {
 .dictation-wave--soft {
   color: var(--muted);
 }
+
+.inline-trade-disclosure {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    grid-template-rows 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 150ms ease-out,
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@starting-style {
+  .inline-trade-disclosure {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.inline-trade-disclosure--closing {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.inline-trade-disclosure__content {
+  min-height: 0;
+  overflow: visible;
+}
+
+.inline-trade-disclosure--closing .inline-trade-disclosure__content {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inline-trade-disclosure {
+    transition: none;
+  }
+}

@@ -262,18 +262,31 @@ After setup, the installer starts the app automatically.
 To start it again later:
 
 ```bash
-npm run --silent dev
+npm run dev:start
 ```
 
 Leave the terminal open while using the journal. To stop the app, click the
 terminal and press **Ctrl + C**. On Mac, that is the Control key, not Command.
 
+This prefers the app's dedicated URL,
+[http://localhost:4317](http://localhost:4317), and automatically uses the next
+open port if another process is already using 4317. The terminal always prints
+the active URL.
+
+For short commands that work from any directory, add these aliases to your
+shell config and replace the example path with the location of your clone:
+
+```bash
+alias journal='npm --prefix "/absolute/path/to/trading-journal" run --silent dev:start'
+alias journal-stop='npm --prefix "/absolute/path/to/trading-journal" run --silent dev:stop'
+alias journal-restart='npm --prefix "/absolute/path/to/trading-journal" run --silent dev:restart'
+```
+
 Stopping and restarting the app does not delete your data. Your journal lives in
 a SQLite database file on disk.
 
 If the browser does not open automatically, go to the localhost URL printed in
-the terminal, usually [http://localhost:3000](http://localhost:3000). That opens
-the dashboard.
+the terminal. That opens the dashboard.
 
 If Next.js says another dev server is already running, or localhost feels stuck,
 use the repo-local cleanup command:
@@ -282,12 +295,16 @@ use the repo-local cleanup command:
 npm run dev:restart
 ```
 
+From any directory, the equivalent shell alias is `journal-restart`.
+
 That stops any Next dev server running from this project folder and starts a
 fresh one. To only stop the stuck server, run:
 
 ```bash
 npm run dev:stop
 ```
+
+From any directory, the equivalent shell alias is `journal-stop`.
 
 ## Hosted Demo
 

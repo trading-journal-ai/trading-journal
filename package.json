@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:app": "next dev",
+    "dev:start": "node scripts/dev-server.mjs start",
     "dev:stop": "node scripts/dev-server.mjs stop",
     "dev:restart": "node scripts/dev-server.mjs restart",
     "build": "next build",

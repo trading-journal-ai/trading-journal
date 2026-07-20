@@ -10,6 +10,14 @@ import { etDateString, etDayRange } from "@/lib/time";
 import ArchiveSidebar, { type ArchiveSidebarMonth } from "@/components/ArchiveSidebar";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
 import InlineImportPrompt from "@/components/InlineImportPrompt";
+import JournalDayDataViews, {
+  type JournalComparisonData,
+  type JournalDataScope,
+  type JournalDataView,
+  type JournalDayProcessFact,
+  type JournalDayTradeRow,
+} from "@/components/JournalDayDataViews";
+import RecapNote from "@/components/RecapNote";
 import TickerReviewRail from "@/components/TickerReviewRail";
 
 export type JournalReviewPreset = "today" | "week" | "month";
@@ -27,6 +35,7 @@ type TickerRow = {
   symbol: string;
   pnl: number;
   trades: number;
+  noted: boolean;
 };
 
 type ReviewSummary = {
@@ -73,6 +82,8 @@ type WorstTradeCardData = {
 type ReviewData = {
   day: ReviewDay;
   tickerRows: TickerRow[];
+  tradeRows: JournalDayTradeRow[];
+  taggedTrades: number;
   pnlPoints: PnlPoint[];
   coachRead: SessionFactPack;
   keyTradePrompts: KeyTradePrompt[];
@@ -121,6 +132,14 @@ type SavedCoachReview = {
   status: string;
   updatedAt: Date;
   storedReview: CoachStoredReview | null;
+};
+
+type ScopedRecapNote = {
+  text: string;
+  thesis: string;
+  whatWentWell: string;
+  whatWentWrong: string;
+  emotionalState: string;
 };
 
 const dateFmt = new Intl.DateTimeFormat("en-US", {
@@ -185,6 +204,15 @@ function pnlClass(value: number | null | undefined) {
 
 function formatTime(epochSeconds: number): string {
   return timeFmt.format(new Date(epochSeconds * 1000)).replace(/^24:/, "00:");
+}
+
+function formatHold(entryAt: number | null, exitAt: number | null): string {
+  if (entryAt == null || exitAt == null || exitAt < entryAt) return "Open";
+  const seconds = exitAt - entryAt;
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return remainder === 0 ? `${minutes}m` : `${minutes}m ${remainder}s`;
 }
 
 function validDate(value: string | undefined): string | undefined {
@@ -394,7 +422,13 @@ function rangeForPreset(preset: JournalReviewPreset, anchor: string): { from: st
   return { from: `${anchor.slice(0, 7)}-01`, to: lastDayOfMonth(anchor) };
 }
 
-function buildDayData(date: string, trades: TradeRow[], executions: ExecutionRow[]): ReviewData {
+function buildDayData(
+  date: string,
+  trades: TradeRow[],
+  executions: ExecutionRow[],
+  notedTickerKeys: Set<string>,
+  taggedTradeIds: Set<number>,
+): ReviewData {
   const executionCountByTrade = new Map<number, number>();
   executions.forEach((execution) => {
     if (execution.tradeId == null) return;
@@ -408,7 +442,12 @@ function buildDayData(date: string, trades: TradeRow[], executions: ExecutionRow
   const tickers = new Map<string, TickerRow>();
 
   trades.forEach((trade) => {
-    const current = tickers.get(trade.symbol) ?? { symbol: trade.symbol, pnl: 0, trades: 0 };
+    const current = tickers.get(trade.symbol) ?? {
+      symbol: trade.symbol,
+      pnl: 0,
+      trades: 0,
+      noted: notedTickerKeys.has(`${date}:${trade.symbol}`),
+    };
     current.pnl += netPnl(trade) ?? 0;
     current.trades += 1;
     tickers.set(trade.symbol, current);
@@ -490,6 +529,18 @@ function buildDayData(date: string, trades: TradeRow[], executions: ExecutionRow
       ...summary,
     },
     tickerRows: [...tickers.values()].sort((a, b) => b.pnl - a.pnl),
+    tradeRows: trades.map((trade) => ({
+      id: trade.id,
+      time: trade.entryAt == null ? "—" : formatTime(trade.entryAt),
+      symbol: trade.symbol,
+      side: trade.side,
+      quantity: trade.quantity,
+      hold: formatHold(trade.entryAt, trade.exitAt),
+      setup: trade.setup,
+      tagged: taggedTradeIds.has(trade.id),
+      pnl: netPnl(trade) ?? 0,
+    })),
+    taggedTrades: trades.filter((trade) => taggedTradeIds.has(trade.id)).length,
     pnlPoints,
     coachRead: buildSessionFactPack(trades),
     keyTradePrompts,
@@ -575,14 +626,30 @@ async function loadReviewRange({
   }
 
   const tradeIds = trades.map((trade) => trade.id);
-  const executions =
-    tradeIds.length > 0
-      ? await db
-          .select()
-          .from(schema.executions)
-          .where(inArray(schema.executions.tradeId, tradeIds))
-          .orderBy(asc(schema.executions.executedAt))
-      : [];
+  const tickerScopeKeys = [...new Set(trades.map((trade) => `${etDateString(trade.entryAt ?? start)}:${trade.symbol}`))];
+  const [executions, tickerNotes, tradeTagRows] = await Promise.all([
+    db
+      .select()
+      .from(schema.executions)
+      .where(inArray(schema.executions.tradeId, tradeIds))
+      .orderBy(asc(schema.executions.executedAt)),
+    db
+      .select({ scopeKey: schema.journalEntries.scopeKey })
+      .from(schema.journalEntries)
+      .where(
+        and(
+          eq(schema.journalEntries.accountId, accountId),
+          eq(schema.journalEntries.scope, "ticker"),
+          inArray(schema.journalEntries.scopeKey, tickerScopeKeys),
+        ),
+      ),
+    db
+      .select({ tradeId: schema.tradeTags.tradeId })
+      .from(schema.tradeTags)
+      .where(inArray(schema.tradeTags.tradeId, tradeIds)),
+  ]);
+  const notedTickerKeys = new Set(tickerNotes.flatMap((row) => (row.scopeKey ? [row.scopeKey] : [])));
+  const taggedTradeIds = new Set(tradeTagRows.map((row) => row.tradeId));
   const tradesByDate = new Map<string, TradeRow[]>();
   const executionsByDate = new Map<string, ExecutionRow[]>();
 
@@ -598,7 +665,15 @@ async function loadReviewRange({
 
   const days = [...tradesByDate.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([entryDate, dayTrades]) => buildDayData(entryDate, dayTrades, executionsByDate.get(entryDate) ?? []));
+    .map(([entryDate, dayTrades]) =>
+      buildDayData(
+        entryDate,
+        dayTrades,
+        executionsByDate.get(entryDate) ?? [],
+        notedTickerKeys,
+        taggedTradeIds,
+      ),
+    );
   const weeksByStart = new Map<string, ReviewData[]>();
 
   days.forEach((day) => {
@@ -638,6 +713,147 @@ async function loadReviewRange({
     days,
     weeks,
     coachRead: buildSessionFactPack(trades, { baselineTrades, baselineLabel: "Prior 30 days" }),
+  };
+}
+
+function formatHorizonValue(key: SessionFactPack["history"]["signals"][number]["key"], label: string, value: number | null) {
+  if (value == null) return "—";
+  if (key === "win_rate") return `${(value * 100).toFixed(1)}%`;
+  if (key === "profit_factor") return value.toFixed(2);
+  if (key === "expectancy" && label === "E[R]") return `${value.toFixed(2)}R`;
+  return formatMoney(value);
+}
+
+function comparisonCoach(factPack: SessionFactPack, emptyDiagnosis: string): JournalComparisonData["week"]["coach"] {
+  const topSurprise = factPack.surprises[0];
+  return {
+    diagnosis: topSurprise?.title ?? factPack.mechanism.label ?? emptyDiagnosis,
+    evidence:
+      topSurprise?.evidence.join(" ") ||
+      factPack.mechanism.evidence.join(" ") ||
+      "The current range does not contain enough contradictory evidence for a stronger diagnosis.",
+    action: factPack.experiment.action,
+    confidence: factPack.confidence.label,
+  };
+}
+
+function sessionRows(range: ReviewRange) {
+  const tradeCounts = range.days.map((day) => day.day.trades).sort((a, b) => a - b);
+  const midpoint = Math.floor(tradeCounts.length / 2);
+  const medianTrades = tradeCounts.length === 0
+    ? 0
+    : tradeCounts.length % 2 === 0
+      ? (tradeCounts[midpoint - 1] + tradeCounts[midpoint]) / 2
+      : tradeCounts[midpoint];
+
+  return range.days.map((day) => ({
+    date: day.day.date,
+    label: `${day.day.label} · ${monthDayFmt.format(utcDate(day.day.date))}`,
+    trades: day.day.trades,
+    accuracy: day.day.accuracy,
+    profitFactor: day.day.profitFactor,
+    pnl: day.day.pnl,
+    activityRead:
+      day.day.trades > medianTrades
+        ? "Above weekly median"
+        : day.day.trades < medianTrades
+          ? "Below weekly median"
+          : "At weekly median",
+  }));
+}
+
+function buildJournalComparisonData(week: ReviewRange, month: ReviewRange): JournalComparisonData {
+  const weekTrades = week.days.flatMap((day) => day.tradeRows);
+  const setupBuckets = new Map<string, { trades: number; wins: number; grossWins: number; grossLosses: number; pnl: number }>();
+
+  weekTrades.forEach((trade) => {
+    const label = trade.setup?.trim() || "Not captured";
+    const bucket = setupBuckets.get(label) ?? { trades: 0, wins: 0, grossWins: 0, grossLosses: 0, pnl: 0 };
+    bucket.trades += 1;
+    bucket.wins += trade.pnl > 0 ? 1 : 0;
+    bucket.grossWins += trade.pnl > 0 ? trade.pnl : 0;
+    bucket.grossLosses += trade.pnl < 0 ? Math.abs(trade.pnl) : 0;
+    bucket.pnl += trade.pnl;
+    setupBuckets.set(label, bucket);
+  });
+
+  const monthLossDays = month.days
+    .filter((day) => day.day.pnl < 0)
+    .sort((a, b) => a.day.pnl - b.day.pnl);
+  const grossSessionLoss = monthLossDays.reduce((sum, day) => sum + Math.abs(day.day.pnl), 0);
+  const sortedActivity = month.days.map((day) => day.day.trades).sort((a, b) => a - b);
+  const activityMidpoint = Math.floor(sortedActivity.length / 2);
+  const medianActivity = sortedActivity.length === 0
+    ? 0
+    : sortedActivity.length % 2 === 0
+      ? (sortedActivity[activityMidpoint - 1] + sortedActivity[activityMidpoint]) / 2
+      : sortedActivity[activityMidpoint];
+  const highActivityLoss = monthLossDays
+    .filter((day) => day.day.trades > medianActivity)
+    .reduce((sum, day) => sum + Math.abs(day.day.pnl), 0);
+  let cumulative = 0;
+  let peak = 0;
+  let maxDrawdown = 0;
+  month.days.forEach((day) => {
+    cumulative += day.day.pnl;
+    peak = Math.max(peak, cumulative);
+    maxDrawdown = Math.min(maxDrawdown, cumulative - peak);
+  });
+
+  const weekTaggedTrades = week.days.reduce((sum, day) => sum + day.taggedTrades, 0);
+  return {
+    week: {
+      summary: {
+        label: week.displayDate,
+        sessions: week.days.length,
+        trades: week.trades,
+        accuracy: week.accuracy,
+        profitFactor: week.profitFactor,
+        pnl: week.pnl,
+      },
+      sessions: sessionRows(week),
+      edgeRows: [...setupBuckets.entries()]
+        .map(([label, bucket]) => ({
+          label,
+          trades: bucket.trades,
+          winRate: bucket.trades === 0 ? null : Math.round((bucket.wins / bucket.trades) * 100),
+          profitFactor: bucket.grossLosses === 0 ? null : bucket.grossWins / bucket.grossLosses,
+          expectancy: bucket.trades === 0 ? 0 : bucket.pnl / bucket.trades,
+          pnl: bucket.pnl,
+        }))
+        .sort((a, b) => b.trades - a.trades),
+      taggedCoverage: week.trades === 0 ? null : Math.round((weekTaggedTrades / week.trades) * 100),
+      plannedRiskCoverage: week.coachRead.session.rCoverage,
+      coach: comparisonCoach(week.coachRead, "No weekly contradiction cleared the evidence gate."),
+    },
+    month: {
+      summary: {
+        label: month.displayDate,
+        sessions: month.days.length,
+        trades: month.trades,
+        accuracy: month.accuracy,
+        profitFactor: month.profitFactor,
+        pnl: month.pnl,
+      },
+      sessions: sessionRows(month),
+      horizonRows: month.coachRead.history.signals.map((signal) => ({
+        metric: signal.label,
+        current: formatHorizonValue(signal.key, signal.label, signal.current),
+        baseline: formatHorizonValue(signal.key, signal.label, signal.baseline),
+        read: signal.vote > 0 ? "Improving" : signal.vote < 0 ? "Fading" : "Stable / unclear",
+        tone: signal.vote > 0 ? "positive" : signal.vote < 0 ? "negative" : "neutral",
+      })),
+      risk: {
+        maxDrawdown,
+        worstDay: monthLossDays[0]?.day.pnl ?? null,
+        worstTwoLossShare: grossSessionLoss === 0
+          ? null
+          : Math.round((monthLossDays.slice(0, 2).reduce((sum, day) => sum + Math.abs(day.day.pnl), 0) / grossSessionLoss) * 100),
+        highActivityLossShare: grossSessionLoss === 0 ? null : Math.round((highActivityLoss / grossSessionLoss) * 100),
+        redDays: monthLossDays.length,
+      },
+      coach: comparisonCoach(month.coachRead, "No monthly contradiction cleared the evidence gate."),
+    },
   };
 }
 
@@ -703,6 +919,64 @@ async function loadSavedCoachReview(
     if (isOptionalCoachReadError(error)) return null;
     throw error;
   }
+}
+
+async function loadScopedRecapNote(
+  accountId: number,
+  reviewScope: ReviewScope,
+): Promise<ScopedRecapNote | null> {
+  const row = await db
+    .select({
+      text: schema.journalEntries.lessons,
+      thesis: schema.journalEntries.thesis,
+      whatWentWell: schema.journalEntries.whatWentWell,
+      whatWentWrong: schema.journalEntries.whatWentWrong,
+      emotionalState: schema.journalEntries.emotionalState,
+    })
+    .from(schema.journalEntries)
+    .where(
+      and(
+        eq(schema.journalEntries.accountId, accountId),
+        eq(schema.journalEntries.scope, reviewScope.scope),
+        eq(schema.journalEntries.scopeKey, reviewScope.scopeKey),
+      ),
+    )
+    .limit(1)
+    .get();
+
+  return row
+    ? {
+        text: row.text ?? "",
+        thesis: row.thesis ?? "",
+        whatWentWell: row.whatWentWell ?? "",
+        whatWentWrong: row.whatWentWrong ?? "",
+        emotionalState: row.emotionalState ?? "",
+      }
+    : null;
+}
+
+async function hasBrokerData(accountId: number): Promise<boolean> {
+  const [batch, trade] = await Promise.all([
+    db
+      .select({ id: schema.importBatches.id })
+      .from(schema.importBatches)
+      .where(
+        and(
+          eq(schema.importBatches.accountId, accountId),
+          eq(schema.importBatches.kind, "executions"),
+        ),
+      )
+      .limit(1)
+      .get(),
+    db
+      .select({ id: schema.trades.id })
+      .from(schema.trades)
+      .where(eq(schema.trades.accountId, accountId))
+      .limit(1)
+      .get(),
+  ]);
+
+  return Boolean(batch || trade);
 }
 
 async function loadReviewArchive(anchor: string, accountId: number, basePath: string, month?: string): Promise<ReviewArchive> {
@@ -871,7 +1145,7 @@ function KeyTradePrompts({ prompts }: { prompts: KeyTradePrompt[] }) {
   if (prompts.length === 0) return null;
 
   return (
-    <section className="max-w-[665px] border-t border-[var(--hairline)] pt-4">
+    <section className="max-w-[800px] border-t border-[var(--hairline)] pt-4">
       <div className="text-[14px] font-semibold text-[var(--muted)]">
         Trades to annotate before coach
       </div>
@@ -901,38 +1175,76 @@ function KeyTradePrompts({ prompts }: { prompts: KeyTradePrompt[] }) {
 function DayReviewSection({
   data,
   returnTo,
+  showDataViews = false,
+  comparisonData,
+  initialDataScope,
+  initialDataView,
 }: {
   data: ReviewData;
   returnTo: string;
+  showDataViews?: boolean;
+  comparisonData?: JournalComparisonData;
+  initialDataScope?: JournalDataScope;
+  initialDataView?: JournalDataView;
 }) {
-  const { day, tickerRows, pnlPoints, keyTradePrompts, worstTrade, coachRead } = data;
+  const { day, tickerRows, tradeRows, taggedTrades, pnlPoints, keyTradePrompts, worstTrade, coachRead } = data;
   const topSurprise = coachRead.surprises[0];
   const verdictText = topSurprise
     ? topSurprise.description
     : "Clean session — nothing contradicted your baseline. Add the day's context so the coach read can go deeper.";
 
   const bestPrompt = keyTradePrompts.find((prompt) => prompt.label === "Best trade");
-  const whatWorked: string[] = [];
+  const aligned: string[] = [];
   if (bestPrompt && bestPrompt.pnl > 0) {
-    whatWorked.push(`Concentrated on ${bestPrompt.symbol}, the day's strongest trade.`);
+    aligned.push(`Concentrated on ${bestPrompt.symbol}, the day's strongest trade.`);
   }
   if (
     coachRead.session.winRate != null &&
     coachRead.session.breakevenWinRate != null &&
     coachRead.session.winRate > coachRead.session.breakevenWinRate
   ) {
-    whatWorked.push("Win rate cleared the breakeven line.");
+    aligned.push("Win rate cleared the breakeven line.");
   }
   coachRead.history.signals
     .filter((signal) => signal.vote > 0)
     .slice(0, 1)
-    .forEach((signal) => whatWorked.push(`${signal.label} improved versus your baseline.`));
+    .forEach((signal) => aligned.push(`${signal.label} improved versus your baseline.`));
 
-  const whatCost: string[] = [];
+  const unresolved: string[] = [];
   if (worstTrade) {
-    whatCost.push(`${worstTrade.symbol} was the session's clearest red mark.`);
+    unresolved.push(`${worstTrade.symbol} was the session's clearest red mark.`);
   }
-  coachRead.surprises.slice(0, 2).forEach((surprise) => whatCost.push(surprise.description));
+  coachRead.surprises.slice(0, 2).forEach((surprise) => unresolved.push(surprise.description));
+
+  const processFacts: JournalDayProcessFact[] = [
+    {
+      label: "Outcome distribution",
+      value: coachRead.robustness.distributionLabel,
+      detail: "Classifies whether the result was broad, top-heavy, or driven by the losing tail.",
+      tone: day.pnl > 0 ? "positive" : day.pnl < 0 ? "negative" : "neutral",
+    },
+    {
+      label: "Baseline trend",
+      value: coachRead.history.trendLabel,
+      detail: `${coachRead.history.baselineTrades} prior trades in ${coachRead.history.baselineLabel}.`,
+      tone:
+        coachRead.history.trendLabel === "improvement"
+          ? "positive"
+          : coachRead.history.trendLabel === "deterioration"
+            ? "negative"
+            : "neutral",
+    },
+    {
+      label: "Risk basis",
+      value: coachRead.confidence.riskModel === "r-multiple" ? "R-multiple" : "Dollar fallback",
+      detail: `${formatPercent(coachRead.session.rCoverage)} of trades have enough planned-risk data for R.`,
+    },
+    {
+      label: "Structured context",
+      value: `${taggedTrades} of ${day.trades} trades tagged`,
+      detail: "Missing setup and tag context remains unresolved instead of being inferred from outcome.",
+    },
+  ];
 
   return (
     <section>
@@ -972,7 +1284,7 @@ function DayReviewSection({
             </div>
           </div>
 
-          <div className="mb-8 max-w-[720px]">
+          <div className="mb-8 max-w-[800px]">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="text-[13px] font-semibold text-[var(--coach)]">✳ Session verdict</span>
               <span className="text-[12px] text-[var(--muted)]">
@@ -982,29 +1294,107 @@ function DayReviewSection({
             <p className="mt-3 text-[20px] font-medium leading-[1.55] tracking-[-0.005em] text-[var(--foreground)] [text-wrap:pretty]">
               {verdictText}
             </p>
-            {whatWorked.length > 0 || whatCost.length > 0 ? (
-              <div className="mt-9 grid gap-x-12 gap-y-8 sm:grid-cols-2">
-                <FindingColumn label="What worked" tone="positive" items={whatWorked} />
-                <FindingColumn label="What cost you" tone="negative" items={whatCost} />
+            {showDataViews ? (
+              <div className="mt-9 grid gap-9 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] sm:gap-12">
+                <section>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <h3 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+                      Market context
+                    </h3>
+                    <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-[11px] font-semibold text-[var(--muted)]">
+                      Coverage unavailable
+                    </span>
+                  </div>
+                  <p className="mt-4 text-[14.5px] leading-6 text-[var(--body)]">
+                    Scanner coverage is not connected, so the journal will not infer whether the market was hot, selective, or slow.
+                  </p>
+                  <p className="mt-3 text-[12px] leading-5 text-[var(--muted)]">
+                    Opportunity grade, stock leadership, and participation alignment will appear here after the Stock Info daily summary is connected.
+                  </p>
+                </section>
+
+                <section>
+                  <h3 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+                    Process read
+                  </h3>
+                  <div className="mt-4 space-y-6">
+                    <FindingColumn label="Aligned" tone="positive" items={aligned} />
+                    <FindingColumn label="Unresolved" tone="watch" items={unresolved} />
+                  </div>
+                </section>
+              </div>
+            ) : aligned.length > 0 || unresolved.length > 0 ? (
+              <div className="mt-9">
+                <div className="text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">
+                  Process read
+                </div>
+                <div className="mt-4 grid gap-x-12 gap-y-8 sm:grid-cols-2">
+                  <FindingColumn label="Aligned" tone="positive" items={aligned} />
+                  <FindingColumn label="Unresolved" tone="watch" items={unresolved} />
+                </div>
               </div>
             ) : null}
           </div>
 
-          <div className="grid max-w-[665px] gap-6 lg:grid-cols-[minmax(0,1fr)_200px] lg:items-start">
-            <RunningPnlChart day={day} pnlPoints={pnlPoints} />
-            <TickerReviewRail
-              rows={tickerRows.map((row) => ({
-                symbol: row.symbol,
-                pnl: row.pnl,
-                href: `/trades/review?date=${day.date}&symbol=${row.symbol}&returnTo=${encodeURIComponent(returnTo)}`,
-              }))}
-              accuracy={day.accuracy}
-              profitFactor={day.profitFactor}
-              pnl={day.pnl}
+          {showDataViews && comparisonData ? <div className="max-w-[800px]">
+            <JournalDayDataViews
+              comparisons={comparisonData}
+              date={day.date}
+              initialScope={initialDataScope}
+              initialView={initialDataView}
+              returnTo={returnTo}
+              summary={{
+                trades: day.trades,
+                accuracy: day.accuracy,
+                profitFactor: day.profitFactor,
+                pnl: day.pnl,
+                taggedTrades,
+              }}
+              tradeRows={tradeRows}
+              processFacts={processFacts}
+              coach={{
+                diagnosis: topSurprise?.title ?? "No contradiction cleared the evidence gate.",
+                evidence:
+                  topSurprise?.evidence.join(" ") ??
+                  "Add setup, stop, and journal context before treating the absence of a signal as a clean process read.",
+                action: coachRead.experiment.action,
+                confidence: coachRead.confidence.label,
+              }}
+              pnlContent={
+                <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
+                  <RunningPnlChart day={day} pnlPoints={pnlPoints} />
+                  <TickerReviewRail
+                    rows={tickerRows.map((row) => ({
+                      symbol: row.symbol,
+                      pnl: row.pnl,
+                      noted: row.noted,
+                      href: `/trades/review?date=${day.date}&symbol=${row.symbol}&returnTo=${encodeURIComponent(returnTo)}`,
+                    }))}
+                    accuracy={day.accuracy}
+                    profitFactor={day.profitFactor}
+                    pnl={day.pnl}
+                  />
+                </div>
+              }
             />
-          </div>
+          </div> : (
+            <div className="grid max-w-[800px] gap-6 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
+              <RunningPnlChart day={day} pnlPoints={pnlPoints} />
+              <TickerReviewRail
+                rows={tickerRows.map((row) => ({
+                  symbol: row.symbol,
+                  pnl: row.pnl,
+                  noted: row.noted,
+                  href: `/trades/review?date=${day.date}&symbol=${row.symbol}&returnTo=${encodeURIComponent(returnTo)}`,
+                }))}
+                accuracy={day.accuracy}
+                profitFactor={day.profitFactor}
+                pnl={day.pnl}
+              />
+            </div>
+          )}
           {worstTrade ? (
-            <div className="mt-14 max-w-[665px]">
+            <div className="mt-14 max-w-[800px]">
               <WorstTradeCard trade={worstTrade} />
             </div>
           ) : null}
@@ -1023,12 +1413,12 @@ function FindingColumn({
   items,
 }: {
   label: string;
-  tone: "positive" | "negative";
+  tone: "positive" | "watch";
   items: string[];
 }) {
   if (items.length === 0) return null;
-  const marker = tone === "positive" ? "+" : "−";
-  const markerColor = tone === "positive" ? "text-[var(--green)]" : "text-[var(--red)]";
+  const marker = tone === "positive" ? "+" : "?";
+  const markerColor = tone === "positive" ? "text-[var(--green)]" : "text-[var(--coach)]";
   return (
     <div>
       <div className="text-[14px] font-semibold text-[var(--foreground)]">{label}</div>
@@ -1166,15 +1556,170 @@ function TradeReviewSidebar({
   );
 }
 
-function EmptyReviewState() {
-  const readOnly = isDemoReadOnly();
+function EmptyReviewState({
+  brokerDataAvailable,
+  reviewScope,
+  recapNote,
+  readOnly,
+}: {
+  brokerDataAvailable: boolean;
+  reviewScope: ReviewScope;
+  recapNote: ScopedRecapNote | null;
+  readOnly: boolean;
+}) {
+  if (!brokerDataAvailable) {
+    return (
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-[var(--foreground)]">No broker import found</h2>
+        <p className="max-w-[500px] text-sm leading-6 text-[var(--body)]">
+          Import executions before the journal can build the session path, trade list, and deterministic Coach facts.
+        </p>
+        <InlineImportPrompt readOnly={readOnly} />
+      </section>
+    );
+  }
 
   return (
-    <section className="space-y-3">
-      <p className="max-w-[460px] text-sm leading-6 text-[var(--body)]">
-        No trades for this account in the selected period yet.
+    <section className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-[var(--foreground)]">
+          {reviewScope.scope === "day" ? "No trades taken" : "No trades in this period"}
+        </h2>
+        <p className="mt-2 max-w-[520px] text-sm leading-6 text-[var(--body)]">
+          {reviewScope.scope === "day"
+            ? "A no-trade day can be an aligned decision when the market did not provide quality. Capture what you saw and why you stayed out."
+            : "Broker history is connected; this selected period simply has no recorded trades."}
+        </p>
+      </div>
+      <RecapNote
+        scope={reviewScope.scope}
+        scopeKey={reviewScope.scopeKey}
+        text={recapNote?.text ?? ""}
+        thesis={recapNote?.thesis ?? ""}
+        whatWentWell={recapNote?.whatWentWell ?? ""}
+        whatWentWrong={recapNote?.whatWentWrong ?? ""}
+        emotionalState={recapNote?.emotionalState ?? ""}
+        placeholder={`Add a ${reviewScope.scope} note: What opportunity did the market provide, and why was no trade the right response?`}
+        readOnly={readOnly}
+      />
+      <p className="max-w-[520px] border-l-2 border-[var(--hairline)] pl-4 text-[12px] leading-5 text-[var(--muted)]">
+        Market-context coverage is not connected yet, so the journal will not label this a cold market from missing scanner data.
       </p>
-      <InlineImportPrompt readOnly={readOnly} />
+    </section>
+  );
+}
+
+function hasRecapContent(note: ScopedRecapNote | null): boolean {
+  if (!note) return false;
+  return Boolean(note.text || note.thesis || note.whatWentWell || note.whatWentWrong || note.emotionalState);
+}
+
+function CoachContextFlow({
+  data,
+  reviewScope,
+  recapNote,
+  savedReview,
+  readOnly,
+}: {
+  data: ReviewData;
+  reviewScope: ReviewScope;
+  recapNote: ScopedRecapNote | null;
+  savedReview: SavedCoachReview | null;
+  readOnly: boolean;
+}) {
+  const notedTickers = data.tickerRows.filter((row) => row.noted).length;
+  const dayNoteComplete = hasRecapContent(recapNote);
+  const generated = savedReview?.status === "generated" && Boolean(
+    savedReview.storedReview && "review" in savedReview.storedReview,
+  );
+  const annotated = notedTickers > 0 || data.taggedTrades > 0;
+  const completeSteps = Number(annotated) + Number(dayNoteComplete) + Number(generated);
+
+  const steps = [
+    {
+      label: "Note your trades",
+      detail: `${notedTickers}/${data.tickerRows.length} ticker notes · ${data.taggedTrades}/${data.day.trades} trades tagged`,
+      complete: annotated,
+    },
+    {
+      label: "Add a daily note",
+      detail: dayNoteComplete ? "Your session context is included" : "Explain the market, plan, and decisions",
+      complete: dayNoteComplete,
+    },
+    {
+      label: "Generate coach review",
+      detail: generated ? "Coach review generated" : "Combine your context with deterministic facts",
+      complete: generated,
+    },
+  ];
+
+  return (
+    <section className="border-t border-[var(--hairline)] pt-8">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <div>
+          <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Coach context</h2>
+          <p className="mt-1 text-[13px] text-[var(--muted)]">Add what the broker data cannot explain before asking Coach.</p>
+        </div>
+        <span className="font-mono text-[12px] tabular-nums text-[var(--muted)]">{completeSteps} of 3 complete</span>
+      </div>
+
+      <ol className="mt-6 grid gap-5 sm:grid-cols-3">
+        {steps.map((step, index) => (
+          <li key={step.label} className="border-t border-[var(--hairline)] pt-3">
+            <div className="flex items-baseline gap-2">
+              <span className="font-mono text-[11px] text-[var(--muted)]">{index + 1}</span>
+              <span className="text-[13px] font-semibold text-[var(--foreground)]">{step.label}</span>
+              <span className={`ml-auto text-[11px] font-semibold ${step.complete ? "text-[var(--green)]" : "text-[var(--muted)]"}`}>
+                {step.complete ? "Complete" : "Open"}
+              </span>
+            </div>
+            <p className="mt-2 text-[12px] leading-5 text-[var(--muted)]">{step.detail}</p>
+          </li>
+        ))}
+      </ol>
+
+      <div className="mt-7">
+        <RecapNote
+          scope="day"
+          scopeKey={reviewScope.scopeKey}
+          text={recapNote?.text ?? ""}
+          thesis={recapNote?.thesis ?? ""}
+          whatWentWell={recapNote?.whatWentWell ?? ""}
+          whatWentWrong={recapNote?.whatWentWrong ?? ""}
+          emotionalState={recapNote?.emotionalState ?? ""}
+          placeholder="Add a daily note: What was the market offering, what was your plan, and where did your decisions align or remain unresolved?"
+          readOnly={readOnly}
+        />
+      </div>
+
+      <div className="mt-6 flex flex-col gap-4 border-t border-[var(--hairline)] pt-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="text-[12px] text-[var(--muted)]">Review payload</div>
+          <p className="mt-1 max-w-[470px] text-[13px] leading-5 text-[var(--body)]">
+            Playbook and rubric · deterministic facts · daily note · ticker notes · trade tags
+          </p>
+        </div>
+        {!readOnly ? (
+          <div className="flex flex-wrap gap-2">
+            <form action={generateCoachReviewAction}>
+              <input type="hidden" name="scope" value={reviewScope.scope} />
+              <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
+              <button type="submit" className="h-9 rounded-md bg-[var(--foreground)] px-4 text-[12px] font-semibold text-[var(--background)] transition-opacity hover:opacity-90">
+                {generated ? "Regenerate coach review" : "Generate coach review"}
+              </button>
+            </form>
+            <form action={saveDraftCoachReviewAction}>
+              <input type="hidden" name="scope" value={reviewScope.scope} />
+              <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
+              <button type="submit" className="h-9 rounded-md border border-[var(--border)] px-3 text-[12px] font-semibold text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--foreground)]">
+                {savedReview ? "Refresh draft" : "Save draft"}
+              </button>
+            </form>
+          </div>
+        ) : (
+          <span className="text-[12px] text-[var(--muted)]">Read-only demo</span>
+        )}
+      </div>
     </section>
   );
 }
@@ -1206,12 +1751,14 @@ function StarterCoachRead({
   savedExperiment,
   savedReview,
   readOnly,
+  showReviewActions = true,
 }: {
   factPack: SessionFactPack;
   reviewScope: ReviewScope;
   savedExperiment: SavedCoachExperiment | null;
   savedReview: SavedCoachReview | null;
   readOnly: boolean;
+  showReviewActions?: boolean;
 }) {
   const topSurprise = factPack.surprises[0];
   const experiment = factPack.experiment;
@@ -1348,7 +1895,7 @@ function StarterCoachRead({
           This uses the exact context package: playbook, rubric, deterministic facts,
           daily context, and annotated trade notes.
         </p>
-        {!readOnly ? (
+        {showReviewActions && !readOnly ? (
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <form action={generateCoachReviewAction}>
               <input type="hidden" name="scope" value={reviewScope.scope} />
@@ -1376,16 +1923,16 @@ function StarterCoachRead({
               </span>
             ) : null}
           </div>
-        ) : (
+        ) : showReviewActions && readOnly ? (
           <p className="mt-3 max-w-[760px] text-[12px] leading-5 text-[var(--muted)] tabular-nums">
             Read-only demo: coach reviews are loaded from approved static fixtures,
             not generated live.
           </p>
-        )}
+        ) : null}
 
         {generationError ? (
           <p className="mt-4 max-w-[760px] border-l border-[var(--red)] pl-4 text-sm leading-6 text-[var(--body)]">
-            Coach generation failed: {generationError}
+            Coach review could not be generated. Check Coach settings and try again; your notes and draft are still saved.
           </p>
         ) : null}
 
@@ -1479,6 +2026,8 @@ export default async function TradeJournalReview({
   returnTo,
   backHref,
   accountId,
+  initialDataScope,
+  initialDataView,
 }: {
   preset?: JournalReviewPreset;
   date?: string;
@@ -1488,16 +2037,29 @@ export default async function TradeJournalReview({
   returnTo?: string;
   backHref?: string;
   accountId: number;
+  initialDataScope?: JournalDataScope;
+  initialDataView?: JournalDataView;
 }) {
   const archiveAnchor = validDate(date) ?? validDate(from) ?? currentEtDate();
-  const [range, archive] = await Promise.all([
+  const [range, archive, brokerDataAvailable, comparisonRanges] = await Promise.all([
     loadReviewRange({ preset, date, from, month, accountId }),
     loadReviewArchive(archiveAnchor, accountId, basePath, month),
+    hasBrokerData(accountId),
+    preset === "today"
+      ? Promise.all([
+          loadReviewRange({ preset: "week", from: archiveAnchor, accountId }),
+          loadReviewRange({ preset: "month", from: archiveAnchor, accountId }),
+        ])
+      : Promise.resolve(null),
   ]);
+  const comparisonData = comparisonRanges
+    ? buildJournalComparisonData(comparisonRanges[0], comparisonRanges[1])
+    : undefined;
   const reviewScope = reviewScopeFor(range.preset, rangeForPreset(range.preset, range.anchor));
-  const [savedExperiment, savedReview] = await Promise.all([
+  const [savedExperiment, savedReview, recapNote] = await Promise.all([
     loadSavedCoachExperiment(accountId, reviewScope),
     loadSavedCoachReview(accountId, reviewScope),
+    loadScopedRecapNote(accountId, reviewScope),
   ]);
   const readOnly = isDemoReadOnly();
   const currentHref = returnTo ?? journalReviewHref(basePath, { preset, date, from, month });
@@ -1506,7 +2068,7 @@ export default async function TradeJournalReview({
     : { label: "Journal", href: basePath };
 
   return (
-    <div className="mx-auto w-full max-w-[905px] pb-24">
+    <div className="mx-auto w-full max-w-[1040px] pb-24">
       {backHref ? (
         <Breadcrumbs
           back={breadcrumbBack}
@@ -1515,7 +2077,7 @@ export default async function TradeJournalReview({
         />
       ) : null}
 
-      <div className="grid gap-8 md:grid-cols-[180px_minmax(0,665px)] xl:grid-cols-[200px_minmax(0,665px)] xl:gap-10">
+      <div className="grid gap-8 md:grid-cols-[180px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,800px)] xl:gap-10">
         <TradeReviewSidebar
           archive={archive}
           todayHref={journalReviewHref(basePath, { preset: "today" })}
@@ -1530,7 +2092,12 @@ export default async function TradeJournalReview({
           ) : null}
 
           {range.trades === 0 ? (
-            <EmptyReviewState />
+            <EmptyReviewState
+              brokerDataAvailable={brokerDataAvailable}
+              reviewScope={reviewScope}
+              recapNote={recapNote}
+              readOnly={readOnly}
+            />
           ) : preset === "month" ? (
             <div className="space-y-14">
               {range.weeks.map((week) => (
@@ -1544,8 +2111,25 @@ export default async function TradeJournalReview({
               ))}
             </div>
           ) : (
-            <DayReviewSection data={range.days[0]} returnTo={currentHref} />
+            <DayReviewSection
+              data={range.days[0]}
+              returnTo={currentHref}
+              showDataViews
+              comparisonData={comparisonData}
+              initialDataScope={initialDataScope}
+              initialDataView={initialDataView}
+            />
           )}
+
+          {range.trades > 0 && preset === "today" ? (
+            <CoachContextFlow
+              data={range.days[0]}
+              reviewScope={reviewScope}
+              recapNote={recapNote}
+              savedReview={savedReview}
+              readOnly={readOnly}
+            />
+          ) : null}
 
           {range.trades > 0 ? (
             <StarterCoachRead
@@ -1554,6 +2138,7 @@ export default async function TradeJournalReview({
               savedExperiment={savedExperiment}
               savedReview={savedReview}
               readOnly={readOnly}
+              showReviewActions={preset !== "today"}
             />
           ) : null}
         </div>

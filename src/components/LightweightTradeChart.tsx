@@ -18,11 +18,14 @@ type LightweightTradeChartProps = {
   candles: ChartCandle[];
   markers: ChartMarker[];
   enableFullscreen?: boolean;
+  focusMinutesAfter?: number;
+  focusMinutesBefore?: number;
   initialFocusTime?: number;
+  chartHeightClass?: string;
+  selectedTradeNumber?: number;
 };
 
 type InteractiveLightweightTradeChartProps = LightweightTradeChartProps & {
-  chartHeightClass?: string;
   footerAction?: ReactNode;
 };
 
@@ -82,9 +85,9 @@ function readChartColors(): ChartColors {
   };
 }
 
-function EmptyTradeChart() {
+function EmptyTradeChart({ chartHeightClass = "h-[520px]" }: { chartHeightClass?: string }) {
   return (
-    <div className="flex h-[520px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 text-center text-sm text-[var(--muted)]">
+    <div className={`flex ${chartHeightClass} items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] px-6 text-center text-sm text-[var(--muted)]`}>
       No candle data is available for this trade yet.
     </div>
   );
@@ -191,8 +194,11 @@ function candleTimeForExecution(
 
 function InteractiveLightweightTradeChart({
   candles,
+  focusMinutesAfter = 70,
+  focusMinutesBefore = 20,
   markers,
   initialFocusTime,
+  selectedTradeNumber,
   chartHeightClass = "h-[520px]",
   footerAction,
 }: InteractiveLightweightTradeChartProps) {
@@ -206,6 +212,13 @@ function InteractiveLightweightTradeChart({
   const activeMarker = activeMarkerKey == null
     ? undefined
     : markerPoints.find((point) => point.key === activeMarkerKey);
+  const selectedTradeGuide = selectedTradeNumber == null
+    ? undefined
+    : markerPoints
+        .filter((point) => point.marker.tradeNumber === selectedTradeNumber)
+        .reduce<MarkerPoint | undefined>((earliest, point) => (
+          !earliest || point.marker.t < earliest.marker.t ? point : earliest
+        ), undefined);
   const activeMarkerTitle = activeMarker ? markerTooltipTitle(activeMarker.marker) : "";
   const activeMarkerDetail = activeMarker ? markerTooltipDetail(activeMarker.marker) : "";
   const activeMarkerShowsOutcome = activeMarker?.marker.side === "sell"
@@ -374,8 +387,12 @@ function InteractiveLightweightTradeChart({
     if (initialFocusTime != null) {
       const firstCandleTime = candles[0]?.t;
       const lastCandleTime = candles.at(-1)?.t;
-      const focusedFrom = firstCandleTime == null ? initialFocusTime - 20 * 60 : Math.max(firstCandleTime, initialFocusTime - 20 * 60);
-      const focusedTo = lastCandleTime == null ? initialFocusTime + 70 * 60 : Math.min(lastCandleTime, initialFocusTime + 70 * 60);
+      const focusedFrom = firstCandleTime == null
+        ? initialFocusTime - focusMinutesBefore * 60
+        : Math.max(firstCandleTime, initialFocusTime - focusMinutesBefore * 60);
+      const focusedTo = lastCandleTime == null
+        ? initialFocusTime + focusMinutesAfter * 60
+        : Math.min(lastCandleTime, initialFocusTime + focusMinutesAfter * 60);
 
       if (focusedFrom < focusedTo) {
         chart.timeScale().setVisibleRange({
@@ -406,7 +423,7 @@ function InteractiveLightweightTradeChart({
       setActiveMarkerKey(null);
       setMarkerPoints([]);
     };
-  }, [candleData, candles, initialFocusTime, markers, themeKey]);
+  }, [candleData, candles, focusMinutesAfter, focusMinutesBefore, initialFocusTime, markers, themeKey]);
 
   return (
     <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
@@ -423,6 +440,42 @@ function InteractiveLightweightTradeChart({
           viewBox={`0 0 ${chartSize.width} ${chartSize.height}`}
           width={chartSize.width}
         >
+          {selectedTradeGuide ? (
+            <g aria-label={`Selected Trade ${selectedTradeNumber}`} role="img">
+              <line
+                x1={selectedTradeGuide.x}
+                x2={selectedTradeGuide.x}
+                y1={12}
+                y2={Math.max(28, chartSize.height - 30)}
+                stroke="var(--accent)"
+                strokeDasharray="3 4"
+                strokeLinecap="round"
+                strokeOpacity="0.72"
+                strokeWidth="1.5"
+              />
+              <rect
+                x={Math.min(Math.max(4, selectedTradeGuide.x - 13), Math.max(4, chartSize.width - 30))}
+                y={7}
+                width={26}
+                height={18}
+                rx={4}
+                fill="var(--surface)"
+                stroke="var(--accent)"
+                strokeWidth="1"
+              />
+              <text
+                x={Math.min(Math.max(17, selectedTradeGuide.x), Math.max(17, chartSize.width - 17))}
+                y={19.5}
+                fill="var(--accent)"
+                fontFamily="var(--font-mono)"
+                fontSize="10"
+                fontWeight="600"
+                textAnchor="middle"
+              >
+                T{selectedTradeNumber}
+              </text>
+            </g>
+          ) : null}
           {markerPoints.map((marker, index) => {
             const s = 5;
             const buy = marker.marker.side === "buy";
@@ -545,7 +598,7 @@ export default function LightweightTradeChart(props: LightweightTradeChartProps)
     };
   }, [isFullscreen]);
 
-  if (props.candles.length === 0) return <EmptyTradeChart />;
+  if (props.candles.length === 0) return <EmptyTradeChart chartHeightClass={props.chartHeightClass} />;
 
   const footerAction = props.enableFullscreen ? (
     <button
@@ -582,8 +635,11 @@ export default function LightweightTradeChart(props: LightweightTradeChartProps)
             <div className="min-h-0 flex-1">
               <InteractiveLightweightTradeChart
                 candles={props.candles}
+                focusMinutesAfter={props.focusMinutesAfter}
+                focusMinutesBefore={props.focusMinutesBefore}
                 initialFocusTime={props.initialFocusTime}
                 markers={props.markers}
+                selectedTradeNumber={props.selectedTradeNumber}
                 chartHeightClass="h-[calc(100vh-9rem)]"
               />
             </div>
