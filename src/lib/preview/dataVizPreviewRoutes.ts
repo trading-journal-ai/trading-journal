@@ -64,12 +64,4 @@ export const dataVizPreviewRoutes: DataVizPreviewRoute[] = [
     meta: "Distillation",
     phase: "current",
   },
-  {
-    href: "/preview/data-viz/v8",
-    version: "V8",
-    title: "Open Exploration",
-    description: "Six forms chosen for visual pull — coil, planetarium, ridgeline, terrain, sunburst, river — each on the real join, each with a field note on whether the beauty pays its reading cost.",
-    meta: "Exploration",
-    phase: "exploration",
-  },
 ];
