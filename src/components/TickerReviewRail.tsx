@@ -6,6 +6,7 @@ export type TickerReviewRailRow = {
   symbol: string;
   pnl: number;
   href: string;
+  noted?: boolean;
   active?: boolean;
 };
 
@@ -50,16 +51,20 @@ export default function TickerReviewRail({
               <Link
                 key={row.symbol}
                 href={row.href}
+                aria-label={`${row.noted ? "Edit" : "Add"} ${row.symbol} note, ${formatMoney(row.pnl)}`}
                 aria-current={row.active ? "page" : undefined}
                 className={`group relative block rounded-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] before:absolute before:inset-x-0 before:inset-y-0 before:rounded-sm before:bg-[var(--surface)] before:opacity-0 before:transition-opacity hover:before:opacity-100 focus:before:opacity-100 ${
                   row.active ? "text-[var(--foreground)]" : ""
                 }`}
               >
-                <span className="relative z-10 grid grid-cols-[42px_1fr] items-baseline gap-2 px-3 py-1 font-mono text-[13px]">
+                <span className="relative z-10 grid grid-cols-[42px_1fr_auto] items-baseline gap-2 px-3 py-1.5 font-mono text-[13px]">
                   <span className={row.active ? "font-semibold text-[var(--foreground)]" : "text-[var(--foreground)]"}>
                     {row.symbol}
                   </span>
                   <span className={`text-right tabular-nums ${pnlClass(row.pnl)}`}>{formatMoney(row.pnl)}</span>
+                  <span className="font-sans text-[11px] font-semibold text-[var(--accent)] opacity-80 transition-opacity group-hover:opacity-100">
+                    {row.noted ? "Edit note" : "Add note"}
+                  </span>
                 </span>
               </Link>
             ))

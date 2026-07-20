@@ -102,6 +102,6 @@ echo "${INDENT}${CYAN}${BOLD}Step 3 of 3: Starting Trading Journal locally${RESE
 echo
 echo "${INDENT}${BOLD}Start and stop${RESET}"
 echo "${INDENT}To stop the app: press ${CYAN}Ctrl+C${RESET} in this terminal."
-echo "${INDENT}To start it again later: run ${CYAN}npm run --silent dev${RESET} from this folder."
+echo "${INDENT}To start it again later: run ${CYAN}npm run --silent dev:start${RESET} from this folder."
 echo
-npm run --silent dev
+npm run --silent dev:start

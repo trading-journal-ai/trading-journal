@@ -526,13 +526,20 @@ or "no clean A+ names," rather than storing pillar-by-pillar detail.
 | Float | `< 10M shares` | Candidate quality marker for supply/demand imbalance. |
 | Relative volume | `>= 5x` | Confirms attention/liquidity and theme strength. |
 | Daily percentage change | `>= 10%` | Confirms current momentum. |
-| News catalyst | Required | Explains why the move may be happening. |
+| Catalyst context | Fresh, continuation, no-news momentum, unclear/stale, or adverse | Explains why attention may persist without making same-day news a hard gate. |
 
 Possible candidate states:
 
-- **A+ candidate**: meets all five pillars.
-- **Watchable**: meets most pillars but has one caveat.
-- **Avoid / low quality**: fails multiple pillars or lacks a catalyst.
+- **A+ candidate**: strong price, float, volume, and momentum evidence with a
+  supportive catalyst profile or unmistakable no-news attention.
+- **Watchable**: meets most pillars but has one explicit caveat.
+- **Avoid / low quality**: fails multiple pillars, carries adverse context, or
+  lacks both a credible catalyst and convincing independent momentum.
+
+News remains part of the five-pillar profile, but it is not a hard pass/fail
+requirement. A prior-session catalyst may support continuation, and a no-news
+mover may still be highly tradeable when volume, price action, liquidity, and
+market attention are independently strong.
 
 This framework can support three product moments:
 
@@ -544,6 +551,12 @@ This framework can support three product moments:
    actual participation, missed opportunities, and trade selection.
 
 ### Data Capture Strategy
+
+The focused production contract, source ownership, ET day sync, trade-joining
+rules, and phased implementation sequence now live in
+[Opportunity Set Capture Plan](OPPORTUNITY_SET_CAPTURE_PLAN.md). Treat that file
+as the source of truth for V5 Study 05 and the future Journal daily opportunity
+review.
 
 Start lightweight and local:
 

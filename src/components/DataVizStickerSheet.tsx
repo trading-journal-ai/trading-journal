@@ -1012,8 +1012,11 @@ export default function DataVizStickerSheet() {
       <div className="mx-auto max-w-[1240px] px-4 pb-24 pt-8 sm:px-8 sm:pt-12 lg:px-12">
         <header className="border-b border-[var(--border)] pb-10">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Preview / Data visualization</p>
-            <Link href="/preview/journal" className="text-[12px] font-semibold text-[var(--muted)] transition-colors hover:text-[var(--foreground)]">Back to Journal preview →</Link>
+            <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Preview / Data visualization / V1</p>
+            <div className="flex flex-wrap items-center gap-4 text-[12px] font-semibold">
+              <Link href="/preview/data-viz" className="text-[var(--blue)] transition-colors hover:text-[var(--foreground)]">← Data viz index</Link>
+              <Link href="/preview/journal" className="text-[var(--muted)] transition-colors hover:text-[var(--foreground)]">Journal preview →</Link>
+            </div>
           </div>
           <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
             <div>

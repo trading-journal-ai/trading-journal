@@ -27,8 +27,8 @@ public users triggering imports, API calls, or live AI generation.
 | --- | --- | --- | --- | --- |
 | Marketing site | `trading-journal-site` | Vercel | `trading-journal.ai` | Public website, docs, install/demo CTA |
 | Hosted demo app | `trading-journal` | Vercel | `demo.trading-journal.ai` target | Read-only app preview |
-| Local app | `trading-journal` | Local machine | `localhost:3000` | User-owned journal with local SQLite |
-| Local demo | `trading-journal` | Local machine | `localhost:3000` | Resettable demo data for testing and fixture generation |
+| Local app | `trading-journal` | Local machine | `localhost:4317` | User-owned journal with local SQLite |
+| Local demo | `trading-journal` | Local machine | `localhost:4317` | Resettable demo data for testing and fixture generation |
 
 Current transitional state:
 
