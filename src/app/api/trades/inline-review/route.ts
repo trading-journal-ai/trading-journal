@@ -14,11 +14,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Invalid inline trade review request." }, { status: 400 });
   }
 
-  const activeAccount = await getActiveAccount();
-  const data = await loadInlineTradeReview({ accountId: activeAccount.id, date, symbol, tradeId });
-  if (!data) return NextResponse.json({ error: "Trade not found for this session." }, { status: 404 });
+  try {
+    const activeAccount = await getActiveAccount();
+    const data = await loadInlineTradeReview({ accountId: activeAccount.id, date, symbol, tradeId });
+    if (!data) return NextResponse.json({ error: "Trade not found for this session." }, { status: 404 });
 
-  return NextResponse.json(data, {
-    headers: { "Cache-Control": "no-store" },
-  });
+    return NextResponse.json(data, {
+      headers: { "Cache-Control": "no-store" },
+    });
+  } catch (error) {
+    console.error("Failed to load inline trade review.", error);
+    return NextResponse.json(
+      { error: "Could not load this trade review." },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 }
