@@ -2,7 +2,11 @@ import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { generateCoachReviewAction, saveDraftCoachReviewAction } from "@/app/coach/actions";
 import { saveCoachExperimentAction } from "@/app/journal/actions";
 import { db, schema } from "@/lib/db";
+import { listAccounts } from "@/lib/accountScope";
 import { parseCoachStoredReview, type CoachStoredReview } from "@/lib/coach/generatedReview";
+import CoachOutputTabs from "@/components/CoachOutputTabs";
+import CollapsibleSection from "@/components/CollapsibleSection";
+import PendingSubmitButton from "@/components/PendingSubmitButton";
 import { buildSessionFactPack, type SessionFactPack } from "@/lib/coach/reviewEngine";
 import { shortEntryReason, type TradeOpportunityContext } from "@/lib/coach/opportunityContext";
 import { opportunityContextsForTrades } from "@/lib/coach/opportunityContextService";
@@ -329,6 +333,17 @@ function journalWeekSectionHref(basePath: string, monthKey: string, weekKey: str
 }
 
 type ArchiveLinkMode = "legacy" | "review-module";
+
+/** One-line status for the collapsed coach section: automatic tier + AI tier. */
+function coachSectionStatus(savedReview: SavedCoachReview | null): string {
+  const auto = "automatic review ready";
+  if (savedReview?.status === "generated" && savedReview.storedReview && "review" in savedReview.storedReview) {
+    return `${auto} · AI review generated`;
+  }
+  if (savedReview?.status === "draft") return `${auto} · draft payload saved, no AI review yet`;
+  if (savedReview?.status === "stale") return `${auto} · last AI generation failed`;
+  return `${auto} · no AI review yet`;
+}
 
 function journalReviewModuleHref(
   basePath: string,
@@ -690,20 +705,24 @@ async function loadReviewRange({
     executionsByDate.set(key, [...(executionsByDate.get(key) ?? []), execution]);
   });
 
-  // Chart-evidence entry context for the focused day view only — week/month
-  // archives stay lean (one candle join per traded symbol-day).
-  const entryContexts = preset === "today" && trades.length > 0
-    ? await opportunityContextsForTrades(trades.map((trade) => ({
-        id: trade.id,
-        symbol: trade.symbol,
-        side: trade.side,
-        entryAt: trade.entryAt,
-        exitAt: trade.exitAt,
-        entryPrice: trade.avgEntryPrice,
-        quantity: trade.quantity,
-        pnl: netPnl(trade),
-        setup: trade.setup,
-      })))
+  // Chart-evidence entry context for every rendered day. Archive/month
+  // renders are cache-only so missing candle days (delisted symbols) degrade
+  // instantly instead of re-attempting rate-limited fetches per render.
+  const entryContexts = trades.length > 0
+    ? await opportunityContextsForTrades(
+        trades.map((trade) => ({
+          id: trade.id,
+          symbol: trade.symbol,
+          side: trade.side,
+          entryAt: trade.entryAt,
+          exitAt: trade.exitAt,
+          entryPrice: trade.avgEntryPrice,
+          quantity: trade.quantity,
+          pnl: netPnl(trade),
+          setup: trade.setup,
+        })),
+        { cachedOnly: preset !== "today" },
+      )
     : undefined;
 
   const days = reviewDatesForRange(preset, range)
@@ -1312,14 +1331,27 @@ function buildDayReviewPresentation(data: ReviewData) {
   return { topSurprise, verdictText, aligned, unresolved, processFacts };
 }
 
+type ModuleCoachSlots = { week?: React.ReactNode; month?: React.ReactNode };
+
+/** Everything a day entry needs to render its own coach review section. */
+type DayCoachPanelData = {
+  reviewScope: ReviewScope;
+  savedReview: SavedCoachReview | null;
+  savedExperiment: SavedCoachExperiment | null;
+  recapNote: ScopedRecapNote | null;
+  readOnly: boolean;
+};
+
 function JournalReviewModuleForDay({
   data,
   returnTo,
   comparisonData,
+  coachSlots,
 }: {
   data: ReviewData;
   returnTo: string;
   comparisonData: JournalComparisonData;
+  coachSlots?: ModuleCoachSlots;
 }) {
   const { day, tickerRows, tradeRows, taggedTrades, pnlPoints, coachRead } = data;
   const { topSurprise, processFacts } = buildDayReviewPresentation(data);
@@ -1331,6 +1363,8 @@ function JournalReviewModuleForDay({
         comparisons={comparisonData}
         date={day.date}
         returnTo={returnTo}
+        weekCoachSlot={coachSlots?.week}
+        monthCoachSlot={coachSlots?.month}
         summary={{
           trades: day.trades,
           accuracy: day.accuracy,
@@ -1378,6 +1412,8 @@ function DayReviewSection({
   showReviewModule = false,
   showContextDetails = false,
   showLegacyPnl = true,
+  coachSlots,
+  dayCoach,
 }: {
   data: ReviewData;
   returnTo: string;
@@ -1385,6 +1421,8 @@ function DayReviewSection({
   showReviewModule?: boolean;
   showContextDetails?: boolean;
   showLegacyPnl?: boolean;
+  coachSlots?: ModuleCoachSlots;
+  dayCoach?: DayCoachPanelData;
 }) {
   const { day, tickerRows, pnlPoints, keyTradePrompts, worstTrade, coachRead } = data;
   const { verdictText, aligned, unresolved } = buildDayReviewPresentation(data);
@@ -1493,6 +1531,7 @@ function DayReviewSection({
                 data={data}
                 returnTo={returnTo}
                 comparisonData={comparisonData}
+                coachSlots={coachSlots}
               />
             </div>
           ) : null}
@@ -1522,6 +1561,55 @@ function DayReviewSection({
           <div className="mt-6">
             <KeyTradePrompts prompts={keyTradePrompts} />
           </div>
+
+          {dayCoach ? (
+            <div className="mt-10 max-w-[800px]">
+              <CollapsibleSection
+                title="✳ Coach review"
+                status={coachSectionStatus(dayCoach.savedReview)}
+              >
+                <CoachOutputTabs
+                  hasAiReview={Boolean(
+                    dayCoach.savedReview?.storedReview &&
+                    "review" in dayCoach.savedReview.storedReview,
+                  )}
+                  deterministic={
+                    <StarterCoachRead
+                      factPack={data.coachRead}
+                      reviewScope={dayCoach.reviewScope}
+                      savedExperiment={dayCoach.savedExperiment}
+                      savedReview={dayCoach.savedReview}
+                      readOnly={dayCoach.readOnly}
+                      showReviewActions={false}
+                      output="deterministic"
+                    />
+                  }
+                  ai={
+                    <div>
+                      <CoachContextFlow
+                        data={data}
+                        reviewScope={dayCoach.reviewScope}
+                        recapNote={dayCoach.recapNote}
+                        savedReview={dayCoach.savedReview}
+                        readOnly={dayCoach.readOnly}
+                      />
+                      <div className="mt-6">
+                        <StarterCoachRead
+                          factPack={data.coachRead}
+                          reviewScope={dayCoach.reviewScope}
+                          savedExperiment={dayCoach.savedExperiment}
+                          savedReview={dayCoach.savedReview}
+                          readOnly={dayCoach.readOnly}
+                          showReviewActions={false}
+                          output="ai"
+                        />
+                      </div>
+                    </div>
+                  }
+                />
+              </CollapsibleSection>
+            </div>
+          ) : null}
       </div>
     </section>
   );
@@ -1637,13 +1725,19 @@ function WeekSection({
   returnTo,
   comparisonData,
   showReviewModule = false,
+  showContextDetails = false,
   showLegacyPnl = true,
+  coachSlots,
+  dayCoachData,
 }: {
   week: ReviewWeek;
   returnTo: string;
   comparisonData?: JournalComparisonData;
   showReviewModule?: boolean;
+  showContextDetails?: boolean;
   showLegacyPnl?: boolean;
+  coachSlots?: ModuleCoachSlots;
+  dayCoachData?: Map<string, DayCoachPanelData>;
 }) {
   return (
     <section id={journalWeekSectionId(week.key)} className="scroll-mt-8 space-y-8">
@@ -1659,7 +1753,10 @@ function WeekSection({
             returnTo={returnTo}
             comparisonData={comparisonData}
             showReviewModule={showReviewModule}
+            showContextDetails={showContextDetails}
             showLegacyPnl={showLegacyPnl}
+            coachSlots={coachSlots}
+            dayCoach={dayCoachData?.get(dayData.day.date)}
           />
         ))}
       </div>
@@ -1674,6 +1771,8 @@ function ReviewDayRangeSection({
   showReviewModule = false,
   showContextDetails = false,
   showLegacyPnl = true,
+  coachSlots,
+  dayCoach,
 }: {
   data: ReviewData;
   returnTo: string;
@@ -1681,6 +1780,8 @@ function ReviewDayRangeSection({
   showReviewModule?: boolean;
   showContextDetails?: boolean;
   showLegacyPnl?: boolean;
+  coachSlots?: ModuleCoachSlots;
+  dayCoach?: DayCoachPanelData;
 }) {
   if (data.day.trades === 0) {
     return (
@@ -1701,6 +1802,8 @@ function ReviewDayRangeSection({
       showReviewModule={showReviewModule}
       showContextDetails={showContextDetails}
       showLegacyPnl={showLegacyPnl}
+      coachSlots={coachSlots}
+      dayCoach={dayCoach}
     />
   );
 }
@@ -1761,18 +1864,22 @@ function EmptyReviewState({
   reviewScope,
   recapNote,
   readOnly,
+  accountName,
 }: {
   brokerDataAvailable: boolean;
   reviewScope: ReviewScope;
   recapNote: ScopedRecapNote | null;
   readOnly: boolean;
+  accountName?: string | null;
 }) {
+  const accountSuffix = accountName ? ` on ${accountName}` : "";
   if (!brokerDataAvailable) {
     return (
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-[var(--foreground)]">No broker import found</h2>
+        <h2 className="text-lg font-semibold text-[var(--foreground)]">No broker import found{accountSuffix}</h2>
         <p className="max-w-[500px] text-sm leading-6 text-[var(--body)]">
           Import executions before the journal can build the session path, trade list, and deterministic Coach facts.
+          {accountName ? " If you expected data here, check the account selector in the top-right menu." : ""}
         </p>
         <InlineImportPrompt readOnly={readOnly} />
       </section>
@@ -1783,12 +1890,13 @@ function EmptyReviewState({
     <section className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-[var(--foreground)]">
-          {reviewScope.scope === "day" ? "No trades taken" : "No trades in this period"}
+          {reviewScope.scope === "day" ? `No trades taken${accountSuffix}` : `No trades in this period${accountSuffix}`}
         </h2>
         <p className="mt-2 max-w-[520px] text-sm leading-6 text-[var(--body)]">
           {reviewScope.scope === "day"
             ? "A no-trade day can be an aligned decision when the market did not provide quality. Capture what you saw and why you stayed out."
             : "Broker history is connected; this selected period simply has no recorded trades."}
+          {accountName ? " Looking for different data? The account selector (top right) changes everything the journal shows." : ""}
         </p>
       </div>
       <RecapNote
@@ -1904,9 +2012,11 @@ function CoachContextFlow({
             <form action={generateCoachReviewAction}>
               <input type="hidden" name="scope" value={reviewScope.scope} />
               <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
-              <button type="submit" className="h-9 rounded-md bg-[var(--foreground)] px-4 text-[12px] font-semibold text-[var(--background)] transition-opacity hover:opacity-90">
-                {generated ? "Regenerate coach review" : "Generate coach review"}
-              </button>
+              <PendingSubmitButton
+                label={generated ? "Regenerate coach review" : "Generate coach review"}
+                pendingLabel="Generating — asking the coach…"
+                className="h-9 rounded-md bg-[var(--foreground)] px-4 text-[12px] font-semibold text-[var(--background)] transition-opacity hover:opacity-90"
+              />
             </form>
             <form action={saveDraftCoachReviewAction}>
               <input type="hidden" name="scope" value={reviewScope.scope} />
@@ -1952,6 +2062,7 @@ function StarterCoachRead({
   savedReview,
   readOnly,
   showReviewActions = true,
+  output = "full",
 }: {
   factPack: SessionFactPack;
   reviewScope: ReviewScope;
@@ -1959,6 +2070,8 @@ function StarterCoachRead({
   savedReview: SavedCoachReview | null;
   readOnly: boolean;
   showReviewActions?: boolean;
+  /** "deterministic" = fact sections only; "ai" = payload/review only. */
+  output?: "full" | "deterministic" | "ai";
 }) {
   const topSurprise = factPack.surprises[0];
   const experiment = factPack.experiment;
@@ -1975,6 +2088,7 @@ function StarterCoachRead({
 
   return (
     <section className="pt-2">
+      {output !== "ai" ? (<>
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <h2 className="text-[13px] font-semibold text-[var(--coach)]">✳ Automatic review</h2>
@@ -2093,8 +2207,10 @@ function StarterCoachRead({
           {factPack.confidence.limitations.join(" ")}
         </p>
       ) : null}
+      </>) : null}
 
-      <div className="mt-5 border-t border-[var(--hairline)] pt-4">
+      {output !== "deterministic" ? (
+      <div className={`border-t border-[var(--hairline)] pt-4 ${output === "ai" ? "border-t-0 pt-0" : "mt-5"}`}>
         <div className="text-[12px] text-[var(--muted)]">Coach review payload</div>
         <p className="mt-2 max-w-[760px] text-sm leading-6 text-[var(--body)]">
           This uses the exact context package: playbook, rubric, deterministic facts,
@@ -2105,12 +2221,11 @@ function StarterCoachRead({
             <form action={generateCoachReviewAction}>
               <input type="hidden" name="scope" value={reviewScope.scope} />
               <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
-              <button
-                type="submit"
+              <PendingSubmitButton
+                label={generatedReview ? "Regenerate coach review" : "Ask Coach"}
+                pendingLabel="Generating — asking the coach…"
                 className="h-8 rounded-md border border-[var(--foreground)] bg-[var(--foreground)] px-3 text-[12px] font-semibold text-[var(--background)] transition-opacity hover:opacity-90"
-              >
-                {generatedReview ? "Regenerate coach review" : "Ask Coach"}
-              </button>
+              />
             </form>
             <form action={saveDraftCoachReviewAction}>
               <input type="hidden" name="scope" value={reviewScope.scope} />
@@ -2199,8 +2314,14 @@ function StarterCoachRead({
           <p className="mt-4 max-w-[760px] border-l border-[var(--hairline)] pl-4 text-sm leading-6 text-[var(--body)]">
             No approved static coach review is seeded for this period yet.
           </p>
+        ) : output === "ai" ? (
+          <p className="mt-4 max-w-[760px] border-l border-[var(--hairline)] pl-4 text-sm leading-6 text-[var(--body)]">
+            No AI review yet for this day. Add context above (or generate as-is) —
+            the review will say plainly what it could and couldn&apos;t judge.
+          </p>
         ) : null}
       </div>
+      ) : null}
     </section>
   );
 }
@@ -2247,6 +2368,12 @@ export default async function TradeJournalReview({
 }) {
   const archiveAnchor = validDate(date) ?? validDate(from) ?? currentEtDate();
   const usesReviewModule = archiveLinkMode === "review-module";
+  // The active account changes everything the journal shows — make it part of
+  // the surface's identity so a silent switch can't masquerade as lost data
+  // (JOURNAL_NAVIGATION_DECISION.md decision #5).
+  const accounts = await listAccounts();
+  const activeAccount = accounts.find((account) => account.id === accountId) ?? null;
+  const showAccountIdentity = accounts.length > 1 && activeAccount != null;
   const [range, archive, brokerDataAvailable, comparisonRanges] = await Promise.all([
     loadReviewRange({ preset, date, from, month, accountId }),
     showArchiveSidebar
@@ -2282,7 +2409,87 @@ export default async function TradeJournalReview({
     loadSavedCoachReview(accountId, reviewScope),
     loadScopedRecapNote(accountId, reviewScope),
   ]);
+  // Week/month coach reviews are homed in the day module's Week/Month → Coach
+  // tabs (JOURNAL_NAVIGATION_DECISION.md migration requirement #1).
+  const moduleCoachScopes = preset === "today" && comparisonRanges
+    ? {
+        week: reviewScopeFor("week", rangeForPreset("week", archiveAnchor)),
+        month: reviewScopeFor("month", rangeForPreset("month", archiveAnchor)),
+      }
+    : null;
+  const [weekSavedExperiment, weekSavedReview, monthSavedExperiment, monthSavedReview] =
+    moduleCoachScopes
+      ? await Promise.all([
+          loadSavedCoachExperiment(accountId, moduleCoachScopes.week),
+          loadSavedCoachReview(accountId, moduleCoachScopes.week),
+          loadSavedCoachExperiment(accountId, moduleCoachScopes.month),
+          loadSavedCoachReview(accountId, moduleCoachScopes.month),
+        ])
+      : [null, null, null, null];
   const readOnly = isDemoReadOnly();
+  // Every rendered day carries its own coach section — the URL only chooses
+  // which days are on screen, never which UI they get (JOURNAL_NAVIGATION_DECISION.md).
+  const dayCoachData = new Map<string, DayCoachPanelData>(
+    usesReviewModule
+      ? await Promise.all(
+          range.days
+            .filter((dayData) => dayData.day.trades > 0)
+            .map(async (dayData) => {
+              const scope: ReviewScope = { scope: "day", scopeKey: dayData.day.date };
+              const [experiment, review, note] = await Promise.all([
+                loadSavedCoachExperiment(accountId, scope),
+                loadSavedCoachReview(accountId, scope),
+                loadScopedRecapNote(accountId, scope),
+              ]);
+              return [
+                dayData.day.date,
+                { reviewScope: scope, savedReview: review, savedExperiment: experiment, recapNote: note, readOnly },
+              ] as const;
+            }),
+        )
+      : [],
+  );
+  // Month view: per-week module slots (weekly fact pack + saved review) and a
+  // shared month slot, so each day's module matches the focused-day module.
+  const monthModuleSlots = new Map<string, ModuleCoachSlots>();
+  if (usesReviewModule && preset === "month" && weekComparisonRanges.length > 0) {
+    const monthScope = reviewScopeFor("month", rangeForPreset("month", range.anchor));
+    const [monthExperiment, monthReview] = await Promise.all([
+      loadSavedCoachExperiment(accountId, monthScope),
+      loadSavedCoachReview(accountId, monthScope),
+    ]);
+    const monthSlot = (
+      <StarterCoachRead
+        factPack={range.coachRead}
+        reviewScope={monthScope}
+        savedExperiment={monthExperiment}
+        savedReview={monthReview}
+        readOnly={readOnly}
+      />
+    );
+    await Promise.all(
+      weekComparisonRanges.map(async (weekRange) => {
+        const weekKey = weekStartFor(weekRange.anchor);
+        const weekScope: ReviewScope = { scope: "week", scopeKey: weekKey };
+        const [weekExperiment, weekReview] = await Promise.all([
+          loadSavedCoachExperiment(accountId, weekScope),
+          loadSavedCoachReview(accountId, weekScope),
+        ]);
+        monthModuleSlots.set(weekKey, {
+          week: (
+            <StarterCoachRead
+              factPack={weekRange.coachRead}
+              reviewScope={weekScope}
+              savedExperiment={weekExperiment}
+              savedReview={weekReview}
+              readOnly={readOnly}
+            />
+          ),
+          month: monthSlot,
+        });
+      }),
+    );
+  }
   const currentHref = returnTo ?? journalReviewHref(basePath, { preset, date, from, month });
   const breadcrumbBack = backHref
     ? originCrumbFromHref(backHref, basePath)
@@ -2306,6 +2513,17 @@ export default async function TradeJournalReview({
           />
         ) : null}
         <div className="mt-8 min-w-0 space-y-8">
+          {showAccountIdentity ? (
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-[12px] font-semibold text-[var(--foreground)]">
+                {activeAccount!.name}
+              </span>
+              <span className="text-[12px] text-[var(--muted)]">
+                the journal shows this account&apos;s trades only
+              </span>
+            </div>
+          ) : null}
+
           {preset === "week" ? (
             <ScopeHeader>
               <WeekHeader label={range.title} displayDate={range.displayDate} />
@@ -2318,6 +2536,7 @@ export default async function TradeJournalReview({
               reviewScope={reviewScope}
               recapNote={recapNote}
               readOnly={readOnly}
+              accountName={showAccountIdentity ? activeAccount!.name : null}
             />
           ) : usesReviewModule && preset === "month" ? (
             <div className="space-y-14">
@@ -2328,7 +2547,10 @@ export default async function TradeJournalReview({
                   returnTo={currentHref}
                   comparisonData={weekComparisons.get(week.key)}
                   showReviewModule
+                  showContextDetails
                   showLegacyPnl={false}
+                  coachSlots={monthModuleSlots.get(week.key)}
+                  dayCoachData={dayCoachData}
                 />
               ))}
             </div>
@@ -2340,6 +2562,27 @@ export default async function TradeJournalReview({
               showReviewModule
               showContextDetails
               showLegacyPnl={false}
+              coachSlots={moduleCoachScopes && comparisonRanges ? {
+                week: (
+                  <StarterCoachRead
+                    factPack={comparisonRanges[0].coachRead}
+                    reviewScope={moduleCoachScopes.week}
+                    savedExperiment={weekSavedExperiment}
+                    savedReview={weekSavedReview}
+                    readOnly={readOnly}
+                  />
+                ),
+                month: (
+                  <StarterCoachRead
+                    factPack={comparisonRanges[1].coachRead}
+                    reviewScope={moduleCoachScopes.month}
+                    savedExperiment={monthSavedExperiment}
+                    savedReview={monthSavedReview}
+                    readOnly={readOnly}
+                  />
+                ),
+              } : undefined}
+              dayCoach={dayCoachData.get(range.days[0].day.date)}
             />
           ) : preset === "month" ? (
             <div className="space-y-14">
@@ -2359,24 +2602,14 @@ export default async function TradeJournalReview({
             </div>
           ) : null}
 
-          {range.trades > 0 && preset === "today" ? (
-            <CoachContextFlow
-              data={range.days[0]}
-              reviewScope={reviewScope}
-              recapNote={recapNote}
-              savedReview={savedReview}
-              readOnly={readOnly}
-            />
-          ) : null}
-
-          {range.trades > 0 ? (
+          {range.trades > 0 && !usesReviewModule ? (
             <StarterCoachRead
               factPack={range.coachRead}
               reviewScope={reviewScope}
               savedExperiment={savedExperiment}
               savedReview={savedReview}
               readOnly={readOnly}
-              showReviewActions={preset !== "today"}
+              showReviewActions
             />
           ) : null}
         </div>
