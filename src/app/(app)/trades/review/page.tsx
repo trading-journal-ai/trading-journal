@@ -273,31 +273,6 @@ export default async function TickerDayReviewPage({
             pnl={{ value: totalPnl, formatted: `${totalPnl > 0 ? "+" : ""}${fmtMoney(totalPnl)}` }}
             metrics={summaryStats}
           />
-          {dayTickers.length > 1 ? (
-            <nav aria-label="Tickers traded this day" className="mt-4 flex flex-wrap items-center gap-1.5">
-              {dayTickers.map((ticker) =>
-                ticker.symbol === symbol ? (
-                  <span
-                    key={ticker.symbol}
-                    className="rounded-full bg-[var(--foreground)] px-3 py-1 text-[12px] font-semibold text-[var(--background)]"
-                  >
-                    {ticker.symbol}
-                  </span>
-                ) : (
-                  <a
-                    key={ticker.symbol}
-                    href={`/trades/review?date=${date}&symbol=${ticker.symbol}&returnTo=${encodeURIComponent(backHref)}`}
-                    className="rounded-full border border-[var(--border)] px-3 py-1 text-[12px] font-semibold text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
-                  >
-                    {ticker.symbol}
-                    <span className={`ml-1.5 font-mono tabular-nums ${ticker.pnl > 0 ? "text-[var(--green)]" : ticker.pnl < 0 ? "text-[var(--red)]" : ""}`}>
-                      {formatSignedMoney(ticker.pnl)}
-                    </span>
-                  </a>
-                ),
-              )}
-            </nav>
-          ) : null}
         </div>
       </div>
 
@@ -308,6 +283,8 @@ export default async function TickerDayReviewPage({
               Estimated chart · reconstructed from executions
             </p>
           ) : null}
+          <div className={dayTickers.length > 1 ? "grid gap-6 lg:grid-cols-[minmax(0,1fr)_170px] lg:items-start" : ""}>
+          <div className="min-w-0">
           {chartCandles.length > 0 ? (
             <LightweightTradeChart
               candles={chartCandles}
@@ -339,6 +316,39 @@ export default async function TickerDayReviewPage({
           ) : (
             <LightweightTradeChart candles={[]} markers={[]} />
           )}
+          </div>
+          {dayTickers.length > 1 ? (
+            <nav aria-label="Tickers traded this day" className="lg:pt-1">
+              <div className="text-[12px] font-semibold text-[var(--muted)]">
+                Traded this day
+              </div>
+              <ul className="mt-2 divide-y divide-[var(--hairline)] border-y border-[var(--hairline)]">
+                {dayTickers.map((ticker) => (
+                  <li key={ticker.symbol}>
+                    {ticker.symbol === symbol ? (
+                      <span className="flex items-baseline justify-between gap-2 border-l-2 border-[var(--accent)] py-2 pl-2.5 pr-1 text-[13px] font-semibold text-[var(--foreground)]">
+                        {ticker.symbol}
+                        <span className={`font-mono text-[12px] tabular-nums ${ticker.pnl > 0 ? "text-[var(--green)]" : ticker.pnl < 0 ? "text-[var(--red)]" : "text-[var(--muted)]"}`}>
+                          {formatSignedMoney(ticker.pnl)}
+                        </span>
+                      </span>
+                    ) : (
+                      <a
+                        href={`/trades/review?date=${date}&symbol=${ticker.symbol}&returnTo=${encodeURIComponent(backHref)}`}
+                        className="flex items-baseline justify-between gap-2 border-l-2 border-transparent py-2 pl-2.5 pr-1 text-[13px] font-semibold text-[var(--muted)] transition-colors hover:border-[var(--border)] hover:text-[var(--foreground)]"
+                      >
+                        {ticker.symbol}
+                        <span className={`font-mono text-[12px] tabular-nums ${ticker.pnl > 0 ? "text-[var(--green)]" : ticker.pnl < 0 ? "text-[var(--red)]" : "text-[var(--muted)]"}`}>
+                          {formatSignedMoney(ticker.pnl)}
+                        </span>
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ) : null}
+          </div>
           <TickerReviewWorkspace
             key={`${date}:${symbol}:${tickerReviewNote[0]?.lessons ?? ""}`}
             date={date}
