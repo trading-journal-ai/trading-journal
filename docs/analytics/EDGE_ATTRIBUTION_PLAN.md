@@ -26,6 +26,26 @@
 | Volume state / failed breaks / VWAP at entry | already in opportunity context | |
 | Time-of-day / price band / hold time | already in fact-pack segments | |
 
+## Owner's mental-stop model (stated 2026-07-21 — use as calibration, not guesses)
+
+- **Structural stop:** break of the previous candle's low. Computable at
+  entry: `naturalStopDistance = entry − prior 1-min bar low`.
+- **Band stop:** 10–20¢ per share. **Anything beyond 20¢ is "holding and
+  hoping"** — the owner's own definition of a broken loss.
+- **The breathing problem:** stocks wiggle (ATR); a band stop inside the
+  stock's normal per-minute range gets shaken or widened ("you try to make
+  it work"). Measure the tension as `stopBand ÷ ATR` per trade.
+
+Derived deterministic checks (no annotation needed):
+
+1. **Born-as-hold-and-hope flag:** `naturalStopDistance > 20¢` at entry —
+   structure and band rule conflicted before the first tick against you.
+2. **Loss buckets by the owner's bands:** ≤10¢ / 10–20¢ / >20¢ per share;
+   report share of total losing dollars in the >20¢ bucket.
+3. **Breathing conflict:** entries where ATR ≥ the intended band (using
+   10–20¢ as default band until per-trade stops are captured) — days when
+   discipline was fighting physics, not emotion.
+
 ## Features that require annotation (forward capture)
 
 | Feature | Why the machine can't | Capture |
