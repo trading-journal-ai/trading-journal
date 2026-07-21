@@ -3,7 +3,9 @@ import { generateCoachReviewAction, saveDraftCoachReviewAction } from "@/app/coa
 import { saveCoachExperimentAction } from "@/app/journal/actions";
 import { db, schema } from "@/lib/db";
 import { parseCoachStoredReview, type CoachStoredReview } from "@/lib/coach/generatedReview";
+import CoachOutputTabs from "@/components/CoachOutputTabs";
 import CollapsibleSection from "@/components/CollapsibleSection";
+import PendingSubmitButton from "@/components/PendingSubmitButton";
 import { buildSessionFactPack, type SessionFactPack } from "@/lib/coach/reviewEngine";
 import { shortEntryReason, type TradeOpportunityContext } from "@/lib/coach/opportunityContext";
 import { opportunityContextsForTrades } from "@/lib/coach/opportunityContextService";
@@ -1565,20 +1567,44 @@ function DayReviewSection({
                 title="✳ Coach review"
                 status={coachSectionStatus(dayCoach.savedReview)}
               >
-                <CoachContextFlow
-                  data={data}
-                  reviewScope={dayCoach.reviewScope}
-                  recapNote={dayCoach.recapNote}
-                  savedReview={dayCoach.savedReview}
-                  readOnly={dayCoach.readOnly}
-                />
-                <StarterCoachRead
-                  factPack={data.coachRead}
-                  reviewScope={dayCoach.reviewScope}
-                  savedExperiment={dayCoach.savedExperiment}
-                  savedReview={dayCoach.savedReview}
-                  readOnly={dayCoach.readOnly}
-                  showReviewActions={false}
+                <CoachOutputTabs
+                  hasAiReview={Boolean(
+                    dayCoach.savedReview?.storedReview &&
+                    "review" in dayCoach.savedReview.storedReview,
+                  )}
+                  deterministic={
+                    <StarterCoachRead
+                      factPack={data.coachRead}
+                      reviewScope={dayCoach.reviewScope}
+                      savedExperiment={dayCoach.savedExperiment}
+                      savedReview={dayCoach.savedReview}
+                      readOnly={dayCoach.readOnly}
+                      showReviewActions={false}
+                      output="deterministic"
+                    />
+                  }
+                  ai={
+                    <div>
+                      <CoachContextFlow
+                        data={data}
+                        reviewScope={dayCoach.reviewScope}
+                        recapNote={dayCoach.recapNote}
+                        savedReview={dayCoach.savedReview}
+                        readOnly={dayCoach.readOnly}
+                      />
+                      <div className="mt-6">
+                        <StarterCoachRead
+                          factPack={data.coachRead}
+                          reviewScope={dayCoach.reviewScope}
+                          savedExperiment={dayCoach.savedExperiment}
+                          savedReview={dayCoach.savedReview}
+                          readOnly={dayCoach.readOnly}
+                          showReviewActions={false}
+                          output="ai"
+                        />
+                      </div>
+                    </div>
+                  }
                 />
               </CollapsibleSection>
             </div>
@@ -1980,9 +2006,11 @@ function CoachContextFlow({
             <form action={generateCoachReviewAction}>
               <input type="hidden" name="scope" value={reviewScope.scope} />
               <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
-              <button type="submit" className="h-9 rounded-md bg-[var(--foreground)] px-4 text-[12px] font-semibold text-[var(--background)] transition-opacity hover:opacity-90">
-                {generated ? "Regenerate coach review" : "Generate coach review"}
-              </button>
+              <PendingSubmitButton
+                label={generated ? "Regenerate coach review" : "Generate coach review"}
+                pendingLabel="Generating — asking the coach…"
+                className="h-9 rounded-md bg-[var(--foreground)] px-4 text-[12px] font-semibold text-[var(--background)] transition-opacity hover:opacity-90"
+              />
             </form>
             <form action={saveDraftCoachReviewAction}>
               <input type="hidden" name="scope" value={reviewScope.scope} />
@@ -2028,6 +2056,7 @@ function StarterCoachRead({
   savedReview,
   readOnly,
   showReviewActions = true,
+  output = "full",
 }: {
   factPack: SessionFactPack;
   reviewScope: ReviewScope;
@@ -2035,6 +2064,8 @@ function StarterCoachRead({
   savedReview: SavedCoachReview | null;
   readOnly: boolean;
   showReviewActions?: boolean;
+  /** "deterministic" = fact sections only; "ai" = payload/review only. */
+  output?: "full" | "deterministic" | "ai";
 }) {
   const topSurprise = factPack.surprises[0];
   const experiment = factPack.experiment;
@@ -2051,6 +2082,7 @@ function StarterCoachRead({
 
   return (
     <section className="pt-2">
+      {output !== "ai" ? (<>
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <h2 className="text-[13px] font-semibold text-[var(--coach)]">✳ Automatic review</h2>
@@ -2169,8 +2201,10 @@ function StarterCoachRead({
           {factPack.confidence.limitations.join(" ")}
         </p>
       ) : null}
+      </>) : null}
 
-      <div className="mt-5 border-t border-[var(--hairline)] pt-4">
+      {output !== "deterministic" ? (
+      <div className={`border-t border-[var(--hairline)] pt-4 ${output === "ai" ? "border-t-0 pt-0" : "mt-5"}`}>
         <div className="text-[12px] text-[var(--muted)]">Coach review payload</div>
         <p className="mt-2 max-w-[760px] text-sm leading-6 text-[var(--body)]">
           This uses the exact context package: playbook, rubric, deterministic facts,
@@ -2181,12 +2215,11 @@ function StarterCoachRead({
             <form action={generateCoachReviewAction}>
               <input type="hidden" name="scope" value={reviewScope.scope} />
               <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
-              <button
-                type="submit"
+              <PendingSubmitButton
+                label={generatedReview ? "Regenerate coach review" : "Ask Coach"}
+                pendingLabel="Generating — asking the coach…"
                 className="h-8 rounded-md border border-[var(--foreground)] bg-[var(--foreground)] px-3 text-[12px] font-semibold text-[var(--background)] transition-opacity hover:opacity-90"
-              >
-                {generatedReview ? "Regenerate coach review" : "Ask Coach"}
-              </button>
+              />
             </form>
             <form action={saveDraftCoachReviewAction}>
               <input type="hidden" name="scope" value={reviewScope.scope} />
@@ -2275,8 +2308,14 @@ function StarterCoachRead({
           <p className="mt-4 max-w-[760px] border-l border-[var(--hairline)] pl-4 text-sm leading-6 text-[var(--body)]">
             No approved static coach review is seeded for this period yet.
           </p>
+        ) : output === "ai" ? (
+          <p className="mt-4 max-w-[760px] border-l border-[var(--hairline)] pl-4 text-sm leading-6 text-[var(--body)]">
+            No AI review yet for this day. Add context above (or generate as-is) —
+            the review will say plainly what it could and couldn&apos;t judge.
+          </p>
         ) : null}
       </div>
+      ) : null}
     </section>
   );
 }
