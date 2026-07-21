@@ -79,6 +79,11 @@ Each versioned setup evaluator returns one of:
 It also returns confidence, stable reason codes, and the calculation version.
 The frozen result is not rewritten after notes or P&L become available.
 
+Directional alignment can be evaluated before a setup is named. Setup-specific
+validity cannot: when a setup still contains `TODO` criteria in
+[SETUPS.md](SETUPS.md), return insufficient evidence rather than silently
+inventing entry, volume, or invalidation rules.
+
 ### 4. Add the trader's context
 
 Notes, tags, emotions, and stated setup explain what the trader saw. They may

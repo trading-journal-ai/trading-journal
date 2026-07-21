@@ -21,7 +21,13 @@ import { MARKET_TZ, REVIEW_SESSION_WINDOW, zonedDateTimeToUtcMs } from "@/lib/ti
 import type { Candle } from "@/lib/candles/massive";
 import type { ConfidenceLabel } from "@/lib/coach/reviewEngine";
 import { marketIndicatorSeries } from "@/lib/marketIndicators";
-import { evaluateFylMarketRead, type FylMarketRead } from "@/lib/coach/fylMarketRead";
+import {
+  evaluateFylDirectionalOpportunity,
+  evaluateFylMarketRead,
+  type FylDirectionalOpportunity,
+  type FylMarketRead,
+} from "@/lib/coach/fylMarketRead";
+import { evaluatePriceActionRead, type PriceActionRead } from "@/lib/coach/priceActionRead";
 
 /**
  * Calibration v1 (2026-07-21): thresholds swept against the 2026-01→07
@@ -48,6 +54,9 @@ export const OPPORTUNITY_CALIBRATION = {
   attemptConfirmBars: 2,
   swingPivotBars: 3,
   compressionAtrMult: 1.5,
+  emaSlopeLookbackBars: 5,
+  /** Candidate FYL prior: total EMA change over five bars, normalized by ATR. */
+  emaSlopeFlatAtr: 0.05,
   /** v1: median capture on ≥1 ATR moves was 0.16; flag only the round-trips (p25). */
   capturePoorRatio: 0.01,
   captureMinMfeAtr: 1.0,
@@ -60,6 +69,7 @@ export type VolumeState = "expanding" | "stable" | "declining";
 export type EmaStackState = "bullish" | "bearish" | "touching";
 export type EmaCrossDirection = "bullish" | "bearish";
 export type EmaRailRelationship = "above" | "inside" | "below";
+export type EmaSlopeState = "rising" | "falling" | "mixed" | "flat";
 
 export type PriceStructureLabel =
   | "hh_hl"
@@ -100,11 +110,16 @@ export type AnatomyBar = {
   lastEmaCross: EmaCrossDirection | null;
   barsSinceEmaCross: number | null;
   priceVsEmaRail: EmaRailRelationship | null;
+  ema9SlopeAtr: number | null;
+  ema20SlopeAtr: number | null;
+  emaSpreadAtr: number | null;
+  emaSlope: EmaSlopeState | null;
   vwap: number | null;
   atr: number | null;
   volumeState: VolumeState | null;
   failedAttempts: number;
   structure: PriceStructureLabel;
+  priceActionRead: PriceActionRead | null;
   lastSwingHigh: number | null;
   lastSwingLow: number | null;
   /** Closed bars so far within the review window. */
@@ -137,7 +152,13 @@ export type OpportunityAtEntry = {
   lastEmaCross: EmaCrossDirection | null;
   barsSinceEmaCross: number | null;
   priceVsEmaRail: EmaRailRelationship | null;
+  ema9SlopeAtr: number | null;
+  ema20SlopeAtr: number | null;
+  emaSpreadAtr: number | null;
+  emaSlope: EmaSlopeState | null;
   fylMarketRead: FylMarketRead;
+  fylDirectionalOpportunity: FylDirectionalOpportunity;
+  priceActionRead: PriceActionRead | null;
   volumeState: VolumeState | null;
   priceStructure: PriceStructureLabel | null;
   failedAttemptCount: number | null;
@@ -225,6 +246,7 @@ export function sessionAnatomy(symbol: string, date: string, candles: Candle[]):
   const trueRanges: number[] = [];
   const swingHighs: number[] = [];
   const swingLows: number[] = [];
+  const reviewHistory: Candle[] = [];
   let prevClose: number | null = null;
   let lastDirectionalEmaStack: Exclude<EmaStackState, "touching"> | null = null;
   let lastEmaCross: EmaCrossDirection | null = null;
@@ -268,6 +290,7 @@ export function sessionAnatomy(symbol: string, date: string, candles: Candle[]):
 
     if (inReview) {
       barsSinceOpen += 1;
+      reviewHistory.push(bar);
 
       // Failed HOD-break attempts, judged against the pre-attempt high.
       const priorHigh = runningHigh;
@@ -323,6 +346,37 @@ export function sessionAnatomy(symbol: string, date: string, candles: Candle[]):
         : bar.c < Math.min(ema9, ema20)
           ? "below"
           : "inside";
+    const reviewIndex = reviewHistory.length - 1;
+    const slopeStart = reviewBars[reviewIndex - cal.emaSlopeLookbackBars];
+    const priorEma9 = slopeStart == null ? null : ema9ByTime.get(slopeStart.t) ?? null;
+    const priorEma20 = slopeStart == null ? null : ema20ByTime.get(slopeStart.t) ?? null;
+    const ema9SlopeAtr = ema9 != null && priorEma9 != null && atr != null && atr > 0
+      ? (ema9 - priorEma9) / atr
+      : null;
+    const ema20SlopeAtr = ema20 != null && priorEma20 != null && atr != null && atr > 0
+      ? (ema20 - priorEma20) / atr
+      : null;
+    const emaSpreadAtr = ema9 != null && ema20 != null && atr != null && atr > 0
+      ? Math.abs(ema9 - ema20) / atr
+      : null;
+    const slopeDirection = (slope: number | null): "rising" | "falling" | "flat" | null => slope == null
+      ? null
+      : slope > cal.emaSlopeFlatAtr
+        ? "rising"
+        : slope < -cal.emaSlopeFlatAtr
+          ? "falling"
+          : "flat";
+    const ema9Direction = slopeDirection(ema9SlopeAtr);
+    const ema20Direction = slopeDirection(ema20SlopeAtr);
+    const emaSlope: EmaSlopeState | null = ema9Direction == null || ema20Direction == null
+      ? null
+      : ema9Direction === "rising" && ema20Direction === "rising"
+        ? "rising"
+        : ema9Direction === "falling" && ema20Direction === "falling"
+          ? "falling"
+          : ema9Direction === "flat" && ema20Direction === "flat"
+            ? "flat"
+            : "mixed";
 
     // Swing pivots confirmed `swingPivotBars` bars after the fact (causal).
     const k = cal.swingPivotBars;
@@ -354,6 +408,9 @@ export function sessionAnatomy(symbol: string, date: string, candles: Candle[]):
         structure = "transitioning";
       }
     }
+    const priceActionRead = inReview
+      ? evaluatePriceActionRead(reviewHistory, { atr, structure })
+      : null;
 
     bars.push({
       t: bar.t,
@@ -372,11 +429,16 @@ export function sessionAnatomy(symbol: string, date: string, candles: Candle[]):
       lastEmaCross,
       barsSinceEmaCross,
       priceVsEmaRail,
+      ema9SlopeAtr,
+      ema20SlopeAtr,
+      emaSpreadAtr,
+      emaSlope,
       vwap: vwapByTime.get(bar.t) ?? null,
       atr,
       volumeState,
       failedAttempts,
       structure,
+      priceActionRead,
       lastSwingHigh: swingHighs.length > 0 ? swingHighs[swingHighs.length - 1] : null,
       lastSwingLow: swingLows.length > 0 ? swingLows[swingLows.length - 1] : null,
       barsSinceOpen,
@@ -396,7 +458,12 @@ export function anatomyAt(anatomy: SessionAnatomy, at: number): AnatomyBar | nul
   return result;
 }
 
-function buildAtEntry(snap: AnatomyBar, at: number, price: number): OpportunityAtEntry {
+function buildAtEntry(
+  snap: AnatomyBar,
+  at: number,
+  price: number,
+  side: "long" | "short",
+): OpportunityAtEntry {
   const cal = OPPORTUNITY_CALIBRATION;
   const band = snap.atr != null ? cal.bandAtr * snap.atr : null;
 
@@ -442,6 +509,16 @@ function buildAtEntry(snap: AnatomyBar, at: number, price: number): OpportunityA
         : "below";
   }
 
+  const fylMarketRead = evaluateFylMarketRead({
+    structure: snap.structure,
+    emaStack: snap.emaStack,
+    lastEmaCross: snap.lastEmaCross,
+    barsSinceEmaCross: snap.barsSinceEmaCross,
+    priceVsEmaRail: snap.priceVsEmaRail,
+    emaSlope: snap.emaSlope,
+    vwapRelationship,
+  });
+
   return {
     at,
     price,
@@ -457,14 +534,13 @@ function buildAtEntry(snap: AnatomyBar, at: number, price: number): OpportunityA
     lastEmaCross: snap.lastEmaCross,
     barsSinceEmaCross: snap.barsSinceEmaCross,
     priceVsEmaRail: snap.priceVsEmaRail,
-    fylMarketRead: evaluateFylMarketRead({
-      structure: snap.structure,
-      emaStack: snap.emaStack,
-      lastEmaCross: snap.lastEmaCross,
-      barsSinceEmaCross: snap.barsSinceEmaCross,
-      priceVsEmaRail: snap.priceVsEmaRail,
-      vwapRelationship,
-    }),
+    ema9SlopeAtr: snap.ema9SlopeAtr,
+    ema20SlopeAtr: snap.ema20SlopeAtr,
+    emaSpreadAtr: snap.emaSpreadAtr,
+    emaSlope: snap.emaSlope,
+    fylMarketRead,
+    fylDirectionalOpportunity: evaluateFylDirectionalOpportunity(fylMarketRead, side),
+    priceActionRead: snap.priceActionRead,
     volumeState: snap.volumeState,
     priceStructure: snap.structure,
     failedAttemptCount: snap.failedAttempts,
@@ -516,22 +592,41 @@ function conclusionFor(
   const mins = atEntry.minutesSinceHigh;
   const vol = atEntry.volumeState ?? "unknown";
   const fails = atEntry.failedAttemptCount ?? 0;
+  const scene = [
+    atEntry.fylMarketRead.headline,
+    atEntry.priceActionRead?.headline,
+    atEntry.fylDirectionalOpportunity.headline,
+  ].filter((sentence): sentence is string => Boolean(sentence)).join(" ");
+
+  if (atEntry.fylDirectionalOpportunity.status === "contradicted") {
+    const emaProof = atEntry.emaStack === "bearish"
+      ? "the 20 EMA was above the 9"
+      : atEntry.emaStack === "bullish"
+        ? "the 9 EMA was above the 20"
+        : "the EMA rail was undecided";
+    const vwapProof = atEntry.vwapRelationship === "below"
+      ? "price was below VWAP"
+      : atEntry.vwapRelationship === "above"
+        ? "price was above VWAP"
+        : "price was near VWAP";
+    return `${scene} ${emaProof[0].toUpperCase()}${emaProof.slice(1)}, and ${vwapProof}.`;
+  }
 
   switch (classification) {
     case "developing":
-      return `${symbol} was still building when you entered — ${mins} min from the last high with volume ${vol}. The move was alive.`;
+      return `${scene} ${symbol} was still building when you entered. The last high was ${mins} min earlier and volume was ${vol}.`;
     case "still-valid":
-      return `The ${symbol} entry was near a real decision point — ${ext} ATR from ${atEntry.referenceLevel?.kind ?? "support"}, ${mins} min from the high. The opportunity was still there.`;
+      return `${scene} The ${symbol} entry was near a real decision point, ${ext} ATR from ${atEntry.referenceLevel?.kind ?? "support"} and ${mins} min from the high.`;
     case "weakening":
-      return `${symbol} was fading at entry — ${mins} min without a new high and volume ${vol}. The move needed proof it wasn't done.`;
+      return `${scene} ${symbol} had gone ${mins} min without a new high and volume was ${vol}. The move needed fresh proof before another entry.`;
     case "move-mature":
-      return `${symbol} looked done before this entry — ${mins} min past the high, ${ext} ATR above the last decision point, volume ${vol}${fails > 0 ? `, ${fails} failed break${fails === 1 ? "" : "s"} already` : ""}. The move was mature before you clicked.`;
+      return `${scene} The easy part of the ${symbol} move had likely passed: ${mins} min since the high, ${ext} ATR above the last decision point, with volume ${vol}${fails > 0 ? ` and ${fails} failed break${fails === 1 ? "" : "s"}` : ""}.`;
     case "valid-stock-late-entry":
-      return `Right stock, late click — the entry paid up ${ext} ATR above the last decision point${mins != null && mins > 0 ? `, ${mins} min after the high` : ""}. The idea was fine; the entry changed the risk.`;
+      return `${scene} The stock may have been right, but the click was late. You paid ${ext} ATR above the last decision point${mins != null && mins > 0 ? `, ${mins} min after the high` : ""}, which changed the risk.`;
     case "valid-setup-poor-execution":
-      return `The stated setup may have been valid, but execution paid up ${ext} ATR above the decision point. The setup was present; the entry changed the risk.`;
+      return `${scene} The stated setup may have been present, but the entry paid ${ext} ATR above the decision point. The click changed the risk.`;
     case "good-entry-poor-management":
-      return `Good entry, gave it away — the entry was at a real spot, but the trade kept ${postTrade?.captureRatio != null ? `${Math.round(postTrade.captureRatio * 100)}%` : "little"} of the best it offered. The exit lost this trade, not the entry.`;
+      return `${scene} The entry was at a real spot, but the trade kept ${postTrade?.captureRatio != null ? `${Math.round(postTrade.captureRatio * 100)}%` : "little"} of the best it offered. The management gave away a sound entry.`;
     case "cannot-determine":
       return `Not enough chart data to judge this ${symbol} entry.`;
   }
@@ -547,6 +642,19 @@ export function shortEntryReason(ctx: TradeOpportunityContext): string | null {
   const ext = atEntry.extensionAtr != null ? round1(atEntry.extensionAtr) : null;
   const mins = atEntry.minutesSinceHigh;
 
+  if (atEntry.fylDirectionalOpportunity.status === "contradicted") {
+    if (atEntry.emaStack === "bearish" && atEntry.priceVsEmaRail === "below") {
+      return "were trading against the chart—the 20 EMA was above the 9 and price was below the rail";
+    }
+    return "were trading against the chart's established direction";
+  }
+  if (atEntry.priceActionRead?.participation === "climax_without_progress") {
+    return "entered as volume increased but price stopped making progress";
+  }
+  if (atEntry.priceActionRead?.isConsolidating) {
+    return "entered while price was still tightening inside the range";
+  }
+
   switch (ctx.classification) {
     case "move-mature":
       return `entered ${mins} min past the high, ${ext} ATR extended`;
@@ -556,10 +664,12 @@ export function shortEntryReason(ctx: TradeOpportunityContext): string | null {
     case "weakening":
       return `${mins} min past the high on ${atEntry.volumeState ?? "fading"} volume`;
     case "developing":
-      return `entered ${mins} min from the high, volume ${atEntry.volumeState ?? "building"}`;
+      return atEntry.fylDirectionalOpportunity.status === "supported"
+        ? `bought with the trend ${mins} min from the high as volume ${atEntry.volumeState ?? "built"}`
+        : `entered ${mins} min from the high as volume ${atEntry.volumeState ?? "built"}`;
     case "still-valid":
       return atEntry.referenceLevel
-        ? `entered near ${atEntry.referenceLevel.kind === "vwap" ? "VWAP" : `the last ${atEntry.referenceLevel.kind.replace("-", " ")}`}`
+        ? `${atEntry.fylDirectionalOpportunity.status === "supported" ? "bought with the trend" : "entered"} near ${atEntry.referenceLevel.kind === "vwap" ? "VWAP" : `the last ${atEntry.referenceLevel.kind.replace("-", " ")}`}`
         : null;
     case "good-entry-poor-management":
       return ctx.postTrade?.captureRatio != null
@@ -608,7 +718,7 @@ export function opportunityContextForTrade(
   }
 
   const missingContext: string[] = [];
-  const atEntry = buildAtEntry(snap, trade.entryAt, trade.entryPrice);
+  const atEntry = buildAtEntry(snap, trade.entryAt, trade.entryPrice, "long");
   if (snap.atr == null) missingContext.push("ATR still warming up at entry");
   if (snap.premarketHigh == null) missingContext.push("premarket bars unavailable");
   if (!trade.setup) missingContext.push("trade intent (setup) not recorded");
@@ -694,7 +804,7 @@ export function opportunityContextForTrade(
   const adverseAddContexts = (options?.adverseAddTimes ?? [])
     .map((at) => {
       const addSnap = anatomyAt(anatomy, at);
-      return addSnap ? buildAtEntry(addSnap, at, trade.entryPrice!) : null;
+      return addSnap ? buildAtEntry(addSnap, at, trade.entryPrice!, "long") : null;
     })
     .filter((ctx): ctx is OpportunityAtEntry => ctx != null);
 
