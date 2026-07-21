@@ -34,6 +34,14 @@ describe("evaluatePriceActionRead", () => {
     expect(read!.participation).toBe("expanding");
   });
 
+  it("keeps orderly lower-energy progress separate from expansion", () => {
+    const bars = directionalBars(24, 10, 0.02, 100);
+    const read = evaluatePriceActionRead(bars, { atr: 0.2, structure: "hh_hl" });
+
+    expect(read!.quality).toBe("tight_grind");
+    expect(read!.phase).toBe("continuation_reclaim");
+  });
+
   it("identifies tightening range and volume as consolidation", () => {
     const prior = directionalBars(12, 10, 0.2, 200);
     const tight = Array.from({ length: 12 }, (_, index) => {
