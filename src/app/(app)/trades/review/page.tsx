@@ -97,6 +97,15 @@ export default async function TickerDayReviewPage({
   const trades = dayTrades.filter((trade) => trade.symbol === symbol);
   const tradeIds = trades.map((trade) => trade.id);
 
+  // Every ticker traded this day, for switching without leaving the review.
+  const pnlBySymbol = new Map<string, number>();
+  for (const trade of dayTrades) {
+    pnlBySymbol.set(trade.symbol, (pnlBySymbol.get(trade.symbol) ?? 0) + (netPnl(trade) ?? 0));
+  }
+  const dayTickers = [...pnlBySymbol.entries()]
+    .map(([tickerSymbol, pnl]) => ({ symbol: tickerSymbol, pnl }))
+    .sort((a, b) => b.pnl - a.pnl);
+
   const execs =
     tradeIds.length > 0
       ? await db
@@ -207,6 +216,7 @@ export default async function TickerDayReviewPage({
     return {
       id: trade.id,
       number: index + 1,
+      entryAt: trade.entryAt,
       entryTime: formatTradeTime(trade.entryAt),
       shares: Math.abs(trade.quantity).toLocaleString("en-US"),
       executions: (executionCountByTradeId.get(trade.id) ?? 0).toLocaleString("en-US"),
@@ -263,6 +273,31 @@ export default async function TickerDayReviewPage({
             pnl={{ value: totalPnl, formatted: `${totalPnl > 0 ? "+" : ""}${fmtMoney(totalPnl)}` }}
             metrics={summaryStats}
           />
+          {dayTickers.length > 1 ? (
+            <nav aria-label="Tickers traded this day" className="mt-4 flex flex-wrap items-center gap-1.5">
+              {dayTickers.map((ticker) =>
+                ticker.symbol === symbol ? (
+                  <span
+                    key={ticker.symbol}
+                    className="rounded-full bg-[var(--foreground)] px-3 py-1 text-[12px] font-semibold text-[var(--background)]"
+                  >
+                    {ticker.symbol}
+                  </span>
+                ) : (
+                  <a
+                    key={ticker.symbol}
+                    href={`/trades/review?date=${date}&symbol=${ticker.symbol}&returnTo=${encodeURIComponent(backHref)}`}
+                    className="rounded-full border border-[var(--border)] px-3 py-1 text-[12px] font-semibold text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
+                  >
+                    {ticker.symbol}
+                    <span className={`ml-1.5 font-mono tabular-nums ${ticker.pnl > 0 ? "text-[var(--green)]" : ticker.pnl < 0 ? "text-[var(--red)]" : ""}`}>
+                      {formatSignedMoney(ticker.pnl)}
+                    </span>
+                  </a>
+                ),
+              )}
+            </nav>
+          ) : null}
         </div>
       </div>
 
