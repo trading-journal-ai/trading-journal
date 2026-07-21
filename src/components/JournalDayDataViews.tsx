@@ -142,6 +142,8 @@ export default function JournalReviewModule({
   comparisons,
   date,
   returnTo,
+  weekCoachSlot,
+  monthCoachSlot,
 }: {
   pnlContent: ReactNode;
   tradeRows: JournalDayTradeRow[];
@@ -157,6 +159,9 @@ export default function JournalReviewModule({
   comparisons: JournalComparisonData;
   date: string;
   returnTo: string;
+  /** Server-rendered week/month coach review panels (generation lives here). */
+  weekCoachSlot?: ReactNode;
+  monthCoachSlot?: ReactNode;
 }) {
   const [scope, setScope] = useState<JournalDataScope>("day");
   const [view, setView] = useState<JournalDataView>("pnl");
@@ -193,8 +198,8 @@ export default function JournalReviewModule({
             returnTo={returnTo}
           />
         ) : null}
-        {scope === "week" ? <WeekViews view={view} data={comparisons.week} /> : null}
-        {scope === "month" ? <MonthViews view={view} data={comparisons.month} /> : null}
+        {scope === "week" ? <WeekViews view={view} data={comparisons.week} coachSlot={weekCoachSlot} /> : null}
+        {scope === "month" ? <MonthViews view={view} data={comparisons.month} coachSlot={monthCoachSlot} /> : null}
       </div>
     </section>
   );
@@ -258,7 +263,7 @@ function DayViews({
   return <CoachRead coach={coach} label="Deterministic diagnosis" />;
 }
 
-function WeekViews({ view, data }: { view: JournalDataView; data: JournalComparisonData["week"] }) {
+function WeekViews({ view, data, coachSlot }: { view: JournalDataView; data: JournalComparisonData["week"]; coachSlot?: ReactNode }) {
   if (view === "pnl") {
     return (
       <div role="tabpanel">
@@ -305,10 +310,15 @@ function WeekViews({ view, data }: { view: JournalDataView; data: JournalCompari
     );
   }
 
-  return <CoachRead coach={data.coach} label="Weekly read" />;
+  return (
+    <div role="tabpanel" className="space-y-8">
+      <CoachRead coach={data.coach} label="Weekly read" />
+      {coachSlot ?? null}
+    </div>
+  );
 }
 
-function MonthViews({ view, data }: { view: JournalDataView; data: JournalComparisonData["month"] }) {
+function MonthViews({ view, data, coachSlot }: { view: JournalDataView; data: JournalComparisonData["month"]; coachSlot?: ReactNode }) {
   if (view === "pnl") {
     return (
       <div role="tabpanel">
@@ -353,7 +363,12 @@ function MonthViews({ view, data }: { view: JournalDataView; data: JournalCompar
     );
   }
 
-  return <CoachRead coach={data.coach} label="Monthly read" />;
+  return (
+    <div role="tabpanel" className="space-y-8">
+      <CoachRead coach={data.coach} label="Monthly read" />
+      {coachSlot ?? null}
+    </div>
+  );
 }
 
 function RangeHeader({ summary, question }: { summary: JournalRangeSummary; question: string }) {

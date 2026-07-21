@@ -97,6 +97,15 @@ export default async function TickerDayReviewPage({
   const trades = dayTrades.filter((trade) => trade.symbol === symbol);
   const tradeIds = trades.map((trade) => trade.id);
 
+  // Every ticker traded this day, for switching without leaving the review.
+  const pnlBySymbol = new Map<string, number>();
+  for (const trade of dayTrades) {
+    pnlBySymbol.set(trade.symbol, (pnlBySymbol.get(trade.symbol) ?? 0) + (netPnl(trade) ?? 0));
+  }
+  const dayTickers = [...pnlBySymbol.entries()]
+    .map(([tickerSymbol, pnl]) => ({ symbol: tickerSymbol, pnl }))
+    .sort((a, b) => b.pnl - a.pnl);
+
   const execs =
     tradeIds.length > 0
       ? await db
@@ -207,6 +216,7 @@ export default async function TickerDayReviewPage({
     return {
       id: trade.id,
       number: index + 1,
+      entryAt: trade.entryAt,
       entryTime: formatTradeTime(trade.entryAt),
       shares: Math.abs(trade.quantity).toLocaleString("en-US"),
       executions: (executionCountByTradeId.get(trade.id) ?? 0).toLocaleString("en-US"),
@@ -273,6 +283,8 @@ export default async function TickerDayReviewPage({
               Estimated chart · reconstructed from executions
             </p>
           ) : null}
+          <div className={dayTickers.length > 1 ? "grid gap-6 lg:grid-cols-[minmax(0,1fr)_170px] lg:items-start" : ""}>
+          <div className="min-w-0">
           {chartCandles.length > 0 ? (
             <LightweightTradeChart
               candles={chartCandles}
@@ -304,6 +316,39 @@ export default async function TickerDayReviewPage({
           ) : (
             <LightweightTradeChart candles={[]} markers={[]} />
           )}
+          </div>
+          {dayTickers.length > 1 ? (
+            <nav aria-label="Tickers traded this day" className="lg:pt-1">
+              <div className="text-[12px] font-semibold text-[var(--muted)]">
+                Traded this day
+              </div>
+              <ul className="mt-2 divide-y divide-[var(--hairline)] border-y border-[var(--hairline)]">
+                {dayTickers.map((ticker) => (
+                  <li key={ticker.symbol}>
+                    {ticker.symbol === symbol ? (
+                      <span className="flex items-baseline justify-between gap-2 border-l-2 border-[var(--accent)] py-2 pl-2.5 pr-1 text-[13px] font-semibold text-[var(--foreground)]">
+                        {ticker.symbol}
+                        <span className={`font-mono text-[12px] tabular-nums ${ticker.pnl > 0 ? "text-[var(--green)]" : ticker.pnl < 0 ? "text-[var(--red)]" : "text-[var(--muted)]"}`}>
+                          {formatSignedMoney(ticker.pnl)}
+                        </span>
+                      </span>
+                    ) : (
+                      <a
+                        href={`/trades/review?date=${date}&symbol=${ticker.symbol}&returnTo=${encodeURIComponent(backHref)}`}
+                        className="flex items-baseline justify-between gap-2 border-l-2 border-transparent py-2 pl-2.5 pr-1 text-[13px] font-semibold text-[var(--muted)] transition-colors hover:border-[var(--border)] hover:text-[var(--foreground)]"
+                      >
+                        {ticker.symbol}
+                        <span className={`font-mono text-[12px] tabular-nums ${ticker.pnl > 0 ? "text-[var(--green)]" : ticker.pnl < 0 ? "text-[var(--red)]" : "text-[var(--muted)]"}`}>
+                          {formatSignedMoney(ticker.pnl)}
+                        </span>
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ) : null}
+          </div>
           <TickerReviewWorkspace
             key={`${date}:${symbol}:${tickerReviewNote[0]?.lessons ?? ""}`}
             date={date}
