@@ -1324,14 +1324,18 @@ function buildDayReviewPresentation(data: ReviewData) {
   return { topSurprise, verdictText, aligned, unresolved, processFacts };
 }
 
+type ModuleCoachSlots = { week?: React.ReactNode; month?: React.ReactNode };
+
 function JournalReviewModuleForDay({
   data,
   returnTo,
   comparisonData,
+  coachSlots,
 }: {
   data: ReviewData;
   returnTo: string;
   comparisonData: JournalComparisonData;
+  coachSlots?: ModuleCoachSlots;
 }) {
   const { day, tickerRows, tradeRows, taggedTrades, pnlPoints, coachRead } = data;
   const { topSurprise, processFacts } = buildDayReviewPresentation(data);
@@ -1343,6 +1347,8 @@ function JournalReviewModuleForDay({
         comparisons={comparisonData}
         date={day.date}
         returnTo={returnTo}
+        weekCoachSlot={coachSlots?.week}
+        monthCoachSlot={coachSlots?.month}
         summary={{
           trades: day.trades,
           accuracy: day.accuracy,
@@ -1390,6 +1396,7 @@ function DayReviewSection({
   showReviewModule = false,
   showContextDetails = false,
   showLegacyPnl = true,
+  coachSlots,
 }: {
   data: ReviewData;
   returnTo: string;
@@ -1397,6 +1404,7 @@ function DayReviewSection({
   showReviewModule?: boolean;
   showContextDetails?: boolean;
   showLegacyPnl?: boolean;
+  coachSlots?: ModuleCoachSlots;
 }) {
   const { day, tickerRows, pnlPoints, keyTradePrompts, worstTrade, coachRead } = data;
   const { verdictText, aligned, unresolved } = buildDayReviewPresentation(data);
@@ -1505,6 +1513,7 @@ function DayReviewSection({
                 data={data}
                 returnTo={returnTo}
                 comparisonData={comparisonData}
+                coachSlots={coachSlots}
               />
             </div>
           ) : null}
@@ -1686,6 +1695,7 @@ function ReviewDayRangeSection({
   showReviewModule = false,
   showContextDetails = false,
   showLegacyPnl = true,
+  coachSlots,
 }: {
   data: ReviewData;
   returnTo: string;
@@ -1693,6 +1703,7 @@ function ReviewDayRangeSection({
   showReviewModule?: boolean;
   showContextDetails?: boolean;
   showLegacyPnl?: boolean;
+  coachSlots?: ModuleCoachSlots;
 }) {
   if (data.day.trades === 0) {
     return (
@@ -1713,6 +1724,7 @@ function ReviewDayRangeSection({
       showReviewModule={showReviewModule}
       showContextDetails={showContextDetails}
       showLegacyPnl={showLegacyPnl}
+      coachSlots={coachSlots}
     />
   );
 }
@@ -2294,6 +2306,23 @@ export default async function TradeJournalReview({
     loadSavedCoachReview(accountId, reviewScope),
     loadScopedRecapNote(accountId, reviewScope),
   ]);
+  // Week/month coach reviews are homed in the day module's Week/Month → Coach
+  // tabs (JOURNAL_NAVIGATION_DECISION.md migration requirement #1).
+  const moduleCoachScopes = preset === "today" && comparisonRanges
+    ? {
+        week: reviewScopeFor("week", rangeForPreset("week", archiveAnchor)),
+        month: reviewScopeFor("month", rangeForPreset("month", archiveAnchor)),
+      }
+    : null;
+  const [weekSavedExperiment, weekSavedReview, monthSavedExperiment, monthSavedReview] =
+    moduleCoachScopes
+      ? await Promise.all([
+          loadSavedCoachExperiment(accountId, moduleCoachScopes.week),
+          loadSavedCoachReview(accountId, moduleCoachScopes.week),
+          loadSavedCoachExperiment(accountId, moduleCoachScopes.month),
+          loadSavedCoachReview(accountId, moduleCoachScopes.month),
+        ])
+      : [null, null, null, null];
   const readOnly = isDemoReadOnly();
   const currentHref = returnTo ?? journalReviewHref(basePath, { preset, date, from, month });
   const breadcrumbBack = backHref
@@ -2352,6 +2381,26 @@ export default async function TradeJournalReview({
               showReviewModule
               showContextDetails
               showLegacyPnl={false}
+              coachSlots={moduleCoachScopes && comparisonRanges ? {
+                week: (
+                  <StarterCoachRead
+                    factPack={comparisonRanges[0].coachRead}
+                    reviewScope={moduleCoachScopes.week}
+                    savedExperiment={weekSavedExperiment}
+                    savedReview={weekSavedReview}
+                    readOnly={readOnly}
+                  />
+                ),
+                month: (
+                  <StarterCoachRead
+                    factPack={comparisonRanges[1].coachRead}
+                    reviewScope={moduleCoachScopes.month}
+                    savedExperiment={monthSavedExperiment}
+                    savedReview={monthSavedReview}
+                    readOnly={readOnly}
+                  />
+                ),
+              } : undefined}
             />
           ) : preset === "month" ? (
             <div className="space-y-14">
