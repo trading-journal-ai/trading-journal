@@ -91,9 +91,13 @@ per-day computation: **expansion is the trigger, not scroll.**
 
 ## Open questions (settle during implementation)
 
-1. Which sections are always-visible per day vs collapsed? (Working default:
-   verdict + process read + stat strip visible; module, annotation prompts,
-   coach flow collapsed except on the focused day.)
+1. Which sections are always-visible per day vs collapsed? **DECIDED
+   2026-07-21 (owner ruling, after trying broader collapse in the archive):
+   only the coach review collapses.** Verdict, process read, stat strip,
+   module, and annotation queue are always visible — they are the working
+   surface. The coach review is the single Hide/Open section (status line
+   carries both tiers' states). Do not fold the module or annotation queue
+   behind disclosure again.
 2. Does collapse state persist per user (remember what I keep open) or reset
    per visit?
 3. Virtualization/pagination for long scrolls (a month is ~22 entries; likely
