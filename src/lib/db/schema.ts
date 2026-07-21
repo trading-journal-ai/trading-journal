@@ -89,6 +89,7 @@ export const executions = sqliteTable(
     fees: real("fees").notNull().default(0),
     route: text("route"),
     posEffect: text("pos_effect"), // TO OPEN | TO CLOSE (from TOS) — drives matching
+    brokerOrderKey: text("broker_order_key"), // hashed broker order reference; groups partial fills
     tradeId: integer("trade_id").references(() => trades.id),
     accountId: integer("account_id").references(() => accounts.id),
     importBatchId: integer("import_batch_id").references(() => importBatches.id),
@@ -98,6 +99,7 @@ export const executions = sqliteTable(
     uniqueIndex("executions_source_row_hash_account_unq").on(t.sourceRowHash, t.accountId),
     index("executions_trade_executed_idx").on(t.tradeId, t.executedAt),
     index("executions_account_executed_idx").on(t.accountId, t.executedAt),
+    index("executions_account_order_key_idx").on(t.accountId, t.brokerOrderKey),
   ],
 );
 
@@ -118,6 +120,31 @@ export const candles = sqliteTable(
   (tbl) => [
     uniqueIndex("candles_symbol_tf_t_unq").on(tbl.symbol, tbl.timeframe, tbl.t),
   ],
+);
+
+/**
+ * Immutable-by-source daily market-context snapshot. Retrospective Massive
+ * summaries can later be superseded by a captured Stock Info snapshot without
+ * coupling Journal reads to either provider being online.
+ */
+export const marketContextDays = sqliteTable(
+  "market_context_days",
+  {
+    sessionDateEt: text("session_date_et").primaryKey(),
+    source: text("source", { enum: ["massive_grouped_daily", "stock_info"] }).notNull(),
+    provenance: text("provenance", { enum: ["retrospective", "scanner-captured"] }).notNull(),
+    coverageStatus: text("coverage_status", { enum: ["full", "partial", "unavailable"] })
+      .notNull(),
+    sourceVersion: text("source_version").notNull(),
+    payloadJson: text("payload_json").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [index("market_context_days_source_date_idx").on(t.source, t.sessionDateEt)],
 );
 
 /** Reusable free-form tags. */

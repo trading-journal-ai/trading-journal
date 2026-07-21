@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import type { ExecutionLifecycle } from "@/lib/executionAnalysis";
 
 export type ChartCandle = {
   t: number; // epoch seconds (bar start)
@@ -18,8 +19,8 @@ export type ChartMarker = {
   side: "buy" | "sell";
   quantity?: number;
   tradeNumber?: number;
-  pnl?: number;
-  perShare?: number;
+  executionLifecycle?: ExecutionLifecycle;
+  addedAgainstPosition?: boolean;
 };
 
 const W = 900;

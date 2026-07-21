@@ -89,8 +89,10 @@ DAS/TraderVue trade rows: 3735
 - Notes and Tags are blank because Schwab does not provide playbook context.
 - Times are emitted in Eastern market time so the existing trade-summary parser
   can read them correctly.
-- The first version uses `Account Trade History` as the source of truth and Cash
-  Balance only for fees. Account Order History remains context, not fill truth.
+- `Account Trade History` remains the source of truth for individual fills.
+  `Cash Balance` contributes fees and its broker `REF #` is used to group fills
+  produced by the same order. `Account Order History` remains validation
+  context, not fill truth.
 - P&L may not reconcile exactly to statement-level YTD P&L until we decide how
   to treat open positions, earlier statement periods, and any unmatched
   representation quirks.
@@ -115,3 +117,41 @@ synthetic open/close executions because the source does not contain every fill.
 
 The local `broker:normalize` command remains useful as a preview/export helper
 when we want to inspect the canonical table without writing to the app database.
+
+## ThinkorSwim Orders, Fills, and Partial Fills
+
+ThinkorSwim exposes the same activity at three useful levels:
+
+- `Account Trade History` contains the executed fills. These rows retain the
+  actual quantity, price, and execution time and remain immutable source data.
+- `Cash Balance` repeats the fill activity and includes a broker `REF #`. Fills
+  with the same reference belong to the same submitted broker order, even when
+  the broker filled that order in multiple pieces or at multiple prices.
+- `Account Order History` describes the submitted order and its final status.
+  It is useful for validating requested quantity and status, but it is not a
+  replacement for fill-level history.
+
+The app stores a one-way hash of the normalized `REF #` as
+`broker_order_key`. The raw broker reference is not persisted. This lets the
+review layer distinguish an intentional second order from two fills created by
+one order without discarding the underlying fills.
+
+For example, an order to buy 100 shares can appear in Trade History as fills of
+88 and 12 shares. If both Cash Balance rows share one `REF #`, review treats
+them as one 100-share action while retaining two raw fills. It does not label
+the second fill as an add or as averaging down.
+
+Grouping rules are deliberately conservative:
+
+1. Group fills with the same non-empty `broker_order_key`, side, and position
+   effect. Different fill prices and nearby timestamps are allowed.
+2. For older imports without a broker key, group only fills with the exact same
+   execution timestamp, side, and position effect. This supports common TOS
+   partial-fill exports while avoiding a broad time-window guess.
+3. Keep ambiguous rows separate. Proximity within 10–30 seconds alone is not
+   enough evidence that two fills came from one order.
+
+Grouped review actions use quantity-weighted average price and retain their raw
+fill IDs and fill count. Trade reconstruction and audit paths continue to use
+the raw fills. Re-importing a statement is required to recover broker-reference
+grouping for older records whose partial fills occurred at different times.

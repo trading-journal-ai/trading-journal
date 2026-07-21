@@ -22,6 +22,8 @@
   --coach: #3fb950;
   --green-chart: #1db26b;
   --red-chart: #f05143;
+  --execution-buy: #2bd576;
+  --execution-sell: #ff6257;
   --green-tint: rgba(29, 178, 107, 0.14);
   --red-tint: rgba(240, 81, 67, 0.14);
   color-scheme: dark;
@@ -49,6 +51,8 @@
   --coach: #1a7f37;
   --green-chart: #1db26b;
   --red-chart: #f05143;
+  --execution-buy: #00a95c;
+  --execution-sell: #f04438;
   --green-tint: #dafbe1;
   --red-tint: #ffebe9;
   color-scheme: light;
@@ -77,6 +81,8 @@
   --coach: #2e7d5b;
   --green-chart: #2c9a63;
   --red-chart: #c4553f;
+  --execution-buy: #00a95c;
+  --execution-sell: #e54835;
   --green-tint: #e9f2ec;
   --red-tint: #f8eae5;
   color-scheme: light;
@@ -105,6 +111,8 @@
   --coach: #6fae8f;
   --green-chart: #3fa873;
   --red-chart: #c9604b;
+  --execution-buy: #3ddc97;
+  --execution-sell: #ff6b57;
   --green-tint: #223129;
   --red-tint: #362824;
   color-scheme: dark;

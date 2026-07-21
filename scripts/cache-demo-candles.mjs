@@ -143,8 +143,20 @@ function buildUrl(symbol, date, apiKey, adjusted) {
   return url;
 }
 
+const RATE_LIMIT_RETRIES = 5;
+const RATE_LIMIT_WAIT_MS = 65_000; // free-plan windows are per-minute; wait one out
+
 async function fetchCandles(symbol, date, apiKey, adjusted) {
-  const response = await fetch(buildUrl(symbol, date, apiKey, adjusted), { cache: "no-store" });
+  let response;
+  for (let attempt = 0; ; attempt += 1) {
+    response = await fetch(buildUrl(symbol, date, apiKey, adjusted), { cache: "no-store" });
+    if (response.status !== 429) break;
+    if (attempt >= RATE_LIMIT_RETRIES) {
+      throw new Error(`Massive 429: rate limited after ${RATE_LIMIT_RETRIES} retries`);
+    }
+    process.stdout.write(`rate limited, waiting ${Math.round(RATE_LIMIT_WAIT_MS / 1000)}s ... `);
+    await sleep(RATE_LIMIT_WAIT_MS);
+  }
   if (!response.ok) {
     throw new Error(`Massive ${response.status}: ${(await response.text()).slice(0, 160)}`);
   }

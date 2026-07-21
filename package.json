@@ -32,6 +32,7 @@
     "demo:normalize-das": "node scripts/normalize-das-demo-csv.mjs",
     "demo:paper": "node scripts/rebuild-demo-paper-db.mjs && node scripts/seed-demo-journal-notes.mjs --month all && node scripts/seed-demo-coach-reviews.mjs",
     "demo:paper-db": "node scripts/rebuild-demo-paper-db.mjs",
+    "market-context:backfill": "node scripts/backfill-market-context.mjs",
     "broker:inspect": "node scripts/inspect-broker-csv.mjs",
     "broker:normalize": "node scripts/normalize-broker-csv.mjs",
     "coach:eval": "node scripts/coach-eval.mjs",
