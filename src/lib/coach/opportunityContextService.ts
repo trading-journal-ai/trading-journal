@@ -4,7 +4,7 @@
  * ticker-day, and computes per-trade context. The math itself stays pure in
  * opportunityContext.ts.
  */
-import { getCandles } from "@/lib/candles";
+import { getCachedCandles, getCandles } from "@/lib/candles";
 import { MARKET_TZ, etDateString, zonedDateTimeToUtcMs } from "@/lib/time";
 import {
   opportunityContextForTrade,
@@ -33,6 +33,10 @@ function etSeconds(date: string, time: string): number {
 
 export async function opportunityContextsForTrades(
   trades: OpportunityServiceTrade[],
+  options?: {
+    /** Never fetch remotely — degrade missing days to cannot-determine. */
+    cachedOnly?: boolean;
+  },
 ): Promise<Map<number, TradeOpportunityContext>> {
   const anatomies = new Map<string, SessionAnatomy | null>();
 
@@ -41,11 +45,11 @@ export async function opportunityContextsForTrades(
     const date = etDateString(trade.entryAt);
     const key = `${trade.symbol}|${date}`;
     if (anatomies.has(key)) continue;
-    const { candles } = await getCandles(
-      trade.symbol,
-      etSeconds(date, "04:00:00"),
-      etSeconds(date, "20:00:00"),
-    );
+    const from = etSeconds(date, "04:00:00");
+    const to = etSeconds(date, "20:00:00");
+    const candles = options?.cachedOnly
+      ? await getCachedCandles(trade.symbol, from, to)
+      : (await getCandles(trade.symbol, from, to)).candles;
     anatomies.set(key, candles.length > 0 ? sessionAnatomy(trade.symbol, date, candles) : null);
   }
 
