@@ -34,6 +34,7 @@ export type JournalReviewSearchParams = {
 
 type TradeRow = typeof schema.trades.$inferSelect;
 type ExecutionRow = typeof schema.executions.$inferSelect;
+type MarketContextRow = typeof schema.marketContextDays.$inferSelect;
 
 type TickerRow = {
   symbol: string;
@@ -65,6 +66,15 @@ type PnlPoint = {
   value: number;
 };
 
+type JournalMarketContext = {
+  available: boolean;
+  badge: string;
+  headline: string;
+  shortLabel: string;
+  detail: string;
+  caveat: string;
+};
+
 type ReviewData = {
   day: ReviewDay;
   tickerRows: TickerRow[];
@@ -73,6 +83,7 @@ type ReviewData = {
   pnlPoints: PnlPoint[];
   coachRead: SessionFactPack;
   chartRead: JournalChartReadSummary;
+  marketContext: JournalMarketContext;
 };
 
 type ReviewWeek = ReviewSummary & {
@@ -503,6 +514,93 @@ function combineChartReads(reads: JournalChartReadSummary[]): JournalChartReadSu
   return { ...counts, headline: chartReadHeadline(counts) };
 }
 
+function unavailableMarketContext(): JournalMarketContext {
+  return {
+    available: false,
+    badge: "Coverage unavailable",
+    headline: "Scanner and retrospective coverage are unavailable for this session.",
+    shortLabel: "Unavailable",
+    detail: "The journal will not infer whether the market was hot, selective, or slow from trade activity alone.",
+    caveat: "Run the Massive historical backfill or connect a captured Stock Info daily summary to add this evidence.",
+  };
+}
+
+function finitePayloadNumber(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function marketHeatLabel(over50Pct: number, over100Pct: number): string {
+  if (over100Pct >= 2) return "Hot day";
+  if (over100Pct === 1) return "One true leader";
+  if (over50Pct >= 2) return "Active · no 100% leader";
+  if (over50Pct === 1) return "Thin / selective";
+  return "No +50% mover found";
+}
+
+function buildMarketContext(row: MarketContextRow | undefined, trades: TradeRow[]): JournalMarketContext {
+  if (!row || row.coverageStatus === "unavailable") return unavailableMarketContext();
+
+  try {
+    const payload = JSON.parse(row.payloadJson) as Record<string, unknown>;
+    const counts = payload.counts && typeof payload.counts === "object"
+      ? payload.counts as Record<string, unknown>
+      : {};
+    const over50Pct = finitePayloadNumber(counts.over50Pct);
+    const over100Pct = finitePayloadNumber(counts.over100Pct);
+    const over200Pct = finitePayloadNumber(counts.over200Pct);
+    const strongest = payload.strongestMover && typeof payload.strongestMover === "object"
+      ? payload.strongestMover as Record<string, unknown>
+      : null;
+    const strongestSymbol = typeof strongest?.symbol === "string" ? strongest.symbol : null;
+    const strongestMove = finitePayloadNumber(strongest?.maximumMovePct);
+    const candidates = Array.isArray(payload.candidates) ? payload.candidates : [];
+    const candidateSymbols = new Set(
+      candidates.flatMap((candidate) => {
+        if (!candidate || typeof candidate !== "object") return [];
+        const symbol = (candidate as Record<string, unknown>).symbol;
+        return typeof symbol === "string" ? [symbol] : [];
+      }),
+    );
+    const tradedSymbols = new Set(trades.map((trade) => trade.symbol));
+    const participated = [...candidateSymbols].filter((symbol) => tradedSymbols.has(symbol)).length;
+    const heat = marketHeatLabel(over50Pct, over100Pct);
+    const provenanceLabel = row.provenance === "scanner-captured" ? "Scanner captured" : "Retrospective";
+    const coverageLabel = row.coverageStatus === "full" ? "full coverage" : "partial coverage";
+    const moverNoun = over50Pct === 1 ? "stock rose" : "stocks rose";
+    const participation = over50Pct > 0 && trades.length > 0
+      ? ` You traded ${participated} of those ${over50Pct} movers.`
+      : "";
+    const leader = strongestSymbol && strongestMove > 0
+      ? ` ${strongestSymbol} led at +${strongestMove.toLocaleString("en-US", { maximumFractionDigits: 1 })}%.`
+      : "";
+
+    return {
+      available: true,
+      badge: `${provenanceLabel} · ${coverageLabel}`,
+      headline: `${heat} · ${over100Pct} cleared +100%`,
+      shortLabel: `${heat} · ${over100Pct} ≥100%`,
+      detail: `${over50Pct} $1–$20 ${moverNoun} at least 50% from the prior close to the day high; ${over200Pct} cleared 200%.${leader}${participation}`,
+      caveat: row.provenance === "scanner-captured"
+        ? "Captured scanner context preserves what the system observed during the session."
+        : "This backfill describes the completed session. It does not reconstruct scanner timing, RVOL, float, catalysts, or what was known before entry.",
+    };
+  } catch {
+    return unavailableMarketContext();
+  }
+}
+
+async function loadMarketContextRows(from: string, to: string): Promise<MarketContextRow[]> {
+  try {
+    return await db
+      .select()
+      .from(schema.marketContextDays)
+      .where(and(gte(schema.marketContextDays.sessionDateEt, from), lte(schema.marketContextDays.sessionDateEt, to)));
+  } catch (error) {
+    if (isOptionalCoachReadError(error)) return [];
+    throw error;
+  }
+}
+
 function buildDayData(
   date: string,
   trades: TradeRow[],
@@ -510,6 +608,7 @@ function buildDayData(
   notedTickerKeys: Set<string>,
   taggedTradeIds: Set<number>,
   entryContexts?: Map<number, TradeOpportunityContext>,
+  marketContextRow?: MarketContextRow,
 ): ReviewData {
   const executionCountByTrade = new Map<number, number>();
   executions.forEach((execution) => {
@@ -578,6 +677,7 @@ function buildDayData(
     pnlPoints,
     coachRead: buildSessionFactPack(trades),
     chartRead,
+    marketContext: buildMarketContext(marketContextRow, trades),
   };
 }
 
@@ -610,24 +710,25 @@ async function loadReviewRange({
   const baselineTo = isoAddDays(range.from, -1);
   const { start: baselineStart } = etDayRange(baselineFrom);
   const { start: baselineEnd } = etDayRange(range.from);
-  const trades = (
-    await db
+  const [tradeRowsForRange, baselineRows, marketContextRows] = await Promise.all([
+    db
       .select()
       .from(schema.trades)
       .where(and(eq(schema.trades.accountId, accountId), gte(schema.trades.entryAt, start), lte(schema.trades.entryAt, end)))
-      .orderBy(asc(schema.trades.entryAt))
-  ).filter((trade) => {
+      .orderBy(asc(schema.trades.entryAt)),
+    db
+      .select()
+      .from(schema.trades)
+      .where(and(eq(schema.trades.accountId, accountId), gte(schema.trades.entryAt, baselineStart), lte(schema.trades.entryAt, baselineEnd)))
+      .orderBy(asc(schema.trades.entryAt)),
+    loadMarketContextRows(range.from, range.to),
+  ]);
+  const trades = tradeRowsForRange.filter((trade) => {
     if (trade.entryAt == null) return false;
     const entryDate = etDateString(trade.entryAt);
     return entryDate >= range.from && entryDate <= range.to;
   });
-  const baselineTrades = (
-    await db
-      .select()
-      .from(schema.trades)
-      .where(and(eq(schema.trades.accountId, accountId), gte(schema.trades.entryAt, baselineStart), lte(schema.trades.entryAt, baselineEnd)))
-      .orderBy(asc(schema.trades.entryAt))
-  ).filter((trade) => {
+  const baselineTrades = baselineRows.filter((trade) => {
     if (trade.entryAt == null) return false;
     const entryDate = etDateString(trade.entryAt);
     return entryDate >= baselineFrom && entryDate <= baselineTo;
@@ -664,6 +765,7 @@ async function loadReviewRange({
   const taggedTradeIds = new Set(tradeTagRows.map((row) => row.tradeId));
   const tradesByDate = new Map<string, TradeRow[]>();
   const executionsByDate = new Map<string, ExecutionRow[]>();
+  const marketContextByDate = new Map(marketContextRows.map((row) => [row.sessionDateEt, row]));
 
   trades.forEach((trade) => {
     if (trade.entryAt == null) return;
@@ -704,6 +806,7 @@ async function loadReviewRange({
         notedTickerKeys,
         taggedTradeIds,
         entryContexts,
+        marketContextByDate.get(entryDate),
       ),
     );
   const weeksByStart = new Map<string, ReviewData[]>();
@@ -790,6 +893,7 @@ function sessionRows(range: ReviewRange) {
     accuracy: day.day.accuracy,
     profitFactor: day.day.profitFactor,
     pnl: day.day.pnl,
+    marketContextLabel: day.marketContext.shortLabel,
     activityRead:
       day.day.trades === 0
         ? "No trades imported"
@@ -866,6 +970,10 @@ function buildJournalComparisonData(week: ReviewRange, month: ReviewRange): Jour
         .sort((a, b) => b.trades - a.trades),
       taggedCoverage: week.trades === 0 ? null : Math.round((weekTaggedTrades / week.trades) * 100),
       plannedRiskCoverage: week.coachRead.session.rCoverage,
+      marketContextCoverage: {
+        available: week.days.filter((day) => day.marketContext.available).length,
+        sessions: week.days.length,
+      },
       chartRead: week.chartRead,
       coach: comparisonCoach(week.coachRead, "No weekly contradiction cleared the evidence gate."),
     },
@@ -1422,7 +1530,7 @@ function DayReviewSection({
   coachSlots?: ModuleCoachSlots;
   dayCoach?: DayCoachPanelData;
 }) {
-  const { day, tickerRows, pnlPoints, coachRead, chartRead } = data;
+  const { day, tickerRows, pnlPoints, coachRead, chartRead, marketContext } = data;
   const { verdictText } = buildDayReviewPresentation(data);
   const resolvedCoachSlots = dayCoach
     ? { ...coachSlots, day: <DayCoachReview data={data} dayCoach={dayCoach} /> }
@@ -1492,14 +1600,17 @@ function DayReviewSection({
                       Market context
                     </h3>
                     <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-[11px] font-semibold text-[var(--muted)]">
-                      Coverage unavailable
+                      {marketContext.badge}
                     </span>
                   </div>
-                  <p className="mt-4 text-[14.5px] leading-6 text-[var(--body)]">
-                    Scanner coverage is not connected, so the journal will not infer whether the market was hot, selective, or slow.
+                  <p className="mt-4 text-[14.5px] font-semibold leading-6 text-[var(--foreground)]">
+                    {marketContext.headline}
+                  </p>
+                  <p className="mt-2 text-[14px] leading-6 text-[var(--body)]">
+                    {marketContext.detail}
                   </p>
                   <p className="mt-3 text-[12px] leading-5 text-[var(--muted)]">
-                    Opportunity grade, stock leadership, and participation alignment will appear here after the Stock Info daily summary is connected.
+                    {marketContext.caveat}
                   </p>
                 </section>
 
@@ -1615,7 +1726,7 @@ function WeekSection({
         <WeekHeader label={week.label} displayDate={week.displayDate} />
       </ScopeHeader>
 
-      <div className="space-y-12">
+      <div className="space-y-20">
         {week.days.map((dayData) => (
           <ReviewDayRangeSection
             key={dayData.day.date}
@@ -2480,7 +2591,7 @@ export default async function TradeJournalReview({
               ))}
             </div>
           ) : preset === "week" ? (
-            <div className="space-y-12">
+            <div className="space-y-20">
               {range.days.map((dayData) => (
                 <ReviewDayRangeSection
                   key={dayData.day.date}
