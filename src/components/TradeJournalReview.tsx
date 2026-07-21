@@ -331,6 +331,16 @@ function journalWeekSectionHref(basePath: string, monthKey: string, weekKey: str
 
 type ArchiveLinkMode = "legacy" | "review-module";
 
+/** One-line status for a collapsed archive-day annotation queue. */
+function annotationQueueStatus(
+  prompts: KeyTradePrompt[],
+  worstTrade: WorstTradeCardData | null,
+): string {
+  const parts = prompts.map((prompt) => `${prompt.label.toLowerCase()} ${prompt.symbol}`);
+  if (parts.length === 0 && worstTrade) parts.push(`worst trade ${worstTrade.symbol}`);
+  return parts.length > 0 ? `${parts.length} to review · ${parts.join(" · ")}` : "nothing queued";
+}
+
 /** One-line status for the collapsed coach section: automatic tier + AI tier. */
 function coachSectionStatus(savedReview: SavedCoachReview | null): string {
   const auto = "automatic review ready";
@@ -1509,12 +1519,26 @@ function DayReviewSection({
 
           {showReviewModule && comparisonData ? (
             <div className="mb-12">
-              <JournalReviewModuleForDay
-                data={data}
-                returnTo={returnTo}
-                comparisonData={comparisonData}
-                coachSlots={coachSlots}
-              />
+              {showContextDetails ? (
+                <JournalReviewModuleForDay
+                  data={data}
+                  returnTo={returnTo}
+                  comparisonData={comparisonData}
+                  coachSlots={coachSlots}
+                />
+              ) : (
+                <CollapsibleSection
+                  title="Journal module"
+                  status={`${day.trades} trades · P&L, trades, process, coach`}
+                >
+                  <JournalReviewModuleForDay
+                    data={data}
+                    returnTo={returnTo}
+                    comparisonData={comparisonData}
+                    coachSlots={coachSlots}
+                  />
+                </CollapsibleSection>
+              )}
             </div>
           ) : null}
 
@@ -1534,15 +1558,35 @@ function DayReviewSection({
               />
             </div>
           ) : null}
-          {worstTrade ? (
-            <div className="mt-14 max-w-[800px]">
-              <WorstTradeCard trade={worstTrade} />
+          {showContextDetails ? (
+            <>
+              {worstTrade ? (
+                <div className="mt-14 max-w-[800px]">
+                  <WorstTradeCard trade={worstTrade} />
+                </div>
+              ) : null}
+
+              <div className="mt-6">
+                <KeyTradePrompts prompts={keyTradePrompts} />
+              </div>
+            </>
+          ) : worstTrade || keyTradePrompts.length > 0 ? (
+            <div className="mt-10 max-w-[800px]">
+              <CollapsibleSection
+                title="Annotation queue"
+                status={annotationQueueStatus(keyTradePrompts, worstTrade)}
+              >
+                {worstTrade ? (
+                  <div className="mt-4 max-w-[800px]">
+                    <WorstTradeCard trade={worstTrade} />
+                  </div>
+                ) : null}
+                <div className="mt-6">
+                  <KeyTradePrompts prompts={keyTradePrompts} />
+                </div>
+              </CollapsibleSection>
             </div>
           ) : null}
-
-          <div className="mt-6">
-            <KeyTradePrompts prompts={keyTradePrompts} />
-          </div>
       </div>
     </section>
   );
