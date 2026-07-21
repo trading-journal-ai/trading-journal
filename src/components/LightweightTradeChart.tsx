@@ -6,10 +6,13 @@ import {
   ColorType,
   CrosshairMode,
   HistogramSeries,
+  LineSeries,
+  LineStyle,
   createChart,
   type CandlestickData,
   type HistogramData,
   type IChartApi,
+  type LineData,
   type UTCTimestamp,
 } from "lightweight-charts";
 import type { ChartCandle, ChartMarker } from "@/components/TradeChart";
@@ -36,6 +39,34 @@ type LightweightTradeChartProps = {
 type InteractiveLightweightTradeChartProps = LightweightTradeChartProps & {
   footerAction?: ReactNode;
 };
+
+/** Event other review components dispatch to scroll the chart to a moment. */
+export const CHART_FOCUS_EVENT = "tj:focus-chart-time";
+
+const OVERLAY_COLORS = { ema9: "#f59e0b", ema20: "#3b82f6", vwap: "#a855f7" } as const;
+
+function emaLine(candles: ChartCandle[], period: number): LineData[] {
+  const k = 2 / (period + 1);
+  let ema: number | null = null;
+  const points: LineData[] = [];
+  candles.forEach((candle, index) => {
+    ema = ema == null ? candle.c : candle.c * k + ema * (1 - k);
+    if (index >= period - 1) points.push({ time: candle.t as UTCTimestamp, value: ema });
+  });
+  return points;
+}
+
+function vwapLine(candles: ChartCandle[]): LineData[] {
+  let cumTypicalVol = 0;
+  let cumVol = 0;
+  const points: LineData[] = [];
+  for (const candle of candles) {
+    cumTypicalVol += ((candle.h + candle.l + candle.c) / 3) * candle.vol;
+    cumVol += candle.vol;
+    if (cumVol > 0) points.push({ time: candle.t as UTCTimestamp, value: cumTypicalVol / cumVol });
+  }
+  return points;
+}
 
 type MarkerPoint = {
   key: string;
@@ -429,6 +460,20 @@ function InteractiveLightweightTradeChart({
     candleSeries.setData(candleData);
     volumeSeries.setData(volumeData);
 
+    // Indicator overlays the review vocabulary leans on (EMA rail, VWAP).
+    const overlayOptions = {
+      lineWidth: 1 as const,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    };
+    chart.addSeries(LineSeries, { ...overlayOptions, color: OVERLAY_COLORS.ema9 })
+      .setData(emaLine(candles, 9));
+    chart.addSeries(LineSeries, { ...overlayOptions, color: OVERLAY_COLORS.ema20 })
+      .setData(emaLine(candles, 20));
+    chart.addSeries(LineSeries, { ...overlayOptions, color: OVERLAY_COLORS.vwap, lineStyle: LineStyle.Dashed })
+      .setData(vwapLine(candles));
+
     const updateMarkerPoints = () => {
       const rect = container.getBoundingClientRect();
       const plotWidth = chart.timeScale().width();
@@ -490,7 +535,28 @@ function InteractiveLightweightTradeChart({
     }
     scheduleMarkerUpdate();
 
+    // Other review components (the trade ledger) can scroll the chart to a
+    // moment — e.g. clicking a late-day trade that sits outside the window.
+    const handleFocusRequest = (event: Event) => {
+      const time = (event as CustomEvent<{ time?: number }>).detail?.time;
+      if (time == null || !Number.isFinite(time)) return;
+      const firstTime = candles[0]?.t;
+      const lastTime = candles.at(-1)?.t;
+      const from = firstTime == null
+        ? time - focusMinutesBefore * 60
+        : Math.max(firstTime, time - focusMinutesBefore * 60);
+      const to = lastTime == null
+        ? time + focusMinutesAfter * 60
+        : Math.min(lastTime, time + focusMinutesAfter * 60);
+      if (from < to) {
+        chart.timeScale().setVisibleRange({ from: timeValue(from), to: timeValue(to) });
+        scheduleMarkerUpdate();
+      }
+    };
+    window.addEventListener(CHART_FOCUS_EVENT, handleFocusRequest);
+
     return () => {
+      window.removeEventListener(CHART_FOCUS_EVENT, handleFocusRequest);
       chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
       chart.timeScale().unsubscribeSizeChange(handleSizeChange);
       container.removeEventListener("pointermove", scheduleMarkerUpdate);
@@ -519,6 +585,13 @@ function InteractiveLightweightTradeChart({
         }}
       >
         <div ref={containerRef} className="relative z-0 h-full w-full" />
+        {candles.length > 0 ? (
+          <div className="pointer-events-none absolute left-3 top-2 z-10 flex gap-3 font-mono text-[10px] font-semibold">
+            <span style={{ color: OVERLAY_COLORS.ema9 }}>9 EMA</span>
+            <span style={{ color: OVERLAY_COLORS.ema20 }}>20 EMA</span>
+            <span style={{ color: OVERLAY_COLORS.vwap }}>VWAP</span>
+          </div>
+        ) : null}
         <svg
           aria-label="Trade executions"
           role="group"
