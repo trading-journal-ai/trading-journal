@@ -75,6 +75,7 @@ export type JournalSessionRow = {
   profitFactor: number | null;
   pnl: number;
   activityRead?: string;
+  marketContextLabel?: string;
 };
 
 export type JournalEdgeRow = {
@@ -101,6 +102,7 @@ export type JournalComparisonData = {
     edgeRows: JournalEdgeRow[];
     taggedCoverage: number | null;
     plannedRiskCoverage: number;
+    marketContextCoverage: { available: number; sessions: number };
     chartRead: JournalChartReadSummary;
     coach: JournalCoachSummary;
   };
@@ -321,14 +323,17 @@ function WeekViews({ view, data, coachSlot }: { view: JournalDataView; data: Jou
   }
 
   if (view === "alignment") {
+    const coverage = data.marketContextCoverage;
     return (
       <div role="tabpanel">
         <ChartReadOverview read={data.chartRead} />
-        <ReadFirst title="Market context not connected">
-          The chart read can judge the trades you took, but it cannot yet judge the opportunities you skipped or whether the whole market was hot, selective, or slow.
+        <ReadFirst title={coverage.available > 0 ? "Retrospective market context" : "Market context unavailable"}>
+          {coverage.available > 0
+            ? `${coverage.available} of ${coverage.sessions} imported sessions have completed-day market context. This can describe market heat and leadership, but not scanner timing or what was knowable before entry.`
+            : "The chart read can judge the trades you took, but it cannot judge the opportunities you skipped or whether the whole market was hot, selective, or slow."}
         </ReadFirst>
         <SessionTable rows={data.sessions} showActivity />
-        <EvidenceBoundary>Relative activity is descriptive—not evidence of boredom, FOMO, tilt, or a market-context mismatch.</EvidenceBoundary>
+        <EvidenceBoundary>Retrospective daily bars and relative activity are descriptive—not evidence of scanner compliance, boredom, FOMO, tilt, or what was known at entry.</EvidenceBoundary>
       </div>
     );
   }
@@ -422,7 +427,7 @@ function SessionTable({ rows, showActivity = false }: { rows: JournalSessionRow[
     <div className="mt-5 overflow-x-auto border-y border-[var(--hairline)]">
       <table className="w-full min-w-[580px] border-collapse text-left text-[12px]">
         <thead className="text-[var(--muted)]"><tr className="border-b border-[var(--hairline)]"><th className="px-3 py-3 font-medium">Session</th>{showActivity ? <th className="px-3 py-3 font-medium">Market context</th> : null}<th className="px-3 py-3 text-right font-medium">Trades</th><th className="px-3 py-3 text-right font-medium">Win</th><th className="px-3 py-3 text-right font-medium">PF</th>{showActivity ? <th className="px-3 py-3 text-right font-medium">Activity read</th> : <th className="px-3 py-3 text-right font-medium">P&L</th>}</tr></thead>
-        <tbody>{rows.map((row) => <tr key={row.date} className="border-b border-[var(--hairline)]"><td className="px-3 py-3 font-semibold">{row.label}</td>{showActivity ? <td className="px-3 py-3 text-[var(--muted)]">Unavailable</td> : null}<td className="px-3 py-3 text-right font-mono">{row.trades}</td><td className="px-3 py-3 text-right font-mono">{percent(row.accuracy)}</td><td className="px-3 py-3 text-right font-mono">{ratio(row.profitFactor)}</td>{showActivity ? <td className="px-3 py-3 text-right text-[var(--body)]">{row.activityRead}</td> : <td className={`px-3 py-3 text-right font-mono ${pnlClass(row.pnl)}`}>{money(row.pnl)}</td>}</tr>)}</tbody>
+        <tbody>{rows.map((row) => <tr key={row.date} className="border-b border-[var(--hairline)]"><td className="px-3 py-3 font-semibold">{row.label}</td>{showActivity ? <td className="px-3 py-3 text-[var(--muted)]">{row.marketContextLabel ?? "Unavailable"}</td> : null}<td className="px-3 py-3 text-right font-mono">{row.trades}</td><td className="px-3 py-3 text-right font-mono">{percent(row.accuracy)}</td><td className="px-3 py-3 text-right font-mono">{ratio(row.profitFactor)}</td>{showActivity ? <td className="px-3 py-3 text-right text-[var(--body)]">{row.activityRead}</td> : <td className={`px-3 py-3 text-right font-mono ${pnlClass(row.pnl)}`}>{money(row.pnl)}</td>}</tr>)}</tbody>
       </table>
     </div>
   );
