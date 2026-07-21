@@ -52,6 +52,30 @@ export type CoachReviewPayload = {
   };
 };
 
+/**
+ * Round every number in the payload before it reaches the LLM: raw floats
+ * ("-102.90049999999985") otherwise get echoed verbatim under the numeric
+ * boundary. One decimal by default; two for prices and sub-1 fractions
+ * (win rates, capture ratios) where a tenth would erase the meaning.
+ */
+const TWO_DECIMAL_KEYS = new Set(["entryPrice", "exitPrice", "price", "averageEntryBefore"]);
+
+function roundNumbersDeep(value: unknown, key?: string): unknown {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || Number.isInteger(value)) return value;
+    const decimals = (key != null && TWO_DECIMAL_KEYS.has(key)) || Math.abs(value) < 1 ? 2 : 1;
+    const factor = 10 ** decimals;
+    return Math.round(value * factor) / factor;
+  }
+  if (Array.isArray(value)) return value.map((item) => roundNumbersDeep(item));
+  if (value != null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [k, roundNumbersDeep(v, k)]),
+    );
+  }
+  return value;
+}
+
 export function buildCoachReviewPayload({
   scope,
   scopeKey,
@@ -76,8 +100,8 @@ export function buildCoachReviewPayload({
     generatedAt,
     playbook,
     humanContext,
-    deterministicFacts,
-    trades,
+    deterministicFacts: roundNumbersDeep(deterministicFacts) as SessionFactPack,
+    trades: roundNumbersDeep(trades) as CoachReviewTradeContext[],
     instructions: {
       role: "Post-trade review coach. Review completed trades only. Do not give live trade calls.",
       numericBoundary: "Use deterministicFacts, trades[].executionAnalysis, and trades[].opportunityContext for every number. Do not calculate, infer, or modify numeric claims. opportunityContext.atEntry contains only facts knowable at entry; opportunityContext.postTrade is hindsight and must never be used to grade the entry decision.",

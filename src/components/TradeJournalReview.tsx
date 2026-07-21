@@ -1405,6 +1405,14 @@ function DayReviewSection({
                   <span className="ml-1 text-[10px]">{day.pnl > 0 ? "▲" : "▼"}</span>
                 ) : null}
               </span>
+              {!showContextDetails ? (
+                <a
+                  href={journalReviewModuleHref("/journal", day.date)}
+                  className="text-[13px] font-semibold text-[var(--accent)] transition-colors hover:text-[var(--accent-strong)]"
+                >
+                  Open day review · coach &amp; annotations →
+                </a>
+              ) : null}
             </div>
             <div className="mt-4 flex">
               <span className="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-full bg-[var(--surface-2)] px-4 py-1.5 text-[13px] text-[var(--muted)] tabular-nums">
@@ -1431,7 +1439,7 @@ function DayReviewSection({
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="text-[13px] font-semibold text-[var(--coach)]">✳ Session verdict</span>
               <span className="text-[12px] text-[var(--muted)]">
-                Coach · {coachRead.confidence.label} confidence
+                Automatic · computed from your trades, no AI · {coachRead.confidence.label} confidence
               </span>
             </div>
             <p className="mt-3 text-[20px] font-medium leading-[1.55] tracking-[-0.005em] text-[var(--foreground)] [text-wrap:pretty]">
@@ -1968,7 +1976,12 @@ function StarterCoachRead({
   return (
     <section className="pt-2">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h2 className="text-[13px] font-semibold text-[var(--coach)]">✳ Coach read</h2>
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h2 className="text-[13px] font-semibold text-[var(--coach)]">✳ Automatic review</h2>
+          <span className="text-[12px] text-[var(--muted)]">
+            computed from your trades, no AI
+          </span>
+        </div>
         <span className={`text-[12px] font-semibold ${confidenceClass(factPack.confidence.label)}`}>
           {factPack.confidence.label} confidence
         </span>
