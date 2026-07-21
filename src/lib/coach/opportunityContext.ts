@@ -17,9 +17,11 @@
  * mirrored math. Field names stay side-neutral so LOD mirroring can be added
  * later without a schema change.
  */
-import { MARKET_TZ, zonedDateTimeToUtcMs } from "@/lib/time";
+import { MARKET_TZ, REVIEW_SESSION_WINDOW, zonedDateTimeToUtcMs } from "@/lib/time";
 import type { Candle } from "@/lib/candles/massive";
 import type { ConfidenceLabel } from "@/lib/coach/reviewEngine";
+import { marketIndicatorSeries } from "@/lib/marketIndicators";
+import { evaluateFylMarketRead, type FylMarketRead } from "@/lib/coach/fylMarketRead";
 
 /**
  * Calibration v1 (2026-07-21): thresholds swept against the 2026-01→07
@@ -55,6 +57,10 @@ export const OPPORTUNITY_CALIBRATION = {
 
 export type VolumeState = "expanding" | "stable" | "declining";
 
+export type EmaStackState = "bullish" | "bearish" | "touching";
+export type EmaCrossDirection = "bullish" | "bearish";
+export type EmaRailRelationship = "above" | "inside" | "below";
+
 export type PriceStructureLabel =
   | "hh_hl"
   | "lh_ll"
@@ -88,6 +94,12 @@ export type AnatomyBar = {
   runningLow: number | null;
   /** Running premarket high over 04:00–09:30 ET bars. */
   premarketHigh: number | null;
+  ema9: number | null;
+  ema20: number | null;
+  emaStack: EmaStackState | null;
+  lastEmaCross: EmaCrossDirection | null;
+  barsSinceEmaCross: number | null;
+  priceVsEmaRail: EmaRailRelationship | null;
   vwap: number | null;
   atr: number | null;
   volumeState: VolumeState | null;
@@ -119,6 +131,13 @@ export type OpportunityAtEntry = {
   referenceLevel: { kind: "swing-low" | "swing-high" | "vwap"; price: number } | null;
   premarketHighRelationship: PremarketHighRelationship | null;
   vwapRelationship: "above" | "below" | "at" | null;
+  ema9: number | null;
+  ema20: number | null;
+  emaStack: EmaStackState | null;
+  lastEmaCross: EmaCrossDirection | null;
+  barsSinceEmaCross: number | null;
+  priceVsEmaRail: EmaRailRelationship | null;
+  fylMarketRead: FylMarketRead;
   volumeState: VolumeState | null;
   priceStructure: PriceStructureLabel | null;
   failedAttemptCount: number | null;
@@ -181,13 +200,18 @@ function etSeconds(date: string, time: string): number {
 export function sessionAnatomy(symbol: string, date: string, candles: Candle[]): SessionAnatomy {
   const cal = OPPORTUNITY_CALIBRATION;
   const premarketStart = etSeconds(date, "04:00:00");
-  const reviewStart = etSeconds(date, "07:00:00");
+  const reviewStart = etSeconds(date, REVIEW_SESSION_WINDOW.start);
   const regularOpen = etSeconds(date, "09:30:00");
   const reviewEnd = etSeconds(date, "20:00:00");
 
   const dayBars = [...candles]
     .filter((c) => c.t >= premarketStart && c.t < reviewEnd)
     .sort((a, b) => a.t - b.t);
+  const reviewBars = dayBars.filter((bar) => bar.t >= reviewStart);
+  const indicators = marketIndicatorSeries(reviewBars, { vwapAnchorTime: reviewStart });
+  const ema9ByTime = new Map(indicators.ema9.map((point) => [point.t, point.value]));
+  const ema20ByTime = new Map(indicators.ema20.map((point) => [point.t, point.value]));
+  const vwapByTime = new Map(indicators.vwap.map((point) => [point.t, point.value]));
 
   const bars: AnatomyBar[] = [];
 
@@ -195,8 +219,6 @@ export function sessionAnatomy(symbol: string, date: string, candles: Candle[]):
   let runningHighAt: number | null = null;
   let runningLow: number | null = null;
   let premarketHigh: number | null = null;
-  let cumTypicalVol = 0;
-  let cumVol = 0;
   let barsSinceOpen = 0;
   let failedAttempts = 0;
   let pendingAttempt: { level: number; barsLeft: number } | null = null;
@@ -204,6 +226,9 @@ export function sessionAnatomy(symbol: string, date: string, candles: Candle[]):
   const swingHighs: number[] = [];
   const swingLows: number[] = [];
   let prevClose: number | null = null;
+  let lastDirectionalEmaStack: Exclude<EmaStackState, "touching"> | null = null;
+  let lastEmaCross: EmaCrossDirection | null = null;
+  let barsSinceEmaCross: number | null = null;
 
   for (let i = 0; i < dayBars.length; i += 1) {
     const bar = dayBars[i];
@@ -270,10 +295,34 @@ export function sessionAnatomy(symbol: string, date: string, candles: Candle[]):
       }
       runningLow = runningLow == null ? bar.l : Math.min(runningLow, bar.l);
 
-      const typical = (bar.h + bar.l + bar.c) / 3;
-      cumTypicalVol += typical * bar.vol;
-      cumVol += bar.vol;
     }
+
+    const ema9 = ema9ByTime.get(bar.t) ?? null;
+    const ema20 = ema20ByTime.get(bar.t) ?? null;
+    const emaStack: EmaStackState | null = ema9 == null || ema20 == null
+      ? null
+      : ema9 > ema20
+        ? "bullish"
+        : ema9 < ema20
+          ? "bearish"
+          : "touching";
+
+    if (barsSinceEmaCross != null) barsSinceEmaCross += 1;
+    if (emaStack === "bullish" || emaStack === "bearish") {
+      if (lastDirectionalEmaStack != null && emaStack !== lastDirectionalEmaStack) {
+        lastEmaCross = emaStack;
+        barsSinceEmaCross = 0;
+      }
+      lastDirectionalEmaStack = emaStack;
+    }
+
+    const priceVsEmaRail: EmaRailRelationship | null = ema9 == null || ema20 == null
+      ? null
+      : bar.c > Math.max(ema9, ema20)
+        ? "above"
+        : bar.c < Math.min(ema9, ema20)
+          ? "below"
+          : "inside";
 
     // Swing pivots confirmed `swingPivotBars` bars after the fact (causal).
     const k = cal.swingPivotBars;
@@ -317,7 +366,13 @@ export function sessionAnatomy(symbol: string, date: string, candles: Candle[]):
       runningHighAt,
       runningLow,
       premarketHigh,
-      vwap: cumVol > 0 ? cumTypicalVol / cumVol : null,
+      ema9,
+      ema20,
+      emaStack,
+      lastEmaCross,
+      barsSinceEmaCross,
+      priceVsEmaRail,
+      vwap: vwapByTime.get(bar.t) ?? null,
       atr,
       volumeState,
       failedAttempts,
@@ -396,6 +451,20 @@ function buildAtEntry(snap: AnatomyBar, at: number, price: number): OpportunityA
     referenceLevel,
     premarketHighRelationship,
     vwapRelationship,
+    ema9: snap.ema9,
+    ema20: snap.ema20,
+    emaStack: snap.emaStack,
+    lastEmaCross: snap.lastEmaCross,
+    barsSinceEmaCross: snap.barsSinceEmaCross,
+    priceVsEmaRail: snap.priceVsEmaRail,
+    fylMarketRead: evaluateFylMarketRead({
+      structure: snap.structure,
+      emaStack: snap.emaStack,
+      lastEmaCross: snap.lastEmaCross,
+      barsSinceEmaCross: snap.barsSinceEmaCross,
+      priceVsEmaRail: snap.priceVsEmaRail,
+      vwapRelationship,
+    }),
     volumeState: snap.volumeState,
     priceStructure: snap.structure,
     failedAttemptCount: snap.failedAttempts,

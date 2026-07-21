@@ -174,6 +174,17 @@ describe("sessionAnatomy", () => {
     expect(snap!.volumeState).toBe("declining");
   });
 
+  it("tracks the shared EMA stack and bearish cross causally", () => {
+    const frontside = anatomyAt(anatomy, et("10:05:00"));
+    const backside = anatomyAt(anatomy, et("11:05:00"));
+
+    expect(frontside!.emaStack).toBe("bullish");
+    expect(backside!.emaStack).toBe("bearish");
+    expect(backside!.lastEmaCross).toBe("bearish");
+    expect(backside!.barsSinceEmaCross).toBeGreaterThan(0);
+    expect(backside!.priceVsEmaRail).toBe("below");
+  });
+
   it("only uses bars fully closed before the requested moment", () => {
     const snap = anatomyAt(anatomy, et("09:00:30"));
     expect(snap).toBeNull();
@@ -222,6 +233,8 @@ describe("opportunityContextForTrade classifications", () => {
       makeTrade({ id: 5, entryAt: et("11:00:30"), entryPrice: 11.42, exitAt: et("11:05:00") }),
     );
     expect(ctx.classification).toBe("weakening");
+    expect(ctx.atEntry!.fylMarketRead.mode).toBe("downtrend");
+    expect(ctx.atEntry!.fylMarketRead.headline).toBe("Sellers controlled the trend at entry.");
   });
 
   it("calls a late extended bounce entry move-mature", () => {

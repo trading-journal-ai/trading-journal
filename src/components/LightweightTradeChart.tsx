@@ -17,6 +17,7 @@ import {
 } from "lightweight-charts";
 import type { ChartCandle, ChartMarker } from "@/components/TradeChart";
 import type { AnalyzedTradeExecution, TradeExecutionAnalysis } from "@/lib/executionAnalysis";
+import { marketIndicatorSeries } from "@/lib/marketIndicators";
 
 export type TradeChartSummary = {
   tradeNumber: number;
@@ -44,29 +45,6 @@ type InteractiveLightweightTradeChartProps = LightweightTradeChartProps & {
 export const CHART_FOCUS_EVENT = "tj:focus-chart-time";
 
 const OVERLAY_COLORS = { ema9: "#f59e0b", ema20: "#3b82f6", vwap: "#a855f7" } as const;
-
-function emaLine(candles: ChartCandle[], period: number): LineData[] {
-  const k = 2 / (period + 1);
-  let ema: number | null = null;
-  const points: LineData[] = [];
-  candles.forEach((candle, index) => {
-    ema = ema == null ? candle.c : candle.c * k + ema * (1 - k);
-    if (index >= period - 1) points.push({ time: candle.t as UTCTimestamp, value: ema });
-  });
-  return points;
-}
-
-function vwapLine(candles: ChartCandle[]): LineData[] {
-  let cumTypicalVol = 0;
-  let cumVol = 0;
-  const points: LineData[] = [];
-  for (const candle of candles) {
-    cumTypicalVol += ((candle.h + candle.l + candle.c) / 3) * candle.vol;
-    cumVol += candle.vol;
-    if (cumVol > 0) points.push({ time: candle.t as UTCTimestamp, value: cumTypicalVol / cumVol });
-  }
-  return points;
-}
 
 type MarkerPoint = {
   key: string;
@@ -372,6 +350,18 @@ function InteractiveLightweightTradeChart({
       })),
     [candles],
   );
+  const indicatorData = useMemo(() => {
+    const series = marketIndicatorSeries(candles);
+    const toLineData = (points: typeof series.ema9): LineData[] => points.map((point) => ({
+      time: timeValue(point.t),
+      value: point.value,
+    }));
+    return {
+      ema9: toLineData(series.ema9),
+      ema20: toLineData(series.ema20),
+      vwap: toLineData(series.vwap),
+    };
+  }, [candles]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -468,11 +458,11 @@ function InteractiveLightweightTradeChart({
       crosshairMarkerVisible: false,
     };
     chart.addSeries(LineSeries, { ...overlayOptions, color: OVERLAY_COLORS.ema9 })
-      .setData(emaLine(candles, 9));
+      .setData(indicatorData.ema9);
     chart.addSeries(LineSeries, { ...overlayOptions, color: OVERLAY_COLORS.ema20 })
-      .setData(emaLine(candles, 20));
+      .setData(indicatorData.ema20);
     chart.addSeries(LineSeries, { ...overlayOptions, color: OVERLAY_COLORS.vwap, lineStyle: LineStyle.Dashed })
-      .setData(vwapLine(candles));
+      .setData(indicatorData.vwap);
 
     const updateMarkerPoints = () => {
       const rect = container.getBoundingClientRect();
@@ -573,7 +563,7 @@ function InteractiveLightweightTradeChart({
       setActiveTradeNumber(null);
       setMarkerPoints([]);
     };
-  }, [candleData, candles, focusMinutesAfter, focusMinutesBefore, initialFocusTime, markers, themeKey]);
+  }, [candleData, candles, focusMinutesAfter, focusMinutesBefore, indicatorData, initialFocusTime, markers, themeKey]);
 
   return (
     <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
