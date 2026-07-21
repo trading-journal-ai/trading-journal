@@ -3,6 +3,7 @@ import { generateCoachReviewAction, saveDraftCoachReviewAction } from "@/app/coa
 import { saveCoachExperimentAction } from "@/app/journal/actions";
 import { db, schema } from "@/lib/db";
 import { parseCoachStoredReview, type CoachStoredReview } from "@/lib/coach/generatedReview";
+import CollapsibleSection from "@/components/CollapsibleSection";
 import { buildSessionFactPack, type SessionFactPack } from "@/lib/coach/reviewEngine";
 import { shortEntryReason, type TradeOpportunityContext } from "@/lib/coach/opportunityContext";
 import { opportunityContextsForTrades } from "@/lib/coach/opportunityContextService";
@@ -329,6 +330,17 @@ function journalWeekSectionHref(basePath: string, monthKey: string, weekKey: str
 }
 
 type ArchiveLinkMode = "legacy" | "review-module";
+
+/** One-line status for the collapsed coach section: automatic tier + AI tier. */
+function coachSectionStatus(savedReview: SavedCoachReview | null): string {
+  const auto = "automatic review ready";
+  if (savedReview?.status === "generated" && savedReview.storedReview && "review" in savedReview.storedReview) {
+    return `${auto} · AI review generated`;
+  }
+  if (savedReview?.status === "draft") return `${auto} · draft payload saved, no AI review yet`;
+  if (savedReview?.status === "stale") return `${auto} · last AI generation failed`;
+  return `${auto} · no AI review yet`;
+}
 
 function journalReviewModuleHref(
   basePath: string,
@@ -2360,23 +2372,34 @@ export default async function TradeJournalReview({
           ) : null}
 
           {range.trades > 0 && preset === "today" ? (
-            <CoachContextFlow
-              data={range.days[0]}
-              reviewScope={reviewScope}
-              recapNote={recapNote}
-              savedReview={savedReview}
-              readOnly={readOnly}
-            />
-          ) : null}
-
-          {range.trades > 0 ? (
+            <CollapsibleSection
+              title="✳ Coach review"
+              status={coachSectionStatus(savedReview)}
+            >
+              <CoachContextFlow
+                data={range.days[0]}
+                reviewScope={reviewScope}
+                recapNote={recapNote}
+                savedReview={savedReview}
+                readOnly={readOnly}
+              />
+              <StarterCoachRead
+                factPack={range.coachRead}
+                reviewScope={reviewScope}
+                savedExperiment={savedExperiment}
+                savedReview={savedReview}
+                readOnly={readOnly}
+                showReviewActions={false}
+              />
+            </CollapsibleSection>
+          ) : range.trades > 0 ? (
             <StarterCoachRead
               factPack={range.coachRead}
               reviewScope={reviewScope}
               savedExperiment={savedExperiment}
               savedReview={savedReview}
               readOnly={readOnly}
-              showReviewActions={preset !== "today"}
+              showReviewActions
             />
           ) : null}
         </div>
