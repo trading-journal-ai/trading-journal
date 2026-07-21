@@ -297,6 +297,8 @@ does most of the hard part.
    largest new piece of engine work; raw material (candles) already exists.
    Compute over the **full review session window** (07:00–20:00 ET, §2) so
    premarket-high and premarket-vs-regular-session relationships are available.
+   **v1 spec + data audit:**
+   [analytics/OPPORTUNITY_CONTEXT_CALCULATOR.md](analytics/OPPORTUNITY_CONTEXT_CALCULATOR.md).
 3. **Coach output schema:** the engine's job stays "produce structured facts";
    what changes is the **coach output shape** it feeds (§6b) — flat fields →
    object family with evidence refs.

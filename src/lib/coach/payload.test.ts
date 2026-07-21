@@ -51,6 +51,7 @@ describe("buildCoachReviewPayload", () => {
         processTags: ["Followed plan"],
         emotionTags: ["Calm"],
         executionAnalysis: null,
+        opportunityContext: null,
       }],
     });
 

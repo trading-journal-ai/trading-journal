@@ -359,6 +359,8 @@ async function setupLocal() {
 }
 
 async function resetDemo() {
+  const { snapshotBeforeDestroy } = await import("./db-guard.mjs");
+  snapshotBeforeDestroy(DEMO_DB, "reset this database to demo fixtures");
   ensureDataDir(DEMO_DB);
   writeLocalEnv({ dbPath: DEMO_DB, massiveKey: parseEnvFile(ENV_PATH).get("MASSIVE_API_KEY") ?? "" });
   await quietStep("Applying database migrations", () => {

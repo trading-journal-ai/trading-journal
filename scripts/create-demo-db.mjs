@@ -871,6 +871,8 @@ function seed(db) {
 }
 
 mkdirSync(dirname(outputPath), { recursive: true });
+const { snapshotBeforeDestroy } = await import("./db-guard.mjs");
+snapshotBeforeDestroy(outputPath, "delete and rebuild this database from fixtures");
 for (const suffix of ["", "-wal", "-shm"]) {
   try {
     unlinkSync(`${outputPath}${suffix}`);
