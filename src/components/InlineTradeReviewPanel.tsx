@@ -13,6 +13,7 @@ function isInlineTradeReviewData(value: unknown): value is InlineTradeReviewData
   const payload = value as Record<string, unknown>;
   return Array.isArray(payload.availableTags)
     && Array.isArray(payload.candles)
+    && (payload.candleSource === "market" || payload.candleSource === "execution_fallback")
     && typeof payload.initialTradeId === "number"
     && Array.isArray(payload.markers)
     && typeof payload.readOnly === "boolean"
@@ -108,6 +109,8 @@ export default function InlineTradeReviewPanel({
     );
   }
 
+  const selectedTrade = data.trades.find((trade) => trade.id === data.initialTradeId);
+
   return (
     <section aria-label={`${symbol} inline trade review`} className="px-4 py-4 sm:px-5 sm:py-5">
       <div className="mb-2 flex items-center justify-between gap-4">
@@ -120,6 +123,11 @@ export default function InlineTradeReviewPanel({
       </div>
 
       <div className="min-w-0">
+        {data.candleSource === "execution_fallback" && data.candles.length > 0 ? (
+          <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--muted)]">
+            Estimated chart · reconstructed from executions
+          </p>
+        ) : null}
         {data.candles.length > 0 ? (
           <LightweightTradeChart
             candles={data.candles}
@@ -128,7 +136,12 @@ export default function InlineTradeReviewPanel({
             focusMinutesBefore={12}
             initialFocusTime={data.initialFocusTime}
             markers={data.markers}
-            selectedTradeNumber={data.trades.find((trade) => trade.id === data.initialTradeId)?.number}
+            tradeSummaries={selectedTrade?.executionAnalysis ? [{
+              tradeNumber: selectedTrade.number,
+              executionAnalysis: selectedTrade.executionAnalysis,
+              holdDuration: selectedTrade.holdDuration,
+              shares: selectedTrade.shares,
+            }] : undefined}
           />
         ) : (
           <div className="grid h-[400px] place-items-center border-y border-[var(--hairline)] px-6 text-center text-sm text-[var(--muted)]">

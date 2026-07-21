@@ -148,6 +148,7 @@ export function parseDasTradeSummary(csv: string): ParsedDasTrade[] {
           executedAt: entryAt,
           posEffect: "TO OPEN",
           fees: 0,
+          brokerOrderKey: null,
           sourceRowHash: openHash,
         },
         {
@@ -158,6 +159,7 @@ export function parseDasTradeSummary(csv: string): ParsedDasTrade[] {
           executedAt: exitAt,
           posEffect: "TO CLOSE",
           fees: 0,
+          brokerOrderKey: null,
           sourceRowHash: closeHash,
         },
       ],

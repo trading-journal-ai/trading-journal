@@ -32,4 +32,33 @@ describe("normalizeBrokerCsv", () => {
     expect(result.trades[0].fees).toBeCloseTo(0.02, 2);
     expect(result.trades[0].netPnl).toBeCloseTo(3.98, 2);
   });
+
+  it("normalizes the full Cash Balance ledger when detailed history is filtered", () => {
+    const csv = [
+      "Cash Balance",
+      "DATE,TIME,TYPE,REF #,DESCRIPTION,Misc Fees,Commissions & Fees,AMOUNT,BALANCE",
+      "2/18/26,09:12:51,TRD,5001,BOT +100 FTH @26.80,,,0,0",
+      "2/18/26,09:13:10,TRD,5002,SOLD -100 FTH @26.90,-0.02,,0,0",
+      "7/14/26,04:18:04,TRD,7001,BOT +10 SKDD @13.84,,,0,0",
+      "7/14/26,04:20:21,TRD,7002,SOLD -10 SKDD @13.87,-0.01,,0,0",
+      "",
+      "Account Trade History filtered by SKDD",
+      ",Exec Time,Spread,Side,Qty,Pos Effect,Symbol,Type,Price,Net Price,Order Type",
+      ",7/14/26 04:18:04,STOCK,BUY,+10,TO OPEN,SKDD,STOCK,13.84,13.84,LMT",
+      ",7/14/26 04:20:21,STOCK,SELL,-10,TO CLOSE,SKDD,STOCK,13.87,13.87,LMT",
+      "",
+      "Profits and Losses",
+      "Symbol,Description,P/L Open,P/L %,P/L Day,P/L YTD,P/L Diff,Margin Req",
+      "SKDD,STRUXUREWARE INC,$0.00,0.00%,$0.30,$0.30,$0.30,$0.00",
+    ].join("\n");
+
+    const result = normalizeBrokerCsv(csv);
+
+    expect(result.sourceConfidence).toBe("medium");
+    expect(result.executions).toHaveLength(4);
+    expect(result.trades).toHaveLength(2);
+    expect(result.warnings).toContain(
+      "Imported the full Cash Balance ledger because Account Trade History is filtered by SKDD.",
+    );
+  });
 });

@@ -8,6 +8,7 @@ import LightweightTradeChart from "@/components/LightweightTradeChart";
 import ReviewHeader from "@/components/ReviewHeader";
 import TickerReviewWorkspace from "@/components/TickerReviewWorkspace";
 import { fmtDate, fmtMoney } from "@/lib/format";
+import { analyzeTradeExecutions } from "@/lib/executionAnalysis";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { netPnl } from "@/lib/pnl";
 import { etDayRange, etDateString, reviewSessionRange } from "@/lib/time";
@@ -169,10 +170,27 @@ export default async function TickerDayReviewPage({
   const readOnly = isDemoReadOnly();
   const tradeById = new Map(trades.map((trade) => [trade.id, trade]));
   const executionCountByTradeId = new Map<number, number>();
+  const executionsByTradeId = new Map<number, typeof execs>();
   for (const execution of execs) {
     if (execution.tradeId == null) continue;
     executionCountByTradeId.set(execution.tradeId, (executionCountByTradeId.get(execution.tradeId) ?? 0) + 1);
+    executionsByTradeId.set(execution.tradeId, [...(executionsByTradeId.get(execution.tradeId) ?? []), execution]);
   }
+  const executionAnalysisByTradeId = new Map(trades.map((trade) => [
+    trade.id,
+    analyzeTradeExecutions(
+      trade.side,
+      (executionsByTradeId.get(trade.id) ?? []).map((execution) => ({
+        id: execution.id,
+        executedAt: execution.executedAt,
+        price: execution.price,
+        quantity: execution.quantity,
+        side: execution.side,
+        posEffect: execution.posEffect,
+        brokerOrderKey: execution.brokerOrderKey,
+      })),
+    ),
+  ]));
   const tradeNumberById = new Map(trades.map((trade, index) => [trade.id, index + 1]));
   const tradePnlById = new Map(trades.map((trade) => [trade.id, netPnl(trade)]));
   const tradePerShareById = new Map(trades.map((trade) => {
@@ -201,6 +219,7 @@ export default async function TickerDayReviewPage({
       perShare: perShare == null ? "—" : formatSignedMoney(perShare),
       perShareValue: perShare,
       perShareTone: pnlTone(perShare),
+      executionAnalysis: executionAnalysisByTradeId.get(trade.id),
       tags: tradeTagRows.filter((row) => row.tradeId === trade.id).map((row) => row.name),
       attachments: attachmentRows
         .filter((attachment) => attachment.tradeId === trade.id)
@@ -249,25 +268,34 @@ export default async function TickerDayReviewPage({
 
       <section className="mb-8 pt-5">
         <div className="min-w-0">
+          {candles.length === 0 && chartCandles.length > 0 ? (
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--muted)]">
+              Estimated chart · reconstructed from executions
+            </p>
+          ) : null}
           {chartCandles.length > 0 ? (
             <LightweightTradeChart
               candles={chartCandles}
               enableFullscreen
               initialFocusTime={trades[0]?.entryAt ?? undefined}
-              markers={execs.map((execution) => ({
-                id: execution.id,
-                t: execution.executedAt,
-                price: execution.price,
-                side: execution.side as "buy" | "sell",
-                quantity: execution.quantity,
-                tradeNumber: execution.tradeId == null ? undefined : tradeNumberById.get(execution.tradeId),
-                pnl: execution.side === "sell" && execution.tradeId != null
-                  ? tradePnlById.get(execution.tradeId) ?? undefined
-                  : undefined,
-                perShare: execution.side === "sell" && execution.tradeId != null
-                  ? tradePerShareById.get(execution.tradeId) ?? undefined
-                  : undefined,
-              }))}
+              markers={trades.flatMap((trade) => (
+                (executionAnalysisByTradeId.get(trade.id)?.executions ?? []).map((execution) => ({
+                  id: execution.id,
+                  t: execution.executedAt,
+                  price: execution.price,
+                  side: execution.side,
+                  quantity: execution.quantity,
+                  tradeNumber: tradeNumberById.get(trade.id),
+                  executionLifecycle: execution.lifecycle,
+                  addedAgainstPosition: execution.addedAgainstPosition,
+                }))
+              ))}
+              tradeSummaries={workspaceTrades.flatMap((trade) => trade.executionAnalysis ? [{
+                tradeNumber: trade.number,
+                executionAnalysis: trade.executionAnalysis,
+                holdDuration: trade.holdDuration,
+                shares: trade.shares,
+              }] : [])}
             />
           ) : error ? (
             <div className="rounded-[6px] border border-[var(--red)]/40 bg-[var(--red)]/10 px-4 py-3 text-sm text-[var(--red)]">

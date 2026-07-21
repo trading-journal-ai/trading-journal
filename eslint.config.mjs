@@ -13,7 +13,10 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     ".venv*/**",
+    ".claude/**",
     "**/__pycache__/**",
+    // Local/private databases and generated provider backfills are not source.
+    "data/**",
     // Static design references kept for product/design review, not app source.
     "samples/**",
     "public/review/**",

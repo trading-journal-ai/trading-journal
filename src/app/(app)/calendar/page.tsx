@@ -7,6 +7,7 @@ import { netPnl } from "@/lib/pnl";
 import { etDateString } from "@/lib/time";
 import { fmtMoney } from "@/lib/format";
 import CalendarRangeFilter from "@/components/CalendarRangeFilter";
+import PeriodTabs from "@/components/PeriodTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -201,14 +202,16 @@ function emptyState() {
 }
 
 function ViewToggle({ active, monthHref, yearHref }: { active: "month" | "year"; monthHref: string; yearHref: string }) {
-  const base = "flex h-8 min-w-20 items-center justify-center rounded px-3 text-sm font-semibold transition-colors";
-  const on = "bg-[var(--surface-2)] text-[var(--foreground)]";
-  const off = "text-[var(--muted)] hover:text-[var(--foreground)]";
   return (
-    <div className="inline-flex h-10 items-center rounded-md border border-[var(--border)] p-1">
-      <Link href={monthHref} className={`${base} ${active === "month" ? on : off}`}>Month</Link>
-      <Link href={yearHref} className={`${base} ${active === "year" ? on : off}`}>Year</Link>
-    </div>
+    <PeriodTabs
+      ariaLabel="Calendar view"
+      items={[
+        { value: "month", label: "Month", href: monthHref },
+        { value: "year", label: "Year", href: yearHref },
+      ]}
+      value={active}
+      className="border-b border-[var(--hairline)]"
+    />
   );
 }
 
