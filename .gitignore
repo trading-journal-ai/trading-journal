@@ -39,3 +39,7 @@ npm-debug.log*
 .vscode/
 .idea/
 .vercel
+
+# Local DB snapshots (see docs/product/DATA_BACKUP.md)
+data/backups/
+data/opportunity-context/

@@ -122,6 +122,31 @@ export const candles = sqliteTable(
   ],
 );
 
+/**
+ * Immutable-by-source daily market-context snapshot. Retrospective Massive
+ * summaries can later be superseded by a captured Stock Info snapshot without
+ * coupling Journal reads to either provider being online.
+ */
+export const marketContextDays = sqliteTable(
+  "market_context_days",
+  {
+    sessionDateEt: text("session_date_et").primaryKey(),
+    source: text("source", { enum: ["massive_grouped_daily", "stock_info"] }).notNull(),
+    provenance: text("provenance", { enum: ["retrospective", "scanner-captured"] }).notNull(),
+    coverageStatus: text("coverage_status", { enum: ["full", "partial", "unavailable"] })
+      .notNull(),
+    sourceVersion: text("source_version").notNull(),
+    payloadJson: text("payload_json").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [index("market_context_days_source_date_idx").on(t.source, t.sessionDateEt)],
+);
+
 /** Reusable free-form tags. */
 export const tags = sqliteTable("tags", {
   id: integer("id").primaryKey({ autoIncrement: true }),

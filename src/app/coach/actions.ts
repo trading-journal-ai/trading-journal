@@ -14,6 +14,7 @@ import { buildSessionFactPack } from "@/lib/coach/reviewEngine";
 import { db, schema } from "@/lib/db";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { analyzeTradeExecutions, coachTradeExecutionFacts } from "@/lib/executionAnalysis";
+import { opportunityContextsForTrades } from "@/lib/coach/opportunityContextService";
 import { decodeJournalTags } from "@/lib/journalLabels";
 import { netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
@@ -288,10 +289,9 @@ async function buildCoachReviewPayloadForScope({
     standardsDrift: recapRow?.whatWentWrong ?? "",
     emotionalState: recapRow?.emotionalState ?? "",
   };
-  const tradeContexts: CoachReviewTradeContext[] = trades.map((trade) => {
-    const note = noteByTradeId.get(trade.id);
+  const executionFactsByTradeId = new Map(trades.map((trade) => {
     const tradeExecutions = executionsByTradeId.get(trade.id) ?? [];
-    const executionAnalysis = tradeExecutions.length === 0
+    const facts = tradeExecutions.length === 0
       ? null
       : coachTradeExecutionFacts(analyzeTradeExecutions(
           trade.side,
@@ -305,6 +305,23 @@ async function buildCoachReviewPayloadForScope({
             brokerOrderKey: execution.brokerOrderKey,
           })),
         ));
+    return [trade.id, facts] as const;
+  }));
+  const opportunityContexts = await opportunityContextsForTrades(trades.map((trade) => ({
+    id: trade.id,
+    symbol: trade.symbol,
+    side: trade.side,
+    entryAt: trade.entryAt,
+    exitAt: trade.exitAt,
+    entryPrice: trade.avgEntryPrice,
+    quantity: trade.quantity,
+    pnl: netPnl(trade),
+    setup: trade.setup,
+    adverseAddTimes: executionFactsByTradeId.get(trade.id)?.adverseAdds.map((add) => add.executedAt),
+  })));
+  const tradeContexts: CoachReviewTradeContext[] = trades.map((trade) => {
+    const note = noteByTradeId.get(trade.id);
+    const executionAnalysis = executionFactsByTradeId.get(trade.id) ?? null;
     return {
       id: trade.id,
       symbol: trade.symbol,
@@ -321,6 +338,7 @@ async function buildCoachReviewPayloadForScope({
       processTags: decodeJournalTags(note?.whatWentWell ?? null),
       emotionTags: decodeJournalTags(note?.whatWentWrong ?? null),
       executionAnalysis,
+      opportunityContext: opportunityContexts.get(trade.id) ?? null,
     };
   });
   return buildCoachReviewPayload({

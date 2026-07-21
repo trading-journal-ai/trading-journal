@@ -1,4 +1,5 @@
 import type { SessionFactPack } from "@/lib/coach/reviewEngine";
+import type { TradeOpportunityContext } from "@/lib/coach/opportunityContext";
 import type { CoachTradeExecutionFacts } from "@/lib/executionAnalysis";
 
 export type CoachReviewTradeContext = {
@@ -17,6 +18,8 @@ export type CoachReviewTradeContext = {
   processTags: string[];
   emotionTags: string[];
   executionAnalysis: CoachTradeExecutionFacts | null;
+  /** Chart-evidence entry read (fills × candles); null when not computable. */
+  opportunityContext: TradeOpportunityContext | null;
 };
 
 export type CoachReviewHumanContext = {
@@ -77,7 +80,7 @@ export function buildCoachReviewPayload({
     trades,
     instructions: {
       role: "Post-trade review coach. Review completed trades only. Do not give live trade calls.",
-      numericBoundary: "Use deterministicFacts and trades[].executionAnalysis for every number. Do not calculate, infer, or modify numeric claims.",
+      numericBoundary: "Use deterministicFacts, trades[].executionAnalysis, and trades[].opportunityContext for every number. Do not calculate, infer, or modify numeric claims. opportunityContext.atEntry contains only facts knowable at entry; opportunityContext.postTrade is hindsight and must never be used to grade the entry decision.",
       outputContract: [
         "dayVerdict",
         "whatMatchedPlaybook",

@@ -4,6 +4,8 @@ import { saveCoachExperimentAction } from "@/app/journal/actions";
 import { db, schema } from "@/lib/db";
 import { parseCoachStoredReview, type CoachStoredReview } from "@/lib/coach/generatedReview";
 import { buildSessionFactPack, type SessionFactPack } from "@/lib/coach/reviewEngine";
+import { shortEntryReason, type TradeOpportunityContext } from "@/lib/coach/opportunityContext";
+import { opportunityContextsForTrades } from "@/lib/coach/opportunityContextService";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
@@ -65,6 +67,8 @@ type KeyTradePrompt = {
   symbol: string;
   pnl: number;
   href: string;
+  /** Chart-evidence entry read, e.g. "entered 38 min past the high, 2.1 ATR extended". */
+  entryReason: string | null;
 };
 
 type WorstTradeCardData = {
@@ -75,6 +79,7 @@ type WorstTradeCardData = {
   pnl: number;
   fills: number;
   href: string;
+  entryReason: string | null;
 };
 
 type ReviewData = {
@@ -462,7 +467,12 @@ function buildDayData(
   executions: ExecutionRow[],
   notedTickerKeys: Set<string>,
   taggedTradeIds: Set<number>,
+  entryContexts?: Map<number, TradeOpportunityContext>,
 ): ReviewData {
+  const entryReasonFor = (tradeId: number): string | null => {
+    const ctx = entryContexts?.get(tradeId);
+    return ctx ? shortEntryReason(ctx) : null;
+  };
   const executionCountByTrade = new Map<number, number>();
   executions.forEach((execution) => {
     if (execution.tradeId == null) return;
@@ -517,6 +527,7 @@ function buildDayData(
       symbol: bestTrade.trade.symbol,
       pnl: bestTrade.pnl,
       href: `/trades/review?date=${date}&symbol=${bestTrade.trade.symbol}&trade=${bestTrade.trade.id}&returnTo=${encodeURIComponent(journalReviewModuleHref("/journal", date))}`,
+      entryReason: entryReasonFor(bestTrade.trade.id),
     });
   }
   if (worstTrade && worstTrade.trade.id !== bestTrade?.trade.id) {
@@ -526,6 +537,7 @@ function buildDayData(
       symbol: worstTrade.trade.symbol,
       pnl: worstTrade.pnl,
       href: `/trades/review?date=${date}&symbol=${worstTrade.trade.symbol}&trade=${worstTrade.trade.id}&returnTo=${encodeURIComponent(journalReviewModuleHref("/journal", date))}`,
+      entryReason: entryReasonFor(worstTrade.trade.id),
     });
   }
   if (biggestTicker && biggestTicker.trades > 1) {
@@ -535,6 +547,7 @@ function buildDayData(
       symbol: biggestTicker.symbol,
       pnl: biggestTicker.pnl,
       href: `/trades/review?date=${date}&symbol=${biggestTicker.symbol}&returnTo=${encodeURIComponent(journalReviewModuleHref("/journal", date))}`,
+      entryReason: null,
     });
   }
 
@@ -552,6 +565,7 @@ function buildDayData(
           pnl: worstTrade.pnl,
           fills: executionCountByTrade.get(worstTrade.trade.id) ?? 0,
           href: `/trades/review?date=${date}&symbol=${worstTrade.trade.symbol}&trade=${worstTrade.trade.id}&returnTo=${encodeURIComponent(dayReturnTo)}`,
+          entryReason: entryReasonFor(worstTrade.trade.id),
         }
       : null;
 
@@ -676,6 +690,22 @@ async function loadReviewRange({
     executionsByDate.set(key, [...(executionsByDate.get(key) ?? []), execution]);
   });
 
+  // Chart-evidence entry context for the focused day view only — week/month
+  // archives stay lean (one candle join per traded symbol-day).
+  const entryContexts = preset === "today" && trades.length > 0
+    ? await opportunityContextsForTrades(trades.map((trade) => ({
+        id: trade.id,
+        symbol: trade.symbol,
+        side: trade.side,
+        entryAt: trade.entryAt,
+        exitAt: trade.exitAt,
+        entryPrice: trade.avgEntryPrice,
+        quantity: trade.quantity,
+        pnl: netPnl(trade),
+        setup: trade.setup,
+      })))
+    : undefined;
+
   const days = reviewDatesForRange(preset, range)
     .map((entryDate) =>
       buildDayData(
@@ -684,6 +714,7 @@ async function loadReviewRange({
         executionsByDate.get(entryDate) ?? [],
         notedTickerKeys,
         taggedTradeIds,
+        entryContexts,
       ),
     );
   const weeksByStart = new Map<string, ReviewData[]>();
@@ -1202,6 +1233,11 @@ function KeyTradePrompts({ prompts }: { prompts: KeyTradePrompt[] }) {
                 {formatMoney(prompt.pnl)}
               </span>
             </div>
+            {prompt.entryReason ? (
+              <div className="mt-1.5 text-[11px] leading-4 text-[var(--muted)]">
+                {prompt.entryReason}
+              </div>
+            ) : null}
           </a>
         ))}
       </div>
@@ -1235,7 +1271,11 @@ function buildDayReviewPresentation(data: ReviewData) {
 
   const unresolved: string[] = [];
   if (worstTrade) {
-    unresolved.push(`${worstTrade.symbol} was the session's clearest red mark.`);
+    unresolved.push(
+      worstTrade.entryReason
+        ? `${worstTrade.symbol}: ${worstTrade.entryReason} — what did you see?`
+        : `${worstTrade.symbol} was the session's clearest red mark.`,
+    );
   }
   coachRead.surprises.slice(0, 2).forEach((surprise) => unresolved.push(surprise.description));
 
@@ -1534,8 +1574,9 @@ function WorstTradeCard({ trade }: { trade: WorstTradeCardData }) {
         <div>
           <div className="text-[13px] font-semibold text-[var(--accent)]">✎ Your note</div>
           <p className="mt-2.5 text-[15px] leading-6 text-[var(--body)] [text-wrap:pretty]">
-            Worst trade of the day — the one to inspect closely. Was the entry late, was the stop
-            respected, and did this loss influence the next trade?
+            {trade.entryReason
+              ? `The chart says you ${trade.entryReason}. Add what you saw — the coach can't judge this entry without your side.`
+              : "Worst trade of the day — the one to inspect closely. Was the entry late, was the stop respected, and did this loss influence the next trade?"}
           </p>
           <a
             href={trade.href}
