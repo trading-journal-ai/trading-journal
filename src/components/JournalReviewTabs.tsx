@@ -20,7 +20,7 @@ export const JOURNAL_SCOPE_VIEWS: Record<
   day: [
     { key: "pnl", label: "P&L" },
     { key: "trades", label: "Trades" },
-    { key: "process", label: "Process" },
+    { key: "process", label: "Chart read" },
     { key: "coach", label: "Coach" },
   ],
   week: [

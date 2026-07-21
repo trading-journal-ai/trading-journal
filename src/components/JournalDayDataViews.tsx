@@ -38,6 +38,19 @@ export type JournalDayProcessFact = {
   tone?: "positive" | "negative" | "neutral";
 };
 
+export type JournalChartReadSummary = {
+  total: number;
+  readable: number;
+  supported: number;
+  contradicted: number;
+  unclear: number;
+  consolidating: number;
+  exhaustion: number;
+  cleanExpansion: number;
+  whippyExpansion: number;
+  headline: string;
+};
+
 export type JournalCoachSummary = {
   diagnosis: string;
   evidence: string;
@@ -88,6 +101,7 @@ export type JournalComparisonData = {
     edgeRows: JournalEdgeRow[];
     taggedCoverage: number | null;
     plannedRiskCoverage: number;
+    chartRead: JournalChartReadSummary;
     coach: JournalCoachSummary;
   };
   month: {
@@ -101,6 +115,7 @@ export type JournalComparisonData = {
       highActivityLossShare: number | null;
       redDays: number;
     };
+    chartRead: JournalChartReadSummary;
     coach: JournalCoachSummary;
   };
 };
@@ -144,6 +159,7 @@ export default function JournalReviewModule({
   returnTo,
   weekCoachSlot,
   monthCoachSlot,
+  dayCoachSlot,
 }: {
   pnlContent: ReactNode;
   tradeRows: JournalDayTradeRow[];
@@ -159,9 +175,10 @@ export default function JournalReviewModule({
   comparisons: JournalComparisonData;
   date: string;
   returnTo: string;
-  /** Server-rendered week/month coach review panels (generation lives here). */
+  /** Server-rendered scope-aware coach review panels (generation lives here). */
   weekCoachSlot?: ReactNode;
   monthCoachSlot?: ReactNode;
+  dayCoachSlot?: ReactNode;
 }) {
   const [scope, setScope] = useState<JournalDataScope>("day");
   const [view, setView] = useState<JournalDataView>("pnl");
@@ -193,6 +210,7 @@ export default function JournalReviewModule({
             tradeRows={tradeRows}
             processFacts={processFacts}
             coach={coach}
+            coachSlot={dayCoachSlot}
             summary={summary}
             date={date}
             returnTo={returnTo}
@@ -211,6 +229,7 @@ function DayViews({
   tradeRows,
   processFacts,
   coach,
+  coachSlot,
   summary,
   date,
   returnTo,
@@ -220,6 +239,7 @@ function DayViews({
   tradeRows: JournalDayTradeRow[];
   processFacts: JournalDayProcessFact[];
   coach: JournalCoachSummary;
+  coachSlot?: ReactNode;
   summary: { trades: number; accuracy: number | null; profitFactor: number | null; pnl: number; taggedTrades: number };
   date: string;
   returnTo: string;
@@ -248,19 +268,21 @@ function DayViews({
 
   if (view === "process") {
     return (
-      <div role="tabpanel" className="grid gap-3">
+      <div role="tabpanel" className="divide-y divide-[var(--hairline)] border-y border-[var(--hairline)]">
         {processFacts.map((fact) => (
-          <div key={fact.label} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
+          <div key={fact.label} className="grid gap-2 py-4 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-6">
             <div className="text-[12px] text-[var(--muted)]">{fact.label}</div>
-            <div className={`mt-1 text-sm font-semibold ${factClass(fact.tone)}`}>{fact.value}</div>
-            <p className="mt-2 text-[12px] leading-5 text-[var(--body)]">{fact.detail}</p>
+            <div>
+              <div className={`text-sm font-semibold ${factClass(fact.tone)}`}>{fact.value}</div>
+              <p className="mt-1 text-[12px] leading-5 text-[var(--body)]">{fact.detail}</p>
+            </div>
           </div>
         ))}
       </div>
     );
   }
 
-  return <CoachRead coach={coach} label="Deterministic diagnosis" />;
+  return coachSlot ? <div role="tabpanel">{coachSlot}</div> : <CoachRead coach={coach} label="Deterministic diagnosis" />;
 }
 
 function WeekViews({ view, data, coachSlot }: { view: JournalDataView; data: JournalComparisonData["week"]; coachSlot?: ReactNode }) {
@@ -301,8 +323,9 @@ function WeekViews({ view, data, coachSlot }: { view: JournalDataView; data: Jou
   if (view === "alignment") {
     return (
       <div role="tabpanel">
+        <ChartReadOverview read={data.chartRead} />
         <ReadFirst title="Market context not connected">
-          Activity is visible, but opportunity quality is not. This view will score participation only after the Stock Info daily summary can distinguish a slow tape from missing coverage.
+          The chart read can judge the trades you took, but it cannot yet judge the opportunities you skipped or whether the whole market was hot, selective, or slow.
         </ReadFirst>
         <SessionTable rows={data.sessions} showActivity />
         <EvidenceBoundary>Relative activity is descriptive—not evidence of boredom, FOMO, tilt, or a market-context mismatch.</EvidenceBoundary>
@@ -310,12 +333,7 @@ function WeekViews({ view, data, coachSlot }: { view: JournalDataView; data: Jou
     );
   }
 
-  return (
-    <div role="tabpanel" className="space-y-8">
-      <CoachRead coach={data.coach} label="Weekly read" />
-      {coachSlot ?? null}
-    </div>
-  );
+  return <div role="tabpanel">{coachSlot ?? <CoachRead coach={data.coach} label="Weekly read" />}</div>;
 }
 
 function MonthViews({ view, data, coachSlot }: { view: JournalDataView; data: JournalComparisonData["month"]; coachSlot?: ReactNode }) {
@@ -363,12 +381,7 @@ function MonthViews({ view, data, coachSlot }: { view: JournalDataView; data: Jo
     );
   }
 
-  return (
-    <div role="tabpanel" className="space-y-8">
-      <CoachRead coach={data.coach} label="Monthly read" />
-      {coachSlot ?? null}
-    </div>
-  );
+  return <div role="tabpanel">{coachSlot ?? <CoachRead coach={data.coach} label="Monthly read" />}</div>;
 }
 
 function RangeHeader({ summary, question }: { summary: JournalRangeSummary; question: string }) {
@@ -385,6 +398,21 @@ function RangeHeader({ summary, question }: { summary: JournalRangeSummary; ques
         <Metric label="Profit factor" value={ratio(summary.profitFactor)} />
       </MetricGrid>
     </div>
+  );
+}
+
+function ChartReadOverview({ read }: { read: JournalChartReadSummary }) {
+  return (
+    <section className="mb-6 border-y border-[var(--hairline)] py-4">
+      <SectionLabel>Chart read at entry</SectionLabel>
+      <p className="mt-2 text-[14px] leading-6 text-[var(--body)]">{read.headline}</p>
+      <p className="mt-3 font-mono text-[12px] leading-5 text-[var(--muted)] tabular-nums">
+        {read.supported} with trend · {read.contradicted} against · {read.unclear} unclear · {read.consolidating} tightening · {read.exhaustion} stalled
+      </p>
+      <p className="mt-1 text-[12px] leading-5 text-[var(--muted)]">
+        {read.readable} of {read.total} trades had enough candle history to judge.
+      </p>
+    </section>
   );
 }
 
