@@ -97,4 +97,34 @@ describe("inspectBrokerCsv", () => {
     expect(result.tos.cashBalance.tradeHistoryUnmatched).toBe(0);
     expect(result.tos.cashBalance.cashUnmatched).toBe(0);
   });
+
+  it("detects filtered history and selects the full Cash Balance ledger", () => {
+    const csv = [
+      "Cash Balance",
+      "DATE,TIME,TYPE,REF #,DESCRIPTION,Misc Fees,Commissions & Fees,AMOUNT,BALANCE",
+      "2/18/26,09:12:51,TRD,5001,BOT +100 FTH @26.80,,,0,0",
+      "2/18/26,09:13:10,TRD,5002,SOLD -100 FTH @26.90,-0.02,,0,0",
+      "7/14/26,04:18:04,TRD,7001,BOT +10 SKDD @13.84,,,0,0",
+      "7/14/26,04:20:21,TRD,7002,SOLD -10 SKDD @13.87,-0.01,,0,0",
+      "",
+      "Account Order History filtered by SKDD",
+      "Notes,,Time Placed,Spread,Side,Qty,Pos Effect,Symbol,Exp,Strike,Type,PRICE,,TIF,Status",
+      ",,7/14/26 04:18:04,STOCK,BUY,10,TO OPEN,SKDD,,,STOCK,13.84,LMT,EXT,FILLED",
+      "",
+      "Account Trade History filtered by SKDD",
+      ",Exec Time,Spread,Side,Qty,Pos Effect,Symbol,Type,Price,Net Price,Order Type",
+      ",7/14/26 04:18:04,STOCK,BUY,+10,TO OPEN,SKDD,STOCK,13.84,13.84,LMT",
+      ",7/14/26 04:20:21,STOCK,SELL,-10,TO CLOSE,SKDD,STOCK,13.87,13.87,LMT",
+    ].join("\n");
+
+    const result = inspectBrokerCsv(csv);
+
+    expect(result.importable).toBe(true);
+    expect(result.importSource).toBe("tos_csv");
+    expect(result.tos.cashBalance.tradeRows).toBe(4);
+    expect(result.tos.orderHistory.filteredBy).toBe("SKDD");
+    expect(result.tos.tradeHistory.filteredBy).toBe("SKDD");
+    expect(result.tos.tradeHistory.usableFills).toBe(2);
+    expect(result.recommendation).toContain("full Cash Balance ledger");
+  });
 });

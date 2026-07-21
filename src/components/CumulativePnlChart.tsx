@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import PeriodTabs from "@/components/PeriodTabs";
 
 export type PnlPoint = { label: string; value: number };
 export type PnlSeries = { points: PnlPoint[]; trades: number };
@@ -147,21 +148,17 @@ export default function CumulativePnlChart({
     <section className="border-t border-[var(--hairline)] pt-6">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">Cumulative P&L</h2>
-        <div className="inline-flex h-10 items-center rounded-md border border-[var(--border)] p-1">
-          {(["week", "month", "year"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`flex h-8 min-w-16 items-center justify-center rounded px-3 text-sm font-semibold capitalize transition-colors ${
-                tab === t
-                  ? "bg-[var(--surface-2)] text-[var(--foreground)]"
-                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+        <PeriodTabs
+          ariaLabel="Cumulative P&L time range"
+          items={[
+            { value: "week", label: "Week" },
+            { value: "month", label: "Month" },
+            { value: "year", label: "Year" },
+          ]}
+          value={tab}
+          onChange={(nextTab) => setTab(nextTab as "week" | "month" | "year")}
+          className="border-b border-[var(--hairline)]"
+        />
       </div>
       <PnlSeriesChart series={series} period={tab} />
     </section>

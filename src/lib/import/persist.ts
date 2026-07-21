@@ -3,7 +3,7 @@
  * grouped trade-summary imports create one trade per source row and attach a
  * synthetic open/close execution pair.
  */
-import { inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { etDateString } from "@/lib/time";
 import {
@@ -128,6 +128,26 @@ async function importNormalized(
       })
       .returning({ id: schema.importBatches.id })
       .get();
+
+    const symbolAliases = new Map(
+      normalized.executions.flatMap((execution) =>
+        execution.brokerSymbol && execution.brokerSymbol !== execution.symbol
+          ? [[execution.brokerSymbol, execution.symbol] as const]
+          : [],
+      ),
+    );
+    for (const [brokerSymbol, canonicalSymbol] of symbolAliases) {
+      await tx
+        .update(schema.executions)
+        .set({ symbol: canonicalSymbol })
+        .where(and(eq(schema.executions.accountId, accountId), eq(schema.executions.symbol, brokerSymbol)))
+        .run();
+      await tx
+        .update(schema.trades)
+        .set({ symbol: canonicalSymbol })
+        .where(and(eq(schema.trades.accountId, accountId), eq(schema.trades.symbol, brokerSymbol)))
+        .run();
+    }
 
     const insertedRows = await insertExecutions(tx, normalized.executions, accountId, batch.id);
     const idByHash = new Map(insertedRows.map((r) => [r.hash, r.id]));

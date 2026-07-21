@@ -2,6 +2,13 @@
 
 import dynamic from "next/dynamic";
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import JournalReviewTabs, {
+  JOURNAL_SCOPE_VIEWS,
+  type JournalDataScope,
+  type JournalDataView,
+} from "@/components/JournalReviewTabs";
+
+export type { JournalDataScope, JournalDataView } from "@/components/JournalReviewTabs";
 
 const InlineTradeReviewPanel = dynamic(() => import("@/components/InlineTradeReviewPanel"), {
   ssr: false,
@@ -11,30 +18,6 @@ const InlineTradeReviewPanel = dynamic(() => import("@/components/InlineTradeRev
     </div>
   ),
 });
-
-export type JournalDataScope = "day" | "week" | "month";
-export type JournalDataView = "pnl" | "trades" | "process" | "edge" | "alignment" | "horizon" | "risk" | "coach";
-
-const scopeViews: Record<JournalDataScope, { key: JournalDataView; label: string }[]> = {
-  day: [
-    { key: "pnl", label: "P&L" },
-    { key: "trades", label: "Trades" },
-    { key: "process", label: "Process" },
-    { key: "coach", label: "Coach" },
-  ],
-  week: [
-    { key: "pnl", label: "P&L" },
-    { key: "edge", label: "Edge" },
-    { key: "alignment", label: "Alignment" },
-    { key: "coach", label: "Coach" },
-  ],
-  month: [
-    { key: "pnl", label: "P&L" },
-    { key: "horizon", label: "Horizon" },
-    { key: "risk", label: "Risk" },
-    { key: "coach", label: "Coach" },
-  ],
-};
 
 export type JournalDayTradeRow = {
   id: number;
@@ -150,9 +133,7 @@ function factClass(tone: JournalDayProcessFact["tone"] | JournalHorizonRow["tone
   return "text-[var(--foreground)]";
 }
 
-export default function JournalDayDataViews({
-  initialScope = "day",
-  initialView = "pnl",
+export default function JournalReviewModule({
   pnlContent,
   tradeRows,
   processFacts,
@@ -162,8 +143,6 @@ export default function JournalDayDataViews({
   date,
   returnTo,
 }: {
-  initialScope?: JournalDataScope;
-  initialView?: JournalDataView;
   pnlContent: ReactNode;
   tradeRows: JournalDayTradeRow[];
   processFacts: JournalDayProcessFact[];
@@ -179,65 +158,22 @@ export default function JournalDayDataViews({
   date: string;
   returnTo: string;
 }) {
-  const [scope, setScope] = useState<JournalDataScope>(initialScope);
-  const [view, setView] = useState<JournalDataView>(
-    scopeViews[initialScope].some((item) => item.key === initialView) ? initialView : scopeViews[initialScope][0].key,
-  );
-  const views = scopeViews[scope];
-
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    url.searchParams.set("scope", scope);
-    url.searchParams.set("view", view);
-    window.history.replaceState(null, "", `${url.pathname}?${url.searchParams.toString()}`);
-  }, [scope, view]);
+  const [scope, setScope] = useState<JournalDataScope>("day");
+  const [view, setView] = useState<JournalDataView>("pnl");
 
   function selectScope(nextScope: JournalDataScope) {
     setScope(nextScope);
-    setView(scopeViews[nextScope][0].key);
+    setView(JOURNAL_SCOPE_VIEWS[nextScope][0].key);
   }
 
   return (
     <section>
-      <div className="flex flex-wrap items-end justify-between gap-2 border-b border-[var(--hairline)]">
-        <div role="tablist" aria-label="Journal time range" className="flex min-w-0 items-center gap-1 text-[14px] font-semibold">
-          {(["day", "week", "month"] as const).map((item) => (
-            <button
-              key={item}
-              type="button"
-              role="tab"
-              aria-selected={scope === item}
-              onClick={() => selectScope(item)}
-              className={`-mb-px cursor-pointer border-b-2 px-4 py-3.5 capitalize transition-colors ${
-                scope === item
-                  ? "border-[var(--foreground)] text-[var(--foreground)]"
-                  : "border-transparent text-[var(--muted)] hover:border-[var(--muted)] hover:text-[var(--foreground)]"
-              }`}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
-
-        <div role="tablist" aria-label={`${scope} data view`} className="flex min-w-0 gap-1 overflow-x-auto pb-2.5">
-          {views.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              role="tab"
-              aria-selected={view === item.key}
-              onClick={() => setView(item.key)}
-              className={`min-h-8 cursor-pointer whitespace-nowrap rounded-full px-3.5 text-[12.5px] font-semibold transition-colors ${
-                view === item.key
-                  ? "bg-[var(--foreground)] text-[var(--background)]"
-                  : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]"
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <JournalReviewTabs
+        scope={scope}
+        view={view}
+        onScopeChange={selectScope}
+        onViewChange={setView}
+      />
 
       <div className="mt-7">
         {scope === "day" ? (

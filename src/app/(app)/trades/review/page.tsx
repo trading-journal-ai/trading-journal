@@ -268,6 +268,11 @@ export default async function TickerDayReviewPage({
 
       <section className="mb-8 pt-5">
         <div className="min-w-0">
+          {candles.length === 0 && chartCandles.length > 0 ? (
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--muted)]">
+              Estimated chart · reconstructed from executions
+            </p>
+          ) : null}
           {chartCandles.length > 0 ? (
             <LightweightTradeChart
               candles={chartCandles}

@@ -8,6 +8,7 @@ import { and, eq, gte, lte } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { canFetchRemoteCandles } from "@/lib/demoMode";
 import { MARKET_TZ, zonedDateTimeToUtcMs } from "@/lib/time";
+import { isCusip } from "@/lib/import/securityIdentifiers";
 import { fetchMassiveDay, type Candle } from "./massive";
 
 const TIMEFRAME = "1m";
@@ -99,6 +100,12 @@ export async function getCandles(
   from: number,
   to: number,
 ): Promise<{ candles: Candle[]; error?: string }> {
+  if (isCusip(symbol)) {
+    return {
+      candles: [],
+      error: `Market candles are unavailable until CUSIP ${symbol} is resolved to a ticker.`,
+    };
+  }
   if (!canFetchRemoteCandles()) {
     return { candles: await readCachedCandles(symbol, from, to) };
   }

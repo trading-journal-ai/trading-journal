@@ -11,7 +11,7 @@ import {
   type ReviewAttachment,
   type ReviewTagOption,
 } from "@/components/TickerReviewTradeExtras";
-import type { TradeExecutionAnalysis } from "@/lib/executionAnalysis";
+import type { AnalyzedTradeExecution, TradeExecutionAnalysis } from "@/lib/executionAnalysis";
 
 export type TickerReviewTrade = {
   id: number;
@@ -45,6 +45,73 @@ function formatSignedMoney(value: number) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+
+function formatExecutionPrice(value: number) {
+  return `$${value.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function executionLifecycleLabel(execution: AnalyzedTradeExecution) {
+  if (execution.lifecycle === "open") return "Entry";
+  if (execution.lifecycle === "increase") return "Add";
+  if (execution.lifecycle === "reduce") return "Reduce";
+  return "Exit";
+}
+
+function TradeExecutionDisclosure({
+  analysis,
+  regionId,
+}: {
+  analysis?: TradeExecutionAnalysis;
+  regionId: string;
+}) {
+  if (!analysis || analysis.executions.length === 0) {
+    return (
+      <div id={regionId} className="border-t border-[var(--hairline)] bg-[var(--background)] px-4 py-3 text-[12px] text-[var(--muted)]">
+        Execution details are unavailable for this trade.
+      </div>
+    );
+  }
+
+  return (
+    <div id={regionId} className="border-t border-[var(--hairline)] bg-[var(--background)] px-4 py-2">
+      <div className="divide-y divide-[var(--hairline)] font-mono text-[11px] tabular-nums">
+        {analysis.executions.map((execution, index) => {
+          const realizedTone = execution.realizedPnl == null
+            ? "text-[var(--muted)]"
+            : execution.realizedPnl > 0
+              ? "text-[var(--green)]"
+              : execution.realizedPnl < 0
+                ? "text-[var(--red)]"
+                : "text-[var(--muted)]";
+          return (
+            <div
+              key={execution.id ?? `${execution.side}-${execution.executedAt}-${index}`}
+              className="grid grid-cols-[54px_56px_minmax(48px,1fr)_54px_70px_72px] items-center gap-x-2 py-2"
+            >
+              <span className="font-normal text-[var(--muted)]">
+                {executionLifecycleLabel(execution)}
+              </span>
+              <span className={`ml-5 font-semibold ${execution.side === "buy" ? "text-[var(--green-chart)]" : "text-[var(--red-chart)]"}`}>
+                {execution.side === "buy" ? "Buy" : "Sell"}
+              </span>
+              <span className="ml-5 whitespace-nowrap text-[var(--body)]">{execution.quantity.toLocaleString("en-US")} shares</span>
+              <span className="text-right text-[var(--muted)]">
+                {execution.fillCount} {execution.fillCount === 1 ? "fill" : "fills"}
+              </span>
+              <span className={`text-right ${realizedTone}`}>
+                {execution.realizedPnl == null ? "" : formatSignedMoney(execution.realizedPnl)}
+              </span>
+              <span className="text-right font-semibold text-[var(--foreground)]">{formatExecutionPrice(execution.price)}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function tradeAnchor(trade: TickerReviewTrade) {
@@ -192,6 +259,7 @@ export default function TickerReviewWorkspace({
   const [overallHeaderVisible, setOverallHeaderVisible] = useState(() => Boolean(tickerNote.trim()));
   const [activeSectionIndex, setActiveSectionIndex] = useState<number | null>(null);
   const [hasSavedNote, setHasSavedNote] = useState(() => Boolean(tickerNote.trim()));
+  const [expandedTradeId, setExpandedTradeId] = useState<number | null>(() => initialTrade?.id ?? null);
   const [isSaving, startSaving] = useTransition();
   // Keep the suggested best/worst shortcuts available for the entire edit
   // session instead of removing them as soon as the first words are entered.
@@ -589,27 +657,18 @@ export default function TickerReviewWorkspace({
       </div>
 
       {!compact ? <aside className="lg:sticky lg:top-6" aria-label="Trades">
-        <div className="border-t border-[var(--hairline)] pt-6">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">Trades</h2>
-          </div>
-          <div className="mt-3 grid grid-cols-4 divide-x divide-[var(--hairline)] border-t border-[var(--hairline)] bg-[var(--surface)] py-3">
-            <div className="px-2 text-center">
-              <div className="text-[11px] text-[var(--muted)]">Trades</div>
-              <div className="mt-1 text-[15px] font-semibold tabular-nums text-[var(--foreground)]">{trades.length}</div>
-            </div>
-            <div className="px-2 text-center">
-              <div className="text-[11px] text-[var(--muted)]">Accuracy</div>
-              <div className="mt-1 text-[15px] font-semibold tabular-nums text-[var(--foreground)]">{tradeSummary.accuracy}</div>
-            </div>
-            <div className="px-2 text-center">
-              <div className="whitespace-nowrap text-[11px] text-[var(--muted)]">Profit factor</div>
-              <div className="mt-1 text-[15px] font-semibold tabular-nums text-[var(--foreground)]">{tradeSummary.profitFactor}</div>
-            </div>
-            <div className="px-2 text-center">
-              <div className="whitespace-nowrap text-[11px] text-[var(--muted)]">Total P&amp;L</div>
-              <div className={`mt-1 whitespace-nowrap text-[15px] font-semibold tabular-nums ${pnlClass(tradeSummary.totalPnlTone)}`}>{tradeSummary.totalPnl}</div>
-            </div>
+        <div className="border-t border-[var(--hairline)]">
+          <div
+            aria-label="Trade summary"
+            className="flex flex-wrap items-center gap-x-2.5 gap-y-1 bg-[var(--surface)] px-3 py-4 font-mono text-[13px] tabular-nums text-[var(--muted)]"
+          >
+            <span><span className="font-semibold text-[var(--foreground)]">{trades.length}</span> {trades.length === 1 ? "trade" : "trades"}</span>
+            <span aria-hidden="true">·</span>
+            <span><span className="font-semibold text-[var(--foreground)]">{tradeSummary.accuracy}</span> accuracy</span>
+            <span aria-hidden="true">·</span>
+            <span>PF <span className="font-semibold text-[var(--foreground)]">{tradeSummary.profitFactor}</span></span>
+            <span aria-hidden="true">·</span>
+            <span className={`font-semibold ${pnlClass(tradeSummary.totalPnlTone)}`}>{tradeSummary.totalPnl} total</span>
           </div>
           <div className="divide-y divide-[var(--hairline)] border-y border-[var(--hairline)] bg-[var(--surface)]">
             <div className="grid grid-cols-[minmax(0,1fr)_28px] items-center gap-1 px-1 py-2 text-[11px] font-semibold text-[var(--muted)]">
@@ -626,33 +685,48 @@ export default function TickerReviewWorkspace({
             </div>
             {trades.map((trade) => {
               const hasMoment = anchoredTradeIds.has(trade.id);
+              const isExpanded = expandedTradeId === trade.id;
+              const executionRegionId = `trade-${trade.id}-executions`;
               return (
-                <div key={trade.id} className="grid grid-cols-[minmax(0,1fr)_28px] items-center gap-1 px-1 py-1">
-                  <button
-                    type="button"
-                    onClick={() => addTradeMoment(trade)}
-                    className="grid grid-cols-[0.9fr_0.8fr_0.65fr_1.55fr_1fr_0.8fr_1fr] items-center gap-x-2 rounded px-1 py-2 text-left text-[12px] tabular-nums transition-colors hover:bg-[var(--surface)]"
-                    title={`Append Trade ${trade.number} to the review note`}
+                <div key={trade.id}>
+                  <div className={`grid grid-cols-[minmax(0,1fr)_28px] items-center gap-1 px-1 py-1 transition-colors duration-200 ease-out motion-reduce:transition-none ${isExpanded ? "bg-[var(--surface-2)]" : ""}`}>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedTradeId((current) => current === trade.id ? null : trade.id)}
+                      aria-expanded={isExpanded}
+                      aria-controls={executionRegionId}
+                      className="grid grid-cols-[0.9fr_0.8fr_0.65fr_1.55fr_1fr_0.8fr_1fr] items-center gap-x-2 rounded px-1 py-2 text-left text-[12px] tabular-nums transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--blue)]"
+                      title={`${isExpanded ? "Hide" : "Show"} Trade ${trade.number} entries and exits`}
+                    >
+                      <span className="flex items-baseline gap-2 whitespace-nowrap">
+                        <span aria-hidden="true" className={`text-[10px] text-[var(--accent)] transition-transform duration-200 ease-out motion-reduce:transition-none ${isExpanded ? "rotate-90" : ""}`}>›</span>
+                        <span className="font-semibold text-[var(--foreground)]">{trade.number}</span>
+                        <span className="text-[var(--muted)]">{trade.entryTime}</span>
+                      </span>
+                      <span className="whitespace-nowrap text-center text-[var(--muted)]">{trade.shares}</span>
+                      <span className="whitespace-nowrap text-center text-[var(--muted)]">{trade.executions}</span>
+                      <span className="whitespace-nowrap text-center text-[var(--muted)]">{trade.entryPrice} / {trade.exitPrice}</span>
+                      <span className={`whitespace-nowrap text-center ${pnlClass(trade.perShareTone)}`}>{trade.perShare}</span>
+                      <span className="whitespace-nowrap text-center text-[var(--muted)]">{trade.holdDuration ?? "Open"}</span>
+                      <span className={`whitespace-nowrap text-center ${pnlClass(trade.pnlTone)}`}>{trade.pnl}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addTradeMoment(trade)}
+                      aria-label={`Append Trade ${trade.number} to the review note`}
+                      className={`grid size-7 place-items-center rounded text-[16px] font-semibold transition-colors hover:bg-[var(--surface-2)] ${hasMoment ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--accent)]"}`}
+                    >
+                      {hasMoment ? "✎" : "+"}
+                    </button>
+                  </div>
+                  <div
+                    aria-hidden={!isExpanded}
+                    className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
                   >
-                    <span className="flex items-baseline gap-2 whitespace-nowrap">
-                      <span className="font-semibold text-[var(--foreground)]">{trade.number}</span>
-                      <span className="text-[var(--muted)]">{trade.entryTime}</span>
-                    </span>
-                    <span className="whitespace-nowrap text-center text-[var(--muted)]">{trade.shares}</span>
-                    <span className="whitespace-nowrap text-center text-[var(--muted)]">{trade.executions}</span>
-                    <span className="whitespace-nowrap text-center text-[var(--muted)]">{trade.entryPrice} / {trade.exitPrice}</span>
-                    <span className={`whitespace-nowrap text-center ${pnlClass(trade.perShareTone)}`}>{trade.perShare}</span>
-                    <span className="whitespace-nowrap text-center text-[var(--muted)]">{trade.holdDuration ?? "Open"}</span>
-                    <span className={`whitespace-nowrap text-center ${pnlClass(trade.pnlTone)}`}>{trade.pnl}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => addTradeMoment(trade)}
-                    aria-label={`Append Trade ${trade.number} to the review note`}
-                    className={`grid size-7 place-items-center rounded text-[16px] font-semibold transition-colors hover:bg-[var(--surface-2)] ${hasMoment ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--accent)]"}`}
-                  >
-                    {hasMoment ? "✎" : "+"}
-                  </button>
+                    <div className="min-h-0 overflow-hidden">
+                      <TradeExecutionDisclosure analysis={trade.executionAnalysis} regionId={executionRegionId} />
+                    </div>
+                  </div>
                 </div>
               );
             })}

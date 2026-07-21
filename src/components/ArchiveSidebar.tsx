@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export type ArchiveSidebarWeek = {
   key: string;
@@ -54,6 +54,7 @@ export default function ArchiveSidebar({
     [months],
   );
   const [activeWeekKey, setActiveWeekKey] = useState<string | null>(null);
+  const activeWeekRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!enableWeekScrollSpy || spyWeeks.length === 0) {
@@ -73,7 +74,17 @@ export default function ArchiveSidebar({
         return distance < best.distance ? { key: entry.week.key, distance } : best;
       }, { key: sections[0].week.key, distance: Number.POSITIVE_INFINITY });
 
+      if (activeWeekRef.current === current.key) return;
+      activeWeekRef.current = current.key;
       setActiveWeekKey(current.key);
+      const sectionId = sections.find((entry) => entry.week.key === current.key)?.week.sectionId;
+      if (sectionId) {
+        window.history.replaceState(
+          window.history.state,
+          "",
+          `${window.location.pathname}${window.location.search}#${sectionId}`,
+        );
+      }
     };
 
     const frame = window.requestAnimationFrame(updateActiveWeek);

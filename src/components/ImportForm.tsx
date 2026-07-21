@@ -40,15 +40,20 @@ export default function ImportForm() {
       ?? visibleState.summary.parsedFrom
     : null;
   const recapHref = recapDate
-    ? `/journal?preset=today&date=${recapDate}`
+    ? `/journal?date=${recapDate}`
     : "/journal";
   const sourceLabel =
     visibleState?.ok && visibleState.summary.source === "das_csv" ? "DAS" : "ThinkorSwim";
   const confidenceLabel = visibleState?.ok ? confidenceCopy(visibleState.summary.sourceConfidence) : null;
 
   useEffect(() => {
-    if (state?.ok) router.refresh();
-  }, [router, state]);
+    if (!state?.ok) return;
+    if (recapDate) {
+      router.push(recapHref);
+      return;
+    }
+    router.refresh();
+  }, [recapDate, recapHref, router, state]);
 
   function closeModal() {
     if (pending) return;
@@ -370,10 +375,10 @@ function ImportDiagnostics({ inspection }: { inspection: BrokerCsvInspection }) 
       ? `Cash ↔ trade history: ${inspection.tos.cashBalance.tradeHistoryExactMatches} exact fill matches`
       : null,
     inspection.tos.tradeHistory.present
-      ? `Trade history: ${inspection.tos.tradeHistory.usableFills} usable fills from ${inspection.tos.tradeHistory.rows} rows`
+      ? `Trade history${inspection.tos.tradeHistory.filteredBy ? ` (filtered by ${inspection.tos.tradeHistory.filteredBy})` : ""}: ${inspection.tos.tradeHistory.usableFills} usable fills from ${inspection.tos.tradeHistory.rows} rows`
       : null,
     inspection.tos.orderHistory.present
-      ? `Order history: ${inspection.tos.orderHistory.usableFilledRows} usable filled rows from ${inspection.tos.orderHistory.rows} rows`
+      ? `Order history${inspection.tos.orderHistory.filteredBy ? ` (filtered by ${inspection.tos.orderHistory.filteredBy})` : ""}: ${inspection.tos.orderHistory.usableFilledRows} usable filled rows from ${inspection.tos.orderHistory.rows} rows`
       : null,
     inspection.tos.pnl.present
       ? `P&L: ${inspection.tos.pnl.symbols} symbols${inspection.tos.pnl.netYtdPnl == null ? "" : `, YTD ${formatMoney(inspection.tos.pnl.netYtdPnl)}`}`

@@ -25,6 +25,7 @@ export type InlineTradeReviewData = {
   availableTags: ReviewTagOption[];
   candleError?: string;
   candles: ChartCandle[];
+  candleSource: "market" | "execution_fallback";
   initialFocusTime?: number;
   initialTradeId: number;
   markers: ChartMarker[];
@@ -211,6 +212,7 @@ export async function loadInlineTradeReview({
     availableTags: [...availableTags.values()],
     candleError: candleResult.error,
     candles,
+    candleSource: candleResult.candles.length > 0 ? "market" : "execution_fallback",
     initialFocusTime: selectedTrade.entryAt ?? undefined,
     initialTradeId: tradeId,
     markers: trades.flatMap((trade) => (
