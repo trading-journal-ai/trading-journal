@@ -257,7 +257,7 @@ export default async function TickerDayReviewPage({
   }
 
   return (
-    <div className="mx-auto max-w-[1280px]">
+    <div className={dayTickers.length > 1 ? "mx-auto max-w-[1490px]" : "mx-auto max-w-[1280px]"}>
       <Breadcrumbs
         back={originCrumb}
         items={sectionCrumbs}
@@ -277,48 +277,47 @@ export default async function TickerDayReviewPage({
       </div>
 
       <section className="mb-8 pt-5">
-        <div className="min-w-0">
-          {candles.length === 0 && chartCandles.length > 0 ? (
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--muted)]">
-              Estimated chart · reconstructed from executions
-            </p>
-          ) : null}
-          <div className={dayTickers.length > 1 ? "grid gap-6 lg:grid-cols-[minmax(0,1fr)_170px] lg:items-start" : ""}>
-          <div className="min-w-0">
-          {chartCandles.length > 0 ? (
-            <LightweightTradeChart
-              candles={chartCandles}
-              enableFullscreen
-              initialFocusTime={trades[0]?.entryAt ?? undefined}
-              markers={trades.flatMap((trade) => (
-                (executionAnalysisByTradeId.get(trade.id)?.executions ?? []).map((execution) => ({
-                  id: execution.id,
-                  t: execution.executedAt,
-                  price: execution.price,
-                  side: execution.side,
-                  quantity: execution.quantity,
-                  tradeNumber: tradeNumberById.get(trade.id),
-                  executionLifecycle: execution.lifecycle,
-                  addedAgainstPosition: execution.addedAgainstPosition,
-                }))
-              ))}
-              tradeSummaries={workspaceTrades.flatMap((trade) => trade.executionAnalysis ? [{
-                tradeNumber: trade.number,
-                executionAnalysis: trade.executionAnalysis,
-                holdDuration: trade.holdDuration,
-                shares: trade.shares,
-              }] : [])}
-            />
-          ) : error ? (
-            <div className="rounded-[6px] border border-[var(--red)]/40 bg-[var(--red)]/10 px-4 py-3 text-sm text-[var(--red)]">
-              Candle data is unavailable for this ticker.
-            </div>
-          ) : (
-            <LightweightTradeChart candles={[]} markers={[]} />
-          )}
+        <div className={dayTickers.length > 1 ? "min-w-0 2xl:grid 2xl:grid-cols-[minmax(0,1fr)_170px] 2xl:gap-x-10" : "min-w-0"}>
+          <div className={dayTickers.length > 1 ? "min-w-0 2xl:col-start-1 2xl:row-start-1" : "min-w-0"}>
+            {candles.length === 0 && chartCandles.length > 0 ? (
+              <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--muted)]">
+                Estimated chart · reconstructed from executions
+              </p>
+            ) : null}
+            {chartCandles.length > 0 ? (
+              <LightweightTradeChart
+                candles={chartCandles}
+                enableFullscreen
+                initialFocusTime={trades[0]?.entryAt ?? undefined}
+                markers={trades.flatMap((trade) => (
+                  (executionAnalysisByTradeId.get(trade.id)?.executions ?? []).map((execution) => ({
+                    id: execution.id,
+                    t: execution.executedAt,
+                    price: execution.price,
+                    side: execution.side,
+                    quantity: execution.quantity,
+                    tradeNumber: tradeNumberById.get(trade.id),
+                    executionLifecycle: execution.lifecycle,
+                    addedAgainstPosition: execution.addedAgainstPosition,
+                  }))
+                ))}
+                tradeSummaries={workspaceTrades.flatMap((trade) => trade.executionAnalysis ? [{
+                  tradeNumber: trade.number,
+                  executionAnalysis: trade.executionAnalysis,
+                  holdDuration: trade.holdDuration,
+                  shares: trade.shares,
+                }] : [])}
+              />
+            ) : error ? (
+              <div className="rounded-[6px] border border-[var(--red)]/40 bg-[var(--red)]/10 px-4 py-3 text-sm text-[var(--red)]">
+                Candle data is unavailable for this ticker.
+              </div>
+            ) : (
+              <LightweightTradeChart candles={[]} markers={[]} />
+            )}
           </div>
           {dayTickers.length > 1 ? (
-            <nav aria-label="Tickers traded this day" className="lg:pt-1">
+            <nav aria-label="Tickers traded this day" className="mt-6 2xl:col-start-2 2xl:row-start-1 2xl:mt-0 2xl:pt-1">
               <div className="text-[12px] font-semibold text-[var(--muted)]">
                 Traded this day
               </div>
@@ -348,19 +347,20 @@ export default async function TickerDayReviewPage({
               </ul>
             </nav>
           ) : null}
+          <div className={dayTickers.length > 1 ? "min-w-0 2xl:col-start-1 2xl:row-start-2" : "min-w-0"}>
+            <TickerReviewWorkspace
+              key={`${date}:${symbol}:${tickerReviewNote[0]?.lessons ?? ""}`}
+              date={date}
+              symbol={symbol}
+              returnTo={backHref}
+              tickerNote={tickerReviewNote[0]?.lessons ?? ""}
+              tickerTags={tickerTagRows.map((row) => row.name)}
+              trades={workspaceTrades}
+              availableTags={[...tagOptionMap.values()]}
+              readOnly={readOnly}
+              initialTradeId={initialTradeId}
+            />
           </div>
-          <TickerReviewWorkspace
-            key={`${date}:${symbol}:${tickerReviewNote[0]?.lessons ?? ""}`}
-            date={date}
-            symbol={symbol}
-            returnTo={backHref}
-            tickerNote={tickerReviewNote[0]?.lessons ?? ""}
-            tickerTags={tickerTagRows.map((row) => row.name)}
-            trades={workspaceTrades}
-            availableTags={[...tagOptionMap.values()]}
-            readOnly={readOnly}
-            initialTradeId={initialTradeId}
-          />
         </div>
       </section>
     </div>
