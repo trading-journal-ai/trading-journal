@@ -11,6 +11,8 @@ export type FylReasonCode =
   | "EMA20_ABOVE_EMA9"
   | "EMA9_RECENTLY_CROSSED_ABOVE_EMA20"
   | "EMA9_RECENTLY_CROSSED_BELOW_EMA20"
+  | "EMA_RAIL_RISING"
+  | "EMA_RAIL_FALLING"
   | "PRICE_ABOVE_EMA_RAIL"
   | "PRICE_BELOW_EMA_RAIL"
   | "PRICE_ABOVE_VWAP"
@@ -22,6 +24,7 @@ export type FylMarketReadInput = {
   lastEmaCross: "bullish" | "bearish" | null;
   barsSinceEmaCross: number | null;
   priceVsEmaRail: "above" | "inside" | "below" | null;
+  emaSlope: "rising" | "falling" | "mixed" | "flat" | null;
   vwapRelationship: "above" | "below" | "at" | null;
 };
 
@@ -33,6 +36,14 @@ export type FylMarketRead = {
   bearishVotes: number;
   evidenceCount: number;
   reasonCodes: FylReasonCode[];
+  calculationVersion: typeof FYL_MARKET_READ_VERSION;
+};
+
+export type FylOpportunityStatus = "supported" | "contradicted" | "insufficient_evidence";
+
+export type FylDirectionalOpportunity = {
+  status: FylOpportunityStatus;
+  headline: string;
   calculationVersion: typeof FYL_MARKET_READ_VERSION;
 };
 
@@ -79,6 +90,17 @@ export function evaluateFylMarketRead(input: FylMarketReadInput): FylMarketRead 
     } else if (input.priceVsEmaRail === "below") {
       bearishVotes += 1;
       reasonCodes.push("PRICE_BELOW_EMA_RAIL");
+    }
+  }
+
+  if (input.emaSlope != null) {
+    evidenceCount += 1;
+    if (input.emaSlope === "rising") {
+      bullishVotes += 1;
+      reasonCodes.push("EMA_RAIL_RISING");
+    } else if (input.emaSlope === "falling") {
+      bearishVotes += 1;
+      reasonCodes.push("EMA_RAIL_FALLING");
     }
   }
 
@@ -137,6 +159,37 @@ export function evaluateFylMarketRead(input: FylMarketReadInput): FylMarketRead 
     bearishVotes,
     evidenceCount,
     reasonCodes,
+    calculationVersion: FYL_MARKET_READ_VERSION,
+  };
+}
+
+/** Compare the frozen market read with the broker-recorded trade direction. */
+export function evaluateFylDirectionalOpportunity(
+  read: FylMarketRead,
+  side: "long" | "short",
+): FylDirectionalOpportunity {
+  const aligned = (side === "long" && read.mode === "uptrend")
+    || (side === "short" && read.mode === "downtrend");
+  const opposed = (side === "long" && read.mode === "downtrend")
+    || (side === "short" && read.mode === "uptrend");
+
+  if (aligned) {
+    return {
+      status: "supported",
+      headline: `The ${side} direction fit the chart.`,
+      calculationVersion: FYL_MARKET_READ_VERSION,
+    };
+  }
+  if (opposed) {
+    return {
+      status: "contradicted",
+      headline: `The ${side} direction was fighting the chart.`,
+      calculationVersion: FYL_MARKET_READ_VERSION,
+    };
+  }
+  return {
+    status: "insufficient_evidence",
+    headline: `The chart did not give enough agreement to support the ${side} direction.`,
     calculationVersion: FYL_MARKET_READ_VERSION,
   };
 }

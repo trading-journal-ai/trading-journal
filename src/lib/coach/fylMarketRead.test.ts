@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluateFylMarketRead } from "./fylMarketRead";
+import { evaluateFylDirectionalOpportunity, evaluateFylMarketRead } from "./fylMarketRead";
 
 describe("evaluateFylMarketRead", () => {
   it("calls aligned higher structure an uptrend", () => {
@@ -9,6 +9,7 @@ describe("evaluateFylMarketRead", () => {
       lastEmaCross: "bullish",
       barsSinceEmaCross: 3,
       priceVsEmaRail: "above",
+      emaSlope: "rising",
       vwapRelationship: "above",
     });
 
@@ -25,6 +26,7 @@ describe("evaluateFylMarketRead", () => {
       lastEmaCross: "bearish",
       barsSinceEmaCross: 2,
       priceVsEmaRail: "below",
+      emaSlope: "falling",
       vwapRelationship: "below",
     });
 
@@ -42,6 +44,7 @@ describe("evaluateFylMarketRead", () => {
       lastEmaCross: "bearish",
       barsSinceEmaCross: 1,
       priceVsEmaRail: "inside",
+      emaSlope: "mixed",
       vwapRelationship: "above",
     });
 
@@ -56,6 +59,7 @@ describe("evaluateFylMarketRead", () => {
       lastEmaCross: "bullish",
       barsSinceEmaCross: 1,
       priceVsEmaRail: "above",
+      emaSlope: "rising",
       vwapRelationship: "above",
     });
 
@@ -69,9 +73,25 @@ describe("evaluateFylMarketRead", () => {
       lastEmaCross: null,
       barsSinceEmaCross: null,
       priceVsEmaRail: null,
+      emaSlope: null,
       vwapRelationship: "above",
     });
 
     expect(read.mode).toBe("insufficient_evidence");
+  });
+
+  it("separates the chart read from directional opportunity support", () => {
+    const downtrend = evaluateFylMarketRead({
+      structure: "lh_ll",
+      emaStack: "bearish",
+      lastEmaCross: "bearish",
+      barsSinceEmaCross: 2,
+      priceVsEmaRail: "below",
+      emaSlope: "falling",
+      vwapRelationship: "below",
+    });
+
+    expect(evaluateFylDirectionalOpportunity(downtrend, "long").status).toBe("contradicted");
+    expect(evaluateFylDirectionalOpportunity(downtrend, "short").status).toBe("supported");
   });
 });
