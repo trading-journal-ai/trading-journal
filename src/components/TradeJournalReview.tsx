@@ -2,6 +2,7 @@ import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { generateCoachReviewAction, saveDraftCoachReviewAction } from "@/app/coach/actions";
 import { saveCoachExperimentAction } from "@/app/journal/actions";
 import { db, schema } from "@/lib/db";
+import { listAccounts } from "@/lib/accountScope";
 import { parseCoachStoredReview, type CoachStoredReview } from "@/lib/coach/generatedReview";
 import CoachOutputTabs from "@/components/CoachOutputTabs";
 import CollapsibleSection from "@/components/CollapsibleSection";
@@ -1863,18 +1864,22 @@ function EmptyReviewState({
   reviewScope,
   recapNote,
   readOnly,
+  accountName,
 }: {
   brokerDataAvailable: boolean;
   reviewScope: ReviewScope;
   recapNote: ScopedRecapNote | null;
   readOnly: boolean;
+  accountName?: string | null;
 }) {
+  const accountSuffix = accountName ? ` on ${accountName}` : "";
   if (!brokerDataAvailable) {
     return (
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-[var(--foreground)]">No broker import found</h2>
+        <h2 className="text-lg font-semibold text-[var(--foreground)]">No broker import found{accountSuffix}</h2>
         <p className="max-w-[500px] text-sm leading-6 text-[var(--body)]">
           Import executions before the journal can build the session path, trade list, and deterministic Coach facts.
+          {accountName ? " If you expected data here, check the account selector in the top-right menu." : ""}
         </p>
         <InlineImportPrompt readOnly={readOnly} />
       </section>
@@ -1885,12 +1890,13 @@ function EmptyReviewState({
     <section className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-[var(--foreground)]">
-          {reviewScope.scope === "day" ? "No trades taken" : "No trades in this period"}
+          {reviewScope.scope === "day" ? `No trades taken${accountSuffix}` : `No trades in this period${accountSuffix}`}
         </h2>
         <p className="mt-2 max-w-[520px] text-sm leading-6 text-[var(--body)]">
           {reviewScope.scope === "day"
             ? "A no-trade day can be an aligned decision when the market did not provide quality. Capture what you saw and why you stayed out."
             : "Broker history is connected; this selected period simply has no recorded trades."}
+          {accountName ? " Looking for different data? The account selector (top right) changes everything the journal shows." : ""}
         </p>
       </div>
       <RecapNote
@@ -2362,6 +2368,12 @@ export default async function TradeJournalReview({
 }) {
   const archiveAnchor = validDate(date) ?? validDate(from) ?? currentEtDate();
   const usesReviewModule = archiveLinkMode === "review-module";
+  // The active account changes everything the journal shows — make it part of
+  // the surface's identity so a silent switch can't masquerade as lost data
+  // (JOURNAL_NAVIGATION_DECISION.md decision #5).
+  const accounts = await listAccounts();
+  const activeAccount = accounts.find((account) => account.id === accountId) ?? null;
+  const showAccountIdentity = accounts.length > 1 && activeAccount != null;
   const [range, archive, brokerDataAvailable, comparisonRanges] = await Promise.all([
     loadReviewRange({ preset, date, from, month, accountId }),
     showArchiveSidebar
@@ -2501,6 +2513,17 @@ export default async function TradeJournalReview({
           />
         ) : null}
         <div className="mt-8 min-w-0 space-y-8">
+          {showAccountIdentity ? (
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-[12px] font-semibold text-[var(--foreground)]">
+                {activeAccount!.name}
+              </span>
+              <span className="text-[12px] text-[var(--muted)]">
+                the journal shows this account&apos;s trades only
+              </span>
+            </div>
+          ) : null}
+
           {preset === "week" ? (
             <ScopeHeader>
               <WeekHeader label={range.title} displayDate={range.displayDate} />
@@ -2513,6 +2536,7 @@ export default async function TradeJournalReview({
               reviewScope={reviewScope}
               recapNote={recapNote}
               readOnly={readOnly}
+              accountName={showAccountIdentity ? activeAccount!.name : null}
             />
           ) : usesReviewModule && preset === "month" ? (
             <div className="space-y-14">
