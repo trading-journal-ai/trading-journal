@@ -163,7 +163,12 @@ export default function JournalReviewModule({
 
   function selectScope(nextScope: JournalDataScope) {
     setScope(nextScope);
-    setView(JOURNAL_SCOPE_VIEWS[nextScope][0].key);
+    // Keep the current view when the next scope offers it (e.g. Coach exists
+    // in all three scopes) — resetting to P&L made content "disappear".
+    const nextViews = JOURNAL_SCOPE_VIEWS[nextScope];
+    if (!nextViews.some((item) => item.key === view)) {
+      setView(nextViews[0].key);
+    }
   }
 
   return (

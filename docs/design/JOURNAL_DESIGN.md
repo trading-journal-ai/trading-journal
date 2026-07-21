@@ -1,5 +1,10 @@
 # Journal Design
 
+> Navigation model: see
+> [JOURNAL_NAVIGATION_DECISION.md](JOURNAL_NAVIGATION_DECISION.md) —
+> one continuously scrolling surface of canonical day entries; month/week are
+> scroll positions, not page shapes; heavy sections collapse by default.
+
 ## Purpose
 
 The journal is a text-first review system for turning trading data into a
