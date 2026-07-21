@@ -702,20 +702,24 @@ async function loadReviewRange({
     executionsByDate.set(key, [...(executionsByDate.get(key) ?? []), execution]);
   });
 
-  // Chart-evidence entry context for the focused day view only — week/month
-  // archives stay lean (one candle join per traded symbol-day).
-  const entryContexts = preset === "today" && trades.length > 0
-    ? await opportunityContextsForTrades(trades.map((trade) => ({
-        id: trade.id,
-        symbol: trade.symbol,
-        side: trade.side,
-        entryAt: trade.entryAt,
-        exitAt: trade.exitAt,
-        entryPrice: trade.avgEntryPrice,
-        quantity: trade.quantity,
-        pnl: netPnl(trade),
-        setup: trade.setup,
-      })))
+  // Chart-evidence entry context for every rendered day. Archive/month
+  // renders are cache-only so missing candle days (delisted symbols) degrade
+  // instantly instead of re-attempting rate-limited fetches per render.
+  const entryContexts = trades.length > 0
+    ? await opportunityContextsForTrades(
+        trades.map((trade) => ({
+          id: trade.id,
+          symbol: trade.symbol,
+          side: trade.side,
+          entryAt: trade.entryAt,
+          exitAt: trade.exitAt,
+          entryPrice: trade.avgEntryPrice,
+          quantity: trade.quantity,
+          pnl: netPnl(trade),
+          setup: trade.setup,
+        })),
+        { cachedOnly: preset !== "today" },
+      )
     : undefined;
 
   const days = reviewDatesForRange(preset, range)
@@ -1326,6 +1330,15 @@ function buildDayReviewPresentation(data: ReviewData) {
 
 type ModuleCoachSlots = { week?: React.ReactNode; month?: React.ReactNode };
 
+/** Everything a day entry needs to render its own coach review section. */
+type DayCoachPanelData = {
+  reviewScope: ReviewScope;
+  savedReview: SavedCoachReview | null;
+  savedExperiment: SavedCoachExperiment | null;
+  recapNote: ScopedRecapNote | null;
+  readOnly: boolean;
+};
+
 function JournalReviewModuleForDay({
   data,
   returnTo,
@@ -1397,6 +1410,7 @@ function DayReviewSection({
   showContextDetails = false,
   showLegacyPnl = true,
   coachSlots,
+  dayCoach,
 }: {
   data: ReviewData;
   returnTo: string;
@@ -1405,6 +1419,7 @@ function DayReviewSection({
   showContextDetails?: boolean;
   showLegacyPnl?: boolean;
   coachSlots?: ModuleCoachSlots;
+  dayCoach?: DayCoachPanelData;
 }) {
   const { day, tickerRows, pnlPoints, keyTradePrompts, worstTrade, coachRead } = data;
   const { verdictText, aligned, unresolved } = buildDayReviewPresentation(data);
@@ -1543,6 +1558,31 @@ function DayReviewSection({
           <div className="mt-6">
             <KeyTradePrompts prompts={keyTradePrompts} />
           </div>
+
+          {dayCoach ? (
+            <div className="mt-10 max-w-[800px]">
+              <CollapsibleSection
+                title="✳ Coach review"
+                status={coachSectionStatus(dayCoach.savedReview)}
+              >
+                <CoachContextFlow
+                  data={data}
+                  reviewScope={dayCoach.reviewScope}
+                  recapNote={dayCoach.recapNote}
+                  savedReview={dayCoach.savedReview}
+                  readOnly={dayCoach.readOnly}
+                />
+                <StarterCoachRead
+                  factPack={data.coachRead}
+                  reviewScope={dayCoach.reviewScope}
+                  savedExperiment={dayCoach.savedExperiment}
+                  savedReview={dayCoach.savedReview}
+                  readOnly={dayCoach.readOnly}
+                  showReviewActions={false}
+                />
+              </CollapsibleSection>
+            </div>
+          ) : null}
       </div>
     </section>
   );
@@ -1658,13 +1698,19 @@ function WeekSection({
   returnTo,
   comparisonData,
   showReviewModule = false,
+  showContextDetails = false,
   showLegacyPnl = true,
+  coachSlots,
+  dayCoachData,
 }: {
   week: ReviewWeek;
   returnTo: string;
   comparisonData?: JournalComparisonData;
   showReviewModule?: boolean;
+  showContextDetails?: boolean;
   showLegacyPnl?: boolean;
+  coachSlots?: ModuleCoachSlots;
+  dayCoachData?: Map<string, DayCoachPanelData>;
 }) {
   return (
     <section id={journalWeekSectionId(week.key)} className="scroll-mt-8 space-y-8">
@@ -1680,7 +1726,10 @@ function WeekSection({
             returnTo={returnTo}
             comparisonData={comparisonData}
             showReviewModule={showReviewModule}
+            showContextDetails={showContextDetails}
             showLegacyPnl={showLegacyPnl}
+            coachSlots={coachSlots}
+            dayCoach={dayCoachData?.get(dayData.day.date)}
           />
         ))}
       </div>
@@ -1696,6 +1745,7 @@ function ReviewDayRangeSection({
   showContextDetails = false,
   showLegacyPnl = true,
   coachSlots,
+  dayCoach,
 }: {
   data: ReviewData;
   returnTo: string;
@@ -1704,6 +1754,7 @@ function ReviewDayRangeSection({
   showContextDetails?: boolean;
   showLegacyPnl?: boolean;
   coachSlots?: ModuleCoachSlots;
+  dayCoach?: DayCoachPanelData;
 }) {
   if (data.day.trades === 0) {
     return (
@@ -1725,6 +1776,7 @@ function ReviewDayRangeSection({
       showContextDetails={showContextDetails}
       showLegacyPnl={showLegacyPnl}
       coachSlots={coachSlots}
+      dayCoach={dayCoach}
     />
   );
 }
@@ -2324,6 +2376,69 @@ export default async function TradeJournalReview({
         ])
       : [null, null, null, null];
   const readOnly = isDemoReadOnly();
+  // Every rendered day carries its own coach section — the URL only chooses
+  // which days are on screen, never which UI they get (JOURNAL_NAVIGATION_DECISION.md).
+  const dayCoachData = new Map<string, DayCoachPanelData>(
+    usesReviewModule
+      ? await Promise.all(
+          range.days
+            .filter((dayData) => dayData.day.trades > 0)
+            .map(async (dayData) => {
+              const scope: ReviewScope = { scope: "day", scopeKey: dayData.day.date };
+              const [experiment, review, note] = await Promise.all([
+                loadSavedCoachExperiment(accountId, scope),
+                loadSavedCoachReview(accountId, scope),
+                loadScopedRecapNote(accountId, scope),
+              ]);
+              return [
+                dayData.day.date,
+                { reviewScope: scope, savedReview: review, savedExperiment: experiment, recapNote: note, readOnly },
+              ] as const;
+            }),
+        )
+      : [],
+  );
+  // Month view: per-week module slots (weekly fact pack + saved review) and a
+  // shared month slot, so each day's module matches the focused-day module.
+  const monthModuleSlots = new Map<string, ModuleCoachSlots>();
+  if (usesReviewModule && preset === "month" && weekComparisonRanges.length > 0) {
+    const monthScope = reviewScopeFor("month", rangeForPreset("month", range.anchor));
+    const [monthExperiment, monthReview] = await Promise.all([
+      loadSavedCoachExperiment(accountId, monthScope),
+      loadSavedCoachReview(accountId, monthScope),
+    ]);
+    const monthSlot = (
+      <StarterCoachRead
+        factPack={range.coachRead}
+        reviewScope={monthScope}
+        savedExperiment={monthExperiment}
+        savedReview={monthReview}
+        readOnly={readOnly}
+      />
+    );
+    await Promise.all(
+      weekComparisonRanges.map(async (weekRange) => {
+        const weekKey = weekStartFor(weekRange.anchor);
+        const weekScope: ReviewScope = { scope: "week", scopeKey: weekKey };
+        const [weekExperiment, weekReview] = await Promise.all([
+          loadSavedCoachExperiment(accountId, weekScope),
+          loadSavedCoachReview(accountId, weekScope),
+        ]);
+        monthModuleSlots.set(weekKey, {
+          week: (
+            <StarterCoachRead
+              factPack={weekRange.coachRead}
+              reviewScope={weekScope}
+              savedExperiment={weekExperiment}
+              savedReview={weekReview}
+              readOnly={readOnly}
+            />
+          ),
+          month: monthSlot,
+        });
+      }),
+    );
+  }
   const currentHref = returnTo ?? journalReviewHref(basePath, { preset, date, from, month });
   const breadcrumbBack = backHref
     ? originCrumbFromHref(backHref, basePath)
@@ -2369,7 +2484,10 @@ export default async function TradeJournalReview({
                   returnTo={currentHref}
                   comparisonData={weekComparisons.get(week.key)}
                   showReviewModule
+                  showContextDetails
                   showLegacyPnl={false}
+                  coachSlots={monthModuleSlots.get(week.key)}
+                  dayCoachData={dayCoachData}
                 />
               ))}
             </div>
@@ -2401,6 +2519,7 @@ export default async function TradeJournalReview({
                   />
                 ),
               } : undefined}
+              dayCoach={dayCoachData.get(range.days[0].day.date)}
             />
           ) : preset === "month" ? (
             <div className="space-y-14">
@@ -2420,28 +2539,7 @@ export default async function TradeJournalReview({
             </div>
           ) : null}
 
-          {range.trades > 0 && preset === "today" ? (
-            <CollapsibleSection
-              title="✳ Coach review"
-              status={coachSectionStatus(savedReview)}
-            >
-              <CoachContextFlow
-                data={range.days[0]}
-                reviewScope={reviewScope}
-                recapNote={recapNote}
-                savedReview={savedReview}
-                readOnly={readOnly}
-              />
-              <StarterCoachRead
-                factPack={range.coachRead}
-                reviewScope={reviewScope}
-                savedExperiment={savedExperiment}
-                savedReview={savedReview}
-                readOnly={readOnly}
-                showReviewActions={false}
-              />
-            </CollapsibleSection>
-          ) : range.trades > 0 ? (
+          {range.trades > 0 && !usesReviewModule ? (
             <StarterCoachRead
               factPack={range.coachRead}
               reviewScope={reviewScope}

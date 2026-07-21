@@ -120,3 +120,17 @@ export async function getCandles(
 
   return { candles: await readCachedCandles(symbol, from, to) };
 }
+
+/**
+ * Cache-only read: never fetches remotely. For rendering many ticker-days at
+ * once (archive/month views) where a missing day must degrade instantly to
+ * "no data" instead of burning a rate-limited API call per render.
+ */
+export async function getCachedCandles(
+  symbol: string,
+  from: number,
+  to: number,
+): Promise<Candle[]> {
+  if (isCusip(symbol)) return [];
+  return readCachedCandles(symbol, from, to);
+}
