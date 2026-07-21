@@ -10,10 +10,8 @@ import { etDateString, etDayRange } from "@/lib/time";
 import ArchiveSidebar, { type ArchiveSidebarMonth } from "@/components/ArchiveSidebar";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
 import InlineImportPrompt from "@/components/InlineImportPrompt";
-import JournalDayDataViews, {
+import JournalReviewModule, {
   type JournalComparisonData,
-  type JournalDataScope,
-  type JournalDataView,
   type JournalDayProcessFact,
   type JournalDayTradeRow,
 } from "@/components/JournalDayDataViews";
@@ -325,13 +323,33 @@ function journalWeekSectionHref(basePath: string, monthKey: string, weekKey: str
   return `${journalReviewHref(basePath, { preset: "month", from: `${monthKey}-01` })}#${journalWeekSectionId(weekKey)}`;
 }
 
-function archiveWeeks(monthKey: string, activeWeekKey: string | undefined, basePath: string): ArchiveSidebarMonth["weeks"] {
+type ArchiveLinkMode = "legacy" | "review-module";
+
+function journalReviewModuleHref(
+  basePath: string,
+  date: string,
+): string {
+  const params = new URLSearchParams({ date });
+  return `${basePath}?${params.toString()}`;
+}
+
+function archiveWeeks(
+  monthKey: string,
+  activeWeekKey: string | undefined,
+  basePath: string,
+  linkMode: ArchiveLinkMode,
+  latestDate?: string,
+): ArchiveSidebarMonth["weeks"] {
   const monthStart = `${monthKey}-01`;
   const monthEnd = lastDayOfMonth(monthStart);
   let weekStart = weekStartFor(monthStart);
   const weeks: ArchiveSidebarMonth["weeks"] = [];
 
-  while (weekStart <= monthEnd) {
+  const lastVisibleDate = latestDate && latestDate.slice(0, 7) === monthKey
+    ? latestDate
+    : monthEnd;
+
+  while (weekStart <= monthEnd && weekStart <= lastVisibleDate) {
     const weekEnd = isoAddDays(weekStart, 4);
     const intersectsMonth = weekEnd >= monthStart && weekStart <= monthEnd;
     if (intersectsMonth) {
@@ -340,7 +358,9 @@ function archiveWeeks(monthKey: string, activeWeekKey: string | undefined, baseP
         label: archiveWeekLabel(monthKey, weekStart),
         rangeLabel: archiveWeekRangeLabel(weekStart, monthKey),
         active: weekStart === activeWeekKey,
-        href: journalWeekSectionHref(basePath, monthKey, weekStart),
+        href: linkMode === "review-module"
+          ? `${basePath}?month=${monthKey}#${journalWeekSectionId(weekStart)}`
+          : journalWeekSectionHref(basePath, monthKey, weekStart),
         sectionId: journalWeekSectionId(weekStart),
       });
     }
@@ -422,6 +442,20 @@ function rangeForPreset(preset: JournalReviewPreset, anchor: string): { from: st
   return { from: `${anchor.slice(0, 7)}-01`, to: lastDayOfMonth(anchor) };
 }
 
+function reviewDatesForRange(
+  preset: JournalReviewPreset,
+  range: { from: string; to: string },
+): string[] {
+  if (preset === "today") return [range.from];
+
+  const dates: string[] = [];
+  for (let date = range.from; date <= range.to; date = isoAddDays(date, 1)) {
+    const weekday = isoWeekday(date);
+    if (weekday >= 1 && weekday <= 5) dates.push(date);
+  }
+  return dates;
+}
+
 function buildDayData(
   date: string,
   trades: TradeRow[],
@@ -482,7 +516,7 @@ function buildDayData(
       label: "Best trade",
       symbol: bestTrade.trade.symbol,
       pnl: bestTrade.pnl,
-      href: `/trades/review?date=${date}&symbol=${bestTrade.trade.symbol}&trade=${bestTrade.trade.id}&returnTo=${encodeURIComponent(journalReviewHref("/journal", { preset: "today", date }))}`,
+      href: `/trades/review?date=${date}&symbol=${bestTrade.trade.symbol}&trade=${bestTrade.trade.id}&returnTo=${encodeURIComponent(journalReviewModuleHref("/journal", date))}`,
     });
   }
   if (worstTrade && worstTrade.trade.id !== bestTrade?.trade.id) {
@@ -491,7 +525,7 @@ function buildDayData(
       label: "Worst trade",
       symbol: worstTrade.trade.symbol,
       pnl: worstTrade.pnl,
-      href: `/trades/review?date=${date}&symbol=${worstTrade.trade.symbol}&trade=${worstTrade.trade.id}&returnTo=${encodeURIComponent(journalReviewHref("/journal", { preset: "today", date }))}`,
+      href: `/trades/review?date=${date}&symbol=${worstTrade.trade.symbol}&trade=${worstTrade.trade.id}&returnTo=${encodeURIComponent(journalReviewModuleHref("/journal", date))}`,
     });
   }
   if (biggestTicker && biggestTicker.trades > 1) {
@@ -500,11 +534,11 @@ function buildDayData(
       label: "Ticker to explain",
       symbol: biggestTicker.symbol,
       pnl: biggestTicker.pnl,
-      href: `/trades/review?date=${date}&symbol=${biggestTicker.symbol}&returnTo=${encodeURIComponent(journalReviewHref("/journal", { preset: "today", date }))}`,
+      href: `/trades/review?date=${date}&symbol=${biggestTicker.symbol}&returnTo=${encodeURIComponent(journalReviewModuleHref("/journal", date))}`,
     });
   }
 
-  const dayReturnTo = journalReviewHref("/journal", { preset: "today", date });
+  const dayReturnTo = journalReviewModuleHref("/journal", date);
   const worstTradeCard: WorstTradeCardData | null =
     worstTrade && worstTrade.pnl < 0
       ? {
@@ -600,54 +634,33 @@ async function loadReviewRange({
     return entryDate >= baselineFrom && entryDate <= baselineTo;
   });
 
-  if (trades.length === 0) {
-    const summary = summarizeDays([]);
-    return {
-      ...summary,
-      preset,
-      anchor,
-      title:
-        preset === "month"
-          ? monthFmt.format(utcDate(range.from))
-          : preset === "week"
-            ? archiveWeekLabel(selectedMonthKey, range.from)
-            : dayFmt.format(utcDate(anchor)),
-      eyebrow: "Trade Journal",
-      displayDate:
-        preset === "month"
-          ? monthFmt.format(utcDate(range.from))
-          : preset === "week"
-            ? weekRangeLabel(range.from)
-            : dateFmt.format(utcDate(anchor)),
-      days: [],
-      weeks: [],
-      coachRead: buildSessionFactPack([], { baselineTrades, baselineLabel: "Prior 30 days" }),
-    };
-  }
-
   const tradeIds = trades.map((trade) => trade.id);
   const tickerScopeKeys = [...new Set(trades.map((trade) => `${etDateString(trade.entryAt ?? start)}:${trade.symbol}`))];
-  const [executions, tickerNotes, tradeTagRows] = await Promise.all([
-    db
-      .select()
-      .from(schema.executions)
-      .where(inArray(schema.executions.tradeId, tradeIds))
-      .orderBy(asc(schema.executions.executedAt)),
-    db
-      .select({ scopeKey: schema.journalEntries.scopeKey })
-      .from(schema.journalEntries)
-      .where(
-        and(
-          eq(schema.journalEntries.accountId, accountId),
-          eq(schema.journalEntries.scope, "ticker"),
-          inArray(schema.journalEntries.scopeKey, tickerScopeKeys),
-        ),
-      ),
-    db
-      .select({ tradeId: schema.tradeTags.tradeId })
-      .from(schema.tradeTags)
-      .where(inArray(schema.tradeTags.tradeId, tradeIds)),
-  ]);
+  const [executions, tickerNotes, tradeTagRows] = tradeIds.length > 0
+    ? await Promise.all([
+        db
+          .select()
+          .from(schema.executions)
+          .where(inArray(schema.executions.tradeId, tradeIds))
+          .orderBy(asc(schema.executions.executedAt)),
+        tickerScopeKeys.length > 0
+          ? db
+              .select({ scopeKey: schema.journalEntries.scopeKey })
+              .from(schema.journalEntries)
+              .where(
+                and(
+                  eq(schema.journalEntries.accountId, accountId),
+                  eq(schema.journalEntries.scope, "ticker"),
+                  inArray(schema.journalEntries.scopeKey, tickerScopeKeys),
+                ),
+              )
+          : Promise.resolve([]),
+        db
+          .select({ tradeId: schema.tradeTags.tradeId })
+          .from(schema.tradeTags)
+          .where(inArray(schema.tradeTags.tradeId, tradeIds)),
+      ])
+    : [[], [], []];
   const notedTickerKeys = new Set(tickerNotes.flatMap((row) => (row.scopeKey ? [row.scopeKey] : [])));
   const taggedTradeIds = new Set(tradeTagRows.map((row) => row.tradeId));
   const tradesByDate = new Map<string, TradeRow[]>();
@@ -663,12 +676,11 @@ async function loadReviewRange({
     executionsByDate.set(key, [...(executionsByDate.get(key) ?? []), execution]);
   });
 
-  const days = [...tradesByDate.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([entryDate, dayTrades]) =>
+  const days = reviewDatesForRange(preset, range)
+    .map((entryDate) =>
       buildDayData(
         entryDate,
-        dayTrades,
+        tradesByDate.get(entryDate) ?? [],
         executionsByDate.get(entryDate) ?? [],
         notedTickerKeys,
         taggedTradeIds,
@@ -738,7 +750,10 @@ function comparisonCoach(factPack: SessionFactPack, emptyDiagnosis: string): Jou
 }
 
 function sessionRows(range: ReviewRange) {
-  const tradeCounts = range.days.map((day) => day.day.trades).sort((a, b) => a - b);
+  const tradeCounts = range.days
+    .map((day) => day.day.trades)
+    .filter((trades) => trades > 0)
+    .sort((a, b) => a - b);
   const midpoint = Math.floor(tradeCounts.length / 2);
   const medianTrades = tradeCounts.length === 0
     ? 0
@@ -754,7 +769,9 @@ function sessionRows(range: ReviewRange) {
     profitFactor: day.day.profitFactor,
     pnl: day.day.pnl,
     activityRead:
-      day.day.trades > medianTrades
+      day.day.trades === 0
+        ? "No trades imported"
+        : day.day.trades > medianTrades
         ? "Above weekly median"
         : day.day.trades < medianTrades
           ? "Below weekly median"
@@ -781,7 +798,10 @@ function buildJournalComparisonData(week: ReviewRange, month: ReviewRange): Jour
     .filter((day) => day.day.pnl < 0)
     .sort((a, b) => a.day.pnl - b.day.pnl);
   const grossSessionLoss = monthLossDays.reduce((sum, day) => sum + Math.abs(day.day.pnl), 0);
-  const sortedActivity = month.days.map((day) => day.day.trades).sort((a, b) => a - b);
+  const sortedActivity = month.days
+    .map((day) => day.day.trades)
+    .filter((trades) => trades > 0)
+    .sort((a, b) => a - b);
   const activityMidpoint = Math.floor(sortedActivity.length / 2);
   const medianActivity = sortedActivity.length === 0
     ? 0
@@ -805,7 +825,7 @@ function buildJournalComparisonData(week: ReviewRange, month: ReviewRange): Jour
     week: {
       summary: {
         label: week.displayDate,
-        sessions: week.days.length,
+        sessions: week.days.filter((day) => day.day.trades > 0).length,
         trades: week.trades,
         accuracy: week.accuracy,
         profitFactor: week.profitFactor,
@@ -829,7 +849,7 @@ function buildJournalComparisonData(week: ReviewRange, month: ReviewRange): Jour
     month: {
       summary: {
         label: month.displayDate,
-        sessions: month.days.length,
+        sessions: month.days.filter((day) => day.day.trades > 0).length,
         trades: month.trades,
         accuracy: month.accuracy,
         profitFactor: month.profitFactor,
@@ -979,7 +999,13 @@ async function hasBrokerData(accountId: number): Promise<boolean> {
   return Boolean(batch || trade);
 }
 
-async function loadReviewArchive(anchor: string, accountId: number, basePath: string, month?: string): Promise<ReviewArchive> {
+async function loadReviewArchive(
+  anchor: string,
+  accountId: number,
+  basePath: string,
+  month: string | undefined,
+  linkMode: ArchiveLinkMode,
+): Promise<ReviewArchive> {
   const selectedMonthKey = month ?? anchor.slice(0, 7);
   const selectedWeekKey = weekStartFor(anchor);
   const rows = await db
@@ -987,6 +1013,11 @@ async function loadReviewArchive(anchor: string, accountId: number, basePath: st
     .from(schema.trades)
     .where(eq(schema.trades.accountId, accountId))
     .limit(10000);
+  const latestDate = rows.reduce<string | undefined>((latest, row) => {
+    if (row.entryAt == null) return latest;
+    const date = etDateString(row.entryAt);
+    return !latest || date > latest ? date : latest;
+  }, undefined);
 
   const monthKeys = new Set<string>([selectedMonthKey]);
   const yearKeys = new Set<string>();
@@ -1008,14 +1039,20 @@ async function loadReviewArchive(anchor: string, accountId: number, basePath: st
       key,
       label: monthFmt.format(utcDate(`${key}-01`)).replace(/\s+\d{4}$/, ""),
       active: key === selectedMonthKey,
-      href: journalReviewHref(basePath, { preset: "month", from: `${key}-01` }),
-      weeks: key === selectedMonthKey ? archiveWeeks(key, selectedWeekKey, basePath) : [],
+      href: linkMode === "review-module"
+        ? `${basePath}?month=${key}`
+        : journalReviewHref(basePath, { preset: "month", from: `${key}-01` }),
+      weeks: key === selectedMonthKey
+        ? archiveWeeks(key, selectedWeekKey, basePath, linkMode, latestDate)
+        : [],
     }));
 
   const years = [...yearKeys].sort((a, b) => b.localeCompare(a)).map((year) => ({
     key: year,
     label: year,
-    href: journalReviewHref(basePath, { preset: "month", from: `${year}-01-01` }),
+    href: linkMode === "review-module"
+      ? `${basePath}?month=${year}-01`
+      : journalReviewHref(basePath, { preset: "month", from: `${year}-01-01` }),
   }));
 
   return { months, years };
@@ -1172,22 +1209,8 @@ function KeyTradePrompts({ prompts }: { prompts: KeyTradePrompt[] }) {
   );
 }
 
-function DayReviewSection({
-  data,
-  returnTo,
-  showDataViews = false,
-  comparisonData,
-  initialDataScope,
-  initialDataView,
-}: {
-  data: ReviewData;
-  returnTo: string;
-  showDataViews?: boolean;
-  comparisonData?: JournalComparisonData;
-  initialDataScope?: JournalDataScope;
-  initialDataView?: JournalDataView;
-}) {
-  const { day, tickerRows, tradeRows, taggedTrades, pnlPoints, keyTradePrompts, worstTrade, coachRead } = data;
+function buildDayReviewPresentation(data: ReviewData) {
+  const { day, taggedTrades, keyTradePrompts, worstTrade, coachRead } = data;
   const topSurprise = coachRead.surprises[0];
   const verdictText = topSurprise
     ? topSurprise.description
@@ -1246,6 +1269,86 @@ function DayReviewSection({
     },
   ];
 
+  return { topSurprise, verdictText, aligned, unresolved, processFacts };
+}
+
+function JournalReviewModuleForDay({
+  data,
+  returnTo,
+  comparisonData,
+}: {
+  data: ReviewData;
+  returnTo: string;
+  comparisonData: JournalComparisonData;
+}) {
+  const { day, tickerRows, tradeRows, taggedTrades, pnlPoints, coachRead } = data;
+  const { topSurprise, processFacts } = buildDayReviewPresentation(data);
+
+  return (
+    <div className="max-w-[800px]">
+      <JournalReviewModule
+        key={day.date}
+        comparisons={comparisonData}
+        date={day.date}
+        returnTo={returnTo}
+        summary={{
+          trades: day.trades,
+          accuracy: day.accuracy,
+          profitFactor: day.profitFactor,
+          pnl: day.pnl,
+          taggedTrades,
+        }}
+        tradeRows={tradeRows}
+        processFacts={processFacts}
+        coach={{
+          diagnosis: topSurprise?.title ?? "No contradiction cleared the evidence gate.",
+          evidence:
+            topSurprise?.evidence.join(" ") ??
+            "Add setup, stop, and journal context before treating the absence of a signal as a clean process read.",
+          action: coachRead.experiment.action,
+          confidence: coachRead.confidence.label,
+        }}
+        pnlContent={day.trades > 0 ? (
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
+            <RunningPnlChart day={day} pnlPoints={pnlPoints} />
+            <TickerReviewRail
+              rows={tickerRows.map((row) => ({
+                symbol: row.symbol,
+                pnl: row.pnl,
+                noted: row.noted,
+                href: `/trades/review?date=${day.date}&symbol=${row.symbol}&returnTo=${encodeURIComponent(returnTo)}`,
+              }))}
+              accuracy={day.accuracy}
+              profitFactor={day.profitFactor}
+              pnl={day.pnl}
+            />
+          </div>
+        ) : (
+          <p className="py-8 text-sm text-[var(--muted)]">No trades imported</p>
+        )}
+      />
+    </div>
+  );
+}
+
+function DayReviewSection({
+  data,
+  returnTo,
+  comparisonData,
+  showReviewModule = false,
+  showContextDetails = false,
+  showLegacyPnl = true,
+}: {
+  data: ReviewData;
+  returnTo: string;
+  comparisonData?: JournalComparisonData;
+  showReviewModule?: boolean;
+  showContextDetails?: boolean;
+  showLegacyPnl?: boolean;
+}) {
+  const { day, tickerRows, pnlPoints, keyTradePrompts, worstTrade, coachRead } = data;
+  const { verdictText, aligned, unresolved } = buildDayReviewPresentation(data);
+
   return (
     <section>
       <div className="min-w-0">
@@ -1294,7 +1397,7 @@ function DayReviewSection({
             <p className="mt-3 text-[20px] font-medium leading-[1.55] tracking-[-0.005em] text-[var(--foreground)] [text-wrap:pretty]">
               {verdictText}
             </p>
-            {showDataViews ? (
+            {showContextDetails ? (
               <div className="mt-9 grid gap-9 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] sm:gap-12">
                 <section>
                   <div className="flex flex-wrap items-center gap-2.5">
@@ -1336,48 +1439,17 @@ function DayReviewSection({
             ) : null}
           </div>
 
-          {showDataViews && comparisonData ? <div className="max-w-[800px]">
-            <JournalDayDataViews
-              comparisons={comparisonData}
-              date={day.date}
-              initialScope={initialDataScope}
-              initialView={initialDataView}
-              returnTo={returnTo}
-              summary={{
-                trades: day.trades,
-                accuracy: day.accuracy,
-                profitFactor: day.profitFactor,
-                pnl: day.pnl,
-                taggedTrades,
-              }}
-              tradeRows={tradeRows}
-              processFacts={processFacts}
-              coach={{
-                diagnosis: topSurprise?.title ?? "No contradiction cleared the evidence gate.",
-                evidence:
-                  topSurprise?.evidence.join(" ") ??
-                  "Add setup, stop, and journal context before treating the absence of a signal as a clean process read.",
-                action: coachRead.experiment.action,
-                confidence: coachRead.confidence.label,
-              }}
-              pnlContent={
-                <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
-                  <RunningPnlChart day={day} pnlPoints={pnlPoints} />
-                  <TickerReviewRail
-                    rows={tickerRows.map((row) => ({
-                      symbol: row.symbol,
-                      pnl: row.pnl,
-                      noted: row.noted,
-                      href: `/trades/review?date=${day.date}&symbol=${row.symbol}&returnTo=${encodeURIComponent(returnTo)}`,
-                    }))}
-                    accuracy={day.accuracy}
-                    profitFactor={day.profitFactor}
-                    pnl={day.pnl}
-                  />
-                </div>
-              }
-            />
-          </div> : (
+          {showReviewModule && comparisonData ? (
+            <div className="mb-12">
+              <JournalReviewModuleForDay
+                data={data}
+                returnTo={returnTo}
+                comparisonData={comparisonData}
+              />
+            </div>
+          ) : null}
+
+          {showLegacyPnl ? (
             <div className="grid max-w-[800px] gap-6 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
               <RunningPnlChart day={day} pnlPoints={pnlPoints} />
               <TickerReviewRail
@@ -1392,7 +1464,7 @@ function DayReviewSection({
                 pnl={day.pnl}
               />
             </div>
-          )}
+          ) : null}
           {worstTrade ? (
             <div className="mt-14 max-w-[800px]">
               <WorstTradeCard trade={worstTrade} />
@@ -1514,9 +1586,15 @@ function ScopeHeader({
 function WeekSection({
   week,
   returnTo,
+  comparisonData,
+  showReviewModule = false,
+  showLegacyPnl = true,
 }: {
   week: ReviewWeek;
   returnTo: string;
+  comparisonData?: JournalComparisonData;
+  showReviewModule?: boolean;
+  showLegacyPnl?: boolean;
 }) {
   return (
     <section id={journalWeekSectionId(week.key)} className="scroll-mt-8 space-y-8">
@@ -1526,28 +1604,101 @@ function WeekSection({
 
       <div className="space-y-12">
         {week.days.map((dayData) => (
-          <DayReviewSection key={dayData.day.date} data={dayData} returnTo={returnTo} />
+          <ReviewDayRangeSection
+            key={dayData.day.date}
+            data={dayData}
+            returnTo={returnTo}
+            comparisonData={comparisonData}
+            showReviewModule={showReviewModule}
+            showLegacyPnl={showLegacyPnl}
+          />
         ))}
       </div>
     </section>
   );
 }
 
+function ReviewDayRangeSection({
+  data,
+  returnTo,
+  comparisonData,
+  showReviewModule = false,
+  showContextDetails = false,
+  showLegacyPnl = true,
+}: {
+  data: ReviewData;
+  returnTo: string;
+  comparisonData?: JournalComparisonData;
+  showReviewModule?: boolean;
+  showContextDetails?: boolean;
+  showLegacyPnl?: boolean;
+}) {
+  if (data.day.trades === 0) {
+    return (
+      <NoTradeDaySection
+        data={data}
+        returnTo={returnTo}
+        comparisonData={comparisonData}
+        showReviewModule={showReviewModule}
+      />
+    );
+  }
+
+  return (
+    <DayReviewSection
+      data={data}
+      returnTo={returnTo}
+      comparisonData={comparisonData}
+      showReviewModule={showReviewModule}
+      showContextDetails={showContextDetails}
+      showLegacyPnl={showLegacyPnl}
+    />
+  );
+}
+
+function NoTradeDaySection({
+  data,
+  returnTo,
+  comparisonData,
+  showReviewModule,
+}: {
+  data: ReviewData;
+  returnTo: string;
+  comparisonData?: JournalComparisonData;
+  showReviewModule: boolean;
+}) {
+  const { date } = data.day;
+  return (
+    <section className="border-t border-[var(--hairline)] py-8 first:border-t-0 first:pt-0">
+      <h2 className="text-[32px] font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
+        {dayFmt.format(utcDate(date))}, {monthDayFmt.format(utcDate(date))}
+      </h2>
+      <p className="mt-4 font-mono text-[13px] text-[var(--muted)]">
+        No trades imported
+      </p>
+      {showReviewModule && comparisonData ? (
+        <div className="mt-8">
+          <JournalReviewModuleForDay
+            data={data}
+            returnTo={returnTo}
+            comparisonData={comparisonData}
+          />
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function TradeReviewSidebar({
   archive,
-  todayHref,
-  todayActive = false,
   enableWeekScrollSpy = false,
 }: {
   archive: ReviewArchive;
-  todayHref: string;
-  todayActive?: boolean;
   enableWeekScrollSpy?: boolean;
 }) {
   return (
     <ArchiveSidebar
       ariaLabel="Journal archive"
-      topLinks={[{ key: "today", label: "Today", href: todayHref, active: todayActive }]}
       months={archive.months}
       years={archive.years}
       offsetClassName="md:pt-[5.75rem]"
@@ -2026,8 +2177,8 @@ export default async function TradeJournalReview({
   returnTo,
   backHref,
   accountId,
-  initialDataScope,
-  initialDataView,
+  showArchiveSidebar = true,
+  archiveLinkMode = "legacy",
 }: {
   preset?: JournalReviewPreset;
   date?: string;
@@ -2037,13 +2188,16 @@ export default async function TradeJournalReview({
   returnTo?: string;
   backHref?: string;
   accountId: number;
-  initialDataScope?: JournalDataScope;
-  initialDataView?: JournalDataView;
+  showArchiveSidebar?: boolean;
+  archiveLinkMode?: ArchiveLinkMode;
 }) {
   const archiveAnchor = validDate(date) ?? validDate(from) ?? currentEtDate();
+  const usesReviewModule = archiveLinkMode === "review-module";
   const [range, archive, brokerDataAvailable, comparisonRanges] = await Promise.all([
     loadReviewRange({ preset, date, from, month, accountId }),
-    loadReviewArchive(archiveAnchor, accountId, basePath, month),
+    showArchiveSidebar
+      ? loadReviewArchive(archiveAnchor, accountId, basePath, month, archiveLinkMode)
+      : Promise.resolve(null),
     hasBrokerData(accountId),
     preset === "today"
       ? Promise.all([
@@ -2055,6 +2209,19 @@ export default async function TradeJournalReview({
   const comparisonData = comparisonRanges
     ? buildJournalComparisonData(comparisonRanges[0], comparisonRanges[1])
     : undefined;
+  const weekComparisonRanges = usesReviewModule && preset === "month"
+    ? await Promise.all(
+        range.weeks.map((week) =>
+          loadReviewRange({ preset: "week", from: week.key, accountId }),
+        ),
+      )
+    : [];
+  const weekComparisons = new Map(
+    weekComparisonRanges.map((weekRange) => [
+      weekStartFor(weekRange.anchor),
+      buildJournalComparisonData(weekRange, range),
+    ]),
+  );
   const reviewScope = reviewScopeFor(range.preset, rangeForPreset(range.preset, range.anchor));
   const [savedExperiment, savedReview, recapNote] = await Promise.all([
     loadSavedCoachExperiment(accountId, reviewScope),
@@ -2068,7 +2235,7 @@ export default async function TradeJournalReview({
     : { label: "Journal", href: basePath };
 
   return (
-    <div className="mx-auto w-full max-w-[1040px] pb-24">
+    <div className={`mx-auto w-full pb-24 ${showArchiveSidebar ? "max-w-[1040px]" : "max-w-[800px]"}`}>
       {backHref ? (
         <Breadcrumbs
           back={breadcrumbBack}
@@ -2077,13 +2244,13 @@ export default async function TradeJournalReview({
         />
       ) : null}
 
-      <div className="grid gap-8 md:grid-cols-[180px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,800px)] xl:gap-10">
-        <TradeReviewSidebar
-          archive={archive}
-          todayHref={journalReviewHref(basePath, { preset: "today" })}
-          todayActive={preset === "today"}
-          enableWeekScrollSpy={preset === "month"}
-        />
+      <div className={showArchiveSidebar ? "grid gap-8 md:grid-cols-[180px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,800px)] xl:gap-10" : ""}>
+        {showArchiveSidebar && archive ? (
+          <TradeReviewSidebar
+            archive={archive}
+            enableWeekScrollSpy={preset === "month"}
+          />
+        ) : null}
         <div className="mt-8 min-w-0 space-y-8">
           {preset === "week" ? (
             <ScopeHeader>
@@ -2091,12 +2258,34 @@ export default async function TradeJournalReview({
             </ScopeHeader>
           ) : null}
 
-          {range.trades === 0 ? (
+          {!brokerDataAvailable ? (
             <EmptyReviewState
               brokerDataAvailable={brokerDataAvailable}
               reviewScope={reviewScope}
               recapNote={recapNote}
               readOnly={readOnly}
+            />
+          ) : usesReviewModule && preset === "month" ? (
+            <div className="space-y-14">
+              {range.weeks.map((week) => (
+                <WeekSection
+                  key={week.key}
+                  week={week}
+                  returnTo={currentHref}
+                  comparisonData={weekComparisons.get(week.key)}
+                  showReviewModule
+                  showLegacyPnl={false}
+                />
+              ))}
+            </div>
+          ) : usesReviewModule && preset === "today" && comparisonData ? (
+            <ReviewDayRangeSection
+              data={range.days[0]}
+              returnTo={currentHref}
+              comparisonData={comparisonData}
+              showReviewModule
+              showContextDetails
+              showLegacyPnl={false}
             />
           ) : preset === "month" ? (
             <div className="space-y-14">
@@ -2107,19 +2296,14 @@ export default async function TradeJournalReview({
           ) : preset === "week" ? (
             <div className="space-y-12">
               {range.days.map((dayData) => (
-                <DayReviewSection key={dayData.day.date} data={dayData} returnTo={currentHref} />
+                <ReviewDayRangeSection
+                  key={dayData.day.date}
+                  data={dayData}
+                  returnTo={currentHref}
+                />
               ))}
             </div>
-          ) : (
-            <DayReviewSection
-              data={range.days[0]}
-              returnTo={currentHref}
-              showDataViews
-              comparisonData={comparisonData}
-              initialDataScope={initialDataScope}
-              initialDataView={initialDataView}
-            />
-          )}
+          ) : null}
 
           {range.trades > 0 && preset === "today" ? (
             <CoachContextFlow

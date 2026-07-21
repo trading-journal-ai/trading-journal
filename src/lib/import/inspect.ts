@@ -40,6 +40,7 @@ export type BrokerCsvInspection = {
     };
     orderHistory: {
       present: boolean;
+      filteredBy: string | null;
       rows: number;
       filledRows: number;
       usableFilledRows: number;
@@ -49,6 +50,7 @@ export type BrokerCsvInspection = {
     };
     tradeHistory: {
       present: boolean;
+      filteredBy: string | null;
       rows: number;
       usableFills: number;
       missingPrice: number;
@@ -130,22 +132,44 @@ function headerIndexAfter(rows: string[][], sectionIndex: number): number {
   return -1;
 }
 
-function sliceSection(rows: string[][], name: string): { present: boolean; headers: string[]; rows: string[][] } {
-  const sectionIndex = rows.findIndex((row) => rowLabel(row) === name);
-  if (sectionIndex < 0) return { present: false, headers: [], rows: [] };
+type InspectedSection = {
+  present: boolean;
+  filteredBy: string | null;
+  headers: string[];
+  rows: string[][];
+};
+
+function sliceSection(rows: string[][], name: string): InspectedSection {
+  const sectionIndex = rows.findIndex((row) => {
+    const label = rowLabel(row);
+    return label === name || label.startsWith(`${name} filtered by `);
+  });
+  if (sectionIndex < 0) {
+    return { present: false, filteredBy: null, headers: [], rows: [] };
+  }
+  const title = rowLabel(rows[sectionIndex]);
+  const filteredBy = title.startsWith(`${name} filtered by `)
+    ? title.slice(`${name} filtered by `.length).trim() || "unknown filter"
+    : null;
   const headerIndex = headerIndexAfter(rows, sectionIndex);
-  if (headerIndex < 0) return { present: true, headers: [], rows: [] };
+  if (headerIndex < 0) return { present: true, filteredBy, headers: [], rows: [] };
 
   const headers = rows[headerIndex].map(cleanCell);
   const sectionRows: string[][] = [];
   for (let i = headerIndex + 1; i < rows.length; i += 1) {
     const current = rows[i];
     const label = rowLabel(current);
-    if (TOS_SECTIONS.includes(label as (typeof TOS_SECTIONS)[number])) break;
+    if (
+      TOS_SECTIONS.some(
+        (section) => label === section || label.startsWith(`${section} filtered by `),
+      )
+    ) {
+      break;
+    }
     if (isBlank(current)) break;
     sectionRows.push(current.map(cleanCell));
   }
-  return { present: true, headers, rows: sectionRows };
+  return { present: true, filteredBy, headers, rows: sectionRows };
 }
 
 function indexByHeader(headers: string[]): Map<string, number> {
@@ -235,8 +259,10 @@ function inspectDasTradeSummary(rows: string[][]): BrokerCsvInspection["dasTrade
   };
 }
 
-function summarizeTosTradeHistory(section: { present: boolean; headers: string[]; rows: string[][] }) {
-  if (!section.present) return { present: false, rows: 0, usableFills: 0, missingPrice: 0 };
+function summarizeTosTradeHistory(section: InspectedSection) {
+  if (!section.present) {
+    return { present: false, filteredBy: null, rows: 0, usableFills: 0, missingPrice: 0 };
+  }
   const headerIndex = indexByHeader(section.headers);
   let usableFills = 0;
   let missingPrice = 0;
@@ -248,7 +274,13 @@ function summarizeTosTradeHistory(section: { present: boolean; headers: string[]
     if (symbol && execTime && qty > 0 && price != null) usableFills += 1;
     if (symbol && execTime && qty > 0 && price == null) missingPrice += 1;
   }
-  return { present: true, rows: section.rows.length, usableFills, missingPrice };
+  return {
+    present: true,
+    filteredBy: section.filteredBy,
+    rows: section.rows.length,
+    usableFills,
+    missingPrice,
+  };
 }
 
 function tradeHistoryFillKey(row: string[], headerIndex: Map<string, number>): string | null {
@@ -261,10 +293,7 @@ function tradeHistoryFillKey(row: string[], headerIndex: Map<string, number>): s
   return `${execTime}|${side}|${qty}|${symbol}|${price}`;
 }
 
-function summarizeCashBalance(
-  section: { present: boolean; headers: string[]; rows: string[][] },
-  tradeHistorySection: { present: boolean; headers: string[]; rows: string[][] },
-) {
+function summarizeCashBalance(section: InspectedSection, tradeHistorySection: InspectedSection) {
   if (!section.present) {
     return {
       present: false,
@@ -335,10 +364,11 @@ function summarizeCashBalance(
   };
 }
 
-function summarizeTosOrderHistory(section: { present: boolean; headers: string[]; rows: string[][] }) {
+function summarizeTosOrderHistory(section: InspectedSection) {
   if (!section.present) {
     return {
       present: false,
+      filteredBy: null,
       rows: 0,
       filledRows: 0,
       usableFilledRows: 0,
@@ -373,6 +403,7 @@ function summarizeTosOrderHistory(section: { present: boolean; headers: string[]
 
   return {
     present: true,
+    filteredBy: section.filteredBy,
     rows: section.rows.length,
     filledRows,
     usableFilledRows,
@@ -382,7 +413,7 @@ function summarizeTosOrderHistory(section: { present: boolean; headers: string[]
   };
 }
 
-function summarizePnl(section: { present: boolean; headers: string[]; rows: string[][] }) {
+function summarizePnl(section: InspectedSection) {
   if (!section.present) return { present: false, rows: 0, symbols: 0, netYtdPnl: null };
   const headerIndex = indexByHeader(section.headers);
   let netYtdPnl = 0;
@@ -401,7 +432,7 @@ function summarizePnl(section: { present: boolean; headers: string[]; rows: stri
   };
 }
 
-function summarizeEquities(section: { present: boolean; headers: string[]; rows: string[][] }) {
+function summarizeEquities(section: InspectedSection) {
   if (!section.present) return { present: false, rows: 0, positions: 0 };
   const headerIndex = indexByHeader(section.headers);
   let positions = 0;
@@ -418,6 +449,7 @@ function recommendationFor(
   dasTradeSummary: BrokerCsvInspection["dasTradeSummary"],
   orderHistory: BrokerCsvInspection["tos"]["orderHistory"],
   tradeHistory: BrokerCsvInspection["tos"]["tradeHistory"],
+  cashBalance: BrokerCsvInspection["tos"]["cashBalance"],
   pnl: BrokerCsvInspection["tos"]["pnl"],
 ): string {
   if (dasTradeSummary.detected && dasTradeSummary.tradeRows > 0) {
@@ -426,8 +458,17 @@ function recommendationFor(
   if (appExport.detected && appExport.tradeRows > 0) {
     return "This app export is useful for private coach evals, but it is not a broker import format.";
   }
-  if (tradeHistory.usableFills > 0) {
+  if (tradeHistory.usableFills > 0 && !tradeHistory.filteredBy) {
     return "This ThinkorSwim statement can be imported from fill-level trade history.";
+  }
+  if (cashBalance.tradeRows > 0) {
+    const filterNote = tradeHistory.filteredBy
+      ? `; detailed trade history is filtered by ${tradeHistory.filteredBy}`
+      : "";
+    return `This ThinkorSwim statement can be imported from the full Cash Balance ledger${filterNote}.`;
+  }
+  if (tradeHistory.usableFills > 0 && tradeHistory.filteredBy) {
+    return `Trade history is filtered by ${tradeHistory.filteredBy}; export an unfiltered statement or include full Cash Balance rows.`;
   }
   if (orderHistory.usableFilledRows > 0) {
     return "This statement has filled order-history rows, but the app does not import that lower-confidence section yet.";
@@ -462,10 +503,12 @@ export function inspectBrokerCsv(csv: string): BrokerCsvInspection {
         ? "tos_account_statement"
         : "unknown";
 
+  const hasUnfilteredTradeHistory =
+    tradeHistory.usableFills > 0 && tradeHistory.filteredBy == null;
   const importSource =
     dasTradeSummary.detected && dasTradeSummary.tradeRows > 0
       ? "das_csv"
-      : tradeHistory.usableFills > 0
+      : hasUnfilteredTradeHistory || cashBalance.tradeRows > 0
         ? "tos_csv"
         : null;
 
@@ -482,6 +525,14 @@ export function inspectBrokerCsv(csv: string): BrokerCsvInspection {
       equities,
       pnl,
     },
-    recommendation: recommendationFor(format, appExport, dasTradeSummary, orderHistory, tradeHistory, pnl),
+    recommendation: recommendationFor(
+      format,
+      appExport,
+      dasTradeSummary,
+      orderHistory,
+      tradeHistory,
+      cashBalance,
+      pnl,
+    ),
   };
 }

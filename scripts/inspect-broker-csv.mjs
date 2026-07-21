@@ -105,7 +105,10 @@ function isBlank(row) {
 }
 
 function findSectionIndex(rows, name) {
-  return rows.findIndex((row) => rowLabel(row) === name);
+  return rows.findIndex((row) => {
+    const label = rowLabel(row);
+    return label === name || label.startsWith(`${name} filtered by `);
+  });
 }
 
 function headerIndexAfter(rows, sectionIndex) {
@@ -117,20 +120,24 @@ function headerIndexAfter(rows, sectionIndex) {
 
 function sliceSection(rows, name) {
   const sectionIndex = findSectionIndex(rows, name);
-  if (sectionIndex < 0) return { present: false, headers: [], rows: [] };
+  if (sectionIndex < 0) return { present: false, filteredBy: null, headers: [], rows: [] };
+  const title = rowLabel(rows[sectionIndex]);
+  const filteredBy = title.startsWith(`${name} filtered by `)
+    ? title.slice(`${name} filtered by `.length).trim() || "unknown filter"
+    : null;
   const headerIndex = headerIndexAfter(rows, sectionIndex);
-  if (headerIndex < 0) return { present: true, headers: [], rows: [] };
+  if (headerIndex < 0) return { present: true, filteredBy, headers: [], rows: [] };
 
   const headers = rows[headerIndex].map(cleanCell);
   const sectionRows = [];
   for (let i = headerIndex + 1; i < rows.length; i += 1) {
     const current = rows[i];
     const label = rowLabel(current);
-    if (TOS_SECTIONS.includes(label)) break;
+    if (TOS_SECTIONS.some((section) => label === section || label.startsWith(`${section} filtered by `))) break;
     if (isBlank(current)) break;
     sectionRows.push(current.map(cleanCell));
   }
-  return { present: true, headers, rows: sectionRows };
+  return { present: true, filteredBy, headers, rows: sectionRows };
 }
 
 function indexByHeader(headers) {
@@ -200,7 +207,9 @@ function inspectDasTradeSummary(rows) {
 }
 
 function summarizeTosTradeHistory(section) {
-  if (!section.present) return { present: false, rows: 0, usableFills: 0 };
+  if (!section.present) {
+    return { present: false, filteredBy: null, rows: 0, usableFills: 0, missingPrice: 0 };
+  }
   const headerIndex = indexByHeader(section.headers);
   let usableFills = 0;
   let missingPrice = 0;
@@ -214,6 +223,7 @@ function summarizeTosTradeHistory(section) {
   }
   return {
     present: true,
+    filteredBy: section.filteredBy,
     rows: section.rows.length,
     usableFills,
     missingPrice,
@@ -313,7 +323,15 @@ function summarizeCashBalance(section, tradeHistorySection) {
 
 function summarizeTosOrderHistory(section) {
   if (!section.present) {
-    return { present: false, rows: 0, filledRows: 0, usableFilledRows: 0, canceledRows: 0, missingPrice: 0 };
+    return {
+      present: false,
+      filteredBy: null,
+      rows: 0,
+      filledRows: 0,
+      usableFilledRows: 0,
+      canceledRows: 0,
+      missingPrice: 0,
+    };
   }
   const headerIndex = indexByHeader(section.headers);
   let filledRows = 0;
@@ -340,6 +358,7 @@ function summarizeTosOrderHistory(section) {
 
   return {
     present: true,
+    filteredBy: section.filteredBy,
     rows: section.rows.length,
     filledRows,
     usableFilledRows,
@@ -413,19 +432,36 @@ function inspectBrokerCsv(path) {
       equities,
       pnl,
     },
-    recommendation: recommend({ format, appExport, dasTradeSummary, orderHistory, tradeHistory, pnl }),
+    recommendation: recommend({
+      format,
+      appExport,
+      dasTradeSummary,
+      cashBalance,
+      orderHistory,
+      tradeHistory,
+      pnl,
+    }),
   };
 }
 
-function recommend({ format, appExport, dasTradeSummary, orderHistory, tradeHistory, pnl }) {
+function recommend({ format, appExport, dasTradeSummary, cashBalance, orderHistory, tradeHistory, pnl }) {
   if (dasTradeSummary.detected && dasTradeSummary.tradeRows > 0) {
     return "Usable for import and private coach evals as trade-summary rows.";
   }
   if (appExport.detected && appExport.tradeRows > 0) {
     return "Usable for private coach evals with trade-level P&L facts.";
   }
-  if (tradeHistory.usableFills > 0) {
+  if (tradeHistory.usableFills > 0 && !tradeHistory.filteredBy) {
     return "Usable for import/chart reconstruction from TOS fill-level trade history.";
+  }
+  if (cashBalance.tradeRows > 0) {
+    const filterNote = tradeHistory.filteredBy
+      ? `; detailed trade history is filtered by ${tradeHistory.filteredBy}`
+      : "";
+    return `Usable for import from the full Cash Balance ledger${filterNote}.`;
+  }
+  if (tradeHistory.usableFills > 0 && tradeHistory.filteredBy) {
+    return `Trade history is filtered by ${tradeHistory.filteredBy}; export an unfiltered statement or include full Cash Balance rows.`;
   }
   if (orderHistory.usableFilledRows > 0) {
     return "Usable for a first-pass order-history import; treat times/prices as order-history facts, not exact fills.";
@@ -460,12 +496,12 @@ function printHuman(result) {
   }
   if (orderHistory.present) {
     console.log(
-      `TOS order history: ${orderHistory.rows} rows, ${orderHistory.filledRows} filled, ${orderHistory.usableFilledRows} usable filled, ${orderHistory.canceledRows} canceled`,
+      `TOS order history${orderHistory.filteredBy ? ` (filtered by ${orderHistory.filteredBy})` : ""}: ${orderHistory.rows} rows, ${orderHistory.filledRows} filled, ${orderHistory.usableFilledRows} usable filled, ${orderHistory.canceledRows} canceled`,
     );
   }
   if (tradeHistory.present) {
     console.log(
-      `TOS trade history: ${tradeHistory.rows} rows, ${tradeHistory.usableFills} usable fills, ${tradeHistory.missingPrice} missing price`,
+      `TOS trade history${tradeHistory.filteredBy ? ` (filtered by ${tradeHistory.filteredBy})` : ""}: ${tradeHistory.rows} rows, ${tradeHistory.usableFills} usable fills, ${tradeHistory.missingPrice} missing price`,
     );
   }
   if (equities.present) {

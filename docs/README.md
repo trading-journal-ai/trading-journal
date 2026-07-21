@@ -37,3 +37,5 @@ Key product-area specs referenced by the data model:
 - [`product/COMPETITIVE_ANALYSIS.md`](product/COMPETITIVE_ANALYSIS.md): current
   trading-journal landscape, user-friction hypotheses, TradeNote deep dive,
   product position, and the evaluation needed to prove the coaching loop.
+- [`product/JOURNAL_REVIEW_MODULE.md`](product/JOURNAL_REVIEW_MODULE.md):
+  component contract for the day-level 12-view review and annotation workspace.

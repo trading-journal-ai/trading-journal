@@ -7,6 +7,7 @@ import { fmtDate, fmtMoney, fmtPrice } from "@/lib/format";
 import { grossPnl, netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
 import ReportRangeFilter from "@/components/ReportRangeFilter";
+import PeriodTabs from "@/components/PeriodTabs";
 import { RowLink } from "./RowLink";
 
 export const dynamic = "force-dynamic";
@@ -409,12 +410,6 @@ export default async function TradesPage({
   const currentHref = filterHref(pageFilters, {});
   const summary = rangeSummary(filters, trades.length, total, page);
   const presetBase = { date: undefined, from: undefined, to: undefined };
-  const presetButtonClass = (preset: DatePreset) =>
-    `flex h-8 min-w-16 items-center justify-center rounded px-3 text-sm font-semibold transition-colors ${
-      activePreset === preset
-        ? "bg-[var(--surface-2)] text-[var(--foreground)]"
-        : "text-[var(--muted)] hover:text-[var(--foreground)]"
-    }`;
   const navButtonClass = "flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--foreground)]";
   const disabledNavButtonClass = "flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] opacity-40";
 
@@ -434,20 +429,17 @@ export default async function TradesPage({
         <div className="relative space-y-2">
           <span className="block text-sm font-semibold text-[var(--muted)]">Date range</span>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <div className="inline-flex h-10 items-center rounded-md border border-[var(--border)] p-1">
-              <Link href={filterHref(filters, { ...presetBase, preset: "today", page: 1 })} className={presetButtonClass("today")}>
-                Today
-              </Link>
-              <Link href={filterHref(filters, { ...presetBase, preset: "week", page: 1 })} className={presetButtonClass("week")}>
-                Week
-              </Link>
-              <Link href={filterHref(filters, { ...presetBase, preset: "month", page: 1 })} className={presetButtonClass("month")}>
-                Month
-              </Link>
-              <Link href={filterHref(filters, { ...presetBase, preset: "year", page: 1 })} className={presetButtonClass("year")}>
-                Year
-              </Link>
-            </div>
+            <PeriodTabs
+              ariaLabel="Trade date range"
+              items={[
+                { value: "today", label: "Day", href: filterHref(filters, { ...presetBase, preset: "today", page: 1 }) },
+                { value: "week", label: "Week", href: filterHref(filters, { ...presetBase, preset: "week", page: 1 }) },
+                { value: "month", label: "Month", href: filterHref(filters, { ...presetBase, preset: "month", page: 1 }) },
+                { value: "year", label: "Year", href: filterHref(filters, { ...presetBase, preset: "year", page: 1 }) },
+              ]}
+              value={activePreset}
+              className="border-b border-[var(--hairline)]"
+            />
             <div className="flex flex-wrap gap-2">
               <ReportRangeFilter from={filters.from} to={filters.to} clearHref="/trades" />
             </div>

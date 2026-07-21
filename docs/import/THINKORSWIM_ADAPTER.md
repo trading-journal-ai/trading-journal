@@ -16,9 +16,16 @@ The production import path is:
 - `src/lib/import/tos.ts`
 - `src/lib/import/match.ts`
 
-Today the app imports from the `Account Trade History` section only. Those rows
-are treated as fill-level executions, then `matchTrades` reconstructs trades
-from buys and sells.
+The app prefers an unfiltered `Account Trade History` section. Those rows are
+treated as high-confidence fill-level executions, then `matchTrades`
+reconstructs trades from buys and sells.
+
+When trade history is absent or its title says `filtered by ...`, the adapter
+falls back to the full `Cash Balance` ledger. `BOT` and `SOLD` rows provide
+timestamp, side, quantity, symbol, price, fees, and an opaque hashed broker
+reference. Position effect is inferred from the running position, and the
+result is labeled medium confidence. A filtered trade-history table is never
+silently treated as the complete account history.
 
 The adapter currently does not import `Account Order History`. That section is
 useful, but it is order-history data, not guaranteed fill-level execution data.
@@ -78,7 +85,8 @@ Current import result:
 
 ### Cash Balance
 
-Used only for fee lookup today.
+Used for fee lookup when complete trade history is present, and as the
+execution source when trade history is absent or filtered.
 
 The adapter looks for descriptions like:
 
@@ -87,9 +95,11 @@ BOT +100 TMDE @4.52
 SOLD -100 AIFF @1.7534
 ```
 
-When date, time, symbol, absolute quantity, and price match an execution, the
-misc fee is attached to that execution. Identical fills split the summed fee so
-the fee is not double-counted.
+When date, time, symbol, absolute quantity, and price match a trade-history
+execution, fees are attached to that execution. Identical fills split the
+summed fee so the fee is not double-counted. In fallback mode, each `BOT` or
+`SOLD` row becomes an execution and `REF #` groups broker fills without storing
+the raw reference.
 
 ### Account Order History
 
@@ -190,13 +200,27 @@ building an import adapter from it.
 
 Use these rules when extending import support:
 
-1. Prefer `Account Trade History` when it has usable rows.
-2. Use `Account Order History` only as a separate lower-confidence adapter.
-3. Keep canceled orders out of reconstructed trades.
-4. Preserve missing price as missing; do not infer a fill price from `~`.
-5. Keep private broker exports under `data/evals/`, which is gitignored.
-6. Do not send private broker data to OpenAI unless explicitly running an eval
+1. Prefer unfiltered `Account Trade History` when it has usable rows.
+2. Use full `Cash Balance` trade rows when trade history is absent or filtered.
+3. Use `Account Order History` only as a separate lower-confidence adapter.
+4. Keep canceled orders out of reconstructed trades.
+5. Preserve missing price as missing; do not infer a fill price from `~`.
+6. Keep private broker exports under `data/evals/`, which is gitignored.
+7. Do not send private broker data to OpenAI unless explicitly running an eval
    with `--generate`.
+
+### Security identifiers and corporate actions
+
+ThinkorSwim can export a nine-character CUSIP in the `Symbol` field after a
+corporate action. The adapter validates CUSIP check digits before treating a
+value as a security identifier. Known identifiers are normalized through the
+security alias registry before matching trades or requesting candles; the raw
+broker identifier remains part of the execution's dedupe identity.
+
+The first registered alias is `40423R204 → HCWB` for HCW Biologics after its
+2025 reverse split. Unresolved CUSIPs remain importable but produce an explicit
+import warning and are not sent to the candle provider as if they were tickers.
+Execution-derived fallback charts are labeled as estimates in the review UI.
 
 ## Open Work
 
