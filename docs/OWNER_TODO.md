@@ -129,23 +129,10 @@ This is the cluster you flagged — the "rules" gap traces back to here.
 
 ## D. Docs cleanup (from the 2026-07-11 audit)
 
-The audit's first pass flagged "duplicates," but a content-completeness review
-found **no true duplicates to delete** — the design-system trio (`DESIGN_SYSTEM.md`
-reference + `DESIGN_SYSTEM_ONE_SHEET.md` working checklist + `.html` visual
-companion) and the two import docs (current adapter vs. rich-export gap analysis)
-each hold unique content and already cross-link. So this section is
-freshness/linking, not merging.
-
-- [ ] **OWNER REVIEW — design one-sheet: legacy from prototypes?** You flagged
-  this. `DESIGN_SYSTEM_ONE_SHEET.md` is a working migration checklist, and its
-  Fix List / Phase 1–5 steps (e.g. "add `--prose`", "replace `#58a6ff` with
-  `var(--blue)`") appear **already done** in the current `globals.css` — i.e. it
-  reads as completed prototype-era work. Also, `.html` and `.md` one-sheets have
-  *different* content (not one generated from the other). **Your call:** archive/
-  trim the completed Fix List, decide whether `.md` + `.html` both need to exist,
-  and whether the one-sheet still earns its place next to `DESIGN_SYSTEM.md`.
-  *(Facts gathered 2026-07-11; no content is a true duplicate, so this is a
-  keep/trim/merge judgment, not an obvious delete.)*
+The audit's first pass flagged "duplicates." The prototype-era design-system
+one-sheet artifacts were retired on 2026-07-22; `DESIGN_SYSTEM.md` is now the
+single canonical reference. The two import docs (current adapter vs.
+rich-export gap analysis) still require a freshness/linking review.
 - [ ] **OWNER REVIEW — ThinkorSwim import docs: real overlap to reconcile.** You
   flagged possible duplication here, and there is some. Precise picture:
   - **Genuine overlap:** both `THINKORSWIM_ADAPTER.md` and
