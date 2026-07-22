@@ -35,6 +35,7 @@
     "market-context:backfill": "node scripts/backfill-market-context.mjs",
     "broker:inspect": "node scripts/inspect-broker-csv.mjs",
     "broker:normalize": "node scripts/normalize-broker-csv.mjs",
+    "coach:coverage": "node scripts/coach-data-coverage.mjs",
     "coach:eval": "node scripts/coach-eval.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
