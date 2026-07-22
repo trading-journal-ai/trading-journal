@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import Eyebrow from "@/components/ui/Eyebrow";
 import ThemeSettings from "@/components/ThemeSettings";
 import { ALL_TOKEN_NAMES, TOKEN_GROUPS, TYPE_ROLES } from "@/lib/designSystem";
 
@@ -25,12 +26,6 @@ function useLiveTokenValues() {
   }, []);
 
   return { values, hydrated };
-}
-
-function Eyebrow({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{children}</p>
-  );
 }
 
 function Section({ eyebrow, title, description, children }: { eyebrow: string; title: string; description: string; children: React.ReactNode }) {
@@ -196,7 +191,7 @@ function Components() {
       <div className="rounded-[8px] border border-[var(--hairline)] p-5">
         <Eyebrow>Coach voice</Eyebrow>
         <div className="mt-4 border-l-2 pl-3" style={{ borderColor: "var(--coach)" }}>
-          <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--coach)" }}>Session verdict</p>
+          <Eyebrow tone="coach">Session verdict</Eyebrow>
           <p className="mt-1.5 text-[13px] leading-6 text-[var(--body)]">Clean session — you leaned into the highest-quality mover.</p>
         </div>
         <p className="mt-3 text-[11px] leading-5 text-[var(--faint)]">Coach = green eyebrow + left rule. Trader annotations use --accent.</p>

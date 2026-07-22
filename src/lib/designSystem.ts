@@ -72,7 +72,7 @@ export type TypeRole = {
 
 /** The named type roles from DESIGN_SYSTEM.md, rendered as live specimens. */
 export const TYPE_ROLES: TypeRole[] = [
-  { role: "Eyebrow", use: "Section / kicker labels", px: 10.5, leading: 1.2, weight: 600, family: "mono", tracking: "0.18em", upper: true, sample: "Session verdict" },
+  { role: "Eyebrow", use: "Section / kicker labels", px: 11.5, leading: 1.3, weight: 600, family: "sans", tracking: "0.02em", sample: "Session verdict" },
   { role: "Display", use: "Journal month/week/day title", px: 48, leading: 1.0, weight: 600, family: "sans", tracking: "-0.03em", sample: "Monday, June 8" },
   { role: "Page title", use: "Calendar, reports, trades range", px: 32, leading: 1.1, weight: 600, family: "sans", tracking: "-0.02em", sample: "July 2026" },
   { role: "Section title", use: "Dashboard sections, chart titles", px: 25, leading: 1.2, weight: 600, family: "sans", tracking: "-0.01em", sample: "This week" },
