@@ -711,7 +711,7 @@ function confidenceFor(trades: AnalyzedTrade[]): SessionFactPack["confidence"] {
 
   if (sample < 10) limitations.push("Small sample; treat this as a session read, not a persistent pattern.");
   if (rCoverage < 0.8) limitations.push("Most trades lack planned stop data, so R-multiple confidence is limited.");
-  limitations.push("No playbook, level, or chart-validity match is included in this starter layer yet.");
+  limitations.push("No explicit playbook or named-level match is included in this starter layer yet.");
 
   return {
     label: score >= 0.75 ? "high" : score >= 0.4 ? "medium" : "low",

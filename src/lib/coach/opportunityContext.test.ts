@@ -5,6 +5,7 @@ import {
   anatomyAt,
   opportunityContextForTrade,
   sessionAnatomy,
+  shortEntryReason,
   type OpportunityTradeInput,
 } from "./opportunityContext";
 
@@ -174,6 +175,21 @@ describe("sessionAnatomy", () => {
     expect(snap!.volumeState).toBe("declining");
   });
 
+  it("tracks the shared EMA stack and bearish cross causally", () => {
+    const frontside = anatomyAt(anatomy, et("10:05:00"));
+    const backside = anatomyAt(anatomy, et("11:05:00"));
+
+    expect(frontside!.emaStack).toBe("bullish");
+    expect(backside!.emaStack).toBe("bearish");
+    expect(backside!.lastEmaCross).toBe("bearish");
+    expect(backside!.barsSinceEmaCross).toBeGreaterThan(0);
+    expect(backside!.priceVsEmaRail).toBe("below");
+    expect(backside!.emaSlope).toBe("falling");
+    expect(backside!.ema9SlopeAtr).toBeLessThan(0);
+    expect(backside!.ema20SlopeAtr).toBeLessThan(0);
+    expect(backside!.emaSpreadAtr).toBeGreaterThan(0);
+  });
+
   it("only uses bars fully closed before the requested moment", () => {
     const snap = anatomyAt(anatomy, et("09:00:30"));
     expect(snap).toBeNull();
@@ -222,6 +238,12 @@ describe("opportunityContextForTrade classifications", () => {
       makeTrade({ id: 5, entryAt: et("11:00:30"), entryPrice: 11.42, exitAt: et("11:05:00") }),
     );
     expect(ctx.classification).toBe("weakening");
+    expect(ctx.atEntry!.fylMarketRead.mode).toBe("downtrend");
+    expect(ctx.atEntry!.fylMarketRead.headline).toBe("Sellers controlled the trend at entry.");
+    expect(ctx.atEntry!.fylDirectionalOpportunity.status).toBe("contradicted");
+    expect(ctx.plainLanguageConclusion).toContain("The long direction was fighting the chart.");
+    expect(ctx.plainLanguageConclusion).toContain("20 EMA was above the 9");
+    expect(shortEntryReason(ctx)).toContain("trading against the chart");
   });
 
   it("calls a late extended bounce entry move-mature", () => {
@@ -231,7 +253,8 @@ describe("opportunityContextForTrade classifications", () => {
     );
     expect(ctx.classification).toBe("move-mature");
     expect(ctx.atEntry!.minutesSinceHigh).toBeGreaterThanOrEqual(30);
-    expect(ctx.plainLanguageConclusion).toContain("min past the high");
+    expect(ctx.plainLanguageConclusion).toContain("The easy part of the TEST move had likely passed");
+    expect(ctx.plainLanguageConclusion).toContain("failed breaks");
   });
 
   it("flags a good entry that round-tripped a big move", () => {

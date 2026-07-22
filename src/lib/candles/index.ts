@@ -9,9 +9,31 @@ import { db, schema } from "@/lib/db";
 import { canFetchRemoteCandles } from "@/lib/demoMode";
 import { MARKET_TZ, zonedDateTimeToUtcMs } from "@/lib/time";
 import { isCusip } from "@/lib/import/securityIdentifiers";
-import { fetchMassiveDay, type Candle } from "./massive";
+import type { Candle } from "./massive";
+import { fetchResolvedCandleDay, type CandleResolutionMethod } from "./resolveDay";
+import { marketDataSymbolForDate } from "./symbolHistory";
 
 const TIMEFRAME = "1m";
+
+export type CandleDataStatus = "market" | "missing" | "provider_error";
+export type { CandleResolutionMethod } from "./resolveDay";
+
+export type CandleDataResult = {
+  attemptedSymbols: string[];
+  candles: Candle[];
+  error?: string;
+  marketDataSymbol?: string;
+  resolutionMethod?: CandleResolutionMethod | "cache";
+  status: CandleDataStatus;
+};
+
+type DayCacheResult = {
+  attemptedSymbols: string[];
+  historyError?: string;
+  marketDataSymbol?: string;
+  resolutionMethod?: CandleResolutionMethod | "cache";
+  status: "cache" | "fetched" | "missing";
+};
 
 const etDateFmt = new Intl.DateTimeFormat("en-CA", {
   timeZone: MARKET_TZ,
@@ -38,7 +60,26 @@ function dayBounds(date: string): { start: number; end: number } {
   return { start: start - 3600, end: start + 26 * 3600 };
 }
 
-async function ensureDayCached(symbol: string, date: string): Promise<void> {
+async function storeCandles(symbol: string, bars: Candle[]): Promise<void> {
+  if (bars.length === 0) return;
+  await db
+    .insert(schema.candles)
+    .values(
+      bars.map((bar) => ({
+        symbol,
+        timeframe: TIMEFRAME,
+        t: bar.t,
+        o: bar.o,
+        h: bar.h,
+        l: bar.l,
+        c: bar.c,
+        vol: bar.vol,
+      })),
+    )
+    .onConflictDoNothing();
+}
+
+async function ensureDayCached(symbol: string, date: string): Promise<DayCacheResult> {
   const { start, end } = dayBounds(date);
   const existing = await db
     .select({ t: schema.candles.t })
@@ -52,25 +93,31 @@ async function ensureDayCached(symbol: string, date: string): Promise<void> {
       ),
     )
     .limit(1);
-  if (existing.length > 0) return;
+  if (existing.length > 0) {
+    return {
+      attemptedSymbols: [],
+      marketDataSymbol: marketDataSymbolForDate(symbol, date),
+      resolutionMethod: "cache",
+      status: "cache",
+    };
+  }
 
-  const bars = await fetchMassiveDay(symbol, date);
-  if (bars.length === 0) return;
-  await db
-    .insert(schema.candles)
-    .values(
-      bars.map((b) => ({
-        symbol,
-        timeframe: TIMEFRAME,
-        t: b.t,
-        o: b.o,
-        h: b.h,
-        l: b.l,
-        c: b.c,
-        vol: b.vol,
-      })),
-    )
-    .onConflictDoNothing();
+  const resolvedDay = await fetchResolvedCandleDay(symbol, date);
+  if (resolvedDay.bars.length === 0) {
+    return {
+      attemptedSymbols: resolvedDay.attemptedSymbols,
+      historyError: resolvedDay.historyError,
+      status: "missing",
+    };
+  }
+
+  await storeCandles(symbol, resolvedDay.bars);
+  return {
+    attemptedSymbols: resolvedDay.attemptedSymbols,
+    marketDataSymbol: resolvedDay.marketDataSymbol,
+    resolutionMethod: resolvedDay.resolutionMethod,
+    status: "fetched",
+  };
 }
 
 async function readCachedCandles(symbol: string, from: number, to: number): Promise<Candle[]> {
@@ -99,26 +146,68 @@ export async function getCandles(
   symbol: string,
   from: number,
   to: number,
-): Promise<{ candles: Candle[]; error?: string }> {
-  if (isCusip(symbol)) {
+): Promise<CandleDataResult> {
+  const requestedSymbol = symbol.trim().toUpperCase();
+  const dates = etDatesBetween(from, to);
+  if (isCusip(requestedSymbol)) {
     return {
+      attemptedSymbols: [requestedSymbol],
       candles: [],
-      error: `Market candles are unavailable until CUSIP ${symbol} is resolved to a ticker.`,
+      error: `Market candles are unavailable until CUSIP ${requestedSymbol} is resolved to a ticker.`,
+      status: "missing",
     };
   }
   if (!canFetchRemoteCandles()) {
-    return { candles: await readCachedCandles(symbol, from, to) };
+    const candles = await readCachedCandles(requestedSymbol, from, to);
+    return {
+      attemptedSymbols: [marketDataSymbolForDate(requestedSymbol, dates[0])],
+      candles,
+      error: candles.length === 0 ? `No cached market candles were found for ${requestedSymbol}.` : undefined,
+      marketDataSymbol: marketDataSymbolForDate(requestedSymbol, dates[0]),
+      resolutionMethod: candles.length > 0 ? "cache" : undefined,
+      status: candles.length > 0 ? "market" : "missing",
+    };
   }
 
+  const dayResults: DayCacheResult[] = [];
   try {
-    for (const date of etDatesBetween(from, to)) {
-      await ensureDayCached(symbol, date);
+    for (const date of dates) {
+      dayResults.push(await ensureDayCached(requestedSymbol, date));
     }
   } catch (e) {
-    return { candles: [], error: e instanceof Error ? e.message : "Candle fetch failed." };
+    return {
+      attemptedSymbols: [...new Set(dayResults.flatMap((result) => result.attemptedSymbols))],
+      candles: [],
+      error: e instanceof Error ? e.message : "Candle fetch failed.",
+      status: "provider_error",
+    };
   }
 
-  return { candles: await readCachedCandles(symbol, from, to) };
+  const candles = await readCachedCandles(requestedSymbol, from, to);
+  const attemptedSymbols = [...new Set(dayResults.flatMap((result) => result.attemptedSymbols))];
+  const resolvedDay = dayResults.find((result) => result.status === "fetched")
+    ?? dayResults.find((result) => result.status === "cache");
+  if (candles.length > 0) {
+    return {
+      attemptedSymbols,
+      candles,
+      marketDataSymbol: resolvedDay?.marketDataSymbol,
+      resolutionMethod: resolvedDay?.resolutionMethod,
+      status: "market",
+    };
+  }
+
+  const historyErrors = dayResults.flatMap((result) => result.historyError ? [result.historyError] : []);
+  const attemptedLabel = attemptedSymbols.length > 0 ? ` Checked ${attemptedSymbols.join(", ")}.` : "";
+  const historyErrorLabel = historyErrors.length > 0
+    ? ` Automatic ticker-history check could not complete: ${historyErrors[0]}`
+    : " Automatic ticker-history repair did not find a usable symbol.";
+  return {
+    attemptedSymbols,
+    candles: [],
+    error: `No Massive candles were found for ${requestedSymbol} on ${dates.join(", ")}.${attemptedLabel}${historyErrorLabel}`,
+    status: "missing",
+  };
 }
 
 /**
@@ -132,5 +221,5 @@ export async function getCachedCandles(
   to: number,
 ): Promise<Candle[]> {
   if (isCusip(symbol)) return [];
-  return readCachedCandles(symbol, from, to);
+  return readCachedCandles(symbol.trim().toUpperCase(), from, to);
 }

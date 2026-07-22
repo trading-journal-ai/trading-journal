@@ -211,6 +211,28 @@ type OpportunityContext = {
     entryTime: string; entryPrice: number;
     timeSinceCurrentHigh: string | null; distanceFromCurrentHigh: number | null;
     premarketHighRelationship: string | null; vwapRelationship: "above" | "below" | "at" | null;
+    ema9: number | null; ema20: number | null;
+    emaStack: "bullish" | "bearish" | "touching" | null;
+    lastEmaCross: "bullish" | "bearish" | null; barsSinceEmaCross: number | null;
+    priceVsEmaRail: "above" | "inside" | "below" | null;
+    emaSlope: "rising" | "falling" | "mixed" | "flat" | null;
+    ema9SlopeAtr: number | null; ema20SlopeAtr: number | null; emaSpreadAtr: number | null;
+    fylMarketRead: {
+      mode: "uptrend" | "downtrend" | "mixed" | "insufficient_evidence";
+      headline: string; bullishVotes: number; bearishVotes: number;
+      reasonCodes: string[]; calculationVersion: string;
+    };
+    fylDirectionalOpportunity: {
+      status: "supported" | "contradicted" | "insufficient_evidence";
+      headline: string; calculationVersion: string;
+    };
+    priceActionRead: {
+      quality: "chop" | "tight_grind" | "whippy_expansion" | "clean_expansion";
+      phase: "ignition" | "pullback_consolidation" | "continuation_reclaim"
+           | "exhaustion_failure" | "undetermined";
+      participation: "expanding" | "contracting" | "steady" | "climax_without_progress";
+      headline: string; metrics: object; calculationVersion: string;
+    } | null;
     volumeState: "expanding" | "stable" | "declining" | null;
     priceStructure: string | null; failedAttemptCount: number | null;
   };
@@ -277,7 +299,7 @@ Keep `parseCoachGeneratedReview`'s strict-guard pattern for v2.
 | Produced deterministically (engine, before LLM) | LLM-authored (constrained by refs) |
 |---|---|
 | `sessionStructure.*` numbers, `concentration`, `robustness` | `verdict`, `findings`, `pattern`, `reviewQueue` reads |
-| `opportunity.atEntry` / `postTrade` (candle join) | `plainLanguageLabel` / `plainLanguageConclusion` wording |
+| `opportunity.atEntry` / `postTrade` (candle join), versioned FYL reads, short deterministic copy | Longer coach explanation and evidence selection |
 | `ruleIntegrity.result` where a rule is machine-checkable | `coachExplanation`, `whyItMatters`, `recommendedAction` |
 | all `evidenceRefs` targets (facts must exist) | `nextFocus`, `playbookCandidates` |
 

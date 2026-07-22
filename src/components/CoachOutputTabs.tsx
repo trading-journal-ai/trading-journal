@@ -16,7 +16,7 @@ export default function CoachOutputTabs({
   ai: ReactNode;
   hasAiReview: boolean;
 }) {
-  const [tab, setTab] = useState<"deterministic" | "ai">(hasAiReview ? "ai" : "deterministic");
+  const [tab, setTab] = useState<"deterministic" | "ai">("deterministic");
 
   const tabClass = (active: boolean) =>
     `min-h-8 cursor-pointer whitespace-nowrap rounded-full px-3.5 text-[12.5px] font-semibold transition-colors ${

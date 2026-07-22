@@ -60,5 +60,7 @@ describe("buildCoachReviewPayload", () => {
     expect(payload.instructions.numericBoundary).toContain("deterministicFacts");
     expect(payload.instructions.numericBoundary).toContain("executionAnalysis");
     expect(payload.instructions.outputContract).toContain("oneExperiment");
+    expect(payload.trades[0].ref).toBe("TEST #1");
+    expect(payload.instructions.tradeReference).toContain("trades[].ref");
   });
 });
