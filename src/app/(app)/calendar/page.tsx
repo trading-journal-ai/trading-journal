@@ -6,8 +6,12 @@ import { getActiveAccount } from "@/lib/accountScope";
 import { netPnl } from "@/lib/pnl";
 import { etDateString } from "@/lib/time";
 import { fmtMoney } from "@/lib/format";
+import { isDemoReadOnly } from "@/lib/demoMode";
+import { journalDayState } from "@/lib/journalDayStatus";
 import CalendarRangeFilter from "@/components/CalendarRangeFilter";
+import PendingSubmitButton from "@/components/PendingSubmitButton";
 import PeriodTabs from "@/components/PeriodTabs";
+import { setNoTradeDayAction } from "@/app/journal/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -97,6 +101,13 @@ function filterByRange(byDate: Map<string, DayAgg>, from: string | undefined, to
   return filtered;
 }
 
+function filterDatesByRange(dates: Set<string>, from: string | undefined, to: string | undefined) {
+  if (!from && !to) return dates;
+  return new Set(
+    [...dates].filter((date) => (!from || date >= from) && (!to || date <= to)),
+  );
+}
+
 type WorkweekDay = {
   date: string;
   day: number;
@@ -153,21 +164,34 @@ function workweeksForMonth(year: number, month: number, byDate: Map<string, DayA
   return weeks;
 }
 
-async function dailyAgg(accountId: number): Promise<{ byDate: Map<string, DayAgg>; periods: Set<string> }> {
-  const trades = await db
-    .select({
-      side: schema.trades.side,
-      quantity: schema.trades.quantity,
-      avgEntryPrice: schema.trades.avgEntryPrice,
-      avgExitPrice: schema.trades.avgExitPrice,
-      fees: schema.trades.fees,
-      entryAt: schema.trades.entryAt,
-    })
-    .from(schema.trades)
-    .where(eq(schema.trades.accountId, accountId));
+async function dailyAgg(accountId: number): Promise<{
+  byDate: Map<string, DayAgg>;
+  noTradeDates: Set<string>;
+  periods: Set<string>;
+  today: string;
+}> {
+  const [trades, noTradeRows] = await Promise.all([
+    db
+      .select({
+        side: schema.trades.side,
+        quantity: schema.trades.quantity,
+        avgEntryPrice: schema.trades.avgEntryPrice,
+        avgExitPrice: schema.trades.avgExitPrice,
+        fees: schema.trades.fees,
+        entryAt: schema.trades.entryAt,
+      })
+      .from(schema.trades)
+      .where(eq(schema.trades.accountId, accountId)),
+    db
+      .select({ date: schema.journalDayStatuses.date })
+      .from(schema.journalDayStatuses)
+      .where(eq(schema.journalDayStatuses.accountId, accountId)),
+  ]);
 
   const byDate = new Map<string, DayAgg>();
+  const noTradeDates = new Set(noTradeRows.map((row) => row.date));
   const periods = new Set<string>();
+  noTradeDates.forEach((date) => periods.add(date.slice(0, 7)));
   for (const t of trades) {
     if (t.entryAt == null) continue;
     const date = etDateString(t.entryAt);
@@ -183,7 +207,12 @@ async function dailyAgg(accountId: number): Promise<{ byDate: Map<string, DayAgg
     }
     byDate.set(date, cur);
   }
-  return { byDate, periods };
+  return {
+    byDate,
+    noTradeDates,
+    periods,
+    today: etDateString(Math.floor(Date.now() / 1000)),
+  };
 }
 
 function emptyState() {
@@ -229,22 +258,21 @@ function NavButton({ href, children }: { href: string; children: React.ReactNode
 function MonthView({
   ym,
   byDate,
+  noTradeDates,
+  readOnly,
+  today,
   params,
 }: {
   ym: string;
   byDate: Map<string, DayAgg>;
+  noTradeDates: Set<string>;
+  readOnly: boolean;
+  today: string;
   params: CalendarSearch;
 }) {
   const [year, month] = ym.split("-").map(Number);
   const weeks = workweeksForMonth(year, month, byDate);
   const currentCalendarHref = calendarHref(params);
-  const tradeDates = weeks
-    .flatMap((week) => week.days)
-    .filter((day) => day.inMonth && day.agg && day.agg.trades > 0)
-    .map((day) => day.date);
-  const firstTradeDate = tradeDates[0];
-  const lastTradeDate = tradeDates[tradeDates.length - 1];
-
   let monthPnl = 0;
   for (const week of weeks) {
     monthPnl += week.pnl;
@@ -300,15 +328,14 @@ function MonthView({
             <Fragment key={weekIndex}>
               {week.days.map((day) => {
                 const pos = day.agg ? day.agg.pnl >= 0 : false;
-                const isNoTradeDayInActiveSpan =
-                  day.inMonth &&
-                  !day.agg &&
-                  firstTradeDate != null &&
-                  lastTradeDate != null &&
-                  day.date >= firstTradeDate &&
-                  day.date <= lastTradeDate;
+                const state = journalDayState(
+                  day.agg?.trades ?? 0,
+                  noTradeDates.has(day.date) ? "no_trade" : null,
+                );
+                const canConfirmNoTrade = day.inMonth && day.date <= today && state === "unconfirmed_empty" && !readOnly;
                 const content = (
                   <div
+                    data-calendar-date={day.date}
                     className={`flex h-full min-h-36 flex-col bg-[var(--surface)] p-4 ${
                       day.inMonth ? "" : "opacity-30"
                     }`}
@@ -316,24 +343,49 @@ function MonthView({
                     <span className="text-base font-semibold leading-none text-[var(--foreground)]">
                       {day.day}
                     </span>
-                    {(day.agg || isNoTradeDayInActiveSpan) && (
+                    {state === "trades" ? (
                       <span className="mt-auto">
-                        {day.agg && (
-                          <span
-                            className="block text-lg font-semibold tabular-nums"
-                            style={{ color: pos ? "var(--green)" : "var(--red)" }}
-                          >
-                            {fmtMoney(day.agg.pnl)}
-                          </span>
-                        )}
+                        <span
+                          className="block text-lg font-semibold tabular-nums"
+                          style={{ color: pos ? "var(--green)" : "var(--red)" }}
+                        >
+                          {fmtMoney(day.agg!.pnl)}
+                        </span>
                         <span className="block text-sm font-normal text-[var(--muted)]">
-                          {day.agg?.trades ?? 0} {day.agg?.trades === 1 ? "trade" : "trades"}
+                          {day.agg!.trades} {day.agg!.trades === 1 ? "trade" : "trades"}
                         </span>
                       </span>
-                    )}
+                    ) : state === "no_trade" && day.inMonth ? (
+                      <span className="mt-auto space-y-1.5">
+                        <span className="block font-mono text-[12px] font-medium text-[var(--muted)]">
+                          No-trade day
+                        </span>
+                        {!readOnly ? (
+                          <form action={setNoTradeDayAction}>
+                            <input type="hidden" name="date" value={day.date} />
+                            <input type="hidden" name="selected" value="false" />
+                            <PendingSubmitButton
+                              label="Undo"
+                              pendingLabel="Undoing…"
+                              className="text-[12px] font-semibold text-[var(--accent)] transition-colors hover:text-[var(--accent-strong)]"
+                            />
+                          </form>
+                        ) : null}
+                      </span>
+                    ) : canConfirmNoTrade ? (
+                      <form action={setNoTradeDayAction} className="mt-auto">
+                        <input type="hidden" name="date" value={day.date} />
+                        <input type="hidden" name="selected" value="true" />
+                        <PendingSubmitButton
+                          label="Mark no-trade"
+                          pendingLabel="Marking…"
+                          className="text-left text-[12px] font-medium text-[var(--faint)] transition-colors hover:text-[var(--accent)]"
+                        />
+                      </form>
+                    ) : null}
                   </div>
                 );
-                return day.agg ? (
+                return state === "trades" ? (
                   <Link
                     key={day.date}
                     href={`/journal?date=${day.date}&returnTo=${encodeURIComponent(currentCalendarHref)}`}
@@ -377,11 +429,13 @@ function MiniMonth({
   year,
   month,
   byDate,
+  noTradeDates,
   params,
 }: {
   year: number;
   month: number;
   byDate: Map<string, DayAgg>;
+  noTradeDates: Set<string>;
   params: CalendarSearch;
 }) {
   const ym = `${year}-${String(month).padStart(2, "0")}`;
@@ -415,17 +469,23 @@ function MiniMonth({
       <div className="grid grid-cols-7 gap-1">
         {cells.map((day, i) => {
           if (day == null) return <div key={i} className="aspect-square" />;
-          const agg = byDate.get(`${ym}-${String(day).padStart(2, "0")}`);
+          const date = `${ym}-${String(day).padStart(2, "0")}`;
+          const agg = byDate.get(date);
+          const noTrade = !agg && noTradeDates.has(date);
           const pos = agg ? agg.pnl >= 0 : false;
           return (
             <div
               key={i}
               className="aspect-square rounded-md flex items-center justify-center text-base font-semibold text-[var(--muted)]"
               style={{
-                backgroundColor: agg ? (pos ? "color-mix(in oklch, var(--green) 13%, transparent)" : "color-mix(in oklch, var(--red) 13%, transparent)") : undefined,
-                color: agg ? (pos ? "var(--green)" : "var(--red)") : undefined,
+                backgroundColor: agg
+                  ? (pos ? "color-mix(in oklch, var(--green) 13%, transparent)" : "color-mix(in oklch, var(--red) 13%, transparent)")
+                  : noTrade
+                    ? "var(--surface-2)"
+                    : undefined,
+                color: agg ? (pos ? "var(--green)" : "var(--red)") : noTrade ? "var(--foreground)" : undefined,
               }}
-              title={agg ? `${ym}-${String(day).padStart(2, "0")}: ${fmtMoney(agg.pnl)}` : undefined}
+              title={agg ? `${date}: ${fmtMoney(agg.pnl)}` : noTrade ? `${date}: No-trade day` : undefined}
             >
               {day}
             </div>
@@ -439,11 +499,13 @@ function MiniMonth({
 function YearView({
   year,
   byDate,
+  noTradeDates,
   latest,
   params,
 }: {
   year: number;
   byDate: Map<string, DayAgg>;
+  noTradeDates: Set<string>;
   latest: string;
   params: CalendarSearch;
 }) {
@@ -475,7 +537,7 @@ function YearView({
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {Array.from({ length: 12 }, (_, i) => (
-          <MiniMonth key={i} year={year} month={i + 1} byDate={byDate} params={params} />
+          <MiniMonth key={i} year={year} month={i + 1} byDate={byDate} noTradeDates={noTradeDates} params={params} />
         ))}
       </div>
     </div>
@@ -492,7 +554,7 @@ export default async function CalendarPage({
   const from = validDate(rawParams.from);
   const to = validDate(rawParams.to);
   const activeAccount = await getActiveAccount();
-  const { byDate, periods } = await dailyAgg(activeAccount.id);
+  const { byDate, noTradeDates, periods, today } = await dailyAgg(activeAccount.id);
   const params: CalendarSearch = {
     m,
     y,
@@ -502,15 +564,17 @@ export default async function CalendarPage({
     to,
   };
   const filteredByDate = filterByRange(byDate, from, to);
+  const filteredNoTradeDates = filterDatesByRange(noTradeDates, from, to);
+  const readOnly = isDemoReadOnly();
 
   const latest = [...periods].sort().at(-1);
   if (!latest) return emptyState();
 
   if (view === "year") {
     const year = /^\d{4}$/.test(y ?? "") ? Number(y) : Number(latest.slice(0, 4));
-    return <YearView year={year} byDate={filteredByDate} latest={latest} params={{ ...params, view: "year", y: String(year), m: undefined }} />;
+    return <YearView year={year} byDate={filteredByDate} noTradeDates={filteredNoTradeDates} latest={latest} params={{ ...params, view: "year", y: String(year), m: undefined }} />;
   }
 
   const ym = /^\d{4}-\d{2}$/.test(m ?? "") ? (m as string) : latest;
-  return <MonthView ym={ym} byDate={filteredByDate} params={{ ...params, m: ym, view: undefined, y: undefined }} />;
+  return <MonthView ym={ym} byDate={filteredByDate} noTradeDates={filteredNoTradeDates} readOnly={readOnly} today={today} params={{ ...params, m: ym, view: undefined, y: undefined }} />;
 }

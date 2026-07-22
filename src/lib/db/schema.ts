@@ -198,6 +198,26 @@ export const journalEntries = sqliteTable(
   ],
 );
 
+/** Explicit user confirmation that an empty trading date was intentionally no-trade. */
+export const journalDayStatuses = sqliteTable(
+  "journal_day_statuses",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    accountId: integer("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    status: text("status", { enum: ["no_trade"] }).notNull().default("no_trade"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [uniqueIndex("journal_day_statuses_account_date_unq").on(t.accountId, t.date)],
+);
+
 /** Journal entry <-> Tag join (ticker/day/week/month observations). */
 export const journalEntryTags = sqliteTable(
   "journal_entry_tags",

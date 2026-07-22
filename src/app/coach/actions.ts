@@ -319,7 +319,7 @@ async function buildCoachReviewPayloadForScope({
     setup: trade.setup,
     adverseAddTimes: executionFactsByTradeId.get(trade.id)?.adverseAdds.map((add) => add.executedAt),
   })));
-  const tradeContexts: CoachReviewTradeContext[] = trades.map((trade) => {
+  const tradeContexts: Omit<CoachReviewTradeContext, "ref">[] = trades.map((trade) => {
     const note = noteByTradeId.get(trade.id);
     const executionAnalysis = executionFactsByTradeId.get(trade.id) ?? null;
     return {

@@ -3,7 +3,7 @@ import type { ChartCandle, ChartMarker } from "@/components/TradeChart";
 import type { ReviewTagOption } from "@/components/TickerReviewTradeExtras";
 import type { TickerReviewTrade } from "@/components/TickerReviewWorkspace";
 import { db, schema } from "@/lib/db";
-import { getCandles } from "@/lib/candles";
+import { getCandles, type CandleDataStatus } from "@/lib/candles";
 import { fallbackCandlesFromExecutions } from "@/lib/candles/fallback";
 import { fmtMoney } from "@/lib/format";
 import { analyzeTradeExecutions } from "@/lib/executionAnalysis";
@@ -26,6 +26,7 @@ export type InlineTradeReviewData = {
   candleError?: string;
   candles: ChartCandle[];
   candleSource: "market" | "execution_fallback";
+  candleStatus: CandleDataStatus;
   initialFocusTime?: number;
   initialTradeId: number;
   markers: ChartMarker[];
@@ -213,6 +214,7 @@ export async function loadInlineTradeReview({
     candleError: candleResult.error,
     candles,
     candleSource: candleResult.candles.length > 0 ? "market" : "execution_fallback",
+    candleStatus: candleResult.status,
     initialFocusTime: selectedTrade.entryAt ?? undefined,
     initialTradeId: tradeId,
     markers: trades.flatMap((trade) => (
