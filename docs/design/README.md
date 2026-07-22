@@ -10,6 +10,11 @@ One index for the product's design material. If a doc isn't listed here as
 - **Token values:** [`../../src/app/globals.css`](../../src/app/globals.css) —
   the four themes (`dark`, `light`, `daylight`, `evening`) and every color token.
   Code owns values; the doc owns rules.
+- **Component inventory & extraction plan:** [`COMPONENT_INVENTORY.md`](COMPONENT_INVENTORY.md)
+  — the per-area census of what exists and the tiered plan to turn recurring
+  patterns into real shared components. The living reference for that work.
+- **Living reference:** the `/design-system` route renders tokens, type, and
+  components live from `globals.css` (dev only).
 
 ## Feature-scoped design
 
