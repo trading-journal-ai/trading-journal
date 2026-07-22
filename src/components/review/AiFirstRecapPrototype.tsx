@@ -239,7 +239,7 @@ export default function AiFirstRecapPrototype() {
             <h1 className="mt-3 text-3xl font-semibold leading-tight text-[var(--foreground)] md:text-5xl">
               AI-first daily recap
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--prose)]">
+            <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--body)]">
               A trader contributes only the context the data cannot know. The Coach gives that context an evidence-backed read, then carries one useful behavior forward.
             </p>
           </div>
@@ -304,7 +304,7 @@ export default function AiFirstRecapPrototype() {
                   <div className="mt-3 flex flex-wrap gap-2">
                     {SETUPS.map((candidate) => <ChoiceButton key={candidate} active={setup === candidate} onClick={() => setSetup(candidate)}>{candidate}</ChoiceButton>)}
                   </div>
-                  <p className="mt-3 text-xs leading-5 text-[var(--prose)]">Use structured context for teachable setups. Keep feelings and process observations in your own words.</p>
+                  <p className="mt-3 text-xs leading-5 text-[var(--body)]">Use structured context for teachable setups. Keep feelings and process observations in your own words.</p>
                 </div>
               </div>
             </section>
@@ -314,7 +314,7 @@ export default function AiFirstRecapPrototype() {
               <div className="mt-4 flex flex-col justify-between gap-5 border-l border-[var(--blue)] pl-4 sm:flex-row sm:items-end">
                 <div>
                   <p className="max-w-2xl text-[17px] leading-7 text-[var(--foreground)]">{scenario.focus.action}</p>
-                  <p className="mt-2 text-sm leading-6 text-[var(--prose)]">Measure: {scenario.focus.measure}</p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--body)]">Measure: {scenario.focus.measure}</p>
                 </div>
                 <button type="button" onClick={() => setFocusSaved((saved) => !saved)} className="inline-flex h-10 shrink-0 items-center justify-center rounded-md border border-[var(--border)] px-4 text-sm font-medium text-[var(--body)] transition-colors hover:border-[var(--blue)] hover:text-[var(--foreground)]">
                   {focusSaved ? "Carried to dashboard" : "Carry to dashboard"}
@@ -347,7 +347,7 @@ export default function AiFirstRecapPrototype() {
                     <span className={`font-mono text-[12px] font-semibold tabular-nums ${toneClass(trade.outcome)}`}>{trade.symbol} · {trade.result}</span>
                     <span className="pr-3 sm:pr-0">
                       <span className="block text-sm font-medium text-[var(--foreground)]">{trade.reason}</span>
-                      <span className="mt-1 block text-sm leading-6 text-[var(--prose)]">{trade.read}</span>
+                      <span className="mt-1 block text-sm leading-6 text-[var(--body)]">{trade.read}</span>
                     </span>
                     <span className="pr-3 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--blue)] sm:pt-1 sm:pr-4">{selectedTrade === trade.id ? "Selected" : `Review ${index + 1}`}</span>
                   </button>
@@ -376,7 +376,7 @@ export default function AiFirstRecapPrototype() {
               <div className="mt-5 flex gap-2" aria-label="Pattern evidence across five sessions">
                 {[0, 1, 2, 3, 4].map((session) => <span key={session} className={`h-7 flex-1 rounded-sm border ${scenario.pattern.activeSessions.includes(session) ? "border-[rgba(224,169,74,.65)] bg-[rgba(224,169,74,.22)]" : "border-[var(--hairline)] bg-[var(--surface)]"}`} />)}
               </div>
-              <p className="mt-4 text-sm leading-6 text-[var(--prose)]">{scenario.pattern.copy}</p>
+              <p className="mt-4 text-sm leading-6 text-[var(--body)]">{scenario.pattern.copy}</p>
             </section>
 
             <section>
@@ -397,7 +397,7 @@ export default function AiFirstRecapPrototype() {
               <div><Eyebrow>Your context</Eyebrow><h2 id="capture-title" className="mt-2 text-xl font-semibold text-[var(--foreground)]">Talk through the session</h2></div>
               <button type="button" onClick={() => setCaptureOpen(false)} className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--muted)] hover:text-[var(--foreground)]">Close</button>
             </div>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--prose)]">What did you see? What were you trying to do? Where did standards hold or slip? Speak or type naturally; the transcript stays editable.</p>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--body)]">What did you see? What were you trying to do? Where did standards hold or slip? Speak or type naturally; the transcript stays editable.</p>
             <div className="mt-5"><DictationTextarea name="context" defaultValue={context} rows={7} autoFocus placeholder="Talk through what happened, what you saw, where standards held or slipped, and what to remember next time." className="w-full resize-y rounded-md border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-[15px] leading-7 text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--muted)] focus:border-[var(--blue)]" /></div>
             <div className="mt-5 flex flex-wrap justify-end gap-3"><button type="button" onClick={() => setCaptureOpen(false)} className="inline-flex h-10 items-center rounded-md border border-[var(--border)] px-4 text-sm font-medium text-[var(--muted)] hover:text-[var(--foreground)]">Cancel</button><button type="submit" className="inline-flex h-10 items-center rounded-md bg-[var(--blue)] px-4 text-sm font-semibold text-white hover:bg-[#6aa9ff]">Save your context</button></div>
           </form>

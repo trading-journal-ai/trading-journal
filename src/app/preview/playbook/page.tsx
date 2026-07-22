@@ -68,7 +68,7 @@ export default function PlaybookPreviewPage() {
               <h1 className="text-3xl font-semibold leading-tight text-[var(--foreground)] md:text-5xl">
                 Playbook workspace
               </h1>
-              <p className="mt-4 max-w-3xl text-base leading-7 text-[var(--prose)]">
+              <p className="mt-4 max-w-3xl text-base leading-7 text-[var(--body)]">
                 A wireframe for turning the daily review ritual into a living
                 setup library: archive one high-signal play, classify it, extract
                 rules, and rehearse the best examples before the next session.
@@ -79,7 +79,7 @@ export default function PlaybookPreviewPage() {
               <p className="mt-3 text-lg font-semibold text-[var(--foreground)]">
                 No late chase entries after missing the opening drive.
               </p>
-              <p className="mt-2 text-sm leading-6 text-[var(--prose)]">
+              <p className="mt-2 text-sm leading-6 text-[var(--body)]">
                 Review three A+ opening-drive examples before the bell. Archive
                 today&apos;s clearest play after the close.
               </p>
@@ -93,7 +93,7 @@ export default function PlaybookPreviewPage() {
             <h2 className="mt-3 text-2xl font-semibold text-[var(--foreground)]">
               One play per day
             </h2>
-            <p className="mt-3 text-sm leading-6 text-[var(--prose)]">
+            <p className="mt-3 text-sm leading-6 text-[var(--body)]">
               The MVP should make the end-of-day question obvious: which play
               from today belongs in the playbook?
             </p>
@@ -108,7 +108,7 @@ export default function PlaybookPreviewPage() {
                 <h3 className="mt-3 text-base font-semibold text-[var(--foreground)]">
                   {step.label}
                 </h3>
-                <p className="mt-2 text-sm leading-6 text-[var(--prose)]">{step.detail}</p>
+                <p className="mt-2 text-sm leading-6 text-[var(--body)]">{step.detail}</p>
               </div>
             ))}
           </div>
@@ -143,7 +143,7 @@ export default function PlaybookPreviewPage() {
                       {setup.meta}
                     </p>
                   </div>
-                  <p className="text-sm leading-6 text-[var(--prose)]">{setup.note}</p>
+                  <p className="text-sm leading-6 text-[var(--body)]">{setup.note}</p>
                   <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">
                     {setup.status}
                   </div>
@@ -163,7 +163,7 @@ export default function PlaybookPreviewPage() {
                   <div className="font-mono text-xs uppercase tracking-[0.16em] text-[var(--muted)]">
                     {label}
                   </div>
-                  <p className="mt-1 text-sm leading-6 text-[var(--prose)]">{detail}</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--body)]">{detail}</p>
                 </div>
               ))}
             </div>
@@ -176,7 +176,7 @@ export default function PlaybookPreviewPage() {
             <h2 className="mt-3 text-2xl font-semibold text-[var(--foreground)]">
               Five-variable review
             </h2>
-            <p className="mt-3 text-sm leading-6 text-[var(--prose)]">
+            <p className="mt-3 text-sm leading-6 text-[var(--body)]">
               These become the first form groups for a daily playbook entry.
               Reasons to sell and size review sit beside the main variables.
             </p>
@@ -220,7 +220,7 @@ function BuildSlice({ title, body }: { title: string; body: string }) {
   return (
     <div className="border-t border-[var(--hairline)] pt-4">
       <h3 className="text-base font-semibold text-[var(--foreground)]">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-[var(--prose)]">{body}</p>
+      <p className="mt-2 text-sm leading-6 text-[var(--body)]">{body}</p>
     </div>
   );
 }
