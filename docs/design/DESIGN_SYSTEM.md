@@ -145,7 +145,7 @@ Use named type roles rather than one-off sizes.
 
 | Role | Use | Size / Line | Weight | Family | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Eyebrow | Section/kicker labels | 10.5 / 1.2 | 600 | Mono | Uppercase, muted, letter spaced. |
+| Eyebrow | Section/kicker labels | 11.5 / 1.3 | 600 | Sans | Title case, muted, subtle tracking. Not all-caps. |
 | Display | Journal month/week/day title | 48 / 1.0 | 600 | Sans | Strong editorial moment. Use sparingly. |
 | Page title | Calendar month/year, reports stats, trades range | 30–38 / 1.1 | 600 | Sans | Primary page orientation. |
 | Section title | Dashboard sections, chart titles | 24–26 / 1.2 | 600 | Sans | Major content sections. |
@@ -182,14 +182,15 @@ Open items). Do not introduce serif faces ad hoc before that decision.
 - Use **mono** for: table headers; metric strips and compact metrics;
   dates/ranges that behave like data; ticker rails; journal sidebar
   month/week nav; pills and labels; figures and page counts.
-- Use **sans** for: page titles; prose; navigation; form labels and controls.
+- Use **sans** for: page titles; prose; navigation; form labels and controls;
+  **eyebrows / section labels** (title case, not all-caps).
 - Use `font-variant-numeric: tabular-nums` on every number.
 - Every P&L / figure span uses `white-space: nowrap`.
 - Metric strips: muted mono text, generous dot separators, red/green only on the
   P&L value.
-- Letter spacing stays in a small set: Eyebrow `0.16em`–`0.28em`; table
-  header / small labels `0.16em`–`0.22em`; normal text `0`. Avoid negative
-  letter spacing except for large display titles.
+- Letter spacing stays in a small set: Eyebrow `~0.02em` (sans, title case);
+  mono table headers / small mono labels `0.16em`–`0.22em`; normal text `0`.
+  Avoid negative letter spacing except for large display titles.
 - Micro type (< 12px) must be named and intentional: approved contexts are the
   Journal ticker rail and pill text. Never below 10px.
 
@@ -219,7 +220,12 @@ spacing and rules.
 
 Build once, reuse everywhere.
 
-- **Eyebrow** — mono uppercase kicker for sections and chart labels.
+- **Eyebrow** — sans, **title-case** kicker for sections and chart labels
+  (`src/components/ui/Eyebrow.tsx`). Muted by default; `tone="coach"` (green) for
+  coach-authored sections, `tone="accent"` for the trader's own annotations. The
+  earlier mono-UPPERCASE "terminal" eyebrow was retired — it read too technical
+  for the warm editorial themes, so the sans title-case treatment is now the
+  single eyebrow across all four themes.
 - **Money** — mono tabular figure, P&L-colored, signed (`+$…` / `-$…`), no wrap.
 - **Dot** — small green/red valence circle. Use sparingly. Not on the calendar.
 - **Toggle / Segmented control** — peer view choices (e.g. Today / Week / Month).
