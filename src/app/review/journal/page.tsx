@@ -21,6 +21,12 @@ const wireframes = [
 
 const prototypes = [
   {
+    title: "Trade tag taxonomy",
+    href: "/review/journal/tag-taxonomy",
+    label: "Prototype",
+    body: "Compact inline controls for classifying a trade by Pattern, Execution, Risk, and Emotion while keeping the written note primary.",
+  },
+  {
     title: "Coach recap spine",
     href: "/review/journal/coach-recap-spine",
     label: "Prototype",

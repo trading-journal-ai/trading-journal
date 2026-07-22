@@ -67,7 +67,7 @@ stops) upgrade to `[D]` once a level map exists for the ticker/day — see
 | --- | --- | --- | --- | --- |
 | [Micro Pullback](#micro-pullback) | TODO | long | TODO | draft / unauthored |
 | [ABCD Pattern](#abcd-pattern) | TODO | long | TODO | draft / seeded from cheat sheet |
-| [The Curl](#the-curl) | TODO | TODO | TODO | draft / unauthored |
+| [The Curl](#the-curl) | Phase 2 | long | core | draft / trader-defined |
 | [Bull Flag (Bear Flag)](#bull-flag-bear-flag) | TODO | both | TODO | draft / seeded from cheat sheet |
 | [Flat Top Breakout](#flat-top-breakout) | TODO | both | TODO | draft / seeded from cheat sheet |
 | [Moving Average Pullback](#moving-average-pullback) | TODO | long | TODO | draft / seeded from cheat sheet |
@@ -153,23 +153,30 @@ way.
 
 ## The Curl
 
-> From the teacher's Find Your Levels framework. Not yet documented on the FYL
-> site — author from the teacher's material. Likely level-dependent: define it
-> relative to the level map ([`LEVELS.md`](LEVELS.md)) and trend alignment
-> (candle-over-candle, higher highs / higher lows).
+> A core pattern in the trader's Find Your Levels framework. The trade-review
+> tag is simply `Curl`; the structure below is implied by that pattern
+> selection and should not be re-entered as confirmation tags on every trade.
 
-- **What it looks like:** TODO — roll-over / curl back through a level (define direction).
-- **Required chart structure:** TODO
-- **Required volume behavior:** TODO
+- **What it looks like:** Price reclaims a meaningful level, holds the reclaim,
+  then begins curling higher candle over candle as participation returns.
+- **Required chart structure:** A reclaim and hold at a meaningful level,
+  followed by candle-over-candle upward progression. TODO — define how much
+  overlap or pullback is acceptable before the curl is invalid.
+- **Required volume behavior:** Volume increases / comes in as the curl begins
+  progressing. TODO — decide whether this remains a visual judgment or gets a
+  deterministic expansion threshold.
 - **Entry trigger:** TODO *(mechanical rule → `EXECUTION.md`)*
 - **Stop / risk definition:** TODO
 - **Exit logic:** TODO
 - **Invalid conditions:** TODO
 - **Common mistakes:** TODO
 - **Examples:** TODO
-- **Phase / scene:** TODO
-- **Proficiency:** TODO
-- **Notes:** TODO
+- **Phase / scene:** Phase 2 — after the initial move has produced a meaningful
+  level to reclaim and hold.
+- **Proficiency:** core
+- **Notes:** One of the trader's top three patterns. Tagging records intent; the
+  engine may later verify the reclaim, candle-over-candle progression, and
+  volume behavior from data.
 
 ## Bull Flag (Bear Flag)
 
@@ -290,6 +297,8 @@ way.
 
 ## Relationship to other docs
 
+- [`TAG_TAXONOMY.md`](TAG_TAXONOMY.md) — defines the typed `pattern` tag and the
+  execution, risk, emotion, management, selection, and context vocabularies.
 - [`LEVELS.md`](LEVELS.md) — *where* the setup happens; upgrades location
   `[J]` predicates to `[D]`.
 - `EXECUTION.md` *(planned)* — the mechanical entry/exit/sizing rules for these setups.
