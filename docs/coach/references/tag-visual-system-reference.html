@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tag Visual System — Reference Sheet</title>
+<style>
+  :root {
+    --ink: #2c2c2a; --muted: #6b6a64; --faint: #97958c;
+    --line: #e5e3db; --card: #ffffff; --page: #faf9f5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 24px 64px;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink); background: var(--page); line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0 0 40px; }
+  h2 { font-size: 15px; font-weight: 600; margin: 40px 0 14px; letter-spacing: .01em; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px 24px; }
+  .row { display: flex; align-items: center; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .row:last-child { border-bottom: 0; }
+  .cat { width: 104px; font-size: 13px; font-weight: 500; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--muted); }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; line-height: 1; padding: 4px 11px 4px 9px; border-radius: 999px;
+  }
+  .chip svg { width: 14px; height: 14px; display: block; }
+  .green { background: #EAF3DE; color: #3B6D11; }
+  .red { background: #FCEBEB; color: #A32D2D; }
+  .gray { background: #F1EFE8; color: #5F5E5A; }
+  .teal { background: #E1F5EE; color: #085041; }
+  .amber { background: #FAEEDA; color: #633806; }
+  .swatch { width: 26px; height: 26px; border-radius: 7px; border: 1px solid rgba(0,0,0,.06); flex: none; }
+  .legend { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 24px; }
+  .legend .item { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .note { font-size: 12.5px; color: var(--faint); margin: 12px 2px 0; }
+  .tagcard { max-width: 460px; }
+  .grid { display: grid; grid-template-columns: 84px 1fr; gap: 11px 14px; align-items: start; }
+  .ghead { font-size: 11px; color: var(--faint); padding-top: 5px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .rulepill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 6px; margin-right: 8px; }
+  .rulepill svg { width: 14px; height: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Tag Visual System</h1>
+  <p class="sub">Reference sheet · icon + color + fill + layout · companion to TAG_VISUAL_SYSTEM.md</p>
+
+  <h2>Category &rarr; icon</h2>
+  <div class="card">
+    <div class="row">
+      <span class="cat">Pattern</span>
+      <span class="chip gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8l4 -16l3 8h4"/></svg>Curl</span>
+      <span class="mono">ti-activity · descriptive</span>
+    </div>
+    <div class="row">
+      <span class="cat">Execution</span>
+      <span class="chip green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M9 12l2 2l4 -4"/></svg>Clean</span>
+      <span class="chip red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M10 10l4 4m0 -4l-4 4"/></svg>Chased</span>
+      <span class="mono">circle-check / circle-x · graded</span>
+    </div>
+    <div class="row">
+      <span class="cat">Risk</span>
+      <span class="chip red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M10 10l4 4m0 -4l-4 4"/></svg>Stop ignored</span>
+      <span class="chip red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M10 10l4 4m0 -4l-4 4"/></svg>Oversized</span>
+      <span class="mono">circle-check / circle-x · graded</span>
+    </div>
+    <div class="row">
+      <span class="cat">Emotion</span>
+      <span class="chip teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="9" y1="10" x2="9.01" y2="10"/><line x1="15" y1="10" x2="15.01" y2="10"/><line x1="8.5" y1="15" x2="15.5" y2="15"/></svg>Calm</span>
+      <span class="chip amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="9" y1="10" x2="9.01" y2="10"/><line x1="15" y1="10" x2="15.01" y2="10"/><line x1="8.5" y1="15" x2="15.5" y2="15"/></svg>FOMO</span>
+      <span class="mono">custom face · descriptive</span>
+    </div>
+    <div class="row">
+      <span class="cat">Management</span>
+      <span class="chip green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M9 12l2 2l4 -4"/></svg>Let winner work</span>
+      <span class="mono">circle-check / circle-x · graded · deferred</span>
+    </div>
+    <div class="row">
+      <span class="cat">Selection</span>
+      <span class="chip red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M10 10l4 4m0 -4l-4 4"/></svg>Forced trade</span>
+      <span class="mono">circle-check / circle-x · graded · deferred</span>
+    </div>
+    <div class="row">
+      <span class="cat">Context</span>
+      <span class="chip gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l6 -7l5 5l5 -6"/><path d="M14 14a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M9 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M3 16a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M19 8a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg>Drawdown</span>
+      <span class="mono">ti-timeline · descriptive · deferred</span>
+    </div>
+  </div>
+
+  <h2>Color</h2>
+  <div class="card">
+    <div class="legend">
+      <div class="item"><span class="swatch" style="background:#EAF3DE"></span><span><b style="font-weight:500">reinforcing</b> — <span class="mono">#EAF3DE / #3B6D11</span></span></div>
+      <div class="item"><span class="swatch" style="background:#FCEBEB"></span><span><b style="font-weight:500">review</b> — <span class="mono">#FCEBEB / #A32D2D</span></span></div>
+      <div class="item"><span class="swatch" style="background:#E1F5EE"></span><span><b style="font-weight:500">settled</b> — <span class="mono">#E1F5EE / #085041</span></span></div>
+      <div class="item"><span class="swatch" style="background:#FAEEDA"></span><span><b style="font-weight:500">activated</b> — <span class="mono">#FAEEDA / #633806</span></span></div>
+      <div class="item"><span class="swatch" style="background:#F1EFE8"></span><span><b style="font-weight:500">neutral</b> — <span class="mono">#F1EFE8 / #5F5E5A</span></span></div>
+    </div>
+    <p class="note">Green and red are reserved for <b>tone</b> (verdict). Emotion sentiment uses teal/amber so it never collides. Icons inherit the chip's text color via <span class="mono">currentColor</span>.</p>
+  </div>
+
+  <h2>Read-only card layout — grouped under category headers</h2>
+  <div class="card tagcard">
+    <div class="grid">
+      <span class="ghead">Pattern</span>
+      <div class="chips"><span class="chip gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8l4 -16l3 8h4"/></svg>Curl</span></div>
+      <span class="ghead">Execution</span>
+      <div class="chips"><span class="chip red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M10 10l4 4m0 -4l-4 4"/></svg>Anticipated</span></div>
+      <span class="ghead">Risk</span>
+      <div class="chips">
+        <span class="chip red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M10 10l4 4m0 -4l-4 4"/></svg>Stop ignored</span>
+        <span class="chip red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M10 10l4 4m0 -4l-4 4"/></svg>Oversized</span>
+      </div>
+      <span class="ghead">Emotion</span>
+      <div class="chips"><span class="chip amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="9" y1="10" x2="9.01" y2="10"/><line x1="15" y1="10" x2="15.01" y2="10"/><line x1="8.5" y1="15" x2="15.5" y2="15"/></svg>Impatient</span></div>
+    </div>
+    <p class="note">Graded axes share the check/x pair — the header carries the axis so a check on Execution vs Risk stays unambiguous.</p>
+  </div>
+
+  <h2>The rule, in one line</h2>
+  <div class="card">
+    <p style="margin:0 0 12px;font-size:14px;">
+      <span class="rulepill green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M9 12l2 2l4 -4"/></svg>graded</span>
+      Execution · Risk · Management · Selection — icon swaps check/x by tone.
+    </p>
+    <p style="margin:0;font-size:14px;">
+      <span class="rulepill gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8l4 -16l3 8h4"/></svg>identity</span>
+      Pattern · Emotion · Context — fixed identity glyph, neutral (Emotion adds sentiment color).
+    </p>
+  </div>
+</div>
+</body>
+</html>
