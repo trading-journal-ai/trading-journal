@@ -234,7 +234,9 @@ deployment — no build-time generation, no hosted database to mutate, no refres
 script. Regenerate it from fixtures when they change:
 
 ```text
-npm run demo:db -- samples/demo/tradingjournaldemo.db   # rebuild the seed, then commit it
+npm run demo:db -- samples/demo/tradingjournaldemo.db
+DB_PATH=samples/demo/tradingjournaldemo.db npm run db:migrate
+npm run verify:demo-db
 ```
 
 ```text
