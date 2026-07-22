@@ -515,6 +515,62 @@ passed
 
 ---
 
+# Design QA — Tag Visual System Rollout
+
+## Source and implementation
+
+- Source visual truth: `/private/tmp/tag-visual-system-reference-sheet.png`, rendered from `docs/coach/references/tag-visual-system-reference.html`.
+- Implementation: `http://127.0.0.1:4317/review/journal/tag-taxonomy`.
+- Modal capture: `/private/tmp/tag-taxonomy-semantic-modal.png`.
+- Saved classification capture: `/private/tmp/tag-taxonomy-semantic-saved.png`.
+- Combined focused comparison: `/private/tmp/tag-visual-system-prototype-comparison.png`.
+
+## Viewport and normalization
+
+- Browser-rendered implementation viewport: `1280 × 720` CSS pixels at 1:1 density.
+- Source reference: `1100 × 1357` pixels; implementation modal capture: `1280 × 720` pixels.
+- Focused comparison: source crop normalized to `620 × 732`; implementation crop normalized to `620 × 564`; both placed in one `1280 × 802` comparison image without changing aspect ratio.
+- Compared state: modal open with Pattern identity, review-grade Execution, reinforcing Risk, and settled Emotion selections visible. The saved view was also captured with all four categories grouped under headers.
+
+## Full-view comparison evidence
+
+The implementation carries the reference system into the existing compact modal without changing its established composition. Pattern uses the activity identity glyph and neutral fill; Execution and Risk use check/x verdict glyphs and green/red semantic fills; Emotion uses the face identity glyph with teal/amber sentiment. Unselected choices retain the modal's outline affordance while previewing their semantic icon color.
+
+## Focused-region comparison evidence
+
+`/private/tmp/tag-visual-system-prototype-comparison.png` places the source reference and rendered modal together. The visible glyph family, stroke weight, chip color tokens, chip scale, and category-to-semantics mapping match the source. The source's grouped-card example is reflected in the rendered Trade classification section in `/private/tmp/tag-taxonomy-semantic-saved.png`.
+
+## Fidelity surfaces
+
+- Fonts and typography: existing Geist sans/mono roles remain intact; the semantic chips preserve the reference's compact 11–12px scale and readable label weights.
+- Spacing and layout rhythm: icons use a consistent 5px label gap, chips stay at the existing 24px picker height, and saved tags use a compact category-label grid.
+- Colors and tokens: the implementation uses the source hex values exactly for reinforcing, review, neutral, settled, and activated states.
+- Image quality and assets: all visible glyphs use the supplied SVG assets from `public/icons/tags`; no emoji, text glyphs, inline SVG replacements, or CSS-drawn icons were introduced.
+- Copy and content: existing tag labels, Pattern terminology, and More controls are preserved.
+- States and behavior: selected chips use semantic fills; available chips stay outlined; conflicting Execution selections replace one another; Save updates the grouped classification.
+
+## Primary interactions tested
+
+- Selected `Late or chased`, confirming it replaced the conflicting entry-timing choice and rendered with the review treatment.
+- Selected `Calm`, confirming the settled Emotion treatment.
+- Saved the modal and confirmed Pattern, Execution, Risk, and Emotion render under separate category headers.
+- Confirmed page identity, meaningful DOM content, framework-overlay absence, and zero browser console warnings/errors.
+
+## Comparison history
+
+### Pass 1 — semantic rollout
+
+- P0: none.
+- P1: none.
+- P2: none.
+- P3: the in-app browser remained at its fixed `1280 × 720` viewport when a mobile viewport was requested, so this semantic rollout was not re-captured at mobile width. The previously verified modal uses wrapping rows and the icon addition does not change control height.
+
+## Final result
+
+passed
+
+---
+
 # Journal day data views — production slice QA
 
 - Implementation: `http://localhost:3001/journal?date=2026-07-14`.
@@ -665,6 +721,249 @@ The Move Field is legible in the combined image at the same desktop viewport. It
 - Explicit missing-scanner-coverage state in the monthly lens.
 - Desktop page identity, meaningful DOM content, framework-overlay absence, console health, and screenshot evidence.
 - Mobile responsive layout and page-level overflow at 390 × 844.
+
+## Final result
+
+passed
+
+---
+
+# Design QA — Trade Tag Taxonomy Prototype
+
+## Source and implementation
+
+- Source visual truth: `/Users/justin/Downloads/Tag Modal.dc.html`.
+- Normalized source render: `/private/tmp/tag-modal-reference.html` and `/private/tmp/tag-modal-reference-final.png`.
+- Source-render note: the export references a missing `support.js`; the normalized render uses the export's exact initial-state markup, inline styles, dimensions, and tag order. Interaction behavior was mapped from the embedded component logic.
+- Implementation: `http://127.0.0.1:4317/review/journal/tag-taxonomy`.
+- Implementation captures: `/private/tmp/tag-modal-react-final.png`, `/private/tmp/tag-modal-react-mobile.png`, and `/private/tmp/tag-modal-react-mobile-menu-pass3.png`.
+- Full-view comparison: `/private/tmp/tag-modal-full-comparison.png`.
+- Focused modal comparison: `/private/tmp/tag-modal-focused-comparison.png`.
+
+## Viewports and normalization
+
+- Source and desktop implementation viewport: `620 × 560` CSS pixels.
+- Source screenshot: `620 × 560` pixels at 1:1 density.
+- Implementation screenshot: `620 × 560` pixels at 1:1 density.
+- Source modal: `496 × 409.5` CSS pixels; implementation modal: `496 × 411.75` CSS pixels.
+- Focused comparison: both modal crops normalized to `496 × 412` pixels.
+- Mobile implementation viewport: `390 × 844`; document width and client width both `390px`.
+- Compared state: modal open with Curl, Waited for trigger, and Stop respected selected.
+
+## Full-view comparison evidence
+
+The implementation matches the source's compact 496px stacked modal, warm paper surfaces, 15px radius, subtle border and shadow, four hairline-separated category rows, compact outline/filled chips, dashed More controls, and minimal footer. The app keeps its real dimmed Journal page behind the modal instead of the source export's beige component-preview canvas.
+
+## Focused-region comparison evidence
+
+The normalized modal crops confirm matching category spacing, 24px chip height, 6px chip gaps, selected-state weight, rule placement, footer alignment, and action sizing. The user-requested copy changes are intentional: `Pattern` replaces `Play`, and the Pattern overflow control says `More` instead of `More plays`.
+
+## Fidelity surfaces
+
+- Fonts and typography: Geist roles, weights, line heights, and compact label scale visually match the export.
+- Spacing and layout rhythm: row height, 22px horizontal inset, 17px vertical category padding, footer spacing, and 496px frame match within rounding tolerance.
+- Colors and tokens: the modal uses the source's warm neutral palette and amber link/focus accent; the surrounding Journal retains its app theme.
+- Image quality and assets: the source contains no raster imagery, logos, illustrations, or non-standard assets requiring generation or substitution.
+- Copy and content: source labels and ordering are preserved except for the approved Pattern and More terminology.
+
+## Interaction proof
+
+- Featured chips toggle correctly.
+- Execution timing and stop-behavior selections replace conflicting choices.
+- Emotion stops at two selections and disables additional choices.
+- Every category exposes a More menu.
+- Pattern More supports search and creation of a custom pattern.
+- Save updates the trade classification; Cancel restores the last saved selection.
+- Escape and outside-click dismissal remain available.
+- No framework overlay or browser console warnings/errors were observed.
+
+## Comparison history
+
+### Pass 1 — narrow-screen menu overflow
+
+- Finding: the Pattern menu was anchored to the More button and extended beyond the left edge at `390px`.
+- Severity: P2 because search and several pattern choices were clipped.
+- Fix: anchor the menu to the category row on narrow screens while preserving its source-like floating treatment.
+
+### Pass 2 — post-fix evidence
+
+- `/private/tmp/tag-modal-react-mobile-menu-pass3.png` shows the `266px` menu fully contained from `x=35` to `x=301`.
+- The mobile document remains exactly `390px` wide with no page-level overflow.
+
+## Findings
+
+- P0: none.
+- P1: none.
+- P2: none remaining.
+- P3: the export's beige preview canvas is intentionally replaced by the real dimmed Journal context.
+
+## Final result
+
+passed
+
+---
+
+# Design QA — Borderless Tan Available Tags
+
+## Source and implementation
+
+- Source visual truth: `/Users/justin/Desktop/screenshots/Screenshot 2026-07-22 at 1.28.28 PM.png` plus the explicit direction that available tags use a darker tan fill and selected tags reveal semantic color.
+- Implementation: `http://127.0.0.1:4317/review/journal/tag-taxonomy`.
+- Browser-rendered implementation capture: `/private/tmp/tag-taxonomy-tan-unselected-final.png`.
+- Combined focused before/after comparison: `/private/tmp/tag-taxonomy-tan-before-after.png`.
+
+## Viewport and normalization
+
+- Source screenshot: `1270 × 1034` pixels.
+- Implementation viewport and screenshot: `1280 × 720` CSS pixels at 1:1 density.
+- Focused modal crops were normalized without changing aspect ratio: source `620 × 551`; implementation `620 × 553`; combined comparison `1280 × 593`.
+- Compared state: Curl, Waited for trigger, Stop respected, Focused, and FOMO selected; Calm disabled.
+
+## Full-view comparison evidence
+
+The modal structure, spacing, typography, More controls, footer, and semantic selected colors remain unchanged. Available tag chips now use a shared warm-tan surface with a transparent border, so the selected green, teal, amber, and neutral states carry the visual emphasis.
+
+## Focused-region comparison evidence
+
+`/private/tmp/tag-taxonomy-tan-before-after.png` places the supplied screenshot and browser-rendered implementation together. The comparison confirms that black outline pills were removed from available tags, their icons were neutralized until selection, and chip height, label wrapping, row rhythm, and category grouping were preserved.
+
+## Fidelity surfaces
+
+- Fonts and typography: unchanged Geist scale, weight, and line height; chip labels remain compact and legible.
+- Spacing and layout rhythm: chip height, padding, gaps, category dividers, and modal dimensions are unchanged.
+- Colors and visual tokens: available tags use `#E9E1D4` with `#5F584E`; hover uses `#DDD3C2`; selected tags continue to use the established semantic palette.
+- Image quality and assets: supplied SVG category/verdict icons remain crisp and aligned; no substitute assets were introduced.
+- Copy and content: all labels and category names are unchanged.
+- Accessibility and states: semantic icon shapes remain visible without color; disabled tags preserve the tan surface at reduced opacity; focus-visible outlines remain available for keyboard navigation.
+
+## Primary interactions tested
+
+- Selected Focused and FOMO and confirmed their teal/amber treatments replaced the shared tan availability treatment.
+- Confirmed Calm became disabled at the Emotion selection limit.
+- Confirmed selected, available, and disabled buttons have transparent borders and the expected computed background/text colors.
+- Confirmed page identity, meaningful DOM content, framework-overlay absence, and zero browser console warnings/errors.
+
+## Comparison history
+
+### Pass 1 — post-change comparison
+
+- P0: none.
+- P1: none.
+- P2: none.
+- P3: the captured FOMO chip retains its browser focus-visible ring after interaction; this is an intentional accessibility state, not a persistent border treatment.
+
+## Final result
+
+passed
+
+---
+
+# Design QA — Fixed First-Position Add Control
+
+## Source and implementation
+
+- Source visual truth: `/private/tmp/tag-taxonomy-tan-unselected-final.png` plus the direction to keep the tag-library action first, label it `Add`, and remove the dotted outline/caret.
+- Implementation: `http://127.0.0.1:4317/review/journal/tag-taxonomy`.
+- Browser-rendered implementation capture: `/private/tmp/tag-taxonomy-add-first-aligned.png`.
+- Open-menu capture: `/private/tmp/tag-taxonomy-add-first-menu.png`.
+- Combined focused comparison: `/private/tmp/tag-taxonomy-add-first-comparison.png`.
+
+## Viewport and normalization
+
+- Source and implementation screenshots: `1280 × 720` CSS pixels at 1:1 density.
+- Source and implementation modal crops: `497 × 443` pixels, each normalized to `620 × 553` without changing aspect ratio.
+- Combined comparison: `1280 × 593` pixels.
+- Compared state: Curl, Waited for trigger, Stop respected, Focused, and FOMO selected; Calm disabled.
+
+## Full-view comparison evidence
+
+Every category now begins with the same compact Add control at the same horizontal coordinate. The previous trailing/wrapping More controls, dotted borders, and carets are gone. Existing tag order, semantic selected states, category rhythm, and footer actions remain intact.
+
+## Focused-region comparison evidence
+
+`/private/tmp/tag-taxonomy-add-first-comparison.png` shows the prior trailing More treatment and the new fixed leading Add treatment in the same modal crop and state. The change removes action-position drift while preserving the modal dimensions and the existing wrap behavior for tag content.
+
+## Fidelity surfaces
+
+- Fonts and typography: Add uses the existing compact sans control role at 12px semibold; tag typography is unchanged.
+- Spacing and layout rhythm: all Add controls resolve to `x = 415px` in the browser capture and occupy the first flex position; category spacing and chip gaps remain unchanged.
+- Colors and visual tokens: Add uses the same warm-tan availability surface (`#E9E1D4`) with a darker neutral label and no visible border.
+- Image quality and assets: no new image or icon assets were required; existing semantic SVG icons remain unchanged.
+- Copy and content: `More` is replaced by `Add` in all four categories, with no caret or extra label.
+- Accessibility and behavior: each Add button retains `aria-expanded`, `aria-haspopup="menu"`, and a focus-visible outline; the Pattern Add menu opens with search and the complete option list.
+
+## Primary interactions tested
+
+- Opened Pattern Add and confirmed search plus additional pattern choices rendered.
+- Closed the menu and selected Focused plus FOMO to confirm selection limits and semantic states still work.
+- Confirmed every Add control shares the same text, tan fill, transparent border, pill radius, and horizontal coordinate.
+- Confirmed page identity, meaningful DOM content, framework-overlay absence, and zero browser console warnings/errors.
+
+## Comparison history
+
+### Pass 1 — fixed Add placement
+
+- P0: none.
+- P1: none.
+- P2: none.
+- P3: the compact width keeps Add visually quiet; if future copy localization expands the label, a fixed minimum width may be worth adding.
+
+## Final result
+
+passed
+
+---
+
+# Design QA — Inline Tag Classification
+
+## Source and implementation
+
+- Source visual truth: `/private/tmp/tag-taxonomy-add-first-aligned.png` plus the approved direction to replace the modal with a fixed Pattern / Execution / Risk / Emotion row, category dropdowns, and selected pills directly above the note.
+- Implementation: `http://127.0.0.1:4317/review/journal/tag-taxonomy`.
+- Browser-rendered implementation capture: `/private/tmp/tag-taxonomy-inline-closed.png`.
+- Open-menu interaction capture: `/private/tmp/tag-taxonomy-inline-open.png`.
+- Combined source/implementation comparison: `/private/tmp/tag-taxonomy-inline-comparison.jpg`.
+
+## Viewport and normalization
+
+- Source and implementation screenshots: `1280 × 720` CSS pixels at 1:1 density.
+- Combined comparison: `2560 × 720` pixels, with the source at left and implementation at right; neither side was rescaled.
+- Compared state: the source shows the former modal; the implementation shows the intentionally approved inline replacement with Chop, Anticipated, two Risk exceptions, and two Emotion tags selected.
+
+## Full-view comparison evidence
+
+The comparison confirms the deliberate structural change from a blocking modal to a compact, non-blocking classification row above the note. The implementation preserves the source's warm dropdown surface, semantic chip palette, supplied icon system, compact typography, and category order while removing the overlay, footer actions, and repeated category sections.
+
+## Focused-region comparison evidence
+
+The full viewport keeps the classification controls and note labels readable, so a separate crop was not needed. `/private/tmp/tag-taxonomy-inline-open.png` provides the focused interaction evidence: the Emotion dropdown aligns with its fixed category control, shows the question/helper copy, keeps selected semantic fills, and visibly disables additional choices at the two-tag limit.
+
+## Fidelity surfaces
+
+- Fonts and typography: the inline controls use the app's existing Geist hierarchy; mono is retained for the classification eyebrow and saved pills. Question, helper, and option weights remain legible at compact sizes.
+- Spacing and layout rhythm: the fixed four-control row stays compact, selected pills sit immediately beneath it, and the note follows after one clear section break. The table and review column retain their existing alignment.
+- Colors and visual tokens: app surfaces use canonical product tokens; the dropdown keeps the warm reference surface; Pattern remains neutral, Execution/Risk use reinforcing/review colors, and Emotion uses teal/amber sentiment colors.
+- Image quality and assets: the supplied category/verdict SVG assets remain crisp at 13–14px. No substitute, emoji, or drawn-in-code asset was introduced.
+- Copy and content: Pattern, Execution, Risk, and Emotion remain fixed labels. V1 choices match the ratified taxonomy, including `Chop` for consolidation/low-structure participation and `Anticipated` as distinct from `Early`.
+- Accessibility and states: buttons expose menu state, options use radio/checkbox menu roles, Escape and outside click close the menu, focus-visible outlines remain available, semantic meaning uses both icon shape and color, and selection-limit states disable unavailable options.
+
+## Primary interactions tested
+
+- Replaced Curl with Chop and confirmed the Pattern menu closed after selection.
+- Replaced Clean with Anticipated and confirmed Execution remained single-select.
+- Selected Undersized plus Averaged down, confirmed the two-tag limit, then replaced Undersized with Oversized without losing Averaged down.
+- Selected Focused plus FOMO and confirmed remaining Emotion choices became disabled.
+- Confirmed selected pills update immediately while category controls stay fixed.
+- Confirmed page identity, meaningful DOM content, no blocking overlay, and zero browser console warnings/errors.
+
+## Comparison history
+
+### Pass 1 — approved inline replacement
+
+- P0: none.
+- P1: none.
+- P2: none.
+- P3: the dropdown uses its own warm elevated surface against the canonical app background; this is intentional continuity with the source modal and can be revisited after the production component is wired.
 
 ## Final result
 
