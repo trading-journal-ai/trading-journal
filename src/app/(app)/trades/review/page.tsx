@@ -4,6 +4,7 @@ import { getActiveAccount } from "@/lib/accountScope";
 import { getCandles } from "@/lib/candles";
 import { fallbackCandlesFromExecutions } from "@/lib/candles/fallback";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
+import CandleDataNotice from "@/components/CandleDataNotice";
 import LightweightTradeChart from "@/components/LightweightTradeChart";
 import ReviewHeader from "@/components/ReviewHeader";
 import TickerReviewWorkspace from "@/components/TickerReviewWorkspace";
@@ -165,7 +166,8 @@ export default async function TickerDayReviewPage({
   ]);
 
   const { start: candleFrom, end: candleTo } = reviewSessionRange(date);
-  const { candles, error } = await getCandles(symbol, candleFrom, candleTo);
+  const candleResult = await getCandles(symbol, candleFrom, candleTo);
+  const { candles } = candleResult;
   const chartCandles = candles.length > 0 ? candles : fallbackCandlesFromExecutions(execs, candleFrom, candleTo);
 
   const totalPnl = trades.reduce((sum, trade) => sum + (netPnl(trade) ?? 0), 0);
@@ -279,10 +281,12 @@ export default async function TickerDayReviewPage({
       <section className="mb-8 pt-5">
         <div className={dayTickers.length > 1 ? "min-w-0 2xl:grid 2xl:grid-cols-[minmax(0,1fr)_170px] 2xl:gap-x-10" : "min-w-0"}>
           <div className={dayTickers.length > 1 ? "min-w-0 2xl:col-start-1 2xl:row-start-1" : "min-w-0"}>
-            {candles.length === 0 && chartCandles.length > 0 ? (
-              <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--muted)]">
-                Estimated chart · reconstructed from executions
-              </p>
+            {candleResult.status !== "market" ? (
+              <CandleDataNotice
+                detail={candleResult.error}
+                hasFallback={chartCandles.length > 0}
+                status={candleResult.status}
+              />
             ) : null}
             {chartCandles.length > 0 ? (
               <LightweightTradeChart
@@ -308,10 +312,6 @@ export default async function TickerDayReviewPage({
                   shares: trade.shares,
                 }] : [])}
               />
-            ) : error ? (
-              <div className="rounded-[6px] border border-[var(--red)]/40 bg-[var(--red)]/10 px-4 py-3 text-sm text-[var(--red)]">
-                Candle data is unavailable for this ticker.
-              </div>
             ) : (
               <LightweightTradeChart candles={[]} markers={[]} />
             )}

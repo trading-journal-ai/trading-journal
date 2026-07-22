@@ -7,6 +7,7 @@ import JournalReviewTabs, {
   type JournalDataScope,
   type JournalDataView,
 } from "@/components/JournalReviewTabs";
+import { tradingCalendarWeeks, tradingWeekDates } from "@/lib/journalPnlViews";
 
 export type { JournalDataScope, JournalDataView } from "@/components/JournalReviewTabs";
 
@@ -97,6 +98,7 @@ export type JournalHorizonRow = {
 
 export type JournalComparisonData = {
   week: {
+    key: string;
     summary: JournalRangeSummary;
     sessions: JournalSessionRow[];
     edgeRows: JournalEdgeRow[];
@@ -107,6 +109,7 @@ export type JournalComparisonData = {
     coach: JournalCoachSummary;
   };
   month: {
+    key: string;
     summary: JournalRangeSummary;
     sessions: JournalSessionRow[];
     horizonRows: JournalHorizonRow[];
@@ -292,8 +295,8 @@ function WeekViews({ view, data, coachSlot }: { view: JournalDataView; data: Jou
     return (
       <div role="tabpanel">
         <RangeHeader summary={data.summary} question="Was the week carried by one session or built consistently?" />
-        <SessionTable rows={data.sessions} />
-        <EvidenceBoundary>Imported trade sessions only. A zero-trade day cannot be labeled intentional until scanner or journal-session coverage exists.</EvidenceBoundary>
+        <WeekPnlBars weekStart={data.key} rows={data.sessions} />
+        <EvidenceBoundary>Every weekday shares the same zero line. A blank column means no imported session; it does not infer an intentional no-trade day.</EvidenceBoundary>
       </div>
     );
   }
@@ -346,8 +349,8 @@ function MonthViews({ view, data, coachSlot }: { view: JournalDataView; data: Jo
     return (
       <div role="tabpanel">
         <RangeHeader summary={data.summary} question="How were outcomes distributed across the month?" />
-        <SessionTable rows={data.sessions} />
-        <EvidenceBoundary>Heat and session counts currently reflect imported trading sessions, not every market day in the calendar.</EvidenceBoundary>
+        <MonthPnlCalendar monthKey={data.key} rows={data.sessions} />
+        <EvidenceBoundary>This is a read-only map of imported trading sessions. Blank dates remain unconfirmed; no-trade-day management stays in Calendar.</EvidenceBoundary>
       </div>
     );
   }
@@ -387,6 +390,146 @@ function MonthViews({ view, data, coachSlot }: { view: JournalDataView; data: Jo
   }
 
   return <div role="tabpanel">{coachSlot ?? <CoachRead coach={data.coach} label="Monthly read" />}</div>;
+}
+
+function WeekPnlBars({ weekStart, rows }: { weekStart: string; rows: JournalSessionRow[] }) {
+  const sessionsByDate = new Map(rows.map((row) => [row.date, row]));
+  const slots = tradingWeekDates(weekStart).map((date) => ({ date, session: sessionsByDate.get(date) }));
+  const maxAbs = Math.max(1, ...rows.map((row) => Math.abs(row.pnl)));
+
+  return (
+    <figure className="mt-6 overflow-x-auto" aria-labelledby="week-pnl-bars-title">
+      <figcaption id="week-pnl-bars-title" className="sr-only">
+        Daily P&amp;L for each weekday, with gains above zero and losses below zero.
+      </figcaption>
+      <div className="grid min-w-[560px] grid-cols-5 border-y border-[var(--hairline)]">
+        {slots.map(({ date, session }, index) => {
+          const value = session?.pnl ?? 0;
+          const barHeight = session ? Math.max(5, (Math.abs(value) / maxAbs) * 46) : 0;
+          const positive = value >= 0;
+          return (
+            <div
+              key={date}
+              className={`min-w-0 px-3 py-4 ${index > 0 ? "border-l border-[var(--hairline)]" : ""}`}
+              aria-label={session
+                ? `${weekdayLabel(date)} ${shortDateLabel(date)}: ${money(value)}, ${session.trades} trades`
+                : `${weekdayLabel(date)} ${shortDateLabel(date)}: no imported session`}
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[12px] font-semibold text-[var(--foreground)]">{weekdayLabel(date)}</span>
+                <span className="font-mono text-[11px] tabular-nums text-[var(--muted)]">{shortDateLabel(date)}</span>
+              </div>
+              <div className="relative mt-3 h-32" aria-hidden="true">
+                <div className="absolute inset-x-0 top-1/2 h-px bg-[var(--border)]" />
+                {session ? (
+                  <div
+                    className={`absolute left-1/2 w-8 -translate-x-1/2 ${positive ? "bg-[var(--green)]" : "bg-[var(--red)]"}`}
+                    style={positive
+                      ? { height: `${barHeight}%`, bottom: "50%" }
+                      : { height: `${barHeight}%`, top: "50%" }}
+                  />
+                ) : (
+                  <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-[12px] text-[var(--faint)]">—</span>
+                )}
+              </div>
+              <div className="mt-2 text-center">
+                <div className={`whitespace-nowrap font-mono text-[12px] font-semibold tabular-nums ${session ? pnlClass(value) : "text-[var(--faint)]"}`}>
+                  {session ? money(value) : "No session"}
+                </div>
+                <div className="mt-1 text-[11px] text-[var(--muted)]">
+                  {session ? `${session.trades} ${session.trades === 1 ? "trade" : "trades"}` : "Not imported"}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <ul className="sr-only">
+        {slots.map(({ date, session }) => (
+          <li key={date}>
+            {weekdayLabel(date)} {shortDateLabel(date)}: {session ? `${money(session.pnl)}, ${session.trades} trades` : "no imported session"}
+          </li>
+        ))}
+      </ul>
+    </figure>
+  );
+}
+
+function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalSessionRow[] }) {
+  const sessionsByDate = new Map(rows.map((row) => [row.date, row]));
+  const weeks = tradingCalendarWeeks(monthKey);
+  return (
+    <figure className="mt-6 overflow-x-auto" aria-labelledby="month-pnl-calendar-title">
+      <figcaption id="month-pnl-calendar-title" className="sr-only">
+        Trading calendar showing imported daily P&amp;L and trade counts for the selected month.
+      </figcaption>
+      <div className="min-w-[560px]">
+        <div className="grid grid-cols-5 border-b border-[var(--hairline)] pb-2">
+          {WEEKDAYS.map((day) => (
+            <div key={day} className="px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
+              {day}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-5 gap-px bg-[var(--hairline)]">
+          {weeks.flatMap((week) => week).map((day) => {
+            const session = day.inMonth ? sessionsByDate.get(day.date) : undefined;
+            const positive = (session?.pnl ?? 0) >= 0;
+            return (
+              <div
+                key={day.date}
+                className={`flex min-h-24 flex-col bg-[var(--surface)] px-3 py-3 ${day.inMonth ? "" : "opacity-30"}`}
+                style={session
+                  ? { backgroundColor: positive ? "color-mix(in oklch, var(--green) 8%, var(--surface))" : "color-mix(in oklch, var(--red) 8%, var(--surface))" }
+                  : undefined}
+                aria-label={session
+                  ? `${longDateLabel(day.date)}: ${money(session.pnl)}, ${session.trades} trades`
+                  : `${longDateLabel(day.date)}: no imported session`}
+              >
+                <span className="font-mono text-[12px] font-semibold tabular-nums text-[var(--foreground)]">{day.day}</span>
+                {session ? (
+                  <span className="mt-auto pt-5">
+                    <span className={`block whitespace-nowrap font-mono text-[13px] font-semibold tabular-nums ${pnlClass(session.pnl)}`}>
+                      {money(session.pnl)}
+                    </span>
+                    <span className="mt-0.5 block text-[11px] text-[var(--muted)]">
+                      {session.trades} {session.trades === 1 ? "trade" : "trades"}
+                    </span>
+                  </span>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <ul className="sr-only">
+        {rows.map((session) => (
+          <li key={session.date}>{longDateLabel(session.date)}: {money(session.pnl)}, {session.trades} trades</li>
+        ))}
+      </ul>
+    </figure>
+  );
+}
+
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+const weekdayFormatter = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short" });
+const shortDateFormatter = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric" });
+const longDateFormatter = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "long", month: "long", day: "numeric" });
+
+function isoDate(date: string): Date {
+  return new Date(`${date}T12:00:00Z`);
+}
+
+function weekdayLabel(date: string): string {
+  return weekdayFormatter.format(isoDate(date));
+}
+
+function shortDateLabel(date: string): string {
+  return shortDateFormatter.format(isoDate(date));
+}
+
+function longDateLabel(date: string): string {
+  return longDateFormatter.format(isoDate(date));
 }
 
 function RangeHeader({ summary, question }: { summary: JournalRangeSummary; question: string }) {
@@ -568,7 +711,7 @@ function SectionLabel({ children }: { children: ReactNode }) {
 }
 
 function MetricGrid({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`grid gap-3 sm:grid-cols-4 ${className}`}>{children}</div>;
+  return <div className={`grid grid-cols-2 gap-3 sm:grid-cols-4 ${className}`}>{children}</div>;
 }
 
 function Metric({ label, value, className = "text-[var(--foreground)]" }: { label: string; value: string; className?: string }) {

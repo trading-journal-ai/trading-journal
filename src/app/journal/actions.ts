@@ -3,12 +3,13 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { and, eq } from "drizzle-orm";
+import { and, eq, gte, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getActiveAccount } from "@/lib/accountScope";
 import { db, schema } from "@/lib/db";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { SETUP_PATTERN_CUES } from "@/lib/journalLabels";
+import { etDateString, etDayRange } from "@/lib/time";
 
 type ScopedNoteState = { ok: boolean };
 type TradeNoteState = { ok: boolean };
@@ -17,8 +18,55 @@ type RecapScope = (typeof RECAP_SCOPES)[number];
 
 function revalidateJournalLoop() {
   revalidatePath("/dashboard");
+  revalidatePath("/calendar");
   revalidatePath("/journal");
   revalidatePath("/reports");
+}
+
+export async function setNoTradeDayAction(formData: FormData) {
+  if (isDemoReadOnly()) return;
+
+  const date = String(formData.get("date") ?? "").trim();
+  const selected = String(formData.get("selected")) === "true";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+
+  const activeAccount = await getActiveAccount();
+  if (selected) {
+    const { start, end } = etDayRange(date);
+    const candidateTrades = await db
+      .select({ entryAt: schema.trades.entryAt })
+      .from(schema.trades)
+      .where(
+        and(
+          eq(schema.trades.accountId, activeAccount.id),
+          gte(schema.trades.entryAt, start),
+          lte(schema.trades.entryAt, end),
+        ),
+      );
+    const hasTradeOnDate = candidateTrades.some(
+      (trade) => trade.entryAt != null && etDateString(trade.entryAt) === date,
+    );
+    if (hasTradeOnDate) return;
+
+    await db
+      .insert(schema.journalDayStatuses)
+      .values({ accountId: activeAccount.id, date, status: "no_trade" })
+      .onConflictDoUpdate({
+        target: [schema.journalDayStatuses.accountId, schema.journalDayStatuses.date],
+        set: { status: "no_trade", updatedAt: new Date() },
+      });
+  } else {
+    await db
+      .delete(schema.journalDayStatuses)
+      .where(
+        and(
+          eq(schema.journalDayStatuses.accountId, activeAccount.id),
+          eq(schema.journalDayStatuses.date, date),
+        ),
+      );
+  }
+
+  revalidateJournalLoop();
 }
 
 /** Create-or-update a scoped recap note (day/week/month) keyed by scope+scopeKey. */

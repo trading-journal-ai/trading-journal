@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import CandleDataNotice from "@/components/CandleDataNotice";
 import LightweightTradeChart from "@/components/LightweightTradeChart";
 import TickerReviewWorkspace from "@/components/TickerReviewWorkspace";
 import type { InlineTradeReviewData } from "@/lib/inlineTradeReview";
@@ -14,6 +15,7 @@ function isInlineTradeReviewData(value: unknown): value is InlineTradeReviewData
   return Array.isArray(payload.availableTags)
     && Array.isArray(payload.candles)
     && (payload.candleSource === "market" || payload.candleSource === "execution_fallback")
+    && (payload.candleStatus === "market" || payload.candleStatus === "missing" || payload.candleStatus === "provider_error")
     && typeof payload.initialTradeId === "number"
     && Array.isArray(payload.markers)
     && typeof payload.readOnly === "boolean"
@@ -123,10 +125,12 @@ export default function InlineTradeReviewPanel({
       </div>
 
       <div className="min-w-0">
-        {data.candleSource === "execution_fallback" && data.candles.length > 0 ? (
-          <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--muted)]">
-            Estimated chart · reconstructed from executions
-          </p>
+        {data.candleStatus !== "market" ? (
+          <CandleDataNotice
+            detail={data.candleError}
+            hasFallback={data.candles.length > 0}
+            status={data.candleStatus}
+          />
         ) : null}
         {data.candles.length > 0 ? (
           <LightweightTradeChart
