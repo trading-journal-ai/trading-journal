@@ -148,11 +148,9 @@ function candleIndexForMarker(candles: ChartCandle[], t: number): number {
 export default function TradeChart({
   candles,
   markers,
-  variant = "default",
 }: {
   candles: ChartCandle[];
   markers: ChartMarker[];
-  variant?: "default" | "review";
 }) {
   const fullEnd = Math.max(candles.length - 1, 0);
   const firstCandleTime = candles[0]?.t ?? 0;
