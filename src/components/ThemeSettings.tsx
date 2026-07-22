@@ -1,21 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 import { THEMES, DEFAULT_THEME, type Theme, readStoredTheme, applyTheme } from "@/lib/theme";
+
+const subscribeToStoredTheme = () => () => {};
+const readServerTheme = () => DEFAULT_THEME;
 
 export default function ThemeSettings() {
   // Start from the default so SSR and first client render agree, then sync to
   // the persisted theme on mount WITHOUT re-applying it (applying here would
   // clobber a non-default theme before ThemeBoot has restored it).
-  const [theme, setTheme] = useState<Theme>(DEFAULT_THEME);
-
-  useEffect(() => {
-    setTheme(readStoredTheme());
-  }, []);
+  const storedTheme = useSyncExternalStore(subscribeToStoredTheme, readStoredTheme, readServerTheme);
+  const [selectedTheme, setSelectedTheme] = useState<Theme | null>(null);
+  const theme = selectedTheme ?? storedTheme;
 
   function updateTheme(nextTheme: Theme) {
-    setTheme(nextTheme);
+    setSelectedTheme(nextTheme);
     applyTheme(nextTheme);
   }
 

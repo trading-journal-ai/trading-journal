@@ -2025,17 +2025,22 @@ function coachFigureNodes(text: string, keyPrefix: string): ReactNode[] {
 /** Coach prose: **bold** phrases in ink, dollar figures mono and sign-colored. */
 function coachInline(text: string): ReactNode[] {
   const parts = text.split(/\*\*(.+?)\*\*/g);
-  return parts.flatMap((part, index) => {
-    if (!part) return [];
+  const nodes: ReactNode[] = [];
+
+  parts.forEach((part, index) => {
+    if (!part) return;
     if (index % 2 === 1) {
-      return [
+      nodes.push(
         <strong key={`bold${index}`} className="font-bold text-[var(--foreground)]">
           {coachFigureNodes(part, `bold${index}`)}
         </strong>,
-      ];
+      );
+      return;
     }
-    return coachFigureNodes(part, `text${index}`);
+    nodes.push(...coachFigureNodes(part, `text${index}`));
   });
+
+  return nodes;
 }
 
 function CoachProse({ text, className }: { text: string; className: string }) {
