@@ -83,19 +83,20 @@ export default function SharedNoteComposer({
 }: SharedNoteComposerProps) {
   const [initialValue, setInitialValue] = useState(defaultValue);
   const [savedLocal, setSavedLocal] = useState(false);
-  const [dictationBusy, setDictationBusy] = useState(false);
+  const [actionsHiddenDuringDictation, setActionsHiddenDuringDictation] = useState<boolean | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const actionsHiddenAtDictationStartRef = useRef(hideActions);
   const inputKey = `${localStorageKey ?? "server"}:${initialValue}`;
   const localMode = Boolean(localStorageKey);
   // Freeze the actions row in its pre-dictation state while recording, so
   // streamed live text doesn't pop the row in (or out) mid-dictation.
-  const actionsHidden = dictationBusy ? actionsHiddenAtDictationStartRef.current : hideActions;
+  const actionsHidden = actionsHiddenDuringDictation ?? hideActions;
 
   function handleDictationStatusChange(status: DictationStatus) {
     const busy = status === "recording" || status === "transcribing";
-    if (busy && !dictationBusy) actionsHiddenAtDictationStartRef.current = hideActions;
-    setDictationBusy(busy);
+    setActionsHiddenDuringDictation((current) => {
+      if (!busy) return null;
+      return current ?? hideActions;
+    });
     onDictationStatusChange?.(status);
   }
 
