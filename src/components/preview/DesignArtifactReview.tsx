@@ -30,7 +30,7 @@ function ageLabel(lastCommit: string | null): string {
   return months < 12 ? `${months}mo ago` : `${Math.floor(days / 365)}y ago`;
 }
 
-const KIND_LABEL: Record<string, string> = { image: "Wireframe", html: "HTML", dir: "Directory" };
+const KIND_LABEL: Record<string, string> = { image: "Wireframe", html: "HTML", dir: "Directory", external: "Claude Design" };
 
 function DecisionButtons({
   decision,
@@ -98,12 +98,23 @@ function ArtifactCard({
       <div className="flex flex-1 flex-col gap-2 p-3.5">
         <div className="flex items-baseline justify-between gap-2">
           <h3 className="text-[14px] font-semibold leading-5 text-[var(--foreground)]">{artifact.title}</h3>
-          <span className="shrink-0 font-mono text-[10px] tabular-nums text-[var(--faint)]" title={artifact.lastCommit ?? "not committed"}>
-            {ageLabel(artifact.lastCommit)}
+          <span className="shrink-0 font-mono text-[10px] tabular-nums text-[var(--faint)]" title={artifact.sourceDate ?? artifact.lastCommit ?? "not committed"}>
+            {ageLabel(artifact.sourceDate ?? artifact.lastCommit)}
           </span>
         </div>
         <p className="text-[12.5px] leading-5 text-[var(--body)]">{artifact.description}</p>
-        <p className="truncate font-mono text-[10px] text-[var(--muted)]" title={artifact.file}>{artifact.file}</p>
+        {artifact.externalUrl ? (
+          <a
+            href={artifact.externalUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="truncate font-mono text-[10px] text-[var(--accent)] hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+          >
+            Open in Claude Design ↗
+          </a>
+        ) : (
+          <p className="truncate font-mono text-[10px] text-[var(--muted)]" title={artifact.file}>{artifact.file}</p>
+        )}
         <div className="mt-auto pt-1.5">
           <DecisionButtons decision={decision} onChange={onChange} />
         </div>
