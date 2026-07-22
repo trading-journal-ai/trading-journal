@@ -90,7 +90,7 @@ export default function JournalCoachRecapPrototype() {
             <h1 className="mt-3 text-3xl font-semibold leading-tight text-[var(--foreground)] md:text-5xl">
               Coach review mockup
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--prose)]">
+            <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--body)]">
               A focused mockup of the full recap editor after dashboard inputs
               and trade data have been captured, showing what the coach adds and
               what gets carried forward.
@@ -120,7 +120,7 @@ export default function JournalCoachRecapPrototype() {
               <h2 className="mt-3 text-2xl font-semibold text-[var(--foreground)]">
                 June 8 daily recap review
               </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--prose)]">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--body)]">
                 The user writes the recap first. Dashboard inputs remain visible
                 as source context. The coach review is generated after the user
                 is ready.
@@ -196,7 +196,7 @@ export default function JournalCoachRecapPrototype() {
               ) : (
                 <section className="rounded-lg border border-dashed border-[var(--border)] bg-[rgba(255,255,255,.02)] p-6">
                   <Eyebrow>Coach review pending</Eyebrow>
-                  <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--prose)]">
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--body)]">
                     After the user adds their thoughts, Ask Coach adds narrative
                     feedback, execution feedback, statistical read, and
                     carry-forward items to this same daily recap.
@@ -216,7 +216,7 @@ export default function JournalCoachRecapPrototype() {
 
               <Panel tone="blue">
                 <Eyebrow>Dashboard return</Eyebrow>
-                <p className="mt-3 text-sm leading-6 text-[var(--prose)]">
+                <p className="mt-3 text-sm leading-6 text-[var(--body)]">
                   Carry-forward items become tomorrow&apos;s active experiment,
                   risk guardrail, and sticky dashboard cue.
                 </p>
@@ -242,7 +242,7 @@ function DashboardInputCard({
       <p className="mt-3 text-sm font-semibold leading-6 text-[var(--foreground)]">
         {item.value}
       </p>
-      <p className="mt-2 text-sm leading-6 text-[var(--prose)]">
+      <p className="mt-2 text-sm leading-6 text-[var(--body)]">
         {item.context}
       </p>
     </div>
@@ -253,7 +253,7 @@ function ReviewBlock({ title, body }: { title: string; body: string }) {
   return (
     <div className="rounded-md border border-[rgba(29,178,107,.28)] bg-[rgba(29,178,107,.04)] p-5">
       <h3 className="text-lg font-semibold text-[var(--foreground)]">{title}</h3>
-      <p className="mt-3 text-base leading-7 text-[var(--prose)]">{body}</p>
+      <p className="mt-3 text-base leading-7 text-[var(--body)]">{body}</p>
     </div>
   );
 }
@@ -275,7 +275,7 @@ function StatCard({
       <div className="mt-2 text-base font-semibold text-[var(--foreground)]">
         {value}
       </div>
-      <p className="mt-2 text-sm leading-6 text-[var(--prose)]">{body}</p>
+      <p className="mt-2 text-sm leading-6 text-[var(--body)]">{body}</p>
     </div>
   );
 }
@@ -296,7 +296,7 @@ function CarryCard({ label, body }: { label: string; body: string }) {
 function ContextRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="mt-4 flex items-center justify-between gap-4 border-t border-[var(--hairline)] pt-4 first:mt-0 first:border-t-0 first:pt-0">
-      <span className="text-sm text-[var(--prose)]">{label}</span>
+      <span className="text-sm text-[var(--body)]">{label}</span>
       <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--foreground)]">
         {value}
       </span>

@@ -121,7 +121,7 @@ export default function CoachRecapSpinePrototype() {
             <h1 className="mt-3 text-3xl font-semibold tracking-[-0.025em] text-[var(--foreground)]">
               Coach recap spine
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--prose)]">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--body)]">
               One recap structure with progressive evidence. Notes stay where they were written;
               the coach pulls them into the review only as context.
             </p>
@@ -206,7 +206,7 @@ function ReadyToGenerate({ status, onGenerate }: { status: RecapStatus; onGenera
         <h3 className="mt-3 text-2xl font-semibold tracking-[-0.02em] text-[var(--foreground)] md:text-3xl">
           The coach has enough context to review this session.
         </h3>
-        <p className="mt-3 text-[15px] leading-7 text-[var(--prose)]">
+        <p className="mt-3 text-[15px] leading-7 text-[var(--body)]">
           Trade facts are ready, your current playbook is loaded, and notes from the day,
           tickers, and selected trades will be cited as context. Generate the recap when
           you are ready to synthesize the feedback.
@@ -281,7 +281,7 @@ function GeneratedRecap({
         <h3 className="mt-4 max-w-3xl text-3xl font-semibold leading-[1.16] tracking-[-0.03em] text-[var(--foreground)] md:text-[42px]">
           Green result. The cleaner signal was patience—not broad execution quality.
         </h3>
-        <p className="mt-4 max-w-3xl text-[15px] leading-7 text-[var(--prose)]">
+        <p className="mt-4 max-w-3xl text-[15px] leading-7 text-[var(--body)]">
           SMX and FCUV carried the session after an early dip. Both winners waited for
           confirmation and were given room to work. PFSA was the only losing ticker, but its
           impact was too small to explain the day.
@@ -358,7 +358,7 @@ function GeneratedRecap({
                 <div className="mt-2 text-sm font-semibold text-[var(--foreground)]">{moment.symbol}</div>
                 <div className="mt-1 font-mono text-[11px] text-[var(--muted)]">{moment.meta}</div>
               </div>
-              <p className="text-sm leading-6 text-[var(--prose)]">{moment.why}</p>
+              <p className="text-sm leading-6 text-[var(--body)]">{moment.why}</p>
               <div className="font-mono text-[10px] uppercase leading-5 tracking-[0.1em] text-[var(--muted)]">
                 {moment.source}
               </div>
@@ -374,7 +374,7 @@ function GeneratedRecap({
             <h4 className="mt-3 text-xl font-semibold text-[var(--foreground)]">
               Did the PFSA entry follow your planned trigger?
             </h4>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--prose)]">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--body)]">
               The executions show an early entry, but the note does not say whether it was intentional.
               Your answer determines whether this was normal variance or a process miss.
             </p>
@@ -402,7 +402,7 @@ function GeneratedRecap({
           </div>
           <aside className="border-t border-[var(--hairline)] pt-5 md:border-l md:border-t-0 md:pl-6 md:pt-0">
             <Eyebrow>Why this matters</Eyebrow>
-            <p className="mt-3 text-sm leading-6 text-[var(--prose)]">
+            <p className="mt-3 text-sm leading-6 text-[var(--body)]">
               If the trigger was valid, the coach should reinforce loss acceptance. If it was anticipated,
               the coach should mark entry quality as mixed and adjust the experiment.
             </p>
@@ -537,7 +537,7 @@ function ExperimentCell({ label, value }: { label: string; value: string }) {
   return (
     <div className="border-l border-[var(--hairline)] pl-4 first:border-l-0 first:pl-0">
       <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--muted)]">{label}</div>
-      <p className="mt-2 leading-6 text-[var(--prose)]">{value}</p>
+      <p className="mt-2 leading-6 text-[var(--body)]">{value}</p>
     </div>
   );
 }

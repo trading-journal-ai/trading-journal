@@ -204,7 +204,7 @@ export default function JournalContentReviewPage() {
             <h1 className="mt-3 text-3xl font-semibold leading-tight text-[var(--foreground)] md:text-5xl">
               Daily recap flow prototype
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--prose)]">
+            <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--body)]">
               A lightweight click-through for the core flow: dashboard captures
               the day, trade import opens the recap editor, the journal stores
               the recap, and the dashboard carries the lesson forward.
@@ -290,7 +290,7 @@ function DashboardView({
               <h2 className="mt-3 text-2xl font-semibold text-[var(--foreground)]">
                 Active trading day
               </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--prose)]">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--body)]">
                 The dashboard handles the lightweight intraday check-ins. Trade
                 data can strengthen the recap, but the dashboard is mostly about
                 planning, accountability, and prompts.
@@ -307,7 +307,7 @@ function DashboardView({
                 <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--blue)]">
                   {label}
                 </div>
-                <p className="mt-3 text-sm leading-6 text-[var(--prose)]">
+                <p className="mt-3 text-sm leading-6 text-[var(--body)]">
                   {body}
                 </p>
               </div>
@@ -349,7 +349,7 @@ function DashboardView({
 
         <Panel>
           <Eyebrow>Shared day record</Eyebrow>
-          <p className="mt-3 text-sm leading-6 text-[var(--prose)]">
+          <p className="mt-3 text-sm leading-6 text-[var(--body)]">
             Dashboard check-ins and trade import attach to the same daily
             records in the June 1-5 journal week. The dashboard reads active
             lessons back from those records after review.
@@ -383,7 +383,7 @@ function JournalView({
           <h2 className="mt-3 text-4xl font-semibold leading-none text-[var(--foreground)]">
             June 1-5
           </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--prose)]">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--body)]">
             A scrollable journal week. Import trades soon after the session so
             each recap has the freshest P&L, ticker, and execution context.
           </p>
@@ -392,7 +392,7 @@ function JournalView({
 
       <Panel>
         <Eyebrow>State note</Eyebrow>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--prose)]">
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--body)]">
           A day can begin with dashboard notes only, but the product should
           keep nudging trade import because the recap is better while the
           session is fresh. Bulk import can update several days; focus the most
@@ -403,7 +403,7 @@ function JournalView({
       {importedDates.length === 0 ? (
         <Panel tone="blue">
           <Eyebrow>Before trade import</Eyebrow>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--prose)]">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--body)]">
             Dashboard notes can live here before trades are imported, but the
             best recap happens while the tape is still fresh. Import trades to
             attach P&L, tickers, and execution evidence to these days.
@@ -412,7 +412,7 @@ function JournalView({
       ) : (
         <Panel tone="green">
           <Eyebrow>Bulk import result</Eyebrow>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--prose)]">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--body)]">
             Trades were attached to {importedDates.length} daily records. Start
             with the most recent day while the context is freshest, then work
             backward through the older imported days.
@@ -569,7 +569,7 @@ function JournalDayRow({
       {reviewed ? (
         <div className="mt-5 max-w-[665px] rounded-md border border-[rgba(29,178,107,.28)] bg-[rgba(29,178,107,.05)] p-4">
           <Eyebrow>Coach review attached</Eyebrow>
-          <p className="mt-2 text-sm leading-6 text-[var(--prose)]">
+          <p className="mt-2 text-sm leading-6 text-[var(--body)]">
             Narrative on the day, execution feedback, statistical read, and
             carry-forward cues have been saved back to this recap.
           </p>
@@ -595,7 +595,7 @@ function ExpandedDayReview({
           eyebrow="Recap context"
           helper="dashboard notes only"
         />
-        <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--prose)]">
+        <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--body)]">
           Dashboard notes can start the recap, but trade import should be the
           next step so the day has P&L, ticker, and execution evidence.
         </p>
@@ -676,7 +676,7 @@ function ExpandedDayReview({
               helper="summarized from ticker drill-down"
             />
             <div className="mt-5 rounded-md border border-[var(--hairline)] bg-[rgba(7,9,13,.24)] p-4">
-              <p className="text-sm leading-6 text-[var(--prose)]">
+              <p className="text-sm leading-6 text-[var(--body)]">
                 Trade notes should live with the individual trades. This review
                 only needs to know whether the important winners, avoidable
                 losers, and emotion/process breaks have enough context.
@@ -695,7 +695,7 @@ function ExpandedDayReview({
           <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
             Dashboard loop
           </div>
-          <p className="mt-3 text-sm leading-6 text-[var(--prose)]">
+          <p className="mt-3 text-sm leading-6 text-[var(--body)]">
             Dashboard check-ins shape the recap. The coach promotes one cue
             back to tomorrow&apos;s dashboard.
           </p>
@@ -767,7 +767,7 @@ function RecapEditor({
           <h2 className="mt-3 text-2xl font-semibold text-[var(--foreground)]">
             {selectedDay.shortDate} recap review
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--prose)]">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--body)]">
             {tradeDataImported
               ? "Trade data is attached to this daily record. Add your thoughts, let the coach add feedback, then save back to the journal day."
               : "This daily record only has dashboard context right now. You can still add notes, then attach trade data later when it is imported."}
@@ -905,7 +905,7 @@ function ProductionLikePnlCard({ day }: { day: WeekDay }) {
 function StatusRow({ label, done }: { label: string; done: boolean }) {
   return (
     <div className="mt-4 flex items-center justify-between gap-4 border-t border-[var(--hairline)] pt-4 first:mt-0 first:border-t-0 first:pt-0">
-      <span className="text-sm text-[var(--prose)]">{label}</span>
+      <span className="text-sm text-[var(--body)]">{label}</span>
       <span
         className={`font-mono text-[11px] uppercase tracking-[0.16em] ${
           done ? "text-[var(--green)]" : "text-[var(--muted)]"
@@ -995,7 +995,7 @@ function MiniCard({ title, body }: { title: string; body: string }) {
   return (
     <div className="rounded-md border border-[var(--hairline)] bg-[rgba(255,255,255,.02)] p-4">
       <h3 className="text-sm font-semibold text-[var(--foreground)]">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-[var(--prose)]">{body}</p>
+      <p className="mt-2 text-sm leading-6 text-[var(--body)]">{body}</p>
     </div>
   );
 }

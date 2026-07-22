@@ -44,7 +44,7 @@ function StudyRow({ study }: { study: DataVizPreviewRoute }) {
     >
       <span className="font-mono text-[12px] font-semibold text-[var(--blue)]">{study.version}</span>
       <span className="text-[17px] font-semibold leading-6 text-[var(--foreground)]">{study.title}</span>
-      <span className="max-w-2xl text-[13px] leading-6 text-[var(--prose)]">{study.description}</span>
+      <span className="max-w-2xl text-[13px] leading-6 text-[var(--body)]">{study.description}</span>
       <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">{study.meta}</span>
       <span className="text-[var(--muted)] transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[var(--blue)] group-focus-visible:text-[var(--blue)]"><ArrowIcon /></span>
     </Link>
@@ -81,7 +81,7 @@ export default function DataVizIndexPage() {
               <header>
                 <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">0{index + 1} · {studies.length} studies</p>
                 <h2 className="mt-4 text-[25px] font-semibold leading-8 tracking-[-0.02em]">{group.title}</h2>
-                <p className="mt-4 max-w-sm text-[13px] leading-6 text-[var(--prose)]">{group.description}</p>
+                <p className="mt-4 max-w-sm text-[13px] leading-6 text-[var(--body)]">{group.description}</p>
               </header>
               <div className="border-b border-[var(--hairline)]">
                 {studies.map((study) => <StudyRow key={study.href} study={study} />)}
