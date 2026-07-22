@@ -4,6 +4,9 @@ import type { CoachTradeExecutionFacts } from "@/lib/executionAnalysis";
 
 export type CoachReviewTradeContext = {
   id: number;
+  /** Human-facing citation for prose, e.g. "ADVB #19097". Ticker + trade id so a
+   * reference never reads as a bare number the reader mistakes for a timestamp. */
+  ref: string;
   symbol: string;
   side: string;
   quantity: number;
@@ -48,6 +51,7 @@ export type CoachReviewPayload = {
   instructions: {
     role: string;
     numericBoundary: string;
+    tradeReference: string;
     outputContract: string[];
   };
 };
@@ -91,8 +95,13 @@ export function buildCoachReviewPayload({
   playbook: CoachReviewPlaybookContext;
   humanContext: CoachReviewHumanContext;
   deterministicFacts: SessionFactPack;
-  trades: CoachReviewTradeContext[];
+  trades: Omit<CoachReviewTradeContext, "ref">[];
 }): CoachReviewPayload {
+  const tradesWithRef = trades.map((trade) => ({
+    ...trade,
+    ref: `${trade.symbol} #${trade.id}`,
+  }));
+
   return {
     version: 1,
     scope,
@@ -101,10 +110,11 @@ export function buildCoachReviewPayload({
     playbook,
     humanContext,
     deterministicFacts: roundNumbersDeep(deterministicFacts) as SessionFactPack,
-    trades: roundNumbersDeep(trades) as CoachReviewTradeContext[],
+    trades: roundNumbersDeep(tradesWithRef) as CoachReviewTradeContext[],
     instructions: {
       role: "Post-trade review coach. Review completed trades only. Do not give live trade calls.",
       numericBoundary: "Use deterministicFacts, trades[].executionAnalysis, and trades[].opportunityContext for every number. Do not calculate, infer, or modify numeric claims. opportunityContext.atEntry contains only facts knowable at entry; opportunityContext.postTrade is hindsight and must never be used to grade the entry decision.",
+      tradeReference: "When citing an individual trade in prose, use its trades[].ref value (ticker and trade number, e.g. \"ADVB #19097\"). Never write a trade's raw numeric id on its own — a bare number reads as a timestamp.",
       outputContract: [
         "dayVerdict",
         "whatMatchedPlaybook",

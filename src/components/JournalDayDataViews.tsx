@@ -7,6 +7,7 @@ import JournalReviewTabs, {
   type JournalDataScope,
   type JournalDataView,
 } from "@/components/JournalReviewTabs";
+import { tradingCalendarWeeks, tradingWeekDates } from "@/lib/journalPnlViews";
 
 export type { JournalDataScope, JournalDataView } from "@/components/JournalReviewTabs";
 
@@ -38,6 +39,19 @@ export type JournalDayProcessFact = {
   tone?: "positive" | "negative" | "neutral";
 };
 
+export type JournalChartReadSummary = {
+  total: number;
+  readable: number;
+  supported: number;
+  contradicted: number;
+  unclear: number;
+  consolidating: number;
+  exhaustion: number;
+  cleanExpansion: number;
+  whippyExpansion: number;
+  headline: string;
+};
+
 export type JournalCoachSummary = {
   diagnosis: string;
   evidence: string;
@@ -62,6 +76,7 @@ export type JournalSessionRow = {
   profitFactor: number | null;
   pnl: number;
   activityRead?: string;
+  marketContextLabel?: string;
 };
 
 export type JournalEdgeRow = {
@@ -83,14 +98,18 @@ export type JournalHorizonRow = {
 
 export type JournalComparisonData = {
   week: {
+    key: string;
     summary: JournalRangeSummary;
     sessions: JournalSessionRow[];
     edgeRows: JournalEdgeRow[];
     taggedCoverage: number | null;
     plannedRiskCoverage: number;
+    marketContextCoverage: { available: number; sessions: number };
+    chartRead: JournalChartReadSummary;
     coach: JournalCoachSummary;
   };
   month: {
+    key: string;
     summary: JournalRangeSummary;
     sessions: JournalSessionRow[];
     horizonRows: JournalHorizonRow[];
@@ -101,6 +120,7 @@ export type JournalComparisonData = {
       highActivityLossShare: number | null;
       redDays: number;
     };
+    chartRead: JournalChartReadSummary;
     coach: JournalCoachSummary;
   };
 };
@@ -144,6 +164,7 @@ export default function JournalReviewModule({
   returnTo,
   weekCoachSlot,
   monthCoachSlot,
+  dayCoachSlot,
 }: {
   pnlContent: ReactNode;
   tradeRows: JournalDayTradeRow[];
@@ -159,9 +180,10 @@ export default function JournalReviewModule({
   comparisons: JournalComparisonData;
   date: string;
   returnTo: string;
-  /** Server-rendered week/month coach review panels (generation lives here). */
+  /** Server-rendered scope-aware coach review panels (generation lives here). */
   weekCoachSlot?: ReactNode;
   monthCoachSlot?: ReactNode;
+  dayCoachSlot?: ReactNode;
 }) {
   const [scope, setScope] = useState<JournalDataScope>("day");
   const [view, setView] = useState<JournalDataView>("pnl");
@@ -193,6 +215,7 @@ export default function JournalReviewModule({
             tradeRows={tradeRows}
             processFacts={processFacts}
             coach={coach}
+            coachSlot={dayCoachSlot}
             summary={summary}
             date={date}
             returnTo={returnTo}
@@ -211,6 +234,7 @@ function DayViews({
   tradeRows,
   processFacts,
   coach,
+  coachSlot,
   summary,
   date,
   returnTo,
@@ -220,6 +244,7 @@ function DayViews({
   tradeRows: JournalDayTradeRow[];
   processFacts: JournalDayProcessFact[];
   coach: JournalCoachSummary;
+  coachSlot?: ReactNode;
   summary: { trades: number; accuracy: number | null; profitFactor: number | null; pnl: number; taggedTrades: number };
   date: string;
   returnTo: string;
@@ -248,19 +273,21 @@ function DayViews({
 
   if (view === "process") {
     return (
-      <div role="tabpanel" className="grid gap-3">
+      <div role="tabpanel" className="divide-y divide-[var(--hairline)] border-y border-[var(--hairline)]">
         {processFacts.map((fact) => (
-          <div key={fact.label} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
+          <div key={fact.label} className="grid gap-2 py-4 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-6">
             <div className="text-[12px] text-[var(--muted)]">{fact.label}</div>
-            <div className={`mt-1 text-sm font-semibold ${factClass(fact.tone)}`}>{fact.value}</div>
-            <p className="mt-2 text-[12px] leading-5 text-[var(--body)]">{fact.detail}</p>
+            <div>
+              <div className={`text-sm font-semibold ${factClass(fact.tone)}`}>{fact.value}</div>
+              <p className="mt-1 text-[12px] leading-5 text-[var(--body)]">{fact.detail}</p>
+            </div>
           </div>
         ))}
       </div>
     );
   }
 
-  return <CoachRead coach={coach} label="Deterministic diagnosis" />;
+  return coachSlot ? <div role="tabpanel">{coachSlot}</div> : <CoachRead coach={coach} label="Deterministic diagnosis" />;
 }
 
 function WeekViews({ view, data, coachSlot }: { view: JournalDataView; data: JournalComparisonData["week"]; coachSlot?: ReactNode }) {
@@ -268,8 +295,8 @@ function WeekViews({ view, data, coachSlot }: { view: JournalDataView; data: Jou
     return (
       <div role="tabpanel">
         <RangeHeader summary={data.summary} question="Was the week carried by one session or built consistently?" />
-        <SessionTable rows={data.sessions} />
-        <EvidenceBoundary>Imported trade sessions only. A zero-trade day cannot be labeled intentional until scanner or journal-session coverage exists.</EvidenceBoundary>
+        <WeekPnlBars weekStart={data.key} rows={data.sessions} />
+        <EvidenceBoundary>Every weekday shares the same zero line. A blank column means no imported session; it does not infer an intentional no-trade day.</EvidenceBoundary>
       </div>
     );
   }
@@ -299,23 +326,22 @@ function WeekViews({ view, data, coachSlot }: { view: JournalDataView; data: Jou
   }
 
   if (view === "alignment") {
+    const coverage = data.marketContextCoverage;
     return (
       <div role="tabpanel">
-        <ReadFirst title="Market context not connected">
-          Activity is visible, but opportunity quality is not. This view will score participation only after the Stock Info daily summary can distinguish a slow tape from missing coverage.
+        <ChartReadOverview read={data.chartRead} />
+        <ReadFirst title={coverage.available > 0 ? "Retrospective market context" : "Market context unavailable"}>
+          {coverage.available > 0
+            ? `${coverage.available} of ${coverage.sessions} imported sessions have completed-day market context. This can describe market heat and leadership, but not scanner timing or what was knowable before entry.`
+            : "The chart read can judge the trades you took, but it cannot judge the opportunities you skipped or whether the whole market was hot, selective, or slow."}
         </ReadFirst>
         <SessionTable rows={data.sessions} showActivity />
-        <EvidenceBoundary>Relative activity is descriptive—not evidence of boredom, FOMO, tilt, or a market-context mismatch.</EvidenceBoundary>
+        <EvidenceBoundary>Retrospective daily bars and relative activity are descriptive—not evidence of scanner compliance, boredom, FOMO, tilt, or what was known at entry.</EvidenceBoundary>
       </div>
     );
   }
 
-  return (
-    <div role="tabpanel" className="space-y-8">
-      <CoachRead coach={data.coach} label="Weekly read" />
-      {coachSlot ?? null}
-    </div>
-  );
+  return <div role="tabpanel">{coachSlot ?? <CoachRead coach={data.coach} label="Weekly read" />}</div>;
 }
 
 function MonthViews({ view, data, coachSlot }: { view: JournalDataView; data: JournalComparisonData["month"]; coachSlot?: ReactNode }) {
@@ -323,8 +349,8 @@ function MonthViews({ view, data, coachSlot }: { view: JournalDataView; data: Jo
     return (
       <div role="tabpanel">
         <RangeHeader summary={data.summary} question="How were outcomes distributed across the month?" />
-        <SessionTable rows={data.sessions} />
-        <EvidenceBoundary>Heat and session counts currently reflect imported trading sessions, not every market day in the calendar.</EvidenceBoundary>
+        <MonthPnlCalendar monthKey={data.key} rows={data.sessions} />
+        <EvidenceBoundary>This is a read-only map of imported trading sessions. Blank dates remain unconfirmed; no-trade-day management stays in Calendar.</EvidenceBoundary>
       </div>
     );
   }
@@ -363,12 +389,147 @@ function MonthViews({ view, data, coachSlot }: { view: JournalDataView; data: Jo
     );
   }
 
+  return <div role="tabpanel">{coachSlot ?? <CoachRead coach={data.coach} label="Monthly read" />}</div>;
+}
+
+function WeekPnlBars({ weekStart, rows }: { weekStart: string; rows: JournalSessionRow[] }) {
+  const sessionsByDate = new Map(rows.map((row) => [row.date, row]));
+  const slots = tradingWeekDates(weekStart).map((date) => ({ date, session: sessionsByDate.get(date) }));
+  const maxAbs = Math.max(1, ...rows.map((row) => Math.abs(row.pnl)));
+
   return (
-    <div role="tabpanel" className="space-y-8">
-      <CoachRead coach={data.coach} label="Monthly read" />
-      {coachSlot ?? null}
-    </div>
+    <figure className="mt-6 overflow-x-auto" aria-labelledby="week-pnl-bars-title">
+      <figcaption id="week-pnl-bars-title" className="sr-only">
+        Daily P&amp;L for each weekday, with gains above zero and losses below zero.
+      </figcaption>
+      <div className="grid min-w-[560px] grid-cols-5 border-y border-[var(--hairline)]">
+        {slots.map(({ date, session }, index) => {
+          const value = session?.pnl ?? 0;
+          const barHeight = session ? Math.max(5, (Math.abs(value) / maxAbs) * 46) : 0;
+          const positive = value >= 0;
+          return (
+            <div
+              key={date}
+              className={`min-w-0 px-3 py-4 ${index > 0 ? "border-l border-[var(--hairline)]" : ""}`}
+              aria-label={session
+                ? `${weekdayLabel(date)} ${shortDateLabel(date)}: ${money(value)}, ${session.trades} trades`
+                : `${weekdayLabel(date)} ${shortDateLabel(date)}: no imported session`}
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[12px] font-semibold text-[var(--foreground)]">{weekdayLabel(date)}</span>
+                <span className="font-mono text-[11px] tabular-nums text-[var(--muted)]">{shortDateLabel(date)}</span>
+              </div>
+              <div className="relative mt-3 h-32" aria-hidden="true">
+                <div className="absolute inset-x-0 top-1/2 h-px bg-[var(--border)]" />
+                {session ? (
+                  <div
+                    className={`absolute left-1/2 w-8 -translate-x-1/2 ${positive ? "bg-[var(--green)]" : "bg-[var(--red)]"}`}
+                    style={positive
+                      ? { height: `${barHeight}%`, bottom: "50%" }
+                      : { height: `${barHeight}%`, top: "50%" }}
+                  />
+                ) : (
+                  <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-[12px] text-[var(--faint)]">—</span>
+                )}
+              </div>
+              <div className="mt-2 text-center">
+                <div className={`whitespace-nowrap font-mono text-[12px] font-semibold tabular-nums ${session ? pnlClass(value) : "text-[var(--faint)]"}`}>
+                  {session ? money(value) : "No session"}
+                </div>
+                <div className="mt-1 text-[11px] text-[var(--muted)]">
+                  {session ? `${session.trades} ${session.trades === 1 ? "trade" : "trades"}` : "Not imported"}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <ul className="sr-only">
+        {slots.map(({ date, session }) => (
+          <li key={date}>
+            {weekdayLabel(date)} {shortDateLabel(date)}: {session ? `${money(session.pnl)}, ${session.trades} trades` : "no imported session"}
+          </li>
+        ))}
+      </ul>
+    </figure>
   );
+}
+
+function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalSessionRow[] }) {
+  const sessionsByDate = new Map(rows.map((row) => [row.date, row]));
+  const weeks = tradingCalendarWeeks(monthKey);
+  return (
+    <figure className="mt-6 overflow-x-auto" aria-labelledby="month-pnl-calendar-title">
+      <figcaption id="month-pnl-calendar-title" className="sr-only">
+        Trading calendar showing imported daily P&amp;L and trade counts for the selected month.
+      </figcaption>
+      <div className="min-w-[560px]">
+        <div className="grid grid-cols-5 border-b border-[var(--hairline)] pb-2">
+          {WEEKDAYS.map((day) => (
+            <div key={day} className="px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
+              {day}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-5 gap-px bg-[var(--hairline)]">
+          {weeks.flatMap((week) => week).map((day) => {
+            const session = day.inMonth ? sessionsByDate.get(day.date) : undefined;
+            const positive = (session?.pnl ?? 0) >= 0;
+            return (
+              <div
+                key={day.date}
+                className={`flex min-h-24 flex-col bg-[var(--surface)] px-3 py-3 ${day.inMonth ? "" : "opacity-30"}`}
+                style={session
+                  ? { backgroundColor: positive ? "color-mix(in oklch, var(--green) 8%, var(--surface))" : "color-mix(in oklch, var(--red) 8%, var(--surface))" }
+                  : undefined}
+                aria-label={session
+                  ? `${longDateLabel(day.date)}: ${money(session.pnl)}, ${session.trades} trades`
+                  : `${longDateLabel(day.date)}: no imported session`}
+              >
+                <span className="font-mono text-[12px] font-semibold tabular-nums text-[var(--foreground)]">{day.day}</span>
+                {session ? (
+                  <span className="mt-auto pt-5">
+                    <span className={`block whitespace-nowrap font-mono text-[13px] font-semibold tabular-nums ${pnlClass(session.pnl)}`}>
+                      {money(session.pnl)}
+                    </span>
+                    <span className="mt-0.5 block text-[11px] text-[var(--muted)]">
+                      {session.trades} {session.trades === 1 ? "trade" : "trades"}
+                    </span>
+                  </span>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <ul className="sr-only">
+        {rows.map((session) => (
+          <li key={session.date}>{longDateLabel(session.date)}: {money(session.pnl)}, {session.trades} trades</li>
+        ))}
+      </ul>
+    </figure>
+  );
+}
+
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+const weekdayFormatter = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short" });
+const shortDateFormatter = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric" });
+const longDateFormatter = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "long", month: "long", day: "numeric" });
+
+function isoDate(date: string): Date {
+  return new Date(`${date}T12:00:00Z`);
+}
+
+function weekdayLabel(date: string): string {
+  return weekdayFormatter.format(isoDate(date));
+}
+
+function shortDateLabel(date: string): string {
+  return shortDateFormatter.format(isoDate(date));
+}
+
+function longDateLabel(date: string): string {
+  return longDateFormatter.format(isoDate(date));
 }
 
 function RangeHeader({ summary, question }: { summary: JournalRangeSummary; question: string }) {
@@ -388,13 +549,28 @@ function RangeHeader({ summary, question }: { summary: JournalRangeSummary; ques
   );
 }
 
+function ChartReadOverview({ read }: { read: JournalChartReadSummary }) {
+  return (
+    <section className="mb-6 border-y border-[var(--hairline)] py-4">
+      <SectionLabel>Chart read at entry</SectionLabel>
+      <p className="mt-2 text-[14px] leading-6 text-[var(--body)]">{read.headline}</p>
+      <p className="mt-3 font-mono text-[12px] leading-5 text-[var(--muted)] tabular-nums">
+        {read.supported} with trend · {read.contradicted} against · {read.unclear} unclear · {read.consolidating} tightening · {read.exhaustion} stalled
+      </p>
+      <p className="mt-1 text-[12px] leading-5 text-[var(--muted)]">
+        {read.readable} of {read.total} trades had enough candle history to judge.
+      </p>
+    </section>
+  );
+}
+
 function SessionTable({ rows, showActivity = false }: { rows: JournalSessionRow[]; showActivity?: boolean }) {
   if (!rows.length) return <EmptyEvidence>No imported sessions in this range.</EmptyEvidence>;
   return (
     <div className="mt-5 overflow-x-auto border-y border-[var(--hairline)]">
       <table className="w-full min-w-[580px] border-collapse text-left text-[12px]">
         <thead className="text-[var(--muted)]"><tr className="border-b border-[var(--hairline)]"><th className="px-3 py-3 font-medium">Session</th>{showActivity ? <th className="px-3 py-3 font-medium">Market context</th> : null}<th className="px-3 py-3 text-right font-medium">Trades</th><th className="px-3 py-3 text-right font-medium">Win</th><th className="px-3 py-3 text-right font-medium">PF</th>{showActivity ? <th className="px-3 py-3 text-right font-medium">Activity read</th> : <th className="px-3 py-3 text-right font-medium">P&L</th>}</tr></thead>
-        <tbody>{rows.map((row) => <tr key={row.date} className="border-b border-[var(--hairline)]"><td className="px-3 py-3 font-semibold">{row.label}</td>{showActivity ? <td className="px-3 py-3 text-[var(--muted)]">Unavailable</td> : null}<td className="px-3 py-3 text-right font-mono">{row.trades}</td><td className="px-3 py-3 text-right font-mono">{percent(row.accuracy)}</td><td className="px-3 py-3 text-right font-mono">{ratio(row.profitFactor)}</td>{showActivity ? <td className="px-3 py-3 text-right text-[var(--body)]">{row.activityRead}</td> : <td className={`px-3 py-3 text-right font-mono ${pnlClass(row.pnl)}`}>{money(row.pnl)}</td>}</tr>)}</tbody>
+        <tbody>{rows.map((row) => <tr key={row.date} className="border-b border-[var(--hairline)]"><td className="px-3 py-3 font-semibold">{row.label}</td>{showActivity ? <td className="px-3 py-3 text-[var(--muted)]">{row.marketContextLabel ?? "Unavailable"}</td> : null}<td className="px-3 py-3 text-right font-mono">{row.trades}</td><td className="px-3 py-3 text-right font-mono">{percent(row.accuracy)}</td><td className="px-3 py-3 text-right font-mono">{ratio(row.profitFactor)}</td>{showActivity ? <td className="px-3 py-3 text-right text-[var(--body)]">{row.activityRead}</td> : <td className={`px-3 py-3 text-right font-mono ${pnlClass(row.pnl)}`}>{money(row.pnl)}</td>}</tr>)}</tbody>
       </table>
     </div>
   );
@@ -535,7 +711,7 @@ function SectionLabel({ children }: { children: ReactNode }) {
 }
 
 function MetricGrid({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`grid gap-3 sm:grid-cols-4 ${className}`}>{children}</div>;
+  return <div className={`grid grid-cols-2 gap-3 sm:grid-cols-4 ${className}`}>{children}</div>;
 }
 
 function Metric({ label, value, className = "text-[var(--foreground)]" }: { label: string; value: string; className?: string }) {

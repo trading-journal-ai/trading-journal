@@ -1,14 +1,15 @@
+import type { ReactNode } from "react";
 import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
+import Link from "next/link";
 import { generateCoachReviewAction, saveDraftCoachReviewAction } from "@/app/coach/actions";
 import { saveCoachExperimentAction } from "@/app/journal/actions";
 import { db, schema } from "@/lib/db";
 import { listAccounts } from "@/lib/accountScope";
 import { parseCoachStoredReview, type CoachStoredReview } from "@/lib/coach/generatedReview";
 import CoachOutputTabs from "@/components/CoachOutputTabs";
-import CollapsibleSection from "@/components/CollapsibleSection";
 import PendingSubmitButton from "@/components/PendingSubmitButton";
 import { buildSessionFactPack, type SessionFactPack } from "@/lib/coach/reviewEngine";
-import { shortEntryReason, type TradeOpportunityContext } from "@/lib/coach/opportunityContext";
+import type { TradeOpportunityContext } from "@/lib/coach/opportunityContext";
 import { opportunityContextsForTrades } from "@/lib/coach/opportunityContextService";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { netPnl } from "@/lib/pnl";
@@ -18,6 +19,7 @@ import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
 import InlineImportPrompt from "@/components/InlineImportPrompt";
 import JournalReviewModule, {
   type JournalComparisonData,
+  type JournalChartReadSummary,
   type JournalDayProcessFact,
   type JournalDayTradeRow,
 } from "@/components/JournalDayDataViews";
@@ -34,6 +36,7 @@ export type JournalReviewSearchParams = {
 
 type TradeRow = typeof schema.trades.$inferSelect;
 type ExecutionRow = typeof schema.executions.$inferSelect;
+type MarketContextRow = typeof schema.marketContextDays.$inferSelect;
 
 type TickerRow = {
   symbol: string;
@@ -65,25 +68,13 @@ type PnlPoint = {
   value: number;
 };
 
-type KeyTradePrompt = {
-  key: string;
-  label: string;
-  symbol: string;
-  pnl: number;
-  href: string;
-  /** Chart-evidence entry read, e.g. "entered 38 min past the high, 2.1 ATR extended". */
-  entryReason: string | null;
-};
-
-type WorstTradeCardData = {
-  symbol: string;
-  side: "long" | "short";
-  shares: number;
-  timeRange: string;
-  pnl: number;
-  fills: number;
-  href: string;
-  entryReason: string | null;
+type JournalMarketContext = {
+  available: boolean;
+  badge: string;
+  headline: string;
+  shortLabel: string;
+  detail: string;
+  caveat: string;
 };
 
 type ReviewData = {
@@ -93,8 +84,8 @@ type ReviewData = {
   taggedTrades: number;
   pnlPoints: PnlPoint[];
   coachRead: SessionFactPack;
-  keyTradePrompts: KeyTradePrompt[];
-  worstTrade: WorstTradeCardData | null;
+  chartRead: JournalChartReadSummary;
+  marketContext: JournalMarketContext;
 };
 
 type ReviewWeek = ReviewSummary & {
@@ -102,6 +93,7 @@ type ReviewWeek = ReviewSummary & {
   label: string;
   displayDate: string;
   days: ReviewData[];
+  chartRead: JournalChartReadSummary;
 };
 
 type ReviewRange = ReviewSummary & {
@@ -113,6 +105,7 @@ type ReviewRange = ReviewSummary & {
   days: ReviewData[];
   weeks: ReviewWeek[];
   coachRead: SessionFactPack;
+  chartRead: JournalChartReadSummary;
 };
 
 type ReviewArchive = {
@@ -334,17 +327,6 @@ function journalWeekSectionHref(basePath: string, monthKey: string, weekKey: str
 
 type ArchiveLinkMode = "legacy" | "review-module";
 
-/** One-line status for the collapsed coach section: automatic tier + AI tier. */
-function coachSectionStatus(savedReview: SavedCoachReview | null): string {
-  const auto = "automatic review ready";
-  if (savedReview?.status === "generated" && savedReview.storedReview && "review" in savedReview.storedReview) {
-    return `${auto} · AI review generated`;
-  }
-  if (savedReview?.status === "draft") return `${auto} · draft payload saved, no AI review yet`;
-  if (savedReview?.status === "stale") return `${auto} · last AI generation failed`;
-  return `${auto} · no AI review yet`;
-}
-
 function journalReviewModuleHref(
   basePath: string,
   date: string,
@@ -476,6 +458,151 @@ function reviewDatesForRange(
   return dates;
 }
 
+function chartReadHeadline(summary: Omit<JournalChartReadSummary, "headline">): string {
+  if (summary.readable === 0) {
+    return summary.total > 0
+      ? "Chart evidence was unavailable, so no trend judgment was made."
+      : "No trades were available for a chart read.";
+  }
+  if (summary.contradicted > 0 && summary.supported > summary.contradicted) {
+    return `Most readable entries followed the chart, but ${summary.contradicted} fought its established direction.`;
+  }
+  if (summary.contradicted > 0) {
+    return `${summary.contradicted} of ${summary.readable} readable entries fought the chart's established direction.`;
+  }
+  if (summary.supported > 0 && summary.unclear > 0) {
+    return `${summary.supported} entries followed the chart's established direction; ${summary.unclear} did not have enough agreement for a directional call.`;
+  }
+  if (summary.supported > 0) {
+    return `${summary.supported} readable entries followed the chart's established direction.`;
+  }
+  return "The chart did not provide enough agreement to support a directional read.";
+}
+
+function summarizeChartContexts(
+  total: number,
+  contexts: Array<TradeOpportunityContext | undefined>,
+): JournalChartReadSummary {
+  const readableContexts = contexts.flatMap((context) => context?.atEntry ? [context.atEntry] : []);
+  const counts = {
+    total,
+    readable: readableContexts.length,
+    supported: readableContexts.filter((entry) => entry.fylDirectionalOpportunity.status === "supported").length,
+    contradicted: readableContexts.filter((entry) => entry.fylDirectionalOpportunity.status === "contradicted").length,
+    unclear: readableContexts.filter((entry) => entry.fylDirectionalOpportunity.status === "insufficient_evidence").length,
+    consolidating: readableContexts.filter((entry) => entry.priceActionRead?.isConsolidating).length,
+    exhaustion: readableContexts.filter((entry) => entry.priceActionRead?.phase === "exhaustion_failure").length,
+    cleanExpansion: readableContexts.filter((entry) => entry.priceActionRead?.quality === "clean_expansion").length,
+    whippyExpansion: readableContexts.filter((entry) => entry.priceActionRead?.quality === "whippy_expansion").length,
+  };
+  return { ...counts, headline: chartReadHeadline(counts) };
+}
+
+function combineChartReads(reads: JournalChartReadSummary[]): JournalChartReadSummary {
+  const counts = reads.reduce(
+    (sum, read) => ({
+      total: sum.total + read.total,
+      readable: sum.readable + read.readable,
+      supported: sum.supported + read.supported,
+      contradicted: sum.contradicted + read.contradicted,
+      unclear: sum.unclear + read.unclear,
+      consolidating: sum.consolidating + read.consolidating,
+      exhaustion: sum.exhaustion + read.exhaustion,
+      cleanExpansion: sum.cleanExpansion + read.cleanExpansion,
+      whippyExpansion: sum.whippyExpansion + read.whippyExpansion,
+    }),
+    { total: 0, readable: 0, supported: 0, contradicted: 0, unclear: 0, consolidating: 0, exhaustion: 0, cleanExpansion: 0, whippyExpansion: 0 },
+  );
+  return { ...counts, headline: chartReadHeadline(counts) };
+}
+
+function unavailableMarketContext(): JournalMarketContext {
+  return {
+    available: false,
+    badge: "Coverage unavailable",
+    headline: "Scanner and retrospective coverage are unavailable for this session.",
+    shortLabel: "Unavailable",
+    detail: "The journal will not infer whether the market was hot, selective, or slow from trade activity alone.",
+    caveat: "Run the Massive historical backfill or connect a captured Stock Info daily summary to add this evidence.",
+  };
+}
+
+function finitePayloadNumber(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function marketHeatLabel(over50Pct: number, over100Pct: number): string {
+  if (over100Pct >= 2) return "Hot day";
+  if (over100Pct === 1) return "One true leader";
+  if (over50Pct >= 2) return "Active · no 100% leader";
+  if (over50Pct === 1) return "Thin / selective";
+  return "No +50% mover found";
+}
+
+function buildMarketContext(row: MarketContextRow | undefined, trades: TradeRow[]): JournalMarketContext {
+  if (!row || row.coverageStatus === "unavailable") return unavailableMarketContext();
+
+  try {
+    const payload = JSON.parse(row.payloadJson) as Record<string, unknown>;
+    const counts = payload.counts && typeof payload.counts === "object"
+      ? payload.counts as Record<string, unknown>
+      : {};
+    const over50Pct = finitePayloadNumber(counts.over50Pct);
+    const over100Pct = finitePayloadNumber(counts.over100Pct);
+    const over200Pct = finitePayloadNumber(counts.over200Pct);
+    const strongest = payload.strongestMover && typeof payload.strongestMover === "object"
+      ? payload.strongestMover as Record<string, unknown>
+      : null;
+    const strongestSymbol = typeof strongest?.symbol === "string" ? strongest.symbol : null;
+    const strongestMove = finitePayloadNumber(strongest?.maximumMovePct);
+    const candidates = Array.isArray(payload.candidates) ? payload.candidates : [];
+    const candidateSymbols = new Set(
+      candidates.flatMap((candidate) => {
+        if (!candidate || typeof candidate !== "object") return [];
+        const symbol = (candidate as Record<string, unknown>).symbol;
+        return typeof symbol === "string" ? [symbol] : [];
+      }),
+    );
+    const tradedSymbols = new Set(trades.map((trade) => trade.symbol));
+    const participated = [...candidateSymbols].filter((symbol) => tradedSymbols.has(symbol)).length;
+    const heat = marketHeatLabel(over50Pct, over100Pct);
+    const provenanceLabel = row.provenance === "scanner-captured" ? "Scanner captured" : "Retrospective";
+    const coverageLabel = row.coverageStatus === "full" ? "full coverage" : "partial coverage";
+    const moverNoun = over50Pct === 1 ? "stock rose" : "stocks rose";
+    const participation = over50Pct > 0 && trades.length > 0
+      ? ` You traded ${participated} of those ${over50Pct} movers.`
+      : "";
+    const leader = strongestSymbol && strongestMove > 0
+      ? ` ${strongestSymbol} led at +${strongestMove.toLocaleString("en-US", { maximumFractionDigits: 1 })}%.`
+      : "";
+
+    return {
+      available: true,
+      badge: `${provenanceLabel} · ${coverageLabel}`,
+      headline: `${heat} · ${over100Pct} cleared +100%`,
+      shortLabel: `${heat} · ${over100Pct} ≥100%`,
+      detail: `${over50Pct} $1–$20 ${moverNoun} at least 50% from the prior close to the day high; ${over200Pct} cleared 200%.${leader}${participation}`,
+      caveat: row.provenance === "scanner-captured"
+        ? "Captured scanner context preserves what the system observed during the session."
+        : "This backfill describes the completed session. It does not reconstruct scanner timing, RVOL, float, catalysts, or what was known before entry.",
+    };
+  } catch {
+    return unavailableMarketContext();
+  }
+}
+
+async function loadMarketContextRows(from: string, to: string): Promise<MarketContextRow[]> {
+  try {
+    return await db
+      .select()
+      .from(schema.marketContextDays)
+      .where(and(gte(schema.marketContextDays.sessionDateEt, from), lte(schema.marketContextDays.sessionDateEt, to)));
+  } catch (error) {
+    if (isOptionalCoachReadError(error)) return [];
+    throw error;
+  }
+}
+
 function buildDayData(
   date: string,
   trades: TradeRow[],
@@ -483,11 +610,8 @@ function buildDayData(
   notedTickerKeys: Set<string>,
   taggedTradeIds: Set<number>,
   entryContexts?: Map<number, TradeOpportunityContext>,
+  marketContextRow?: MarketContextRow,
 ): ReviewData {
-  const entryReasonFor = (tradeId: number): string | null => {
-    const ctx = entryContexts?.get(tradeId);
-    return ctx ? shortEntryReason(ctx) : null;
-  };
   const executionCountByTrade = new Map<number, number>();
   executions.forEach((execution) => {
     if (execution.tradeId == null) return;
@@ -527,62 +651,10 @@ function buildDayData(
     pnlPoints.push({ time: formatTime(trades.at(-1)?.entryAt ?? start), value: summary.pnl });
   }
 
-  const closedTrades = trades
-    .map((trade) => ({ trade, pnl: netPnl(trade) ?? 0 }))
-    .filter(({ trade }) => trade.exitAt != null);
-  const bestTrade = [...closedTrades].sort((a, b) => b.pnl - a.pnl)[0];
-  const worstTrade = [...closedTrades].sort((a, b) => a.pnl - b.pnl)[0];
-  const biggestTicker = [...tickers.values()].sort((a, b) => Math.abs(b.pnl) - Math.abs(a.pnl))[0];
-  const keyTradePrompts: KeyTradePrompt[] = [];
-
-  if (bestTrade) {
-    keyTradePrompts.push({
-      key: `best-${bestTrade.trade.id}`,
-      label: "Best trade",
-      symbol: bestTrade.trade.symbol,
-      pnl: bestTrade.pnl,
-      href: `/trades/review?date=${date}&symbol=${bestTrade.trade.symbol}&trade=${bestTrade.trade.id}&returnTo=${encodeURIComponent(journalReviewModuleHref("/journal", date))}`,
-      entryReason: entryReasonFor(bestTrade.trade.id),
-    });
-  }
-  if (worstTrade && worstTrade.trade.id !== bestTrade?.trade.id) {
-    keyTradePrompts.push({
-      key: `worst-${worstTrade.trade.id}`,
-      label: "Worst trade",
-      symbol: worstTrade.trade.symbol,
-      pnl: worstTrade.pnl,
-      href: `/trades/review?date=${date}&symbol=${worstTrade.trade.symbol}&trade=${worstTrade.trade.id}&returnTo=${encodeURIComponent(journalReviewModuleHref("/journal", date))}`,
-      entryReason: entryReasonFor(worstTrade.trade.id),
-    });
-  }
-  if (biggestTicker && biggestTicker.trades > 1) {
-    keyTradePrompts.push({
-      key: `ticker-${biggestTicker.symbol}`,
-      label: "Ticker to explain",
-      symbol: biggestTicker.symbol,
-      pnl: biggestTicker.pnl,
-      href: `/trades/review?date=${date}&symbol=${biggestTicker.symbol}&returnTo=${encodeURIComponent(journalReviewModuleHref("/journal", date))}`,
-      entryReason: null,
-    });
-  }
-
-  const dayReturnTo = journalReviewModuleHref("/journal", date);
-  const worstTradeCard: WorstTradeCardData | null =
-    worstTrade && worstTrade.pnl < 0
-      ? {
-          symbol: worstTrade.trade.symbol,
-          side: worstTrade.trade.side,
-          shares: worstTrade.trade.quantity,
-          timeRange:
-            worstTrade.trade.entryAt != null && worstTrade.trade.exitAt != null
-              ? `${formatTime(worstTrade.trade.entryAt)} – ${formatTime(worstTrade.trade.exitAt)}`
-              : "",
-          pnl: worstTrade.pnl,
-          fills: executionCountByTrade.get(worstTrade.trade.id) ?? 0,
-          href: `/trades/review?date=${date}&symbol=${worstTrade.trade.symbol}&trade=${worstTrade.trade.id}&returnTo=${encodeURIComponent(dayReturnTo)}`,
-          entryReason: entryReasonFor(worstTrade.trade.id),
-        }
-      : null;
+  const chartRead = summarizeChartContexts(
+    trades.length,
+    trades.map((trade) => entryContexts?.get(trade.id)),
+  );
 
   return {
     day: {
@@ -606,8 +678,8 @@ function buildDayData(
     taggedTrades: trades.filter((trade) => taggedTradeIds.has(trade.id)).length,
     pnlPoints,
     coachRead: buildSessionFactPack(trades),
-    keyTradePrompts,
-    worstTrade: worstTradeCard,
+    chartRead,
+    marketContext: buildMarketContext(marketContextRow, trades),
   };
 }
 
@@ -640,24 +712,25 @@ async function loadReviewRange({
   const baselineTo = isoAddDays(range.from, -1);
   const { start: baselineStart } = etDayRange(baselineFrom);
   const { start: baselineEnd } = etDayRange(range.from);
-  const trades = (
-    await db
+  const [tradeRowsForRange, baselineRows, marketContextRows] = await Promise.all([
+    db
       .select()
       .from(schema.trades)
       .where(and(eq(schema.trades.accountId, accountId), gte(schema.trades.entryAt, start), lte(schema.trades.entryAt, end)))
-      .orderBy(asc(schema.trades.entryAt))
-  ).filter((trade) => {
+      .orderBy(asc(schema.trades.entryAt)),
+    db
+      .select()
+      .from(schema.trades)
+      .where(and(eq(schema.trades.accountId, accountId), gte(schema.trades.entryAt, baselineStart), lte(schema.trades.entryAt, baselineEnd)))
+      .orderBy(asc(schema.trades.entryAt)),
+    loadMarketContextRows(range.from, range.to),
+  ]);
+  const trades = tradeRowsForRange.filter((trade) => {
     if (trade.entryAt == null) return false;
     const entryDate = etDateString(trade.entryAt);
     return entryDate >= range.from && entryDate <= range.to;
   });
-  const baselineTrades = (
-    await db
-      .select()
-      .from(schema.trades)
-      .where(and(eq(schema.trades.accountId, accountId), gte(schema.trades.entryAt, baselineStart), lte(schema.trades.entryAt, baselineEnd)))
-      .orderBy(asc(schema.trades.entryAt))
-  ).filter((trade) => {
+  const baselineTrades = baselineRows.filter((trade) => {
     if (trade.entryAt == null) return false;
     const entryDate = etDateString(trade.entryAt);
     return entryDate >= baselineFrom && entryDate <= baselineTo;
@@ -694,6 +767,7 @@ async function loadReviewRange({
   const taggedTradeIds = new Set(tradeTagRows.map((row) => row.tradeId));
   const tradesByDate = new Map<string, TradeRow[]>();
   const executionsByDate = new Map<string, ExecutionRow[]>();
+  const marketContextByDate = new Map(marketContextRows.map((row) => [row.sessionDateEt, row]));
 
   trades.forEach((trade) => {
     if (trade.entryAt == null) return;
@@ -725,17 +799,21 @@ async function loadReviewRange({
       )
     : undefined;
 
-  const days = reviewDatesForRange(preset, range)
-    .map((entryDate) =>
+  const days = reviewDatesForRange(preset, range).flatMap((entryDate) => {
+    const dayTrades = tradesByDate.get(entryDate) ?? [];
+    if (dayTrades.length === 0) return [];
+    return [
       buildDayData(
         entryDate,
-        tradesByDate.get(entryDate) ?? [],
+        dayTrades,
         executionsByDate.get(entryDate) ?? [],
         notedTickerKeys,
         taggedTradeIds,
         entryContexts,
+        marketContextByDate.get(entryDate),
       ),
-    );
+    ];
+  });
   const weeksByStart = new Map<string, ReviewData[]>();
 
   days.forEach((day) => {
@@ -750,6 +828,7 @@ async function loadReviewRange({
       label: archiveWeekLabel(preset === "month" ? range.from.slice(0, 7) : selectedMonthKey, key),
       displayDate: weekRangeLabel(key),
       days: weekDays,
+      chartRead: combineChartReads(weekDays.map((day) => day.chartRead)),
       ...summarizeDays(weekDays),
     }));
   const summary = summarizeDays(days);
@@ -775,6 +854,7 @@ async function loadReviewRange({
     days,
     weeks,
     coachRead: buildSessionFactPack(trades, { baselineTrades, baselineLabel: "Prior 30 days" }),
+    chartRead: combineChartReads(days.map((day) => day.chartRead)),
   };
 }
 
@@ -818,6 +898,7 @@ function sessionRows(range: ReviewRange) {
     accuracy: day.day.accuracy,
     profitFactor: day.day.profitFactor,
     pnl: day.day.pnl,
+    marketContextLabel: day.marketContext.shortLabel,
     activityRead:
       day.day.trades === 0
         ? "No trades imported"
@@ -873,6 +954,7 @@ function buildJournalComparisonData(week: ReviewRange, month: ReviewRange): Jour
   const weekTaggedTrades = week.days.reduce((sum, day) => sum + day.taggedTrades, 0);
   return {
     week: {
+      key: weekStartFor(week.anchor),
       summary: {
         label: week.displayDate,
         sessions: week.days.filter((day) => day.day.trades > 0).length,
@@ -894,9 +976,15 @@ function buildJournalComparisonData(week: ReviewRange, month: ReviewRange): Jour
         .sort((a, b) => b.trades - a.trades),
       taggedCoverage: week.trades === 0 ? null : Math.round((weekTaggedTrades / week.trades) * 100),
       plannedRiskCoverage: week.coachRead.session.rCoverage,
+      marketContextCoverage: {
+        available: week.days.filter((day) => day.marketContext.available).length,
+        sessions: week.days.length,
+      },
+      chartRead: week.chartRead,
       coach: comparisonCoach(week.coachRead, "No weekly contradiction cleared the evidence gate."),
     },
     month: {
+      key: month.anchor.slice(0, 7),
       summary: {
         label: month.displayDate,
         sessions: month.days.filter((day) => day.day.trades > 0).length,
@@ -922,6 +1010,7 @@ function buildJournalComparisonData(week: ReviewRange, month: ReviewRange): Jour
         highActivityLossShare: grossSessionLoss === 0 ? null : Math.round((highActivityLoss / grossSessionLoss) * 100),
         redDays: monthLossDays.length,
       },
+      chartRead: month.chartRead,
       coach: comparisonCoach(month.coachRead, "No monthly contradiction cleared the evidence gate."),
     },
   };
@@ -1228,110 +1317,40 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
   );
 }
 
-function KeyTradePrompts({ prompts }: { prompts: KeyTradePrompt[] }) {
-  if (prompts.length === 0) return null;
-
-  return (
-    <section className="max-w-[800px] border-t border-[var(--hairline)] pt-4">
-      <div className="text-[14px] font-semibold text-[var(--muted)]">
-        Trades to annotate before coach
-      </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-3">
-        {prompts.map((prompt) => (
-          <a
-            key={prompt.key}
-            href={prompt.href}
-            className="rounded-md border border-[var(--hairline)] px-3 py-3 transition-colors hover:border-[var(--accent)]"
-          >
-            <div className="text-[12px] text-[var(--muted)]">
-              {prompt.label}
-            </div>
-            <div className="mt-2 flex items-baseline justify-between gap-3">
-              <span className="text-sm font-semibold text-[var(--foreground)]">{prompt.symbol}</span>
-              <span className={`font-mono text-[12px] tabular-nums ${pnlClass(prompt.pnl)}`}>
-                {formatMoney(prompt.pnl)}
-              </span>
-            </div>
-            {prompt.entryReason ? (
-              <div className="mt-1.5 text-[11px] leading-4 text-[var(--muted)]">
-                {prompt.entryReason}
-              </div>
-            ) : null}
-          </a>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function buildDayReviewPresentation(data: ReviewData) {
-  const { day, taggedTrades, keyTradePrompts, worstTrade, coachRead } = data;
+  const { chartRead, coachRead } = data;
   const topSurprise = coachRead.surprises[0];
   const verdictText = topSurprise
     ? topSurprise.description
-    : "Clean session — nothing contradicted your baseline. Add the day's context so the coach read can go deeper.";
-
-  const bestPrompt = keyTradePrompts.find((prompt) => prompt.label === "Best trade");
-  const aligned: string[] = [];
-  if (bestPrompt && bestPrompt.pnl > 0) {
-    aligned.push(`Concentrated on ${bestPrompt.symbol}, the day's strongest trade.`);
-  }
-  if (
-    coachRead.session.winRate != null &&
-    coachRead.session.breakevenWinRate != null &&
-    coachRead.session.winRate > coachRead.session.breakevenWinRate
-  ) {
-    aligned.push("Win rate cleared the breakeven line.");
-  }
-  coachRead.history.signals
-    .filter((signal) => signal.vote > 0)
-    .slice(0, 1)
-    .forEach((signal) => aligned.push(`${signal.label} improved versus your baseline.`));
-
-  const unresolved: string[] = [];
-  if (worstTrade) {
-    unresolved.push(
-      worstTrade.entryReason
-        ? `${worstTrade.symbol}: ${worstTrade.entryReason} — what did you see?`
-        : `${worstTrade.symbol} was the session's clearest red mark.`,
-    );
-  }
-  coachRead.surprises.slice(0, 2).forEach((surprise) => unresolved.push(surprise.description));
-
-  const processFacts: JournalDayProcessFact[] = [
+    : "No outcome contradiction cleared the evidence gate. The chart read below shows what was knowable at entry.";
+  const chartFacts: JournalDayProcessFact[] = [
     {
-      label: "Outcome distribution",
-      value: coachRead.robustness.distributionLabel,
-      detail: "Classifies whether the result was broad, top-heavy, or driven by the losing tail.",
-      tone: day.pnl > 0 ? "positive" : day.pnl < 0 ? "negative" : "neutral",
+      label: "Direction at entry",
+      value: `${chartRead.supported} with trend · ${chartRead.contradicted} against · ${chartRead.unclear} unclear`,
+      detail: "Compares each trade direction with the EMA 9/20 order, slope, VWAP position, and price structure at entry.",
+      tone: chartRead.contradicted > chartRead.supported ? "negative" : chartRead.supported > 0 ? "positive" : "neutral",
     },
     {
-      label: "Baseline trend",
-      value: coachRead.history.trendLabel,
-      detail: `${coachRead.history.baselineTrades} prior trades in ${coachRead.history.baselineLabel}.`,
-      tone:
-        coachRead.history.trendLabel === "improvement"
-          ? "positive"
-          : coachRead.history.trendLabel === "deterioration"
-            ? "negative"
-            : "neutral",
+      label: "Price behavior",
+      value: `${chartRead.cleanExpansion} clean · ${chartRead.whippyExpansion} loose`,
+      detail: "Clean expansion has orderly candles and rail behavior; loose expansion is moving but harder to manage cleanly.",
     },
     {
-      label: "Risk basis",
-      value: coachRead.confidence.riskModel === "r-multiple" ? "R-multiple" : "Dollar fallback",
-      detail: `${formatPercent(coachRead.session.rCoverage)} of trades have enough planned-risk data for R.`,
+      label: "Pauses and pressure",
+      value: `${chartRead.consolidating} tightening · ${chartRead.exhaustion} stalled`,
+      detail: "Flags entries made during compression and moves showing possible exhaustion or failure.",
     },
     {
-      label: "Structured context",
-      value: `${taggedTrades} of ${day.trades} trades tagged`,
-      detail: "Missing setup and tag context remains unresolved instead of being inferred from outcome.",
+      label: "Chart coverage",
+      value: `${chartRead.readable} of ${chartRead.total} trades readable`,
+      detail: "Trades without enough candle history stay unjudged instead of being forced into a trend label.",
     },
   ];
 
-  return { topSurprise, verdictText, aligned, unresolved, processFacts };
+  return { topSurprise, verdictText, chartFacts };
 }
 
-type ModuleCoachSlots = { week?: React.ReactNode; month?: React.ReactNode };
+type ModuleCoachSlots = { day?: React.ReactNode; week?: React.ReactNode; month?: React.ReactNode };
 
 /** Everything a day entry needs to render its own coach review section. */
 type DayCoachPanelData = {
@@ -1341,6 +1360,108 @@ type DayCoachPanelData = {
   recapNote: ScopedRecapNote | null;
   readOnly: boolean;
 };
+
+function DayCoachReview({ data, dayCoach }: { data: ReviewData; dayCoach: DayCoachPanelData }) {
+  const notedTickers = data.tickerRows.filter((row) => row.noted).length;
+  const basedOnParts = [
+    `${data.day.trades} trades`,
+    ...(hasRecapContent(dayCoach.recapNote) ? ["day note"] : []),
+    ...(notedTickers > 0 ? [`${notedTickers} ticker note${notedTickers === 1 ? "" : "s"}`] : []),
+    ...(data.taggedTrades > 0 ? [`${data.taggedTrades} trades tagged`] : []),
+  ];
+  const basedOn = `Based on: ${basedOnParts.join(" · ")}`;
+  return (
+    <CoachOutputTabs
+      hasAiReview={Boolean(
+        dayCoach.savedReview?.storedReview &&
+        "review" in dayCoach.savedReview.storedReview,
+      )}
+      deterministic={
+        <StarterCoachRead
+          factPack={data.coachRead}
+          chartRead={data.chartRead}
+          reviewScope={dayCoach.reviewScope}
+          savedExperiment={dayCoach.savedExperiment}
+          savedReview={dayCoach.savedReview}
+          readOnly={dayCoach.readOnly}
+          showReviewActions={false}
+          output="deterministic"
+        />
+      }
+      ai={
+        <div>
+          <CoachContextFlow
+            data={data}
+            reviewScope={dayCoach.reviewScope}
+            recapNote={dayCoach.recapNote}
+            savedReview={dayCoach.savedReview}
+            readOnly={dayCoach.readOnly}
+          />
+          <div className="mt-6">
+            <StarterCoachRead
+              factPack={data.coachRead}
+              chartRead={data.chartRead}
+              reviewScope={dayCoach.reviewScope}
+              savedExperiment={dayCoach.savedExperiment}
+              savedReview={dayCoach.savedReview}
+              readOnly={dayCoach.readOnly}
+              showReviewActions={false}
+              output="ai"
+              basedOn={basedOn}
+            />
+          </div>
+        </div>
+      }
+    />
+  );
+}
+
+function RangeCoachReview({
+  factPack,
+  chartRead,
+  reviewScope,
+  savedExperiment,
+  savedReview,
+  readOnly,
+}: {
+  factPack: SessionFactPack;
+  chartRead: JournalChartReadSummary;
+  reviewScope: ReviewScope;
+  savedExperiment: SavedCoachExperiment | null;
+  savedReview: SavedCoachReview | null;
+  readOnly: boolean;
+}) {
+  const hasAiReview = Boolean(savedReview?.storedReview && "review" in savedReview.storedReview);
+  return (
+    <CoachOutputTabs
+      hasAiReview={hasAiReview}
+      deterministic={
+        <StarterCoachRead
+          factPack={factPack}
+          chartRead={chartRead}
+          reviewScope={reviewScope}
+          savedExperiment={savedExperiment}
+          savedReview={savedReview}
+          readOnly={readOnly}
+          showReviewActions={false}
+          output="deterministic"
+        />
+      }
+      ai={
+        <StarterCoachRead
+          factPack={factPack}
+          chartRead={chartRead}
+          reviewScope={reviewScope}
+          savedExperiment={savedExperiment}
+          savedReview={savedReview}
+          readOnly={readOnly}
+          showReviewActions
+          output="ai"
+        />
+      }
+    />
+  );
+}
 
 function JournalReviewModuleForDay({
   data,
@@ -1354,7 +1475,7 @@ function JournalReviewModuleForDay({
   coachSlots?: ModuleCoachSlots;
 }) {
   const { day, tickerRows, tradeRows, taggedTrades, pnlPoints, coachRead } = data;
-  const { topSurprise, processFacts } = buildDayReviewPresentation(data);
+  const { topSurprise, chartFacts } = buildDayReviewPresentation(data);
 
   return (
     <div className="max-w-[800px]">
@@ -1363,6 +1484,7 @@ function JournalReviewModuleForDay({
         comparisons={comparisonData}
         date={day.date}
         returnTo={returnTo}
+        dayCoachSlot={coachSlots?.day}
         weekCoachSlot={coachSlots?.week}
         monthCoachSlot={coachSlots?.month}
         summary={{
@@ -1373,7 +1495,7 @@ function JournalReviewModuleForDay({
           taggedTrades,
         }}
         tradeRows={tradeRows}
-        processFacts={processFacts}
+        processFacts={chartFacts}
         coach={{
           diagnosis: topSurprise?.title ?? "No contradiction cleared the evidence gate.",
           evidence:
@@ -1424,8 +1546,11 @@ function DayReviewSection({
   coachSlots?: ModuleCoachSlots;
   dayCoach?: DayCoachPanelData;
 }) {
-  const { day, tickerRows, pnlPoints, keyTradePrompts, worstTrade, coachRead } = data;
-  const { verdictText, aligned, unresolved } = buildDayReviewPresentation(data);
+  const { day, tickerRows, pnlPoints, coachRead, chartRead, marketContext } = data;
+  const { verdictText } = buildDayReviewPresentation(data);
+  const resolvedCoachSlots = dayCoach
+    ? { ...coachSlots, day: <DayCoachReview data={data} dayCoach={dayCoach} /> }
+    : coachSlots;
 
   return (
     <section>
@@ -1491,36 +1616,40 @@ function DayReviewSection({
                       Market context
                     </h3>
                     <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-[11px] font-semibold text-[var(--muted)]">
-                      Coverage unavailable
+                      {marketContext.badge}
                     </span>
                   </div>
-                  <p className="mt-4 text-[14.5px] leading-6 text-[var(--body)]">
-                    Scanner coverage is not connected, so the journal will not infer whether the market was hot, selective, or slow.
+                  <p className="mt-4 text-[14.5px] font-semibold leading-6 text-[var(--foreground)]">
+                    {marketContext.headline}
+                  </p>
+                  <p className="mt-2 text-[14px] leading-6 text-[var(--body)]">
+                    {marketContext.detail}
                   </p>
                   <p className="mt-3 text-[12px] leading-5 text-[var(--muted)]">
-                    Opportunity grade, stock leadership, and participation alignment will appear here after the Stock Info daily summary is connected.
+                    {marketContext.caveat}
                   </p>
                 </section>
 
                 <section>
                   <h3 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-                    Process read
+                    Chart read
                   </h3>
-                  <div className="mt-4 space-y-6">
-                    <FindingColumn label="Aligned" tone="positive" items={aligned} />
-                    <FindingColumn label="Unresolved" tone="watch" items={unresolved} />
+                  <p className="mt-4 text-[14.5px] leading-6 text-[var(--body)]">
+                    {chartRead.headline}
+                  </p>
+                  <div className="mt-4 border-y border-[var(--hairline)] py-3 font-mono text-[12px] leading-6 text-[var(--muted)] tabular-nums">
+                    <div>{chartRead.supported} with trend · {chartRead.contradicted} against · {chartRead.unclear} unclear</div>
+                    <div>{chartRead.consolidating} tightening · {chartRead.exhaustion} stalled</div>
+                    <div>{chartRead.readable} of {chartRead.total} trades readable</div>
                   </div>
                 </section>
               </div>
-            ) : aligned.length > 0 || unresolved.length > 0 ? (
-              <div className="mt-9">
+            ) : chartRead.readable > 0 ? (
+              <div className="mt-8 border-t border-[var(--hairline)] pt-4">
                 <div className="text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">
-                  Process read
+                  Chart read
                 </div>
-                <div className="mt-4 grid gap-x-12 gap-y-8 sm:grid-cols-2">
-                  <FindingColumn label="Aligned" tone="positive" items={aligned} />
-                  <FindingColumn label="Unresolved" tone="watch" items={unresolved} />
-                </div>
+                <p className="mt-3 text-[14px] leading-6 text-[var(--body)]">{chartRead.headline}</p>
               </div>
             ) : null}
           </div>
@@ -1531,7 +1660,7 @@ function DayReviewSection({
                 data={data}
                 returnTo={returnTo}
                 comparisonData={comparisonData}
-                coachSlots={coachSlots}
+                coachSlots={resolvedCoachSlots}
               />
             </div>
           ) : null}
@@ -1552,138 +1681,6 @@ function DayReviewSection({
               />
             </div>
           ) : null}
-          {worstTrade ? (
-            <div className="mt-14 max-w-[800px]">
-              <WorstTradeCard trade={worstTrade} />
-            </div>
-          ) : null}
-
-          <div className="mt-6">
-            <KeyTradePrompts prompts={keyTradePrompts} />
-          </div>
-
-          {dayCoach ? (
-            <div className="mt-10 max-w-[800px]">
-              <CollapsibleSection
-                title="✳ Coach review"
-                status={coachSectionStatus(dayCoach.savedReview)}
-              >
-                <CoachOutputTabs
-                  hasAiReview={Boolean(
-                    dayCoach.savedReview?.storedReview &&
-                    "review" in dayCoach.savedReview.storedReview,
-                  )}
-                  deterministic={
-                    <StarterCoachRead
-                      factPack={data.coachRead}
-                      reviewScope={dayCoach.reviewScope}
-                      savedExperiment={dayCoach.savedExperiment}
-                      savedReview={dayCoach.savedReview}
-                      readOnly={dayCoach.readOnly}
-                      showReviewActions={false}
-                      output="deterministic"
-                    />
-                  }
-                  ai={
-                    <div>
-                      <CoachContextFlow
-                        data={data}
-                        reviewScope={dayCoach.reviewScope}
-                        recapNote={dayCoach.recapNote}
-                        savedReview={dayCoach.savedReview}
-                        readOnly={dayCoach.readOnly}
-                      />
-                      <div className="mt-6">
-                        <StarterCoachRead
-                          factPack={data.coachRead}
-                          reviewScope={dayCoach.reviewScope}
-                          savedExperiment={dayCoach.savedExperiment}
-                          savedReview={dayCoach.savedReview}
-                          readOnly={dayCoach.readOnly}
-                          showReviewActions={false}
-                          output="ai"
-                        />
-                      </div>
-                    </div>
-                  }
-                />
-              </CollapsibleSection>
-            </div>
-          ) : null}
-      </div>
-    </section>
-  );
-}
-
-function FindingColumn({
-  label,
-  tone,
-  items,
-}: {
-  label: string;
-  tone: "positive" | "watch";
-  items: string[];
-}) {
-  if (items.length === 0) return null;
-  const marker = tone === "positive" ? "+" : "?";
-  const markerColor = tone === "positive" ? "text-[var(--green)]" : "text-[var(--coach)]";
-  return (
-    <div>
-      <div className="text-[14px] font-semibold text-[var(--foreground)]">{label}</div>
-      <ul className="mt-3 grid gap-2.5">
-        {items.map((item, index) => (
-          <li
-            key={index}
-            className="grid grid-cols-[18px_1fr] text-[13.5px] leading-[1.5] text-[var(--body)]"
-          >
-            <span className={markerColor}>{marker}</span>
-            <span className="[text-wrap:pretty]">{item}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function WorstTradeCard({ trade }: { trade: WorstTradeCardData }) {
-  return (
-    <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)]">
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2 border-b border-[var(--hairline)] px-5 py-4">
-        <span className="text-[20px] font-semibold text-[var(--foreground)]">{trade.symbol}</span>
-        <span className="text-[13.5px] text-[var(--muted)]">
-          {trade.side === "short" ? "Short" : "Long"} · {trade.shares.toLocaleString()}{" "}
-          {trade.shares === 1 ? "share" : "shares"}
-          {trade.timeRange ? ` · ${trade.timeRange}` : ""}
-        </span>
-        <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-0.5 text-[12px] text-[var(--muted)]">
-          ⇣ Imported
-        </span>
-        <span className="rounded-full bg-[var(--red-tint)] px-2.5 py-0.5 text-[12px] font-semibold text-[var(--red)]">
-          Worst trade
-        </span>
-        <span className="ml-auto font-mono text-[17px] font-semibold tabular-nums text-[var(--red)]">
-          {formatMoney(trade.pnl)}
-          <span className="ml-1 text-[10px]">▼</span>
-        </span>
-      </div>
-      <div className="grid gap-6 px-5 py-5 md:grid-cols-[minmax(0,1fr)_280px]">
-        <div>
-          <div className="text-[13px] font-semibold text-[var(--accent)]">✎ Your note</div>
-          <p className="mt-2.5 text-[15px] leading-6 text-[var(--body)] [text-wrap:pretty]">
-            {trade.entryReason
-              ? `The chart says you ${trade.entryReason}. Add what you saw — the coach can't judge this entry without your side.`
-              : "Worst trade of the day — the one to inspect closely. Was the entry late, was the stop respected, and did this loss influence the next trade?"}
-          </p>
-          <a
-            href={trade.href}
-            className="mt-4 inline-block text-[13px] font-semibold text-[var(--accent)] transition-colors hover:text-[var(--accent-strong)]"
-          >
-            Executions &amp; calculations ({trade.fills} {trade.fills === 1 ? "fill" : "fills"}) →
-          </a>
-        </div>
-        <div className="grid min-h-[150px] place-items-center rounded-md bg-[repeating-linear-gradient(-45deg,var(--surface-2)_0_12px,var(--panel)_12px_24px)]">
-          <span className="text-[13px] text-[var(--muted)]">1-min chart · {trade.symbol}</span>
-        </div>
       </div>
     </section>
   );
@@ -1745,7 +1742,7 @@ function WeekSection({
         <WeekHeader label={week.label} displayDate={week.displayDate} />
       </ScopeHeader>
 
-      <div className="space-y-12">
+      <div className="space-y-20">
         {week.days.map((dayData) => (
           <ReviewDayRangeSection
             key={dayData.day.date}
@@ -1783,17 +1780,6 @@ function ReviewDayRangeSection({
   coachSlots?: ModuleCoachSlots;
   dayCoach?: DayCoachPanelData;
 }) {
-  if (data.day.trades === 0) {
-    return (
-      <NoTradeDaySection
-        data={data}
-        returnTo={returnTo}
-        comparisonData={comparisonData}
-        showReviewModule={showReviewModule}
-      />
-    );
-  }
-
   return (
     <DayReviewSection
       data={data}
@@ -1805,39 +1791,6 @@ function ReviewDayRangeSection({
       coachSlots={coachSlots}
       dayCoach={dayCoach}
     />
-  );
-}
-
-function NoTradeDaySection({
-  data,
-  returnTo,
-  comparisonData,
-  showReviewModule,
-}: {
-  data: ReviewData;
-  returnTo: string;
-  comparisonData?: JournalComparisonData;
-  showReviewModule: boolean;
-}) {
-  const { date } = data.day;
-  return (
-    <section className="border-t border-[var(--hairline)] py-8 first:border-t-0 first:pt-0">
-      <h2 className="text-[32px] font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
-        {dayFmt.format(utcDate(date))}, {monthDayFmt.format(utcDate(date))}
-      </h2>
-      <p className="mt-4 font-mono text-[13px] text-[var(--muted)]">
-        No trades imported
-      </p>
-      {showReviewModule && comparisonData ? (
-        <div className="mt-8">
-          <JournalReviewModuleForDay
-            data={data}
-            returnTo={returnTo}
-            comparisonData={comparisonData}
-          />
-        </div>
-      ) : null}
-    </section>
   );
 }
 
@@ -1862,13 +1815,11 @@ function TradeReviewSidebar({
 function EmptyReviewState({
   brokerDataAvailable,
   reviewScope,
-  recapNote,
   readOnly,
   accountName,
 }: {
   brokerDataAvailable: boolean;
   reviewScope: ReviewScope;
-  recapNote: ScopedRecapNote | null;
   readOnly: boolean;
   accountName?: string | null;
 }) {
@@ -1886,33 +1837,23 @@ function EmptyReviewState({
     );
   }
 
+  const calendarMonth = reviewScope.scope === "month"
+    ? reviewScope.scopeKey
+    : reviewScope.scopeKey.slice(0, 7);
   return (
-    <section className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-[var(--foreground)]">
-          {reviewScope.scope === "day" ? `No trades taken${accountSuffix}` : `No trades in this period${accountSuffix}`}
-        </h2>
-        <p className="mt-2 max-w-[520px] text-sm leading-6 text-[var(--body)]">
-          {reviewScope.scope === "day"
-            ? "A no-trade day can be an aligned decision when the market did not provide quality. Capture what you saw and why you stayed out."
-            : "Broker history is connected; this selected period simply has no recorded trades."}
-          {accountName ? " Looking for different data? The account selector (top right) changes everything the journal shows." : ""}
-        </p>
-      </div>
-      <RecapNote
-        scope={reviewScope.scope}
-        scopeKey={reviewScope.scopeKey}
-        text={recapNote?.text ?? ""}
-        thesis={recapNote?.thesis ?? ""}
-        whatWentWell={recapNote?.whatWentWell ?? ""}
-        whatWentWrong={recapNote?.whatWentWrong ?? ""}
-        emotionalState={recapNote?.emotionalState ?? ""}
-        placeholder={`Add a ${reviewScope.scope} note: What opportunity did the market provide, and why was no trade the right response?`}
-        readOnly={readOnly}
-      />
-      <p className="max-w-[520px] border-l-2 border-[var(--hairline)] pl-4 text-[12px] leading-5 text-[var(--muted)]">
-        Market-context coverage is not connected yet, so the journal will not label this a cold market from missing scanner data.
+    <section className="space-y-3">
+      <h2 className="text-lg font-semibold text-[var(--foreground)]">
+        No imported trade days in this selection{accountSuffix}
+      </h2>
+      <p className="max-w-[520px] text-sm leading-6 text-[var(--body)]">
+        Journal only shows sessions with imported trades. Use Calendar to confirm intentional no-trade days or spot missing imports.
       </p>
+      <Link
+        href={`/calendar?m=${calendarMonth}`}
+        className="inline-flex text-sm font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]"
+      >
+        Review Calendar
+      </Link>
     </section>
   );
 }
@@ -2055,16 +1996,270 @@ function formatTrendValue(value: number | null, key: string) {
   return formatMoney(value);
 }
 
+const COACH_FIGURE_RE = /-?\$\d[\d,]*(?:\.\d+)?/g;
+
+/** Wrap dollar figures in mono spans colored by sign (red negative, green positive). */
+function coachFigureNodes(text: string, keyPrefix: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+  let index = 0;
+  for (const match of text.matchAll(COACH_FIGURE_RE)) {
+    const start = match.index ?? 0;
+    if (start > cursor) nodes.push(text.slice(cursor, start));
+    const figure = match[0];
+    nodes.push(
+      <span
+        key={`${keyPrefix}-fig${index}`}
+        className={`font-mono text-[0.85em] tabular-nums ${figure.startsWith("-") ? "text-[var(--red)]" : "text-[var(--green)]"}`}
+      >
+        {figure}
+      </span>,
+    );
+    cursor = start + figure.length;
+    index += 1;
+  }
+  if (cursor < text.length) nodes.push(text.slice(cursor));
+  return nodes;
+}
+
+/** Coach prose: **bold** phrases in ink, dollar figures mono and sign-colored. */
+function coachInline(text: string): ReactNode[] {
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+  return parts.flatMap((part, index) => {
+    if (!part) return [];
+    if (index % 2 === 1) {
+      return [
+        <strong key={`bold${index}`} className="font-bold text-[var(--foreground)]">
+          {coachFigureNodes(part, `bold${index}`)}
+        </strong>,
+      ];
+    }
+    return coachFigureNodes(part, `text${index}`);
+  });
+}
+
+function CoachProse({ text, className }: { text: string; className: string }) {
+  return <p className={`${className} [text-wrap:pretty]`}>{coachInline(text)}</p>;
+}
+
+function CoachReviewSection({
+  title,
+  className = "mt-8",
+  headingMarginClass = "mb-3.5",
+  children,
+}: {
+  title: string;
+  className?: string;
+  headingMarginClass?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={`${className} border-t border-[var(--border)] pt-7`}>
+      <div className={`${headingMarginClass} text-[17px] font-semibold tracking-[-0.01em] text-[var(--foreground)]`}>
+        {title}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function CoachParagraphs({ items, empty = "No clear signal yet." }: { items: string[]; empty?: string }) {
+  if (items.length === 0) {
+    return <p className="text-[13px] leading-[1.65] text-[var(--muted)]">{empty}</p>;
+  }
+  return (
+    <div className="flex max-w-[72ch] flex-col gap-3">
+      {items.map((item) => (
+        <CoachProse key={item} text={item} className="text-[14.5px] leading-[1.7] text-[var(--body)]" />
+      ))}
+    </div>
+  );
+}
+
+function DayCoachSection({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="mt-7 border-t border-[var(--border)] pt-6">
+      <div className="mb-2.5 text-[16px] font-semibold text-[var(--foreground)]">{title}</div>
+      {items.length === 0 ? (
+        <p className="text-[13px] leading-[1.65] text-[var(--muted)]">No clear signal yet.</p>
+      ) : (
+        <div className="flex max-w-[72ch] flex-col gap-2.5">
+          {items.map((item) => (
+            <CoachProse key={item} text={item} className="text-[14.5px] leading-[1.7] text-[var(--body)]" />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Ledger money: no leading plus, sign carried by color. */
+function ledgerMoney(value: number | null): string {
+  if (value == null) return "—";
+  return `${value < 0 ? "-" : ""}$${Math.abs(value).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function ledgerRatio(value: number | null): string {
+  return value == null ? "—" : value.toFixed(2);
+}
+
+type LedgerTone = "ink" | "pos" | "neg" | "muted";
+
+function moneyTone(value: number | null): LedgerTone {
+  if (value == null) return "muted";
+  if (value > 0) return "pos";
+  if (value < 0) return "neg";
+  return "ink";
+}
+
+function ledgerToneClass(tone: LedgerTone): string {
+  if (tone === "pos") return "text-[var(--green)]";
+  if (tone === "neg") return "text-[var(--red)]";
+  if (tone === "muted") return "text-[var(--muted)]";
+  return "text-[var(--foreground)]";
+}
+
+function LedgerRow({
+  label,
+  value,
+  tone = "ink",
+  strong = false,
+  last = false,
+}: {
+  label: string;
+  value: string;
+  tone?: LedgerTone;
+  strong?: boolean;
+  last?: boolean;
+}) {
+  return (
+    <div className={`flex items-baseline justify-between py-[9px] ${last ? "" : "border-b border-[var(--hairline)]"}`}>
+      <span className="text-[13px] text-[var(--muted)]">{label}</span>
+      <span className={`font-mono text-[13px] tabular-nums ${strong ? "font-semibold" : ""} ${ledgerToneClass(tone)}`}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function RobustnessStat({ label, value, tone }: { label: string; value: string; tone: LedgerTone }) {
+  return (
+    <div>
+      <div className="mb-0.5 text-[12px] text-[var(--muted)]">{label}</div>
+      <div className={`font-mono text-[15px] tabular-nums ${ledgerToneClass(tone)}`}>{value}</div>
+    </div>
+  );
+}
+
+function StatisticalLedger({ factPack, closing }: { factPack: SessionFactPack; closing: string }) {
+  const session = factPack.session;
+  const robustness = factPack.robustness;
+  const tickerDrags = [...factPack.segments.byTicker]
+    .filter((segment) => segment.pnl < 0)
+    .sort((a, b) => a.pnl - b.pnl)
+    .slice(0, 3);
+  const bandDrag = [...factPack.segments.byPriceBand]
+    .filter((segment) => segment.pnl < 0)
+    .sort((a, b) => a.pnl - b.pnl)[0];
+  const dragRows = [
+    ...tickerDrags.map((segment) => ({ label: segment.label, trades: segment.trades, pnl: segment.pnl })),
+    ...(bandDrag ? [{ label: `${bandDrag.label} band`, trades: bandDrag.trades, pnl: bandDrag.pnl }] : []),
+  ];
+
+  return (
+    <div>
+      <div className="grid gap-x-16 sm:grid-cols-2">
+        <div className="flex flex-col">
+          <LedgerRow label="Trades" value={String(session.trades)} />
+          <LedgerRow label="Net P&L" value={ledgerMoney(session.netPnl)} tone={moneyTone(session.netPnl)} strong />
+          <LedgerRow label="Gross wins" value={ledgerMoney(session.grossWins)} tone={moneyTone(session.grossWins)} />
+          <LedgerRow
+            label="Gross losses"
+            value={ledgerMoney(session.grossLosses === 0 ? 0 : -session.grossLosses)}
+            tone={moneyTone(session.grossLosses === 0 ? 0 : -session.grossLosses)}
+          />
+          <LedgerRow label="Avg winner" value={ledgerMoney(session.avgWinner)} tone={moneyTone(session.avgWinner)} />
+          <LedgerRow label="Avg loser" value={ledgerMoney(session.avgLoser)} tone={moneyTone(session.avgLoser)} last />
+        </div>
+        <div className="flex flex-col">
+          <LedgerRow label="Win rate" value={ledgerRatio(session.winRate)} />
+          <LedgerRow label="Breakeven win rate" value={ledgerRatio(session.breakevenWinRate)} />
+          <LedgerRow label="Profit factor" value={ledgerRatio(session.profitFactor)} />
+          <LedgerRow label="Payoff ratio" value={ledgerRatio(session.payoffRatio)} />
+          <LedgerRow
+            label="Expectancy / trade"
+            value={ledgerMoney(session.expectancyPerTrade)}
+            tone={moneyTone(session.expectancyPerTrade)}
+            strong
+          />
+          <LedgerRow label="Retention" value={ledgerRatio(robustness.retention)} last />
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <div className="text-[14.5px] font-semibold text-[var(--foreground)]">
+          Robustness — {robustness.distributionLabel}
+        </div>
+        <div className="mt-2.5 flex flex-wrap gap-x-10 gap-y-3">
+          <RobustnessStat
+            label="Trim-one net P&L"
+            value={ledgerMoney(robustness.trimOneNetPnl)}
+            tone={moneyTone(robustness.trimOneNetPnl)}
+          />
+          <RobustnessStat
+            label="Trim-tail net P&L"
+            value={ledgerMoney(robustness.trimTailNetPnl)}
+            tone={moneyTone(robustness.trimTailNetPnl)}
+          />
+          <RobustnessStat label="Retention" value={ledgerRatio(robustness.retention)} tone="ink" />
+        </div>
+      </div>
+
+      {dragRows.length > 0 ? (
+        <div className="mt-6">
+          <div className="mb-1.5 text-[14.5px] font-semibold text-[var(--foreground)]">Largest drags</div>
+          <div className="flex flex-col">
+            {dragRows.map((row, index) => (
+              <div
+                key={row.label}
+                className={`grid grid-cols-[120px_1fr_110px] items-baseline py-[8px] ${
+                  index === dragRows.length - 1 ? "" : "border-b border-[var(--hairline)]"
+                }`}
+              >
+                <span className="font-mono text-[13px] font-semibold text-[var(--foreground)]">{row.label}</span>
+                <span className="text-[13px] text-[var(--muted)]">{row.trades} trades</span>
+                <span className={`text-right font-mono text-[13px] tabular-nums ${ledgerToneClass(moneyTone(row.pnl))}`}>
+                  {ledgerMoney(row.pnl)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {closing ? (
+        <CoachProse text={closing} className="mt-6 max-w-[70ch] text-[14.5px] leading-[1.7] text-[var(--body)]" />
+      ) : null}
+    </div>
+  );
+}
+
 function StarterCoachRead({
   factPack,
+  chartRead,
   reviewScope,
   savedExperiment,
   savedReview,
   readOnly,
   showReviewActions = true,
   output = "full",
+  basedOn,
 }: {
   factPack: SessionFactPack;
+  chartRead?: JournalChartReadSummary;
   reviewScope: ReviewScope;
   savedExperiment: SavedCoachExperiment | null;
   savedReview: SavedCoachReview | null;
@@ -2072,7 +2267,10 @@ function StarterCoachRead({
   showReviewActions?: boolean;
   /** "deterministic" = fact sections only; "ai" = payload/review only. */
   output?: "full" | "deterministic" | "ai";
+  /** Day scope: "Based on: …" payload provenance line under "One thing to try". */
+  basedOn?: string;
 }) {
+  const scopeLabel = reviewScope.scope === "day" ? "day" : reviewScope.scope === "week" ? "week" : "month";
   const topSurprise = factPack.surprises[0];
   const experiment = factPack.experiment;
   const strongestTrendSignal =
@@ -2091,7 +2289,7 @@ function StarterCoachRead({
       {output !== "ai" ? (<>
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2 className="text-[13px] font-semibold text-[var(--coach)]">✳ Automatic review</h2>
+          <h2 className="text-[13px] font-semibold text-[var(--coach)]">✳ Automatic {scopeLabel} review</h2>
           <span className="text-[12px] text-[var(--muted)]">
             computed from your trades, no AI
           </span>
@@ -2100,6 +2298,18 @@ function StarterCoachRead({
           {factPack.confidence.label} confidence
         </span>
       </div>
+
+      {chartRead ? (
+        <div className="mt-5 border-l border-[var(--coach)] pl-4">
+          <div className="text-[12px] text-[var(--muted)]">Chart read at entry</div>
+          <p className="mt-2 text-sm font-semibold leading-6 text-[var(--foreground)]">
+            {chartRead.headline}
+          </p>
+          <p className="mt-2 font-mono text-[12px] leading-5 text-[var(--muted)] tabular-nums">
+            {chartRead.supported} with trend · {chartRead.contradicted} against · {chartRead.unclear} unclear · {chartRead.consolidating} tightening · {chartRead.exhaustion} stalled
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-4 grid gap-3 sm:grid-cols-4">
         <div className="border-t border-[var(--hairline)] pt-3">
@@ -2211,111 +2421,158 @@ function StarterCoachRead({
 
       {output !== "deterministic" ? (
       <div className={`border-t border-[var(--hairline)] pt-4 ${output === "ai" ? "border-t-0 pt-0" : "mt-5"}`}>
-        <div className="text-[12px] text-[var(--muted)]">Coach review payload</div>
-        <p className="mt-2 max-w-[760px] text-sm leading-6 text-[var(--body)]">
-          This uses the exact context package: playbook, rubric, deterministic facts,
-          daily context, and annotated trade notes.
-        </p>
-        {showReviewActions && !readOnly ? (
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <form action={generateCoachReviewAction}>
-              <input type="hidden" name="scope" value={reviewScope.scope} />
-              <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
-              <PendingSubmitButton
-                label={generatedReview ? "Regenerate coach review" : "Ask Coach"}
-                pendingLabel="Generating — asking the coach…"
-                className="h-8 rounded-md border border-[var(--foreground)] bg-[var(--foreground)] px-3 text-[12px] font-semibold text-[var(--background)] transition-opacity hover:opacity-90"
-              />
-            </form>
-            <form action={saveDraftCoachReviewAction}>
-              <input type="hidden" name="scope" value={reviewScope.scope} />
-              <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
-              <button
-                type="submit"
-                className="h-8 rounded-md border border-[var(--border)] px-3 text-[12px] font-semibold text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
-              >
-                {savedReview ? "Refresh draft" : "Save draft"}
-              </button>
-            </form>
-            {savedReview ? (
-              <span className="text-[12px] text-[var(--muted)]">
-                Saved as {savedReview.status}
-              </span>
+        {reviewScope.scope !== "day" ? (
+          <div className="flex flex-col gap-1.5">
+            <div className="text-[20px] font-semibold tracking-[-0.01em] text-[var(--foreground)]">
+              Coach review payload
+            </div>
+            <p className="max-w-[64ch] text-[13px] leading-[1.6] text-[var(--muted)]">
+              This uses the exact context package: playbook, rubric, deterministic facts,
+              daily context, and annotated trade notes.
+            </p>
+            {showReviewActions && !readOnly ? (
+              <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
+                <form action={generateCoachReviewAction}>
+                  <input type="hidden" name="scope" value={reviewScope.scope} />
+                  <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
+                  <PendingSubmitButton
+                    label={generatedReview ? "Regenerate coach review" : "Ask Coach"}
+                    pendingLabel="Generating — asking the coach…"
+                    className="rounded-full bg-[var(--foreground)] px-[18px] py-[8px] text-[13px] font-semibold text-[var(--background)] transition-opacity hover:opacity-90"
+                  />
+                </form>
+                <form action={saveDraftCoachReviewAction}>
+                  <input type="hidden" name="scope" value={reviewScope.scope} />
+                  <input type="hidden" name="scopeKey" value={reviewScope.scopeKey} />
+                  <button
+                    type="submit"
+                    className="rounded-full border border-[var(--border)] px-[18px] py-[7px] text-[13px] font-semibold text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)]"
+                  >
+                    {savedReview ? "Refresh draft" : "Save draft"}
+                  </button>
+                </form>
+                {savedReview ? (
+                  <span className="text-[12px] text-[var(--faint)]">
+                    Saved as {savedReview.status}
+                  </span>
+                ) : null}
+              </div>
+            ) : showReviewActions && readOnly ? (
+              <p className="mt-2.5 max-w-[64ch] text-[13px] leading-5 text-[var(--muted)]">
+                Read-only demo: coach reviews are loaded from approved static fixtures,
+                not generated live.
+              </p>
             ) : null}
           </div>
-        ) : showReviewActions && readOnly ? (
-          <p className="mt-3 max-w-[760px] text-[12px] leading-5 text-[var(--muted)] tabular-nums">
-            Read-only demo: coach reviews are loaded from approved static fixtures,
-            not generated live.
-          </p>
         ) : null}
 
         {generationError ? (
-          <p className="mt-4 max-w-[760px] border-l border-[var(--red)] pl-4 text-sm leading-6 text-[var(--body)]">
+          <p className="mt-4 max-w-[72ch] border-l border-[var(--red)] pl-4 text-sm leading-6 text-[var(--body)]">
             Coach review could not be generated. Check Coach settings and try again; your notes and draft are still saved.
           </p>
         ) : null}
 
         {generatedReview ? (
-          <div className="mt-5 space-y-5">
-            <div className="border-l border-[var(--coach)] pl-4">
-              <div className="text-[12px] text-[var(--muted)]">
-                {readOnly ? "Static demo coach verdict" : "AI coach verdict"}
+          reviewScope.scope === "day" ? (
+            <div>
+              <div className="border-l-[3px] border-[var(--coach)] pl-5">
+                <CoachProse
+                  text={generatedReview.review.dayVerdict}
+                  className="max-w-[64ch] text-[18px] font-medium leading-[1.55] tracking-[-0.005em] text-[var(--foreground)]"
+                />
+                <div className="mt-3 font-mono text-[12px] text-[var(--faint)]">
+                  {readOnly ? "Static demo coach verdict" : "Coach verdict"} · {generatedReview.model}
+                </div>
               </div>
-              <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
-                {generatedReview.review.dayVerdict}
-              </p>
-              <p className="mt-2 text-[12px] text-[var(--muted)]">
-                {generatedReview.model}
-              </p>
-            </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <CoachReviewList title="Matched playbook" items={generatedReview.review.whatMatchedPlaybook} />
-              <CoachReviewList title="Drifted" items={generatedReview.review.whatDriftedFromPlaybook} />
-            </div>
+              <DayCoachSection title="What worked" items={generatedReview.review.whatMatchedPlaybook} />
+              <DayCoachSection title="What cost you" items={generatedReview.review.whatDriftedFromPlaybook} />
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <div>
-                <div className="text-[12px] text-[var(--muted)]">Key trade to study</div>
-                <p className="mt-2 text-sm leading-6 text-[var(--body)]">
-                  {generatedReview.review.keyTradeToStudy.symbol ?? "Trade"}: {generatedReview.review.keyTradeToStudy.reason}
+              <div className="mt-7 border-t border-[var(--border)] pt-6">
+                <div className="mb-2.5 text-[16px] font-semibold text-[var(--foreground)]">One thing to try</div>
+                <p className="max-w-[60ch] text-[19px] font-bold leading-[1.45] text-[var(--foreground)] [text-wrap:pretty]">
+                  {generatedReview.review.oneExperiment.action}
                 </p>
+                {basedOn ? (
+                  <div className="mt-3.5 font-mono text-[12px] text-[var(--faint)]">{basedOn}</div>
+                ) : null}
               </div>
-              <div>
-                <div className="text-[12px] text-[var(--muted)]">Behavior pattern</div>
-                <p className="mt-2 text-sm leading-6 text-[var(--body)]">
-                  {generatedReview.review.behaviorPattern}
+            </div>
+          ) : (
+            <div className="mt-8">
+              <div className="border-l-[3px] border-[var(--coach)] pl-5">
+                <CoachProse
+                  text={generatedReview.review.dayVerdict}
+                  className="text-[20px] font-medium leading-[1.55] tracking-[-0.005em] text-[var(--foreground)]"
+                />
+                <div className="mt-3 font-mono text-[12px] text-[var(--faint)]">
+                  {readOnly ? "Static demo coach verdict" : "Coach verdict"} · {generatedReview.model}
+                </div>
+              </div>
+
+              <CoachReviewSection title="Matched playbook" className="mt-10">
+                <CoachParagraphs items={generatedReview.review.whatMatchedPlaybook} />
+              </CoachReviewSection>
+
+              <CoachReviewSection title="Drifted">
+                <CoachParagraphs items={generatedReview.review.whatDriftedFromPlaybook} />
+              </CoachReviewSection>
+
+              <CoachReviewSection title="Key trade to study">
+                <p className="max-w-[72ch] text-[14.5px] leading-[1.7] text-[var(--body)] [text-wrap:pretty]">
+                  <strong className="font-bold text-[var(--foreground)]">
+                    {generatedReview.review.keyTradeToStudy.symbol ?? "Trade"}:
+                  </strong>{" "}
+                  {coachInline(generatedReview.review.keyTradeToStudy.reason)}
                 </p>
-              </div>
-            </div>
+              </CoachReviewSection>
 
-            <div className="border-t border-[var(--hairline)] pt-4">
-              <div className="text-[12px] text-[var(--muted)]">Statistical read</div>
-              <p className="mt-2 text-sm leading-6 text-[var(--body)]">
-                {generatedReview.review.statisticalRead}
-              </p>
-            </div>
+              <CoachReviewSection title="Behavior pattern">
+                <CoachProse
+                  text={generatedReview.review.behaviorPattern}
+                  className="max-w-[72ch] text-[14.5px] leading-[1.7] text-[var(--body)]"
+                />
+              </CoachReviewSection>
 
-            <div className="border-t border-[var(--hairline)] pt-4">
-              <div className="text-[12px] text-[var(--muted)]">Coach experiment</div>
-              <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
-                <span className="font-semibold">{generatedReview.review.oneExperiment.action}</span>
-              </p>
-              <p className="mt-1 text-sm leading-6 text-[var(--body)]">
-                Trigger: {generatedReview.review.oneExperiment.trigger} Measure:{" "}
-                {generatedReview.review.oneExperiment.measure.join(", ")}.
-              </p>
-            </div>
+              <CoachReviewSection title="Statistical read" headingMarginClass="mb-4">
+                <StatisticalLedger factPack={factPack} closing={generatedReview.review.statisticalRead} />
+              </CoachReviewSection>
 
-            <CoachReviewList title="Confidence / missing context" items={generatedReview.review.confidenceAndMissingContext} />
-          </div>
+              <CoachReviewSection title="Coach experiment">
+                <p className="max-w-[60ch] text-[20px] font-bold leading-[1.45] text-[var(--foreground)] [text-wrap:pretty]">
+                  {generatedReview.review.oneExperiment.action}
+                </p>
+                <div className="mt-4 flex max-w-[66ch] flex-col gap-1.5">
+                  <p className="text-[14px] leading-[1.6] text-[var(--muted)]">
+                    <strong className="font-bold text-[var(--foreground)]">Trigger</strong> —{" "}
+                    {generatedReview.review.oneExperiment.trigger}
+                  </p>
+                  <p className="text-[14px] leading-[1.6] text-[var(--muted)]">
+                    <strong className="font-bold text-[var(--foreground)]">Measure</strong> —{" "}
+                    {generatedReview.review.oneExperiment.measure.join(", ")}.
+                  </p>
+                </div>
+              </CoachReviewSection>
+
+              <CoachReviewSection title="Confidence / missing context">
+                <div className="flex max-w-[72ch] flex-col gap-2.5">
+                  {generatedReview.review.confidenceAndMissingContext.length > 0 ? (
+                    generatedReview.review.confidenceAndMissingContext.map((item) => (
+                      <CoachProse key={item} text={item} className="text-[13px] leading-[1.65] text-[var(--muted)]" />
+                    ))
+                  ) : (
+                    <p className="text-[13px] leading-[1.65] text-[var(--muted)]">No clear signal yet.</p>
+                  )}
+                </div>
+              </CoachReviewSection>
+            </div>
+          )
         ) : readOnly ? (
-          <p className="mt-4 max-w-[760px] border-l border-[var(--hairline)] pl-4 text-sm leading-6 text-[var(--body)]">
+          <p className="mt-4 max-w-[72ch] border-l border-[var(--hairline)] pl-4 text-sm leading-6 text-[var(--body)]">
             No approved static coach review is seeded for this period yet.
           </p>
         ) : output === "ai" ? (
-          <p className="mt-4 max-w-[760px] border-l border-[var(--hairline)] pl-4 text-sm leading-6 text-[var(--body)]">
+          <p className="mt-4 max-w-[72ch] border-l border-[var(--hairline)] pl-4 text-sm leading-6 text-[var(--body)]">
             No AI review yet for this day. Add context above (or generate as-is) —
             the review will say plainly what it could and couldn&apos;t judge.
           </p>
@@ -2323,23 +2580,6 @@ function StarterCoachRead({
       </div>
       ) : null}
     </section>
-  );
-}
-
-function CoachReviewList({ title, items }: { title: string; items: string[] }) {
-  return (
-    <div>
-      <div className="text-[12px] text-[var(--muted)]">{title}</div>
-      {items.length > 0 ? (
-        <ul className="mt-2 space-y-2 text-sm leading-6 text-[var(--body)]">
-          {items.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">No clear signal yet.</p>
-      )}
-    </div>
   );
 }
 
@@ -2404,10 +2644,9 @@ export default async function TradeJournalReview({
     ]),
   );
   const reviewScope = reviewScopeFor(range.preset, rangeForPreset(range.preset, range.anchor));
-  const [savedExperiment, savedReview, recapNote] = await Promise.all([
+  const [savedExperiment, savedReview] = await Promise.all([
     loadSavedCoachExperiment(accountId, reviewScope),
     loadSavedCoachReview(accountId, reviewScope),
-    loadScopedRecapNote(accountId, reviewScope),
   ]);
   // Week/month coach reviews are homed in the day module's Week/Month → Coach
   // tabs (JOURNAL_NAVIGATION_DECISION.md migration requirement #1).
@@ -2459,8 +2698,9 @@ export default async function TradeJournalReview({
       loadSavedCoachReview(accountId, monthScope),
     ]);
     const monthSlot = (
-      <StarterCoachRead
+      <RangeCoachReview
         factPack={range.coachRead}
+        chartRead={range.chartRead}
         reviewScope={monthScope}
         savedExperiment={monthExperiment}
         savedReview={monthReview}
@@ -2477,8 +2717,9 @@ export default async function TradeJournalReview({
         ]);
         monthModuleSlots.set(weekKey, {
           week: (
-            <StarterCoachRead
+            <RangeCoachReview
               factPack={weekRange.coachRead}
+              chartRead={weekRange.chartRead}
               reviewScope={weekScope}
               savedExperiment={weekExperiment}
               savedReview={weekReview}
@@ -2530,11 +2771,10 @@ export default async function TradeJournalReview({
             </ScopeHeader>
           ) : null}
 
-          {!brokerDataAvailable ? (
+          {!brokerDataAvailable || range.trades === 0 ? (
             <EmptyReviewState
               brokerDataAvailable={brokerDataAvailable}
               reviewScope={reviewScope}
-              recapNote={recapNote}
               readOnly={readOnly}
               accountName={showAccountIdentity ? activeAccount!.name : null}
             />
@@ -2564,8 +2804,9 @@ export default async function TradeJournalReview({
               showLegacyPnl={false}
               coachSlots={moduleCoachScopes && comparisonRanges ? {
                 week: (
-                  <StarterCoachRead
+                  <RangeCoachReview
                     factPack={comparisonRanges[0].coachRead}
+                    chartRead={comparisonRanges[0].chartRead}
                     reviewScope={moduleCoachScopes.week}
                     savedExperiment={weekSavedExperiment}
                     savedReview={weekSavedReview}
@@ -2573,8 +2814,9 @@ export default async function TradeJournalReview({
                   />
                 ),
                 month: (
-                  <StarterCoachRead
+                  <RangeCoachReview
                     factPack={comparisonRanges[1].coachRead}
+                    chartRead={comparisonRanges[1].chartRead}
                     reviewScope={moduleCoachScopes.month}
                     savedExperiment={monthSavedExperiment}
                     savedReview={monthSavedReview}
@@ -2591,7 +2833,7 @@ export default async function TradeJournalReview({
               ))}
             </div>
           ) : preset === "week" ? (
-            <div className="space-y-12">
+            <div className="space-y-20">
               {range.days.map((dayData) => (
                 <ReviewDayRangeSection
                   key={dayData.day.date}
@@ -2605,6 +2847,7 @@ export default async function TradeJournalReview({
           {range.trades > 0 && !usesReviewModule ? (
             <StarterCoachRead
               factPack={range.coachRead}
+              chartRead={range.chartRead}
               reviewScope={reviewScope}
               savedExperiment={savedExperiment}
               savedReview={savedReview}

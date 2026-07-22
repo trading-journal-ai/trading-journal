@@ -47,9 +47,13 @@ export async function opportunityContextsForTrades(
     if (anatomies.has(key)) continue;
     const from = etSeconds(date, "04:00:00");
     const to = etSeconds(date, "20:00:00");
-    const candles = options?.cachedOnly
-      ? await getCachedCandles(trade.symbol, from, to)
-      : (await getCandles(trade.symbol, from, to)).candles;
+    let candles;
+    if (options?.cachedOnly) {
+      candles = await getCachedCandles(trade.symbol, from, to);
+    } else {
+      const candleResult = await getCandles(trade.symbol, from, to);
+      candles = candleResult.status === "market" ? candleResult.candles : [];
+    }
     anatomies.set(key, candles.length > 0 ? sessionAnatomy(trade.symbol, date, candles) : null);
   }
 
