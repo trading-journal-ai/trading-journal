@@ -10,19 +10,23 @@ import { lastCommitDate } from "./prototypeCatalog";
  * populated, synced artifacts can be added here as another group.
  */
 
-export type ArtifactKind = "image" | "html" | "dir";
+export type ArtifactKind = "image" | "html" | "dir" | "external";
 
-export type DesignArtifactGroupKey = "wireframes" | "themes" | "samples" | "prototypes";
+export type DesignArtifactGroupKey = "wireframes" | "themes" | "samples" | "prototypes" | "claude-design";
 
 export type DesignArtifact = {
   id: string;
   title: string;
   description: string;
   kind: ArtifactKind;
-  /** Repo-relative source path (also the removal target). */
+  /** Repo-relative source path, or (for external artifacts) a stable label — the removal/harvest target. */
   file: string;
   /** Web-servable URL for a live thumbnail/preview (images under /public only). */
   src?: string;
+  /** For external (Claude Design) artifacts: display date (YYYY-MM-DD) since there is no git commit. */
+  sourceDate?: string;
+  /** For external artifacts: link out to Claude Design. */
+  externalUrl?: string;
   group: DesignArtifactGroupKey;
 };
 
@@ -52,6 +56,12 @@ export const DESIGN_ARTIFACT_GROUPS: DesignArtifactGroup[] = [
     key: "prototypes",
     label: "Static prototypes",
     blurb: "One-off HTML prototypes kept for reference.",
+  },
+  {
+    key: "claude-design",
+    label: "Claude Design projects",
+    blurb:
+      "Design work living in Claude Design, not yet in the repo. Pointers only — the sync tool can't enumerate or pull these (they aren't design-system projects), so there are no thumbnails yet. Export a project (like Design Structure) to pull real visuals. Keep = worth harvesting into the repo; Remove = leave in Claude Design.",
   },
 ];
 
@@ -150,11 +160,54 @@ const prototypeEntries: DesignArtifact[] = [
   },
 ];
 
+/**
+ * Claude Design projects, transcribed from the project list (2026-07-22).
+ * These live in claude.ai/design, not the repo. The sync tool only surfaces
+ * design-*system* projects (just the empty "Trading Journal AI - Landing"), so
+ * these regular projects can't be enumerated or pulled programmatically — they
+ * are catalogued here as pointers. Export one to ingest real thumbnails.
+ */
+const CLAUDE_DESIGN_URL = "https://claude.ai/design";
+
+const claudeDesignProjects: { slug: string; title: string; date: string; description: string }[] = [
+  { slug: "taxonomy-modal", title: "Taxonomy modal design for notes", date: "2026-07-22", description: "Modal design for the notes tagging taxonomy." },
+  { slug: "coach-review-payload", title: "Coach review payload formatting", date: "2026-07-21", description: "Formatting of the coach review payload." },
+  { slug: "journal-edge-cases", title: "Trading journal edge cases", date: "2026-07-21", description: "Edge-case UI explorations." },
+  { slug: "trade-execution-popover", title: "Trade execution popover redesign", date: "2026-07-20", description: "Redesign of the trade-execution popover." },
+  { slug: "journal-page-redesign", title: "Journal page redesign discussion", date: "2026-07-19", description: "Journal page redesign discussion." },
+  { slug: "creative-data-viz", title: "Creative data visualization approaches", date: "2026-07-19", description: "Data-viz exploration — relates to the /preview/data-viz studies." },
+  { slug: "design-structure", title: "Trading Journal Design Structure", date: "2026-07-19", description: "Source of the journal recap wireframes already imported above." },
+  { slug: "visual-project-refresh", title: "Visual project refresh", date: "2026-07-14", description: "Broad visual refresh pass." },
+  { slug: "theme-refinement", title: "Trading journal theme refinement", date: "2026-07-13", description: "Warm-theme refinement — feeds the daylight/evening palette. Design-system relevant." },
+  { slug: "visual-directions", title: "Trading Journal AI visual directions", date: "2026-07-12", description: "The Editorial vs Ledger-Terminal directions that set the tone. Design-system relevant." },
+  { slug: "design-system-extraction", title: "Design system from Trading Journal", date: "2026-07-12", description: "A design-system extraction — candidate to reconcile with DESIGN_SYSTEM.md." },
+  { slug: "daily-recap-design", title: "Trading journal daily recap design", date: "2026-07-11", description: "Daily recap layout design." },
+  { slug: "level-2-simulator", title: "Level 2 Simulator UI Refresh", date: "2026-07-10", description: "Level 2 simulator UI refresh." },
+  { slug: "shared-screenshot", title: "Shared screenshot", date: "2026-07-10", description: "Shared screenshot artifact." },
+  { slug: "circle-animation", title: "Circle animation improvement", date: "2026-07-07", description: "Animation exploration." },
+  { slug: "trees-to-trails", title: "Trees to Trails redesign", date: "2026-07-03", description: "Redesign exploration." },
+  { slug: "font-selection", title: "Font selection request", date: "2026-07-02", description: "Typography / font selection — relevant to the deferred serif decision. Design-system relevant." },
+  { slug: "stock-buttons-pills", title: "Stock app buttons and pills", date: "2026-06-30", description: "Button and pill component tone. Design-system relevant." },
+  { slug: "journal-early", title: "Journal", date: "2026-06-28", description: "Early journal design." },
+];
+
+const claudeDesignEntries: DesignArtifact[] = claudeDesignProjects.map((p) => ({
+  id: `claude-design-${p.slug}`,
+  title: p.title,
+  description: p.description,
+  kind: "external",
+  file: `claude-design: ${p.title}`,
+  sourceDate: p.date,
+  externalUrl: CLAUDE_DESIGN_URL,
+  group: "claude-design",
+}));
+
 export const DESIGN_ARTIFACTS: DesignArtifact[] = [
   ...wireframeEntries,
   ...themeEntries,
   ...sampleEntries,
   ...prototypeEntries,
+  ...claudeDesignEntries,
 ];
 
 export type DesignArtifactWithDate = DesignArtifact & { lastCommit: string | null };
