@@ -322,7 +322,7 @@ Read these in order:
    - Setup intent, manual tagging, grading, and playbook evaluation.
 6. [`docs/DATA_MODEL.md`](../DATA_MODEL.md)
    - Provenance, the ticker/day review window, and structured-versus-prose decisions.
-7. [`docs/design/DESIGN_SYSTEM_ONE_SHEET.md`](DESIGN_SYSTEM_ONE_SHEET.md)
+7. [`docs/design/DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md)
    - Visual language after the interaction and hierarchy are settled.
 
 ## Superseded statements in older docs

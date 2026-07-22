@@ -62,8 +62,8 @@ Read these in order:
 3. [`DASHBOARD_CONCEPT.md`](../../DASHBOARD_CONCEPT.md) — clarifies that the main
    Dashboard owns the live trading-day loop, while Journal owns durable
    reflection and Analytics owns full investigation.
-4. [`DESIGN_SYSTEM_ONE_SHEET.md`](../../../design/DESIGN_SYSTEM_ONE_SHEET.md) —
-   current visual-system rules and reusable primitives.
+4. [`DESIGN_SYSTEM.md`](../../../design/DESIGN_SYSTEM.md) — current
+   visual-system rules and reusable primitives.
 
 Relevant implementation starting points:
 
@@ -158,7 +158,7 @@ Continue the Journal visual-analysis concept from
 docs/product/handoffs/2026-07-journal-compare-dashboard/README.md.
 
 Read the linked canonical concept note, analytics plan context, dashboard
-boundary, and design-system one-sheet before acting. Treat the included Google
+boundary, and canonical design system before acting. Treat the included Google
 Finance screenshot as interaction inspiration only. Preserve the existing
 Journal behavior, account scoping, ET date handling, and the boundary where
 Journal supports reflection while Analytics owns deep investigation.

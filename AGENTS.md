@@ -44,9 +44,8 @@ Default priorities:
 - Before editing, identify the specific files involved.
 - For UI tasks, inspect the relevant component tree first, then patch only what
   is needed.
-- For UI or visual polish work, read
-  `docs/design/DESIGN_SYSTEM_ONE_SHEET.md` first and use
-  `docs/design/DESIGN_SYSTEM.md` as the deeper reference when needed.
+- For UI or visual polish work, use
+  `docs/design/DESIGN_SYSTEM.md` as the canonical visual-system reference.
 - Avoid touching `.env*`, `data/`, and private broker exports unless the task
   is specifically about local setup, parsing, or data repair.
 

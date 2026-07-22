@@ -20,7 +20,6 @@ const eslintConfig = defineConfig([
     // Static design references kept for product/design review, not app source.
     "samples/**",
     "public/review/**",
-    "docs/design/DESIGN_SYSTEM_ONE_SHEET.html",
   ]),
 ]);
 
