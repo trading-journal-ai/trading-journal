@@ -242,9 +242,13 @@ Build once, reuse everywhere.
   (Prev/Next/Clear/Back), `action` for the strong dark Save/Done, `primary` for
   accent fill. 40px height; radius ≤ 6px; 14px semibold. Controls use fills, not
   borders.
-- **Tag** — pill with a small valence dot for process/emotion vocabulary;
-  secondary metadata. (Coach review chips: see `TAG_VISUAL_SYSTEM.md`. Atom
-  pending — extract once the tagging work lands.)
+- **Tag** (`src/components/ui/Tag.tsx`) — trade-review chip. Two channels: the
+  **icon** names the axis (check/x for graded axes, identity glyph for
+  descriptive; colorblind-safe), the **color** names the verdict/sentiment.
+  Icons are local SVG masks in `public/icons/tags/`; full spec in
+  [`../coach/TAG_VISUAL_SYSTEM.md`](../coach/TAG_VISUAL_SYSTEM.md).
+  *Follow-up:* the chip colors are still shipped light-tuned hex, not tokenized
+  per theme — tokenize `--tag-*` so chips adapt to dark/evening.
 - **StatBlock** (`src/components/ui/StatBlock.tsx`) — stacked label above mono
   value for dashboard summary metrics.
 - **ReportsStatsMatrix** — diagnostic stats table for Reports (default when
