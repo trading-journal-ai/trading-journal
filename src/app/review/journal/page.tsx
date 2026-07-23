@@ -59,7 +59,7 @@ export default function JournalReviewHubPage() {
           <h1 className="mt-3 text-3xl font-semibold leading-tight text-[var(--foreground)] md:text-5xl">
             Journal review index
           </h1>
-          <p className="mt-4 max-w-3xl text-base leading-7 text-[var(--prose)]">
+          <p className="mt-4 max-w-3xl text-base leading-7 text-[var(--body)]">
             A small index for separating static structure from clickable flow
             while we explore the dashboard, daily recap, and coach loop.
           </p>
@@ -108,7 +108,7 @@ function ReviewSection({
         <h2 className="mt-3 text-2xl font-semibold text-[var(--foreground)]">
           {title}
         </h2>
-        <p className="mt-3 text-sm leading-6 text-[var(--prose)]">{body}</p>
+        <p className="mt-3 text-sm leading-6 text-[var(--body)]">{body}</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -156,7 +156,7 @@ function CardContent({
       >
         {item.title}
       </Link>
-      <p className="mt-3 text-sm leading-6 text-[var(--prose)]">{item.body}</p>
+      <p className="mt-3 text-sm leading-6 text-[var(--body)]">{item.body}</p>
       {item.versions ? (
         <div className="mt-5 border-t border-[var(--hairline)] pt-4">
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--muted)]">
