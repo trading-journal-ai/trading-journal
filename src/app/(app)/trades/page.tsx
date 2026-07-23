@@ -7,7 +7,7 @@ import { fmtDate, fmtMoney, fmtPrice } from "@/lib/format";
 import { grossPnl, netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
 import ReportRangeFilter from "@/components/ReportRangeFilter";
-import PeriodTabs from "@/components/PeriodTabs";
+import PeriodTabs from "@/components/ui/PeriodTabs";
 import { RowLink } from "./RowLink";
 
 export const dynamic = "force-dynamic";

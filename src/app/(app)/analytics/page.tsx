@@ -6,7 +6,7 @@ import { fmtMoney } from "@/lib/format";
 import { grossPnl, netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange, MARKET_TZ, timeZoneParts } from "@/lib/time";
 import ReportRangeFilter from "@/components/ReportRangeFilter";
-import PeriodTabs from "@/components/PeriodTabs";
+import PeriodTabs from "@/components/ui/PeriodTabs";
 import Eyebrow from "@/components/ui/Eyebrow";
 
 export const dynamic = "force-dynamic";
