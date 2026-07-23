@@ -226,17 +226,23 @@ Build once, reuse everywhere.
   earlier mono-UPPERCASE "terminal" eyebrow was retired — it read too technical
   for the warm editorial themes, so the sans title-case treatment is now the
   single eyebrow across all four themes.
-- **Money** — mono tabular figure, P&L-colored, signed (`+$…` / `-$…`), no wrap.
-- **Dot** — small green/red valence circle. Use sparingly. Not on the calendar.
-- **Toggle / Segmented control** — peer view choices (e.g. Today / Week / Month).
-  One outer border; active segment uses `--surface-2` + foreground; inactive
-  muted; modest radius; height matches nearby controls.
-- **Ghost Button** — outline button for Prev/Next/Clear/Apply/Back and secondary
-  actions. 40px default height; radius ≤ 6px; 14px semibold text. Primary
-  actions may use accent fill; destructive uses red text/border only when needed.
+- **Money** (`src/components/ui/Money.tsx`) — mono tabular figure, P&L-colored,
+  signed (`+$…` / `-$…`), no wrap.
+- **Dot** (`src/components/ui/Dot.tsx`) — small valence circle
+  (`tone="positive|negative|neutral"`). Use sparingly. Not on the calendar.
+- **SegmentedControl** (`src/components/ui/SegmentedControl.tsx`) — one control
+  for every peer-view choice (Today / Week / Month). Replaces the three ad-hoc
+  filters (`PeriodTabs`, `CalendarRangeFilter`, `ReportRangeFilter`). One outer
+  border; active segment uses `--surface-2` + foreground; inactive muted.
+- **Button** (`src/components/ui/Button.tsx`) — `ghost` for secondary actions
+  (Prev/Next/Clear/Back), `action` for the strong dark Save/Done, `primary` for
+  accent fill. 40px height; radius ≤ 6px; 14px semibold. Controls use fills, not
+  borders.
 - **Tag** — pill with a small valence dot for process/emotion vocabulary;
-  secondary metadata. (Coach review chips: see `TAG_VISUAL_SYSTEM.md`.)
-- **StatBlock** — stacked label above mono value for dashboard summary metrics.
+  secondary metadata. (Coach review chips: see `TAG_VISUAL_SYSTEM.md`. Atom
+  pending — extract once the tagging work lands.)
+- **StatBlock** (`src/components/ui/StatBlock.tsx`) — stacked label above mono
+  value for dashboard summary metrics.
 - **ReportsStatsMatrix** — diagnostic stats table for Reports (default when
   comparing many metrics). Compact summary strip first, then grouped rows
   (Performance, Accuracy, Sizing, Timing); label-left/value-right per cell;
