@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 
+import Button from "@/components/ui/Button";
+import Dot from "@/components/ui/Dot";
 import Eyebrow from "@/components/ui/Eyebrow";
+import Money from "@/components/ui/Money";
+import SegmentedControl from "@/components/ui/SegmentedControl";
+import StatBlock from "@/components/ui/StatBlock";
 import ThemeSettings from "@/components/ThemeSettings";
 import { ALL_TOKEN_NAMES, TOKEN_GROUPS, TYPE_ROLES } from "@/lib/designSystem";
 
@@ -64,18 +69,6 @@ function TokenSwatch({ name, use, value, hydrated }: { name: string; use: string
   );
 }
 
-function Money({ value }: { value: number }) {
-  const color = value > 0 ? "var(--green)" : value < 0 ? "var(--red)" : "var(--muted)";
-  const text = `${value > 0 ? "+" : value < 0 ? "-" : ""}$${Math.abs(value).toLocaleString()}`;
-  return (
-    <span className="font-mono tabular-nums" style={{ color, whiteSpace: "nowrap" }}>{text}</span>
-  );
-}
-
-function Dot({ positive }: { positive: boolean }) {
-  return <span className="inline-block h-2 w-2 rounded-full" style={{ background: positive ? "var(--green)" : "var(--red)" }} />;
-}
-
 function Swatches() {
   const { values, hydrated } = useLiveTokenValues();
   return (
@@ -127,21 +120,16 @@ function TypeScale() {
 }
 
 function Components() {
+  const [period, setPeriod] = useState("today");
   return (
     <div className="grid gap-8 lg:grid-cols-2">
       {/* Buttons */}
       <div className="rounded-[8px] border border-[var(--hairline)] p-5">
         <Eyebrow>Buttons</Eyebrow>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <button type="button" className="h-10 rounded-[6px] px-4 text-[14px] font-semibold" style={{ background: "var(--action)", color: "var(--action-foreground)" }}>
-            Save
-          </button>
-          <button type="button" className="h-10 rounded-[6px] border px-4 text-[14px] font-semibold" style={{ borderColor: "var(--border)", color: "var(--body)" }}>
-            Cancel
-          </button>
-          <button type="button" className="h-10 rounded-[6px] px-4 text-[14px] font-semibold" style={{ background: "var(--accent)", color: "var(--background)" }}>
-            Primary
-          </button>
+          <Button variant="action">Save</Button>
+          <Button variant="ghost">Cancel</Button>
+          <Button variant="primary">Primary</Button>
         </div>
         <p className="mt-4 text-[11px] leading-5 text-[var(--faint)]">Controls use fills, not borders. Reserve --border for cards.</p>
       </div>
@@ -149,17 +137,19 @@ function Components() {
       {/* Segmented control */}
       <div className="rounded-[8px] border border-[var(--hairline)] p-5">
         <Eyebrow>Segmented control</Eyebrow>
-        <div className="mt-4 inline-flex h-10 items-center rounded-md border p-1" style={{ borderColor: "var(--border)" }}>
-          {["Today", "Week", "Month"].map((label, i) => (
-            <span
-              key={label}
-              className="h-8 rounded px-3 text-[13px] font-semibold leading-8"
-              style={i === 0 ? { background: "var(--surface-2)", color: "var(--foreground)" } : { color: "var(--muted)" }}
-            >
-              {label}
-            </span>
-          ))}
+        <div className="mt-4">
+          <SegmentedControl
+            aria-label="Period"
+            value={period}
+            onChange={setPeriod}
+            options={[
+              { label: "Today", value: "today" },
+              { label: "Week", value: "week" },
+              { label: "Month", value: "month" },
+            ]}
+          />
         </div>
+        <p className="mt-4 text-[11px] leading-5 text-[var(--faint)]">One control for every peer-view choice — click to try it.</p>
       </div>
 
       {/* Money + dots */}
@@ -169,8 +159,18 @@ function Components() {
           <Money value={1284} />
           <Money value={-412} />
           <Money value={0} />
-          <span className="inline-flex items-center gap-1.5 text-[13px] text-[var(--body)]"><Dot positive /> Win</span>
-          <span className="inline-flex items-center gap-1.5 text-[13px] text-[var(--body)]"><Dot positive={false} /> Loss</span>
+          <span className="inline-flex items-center gap-1.5 text-[13px] text-[var(--body)]"><Dot tone="positive" /> Win</span>
+          <span className="inline-flex items-center gap-1.5 text-[13px] text-[var(--body)]"><Dot tone="negative" /> Loss</span>
+        </div>
+      </div>
+
+      {/* Stat blocks */}
+      <div className="rounded-[8px] border border-[var(--hairline)] p-5">
+        <Eyebrow>Stat blocks</Eyebrow>
+        <div className="mt-4 grid grid-cols-3 gap-5">
+          <StatBlock label="Win rate">64%</StatBlock>
+          <StatBlock label="Profit factor">2.1</StatBlock>
+          <StatBlock label="Net P&L"><Money value={1284} /></StatBlock>
         </div>
       </div>
 
