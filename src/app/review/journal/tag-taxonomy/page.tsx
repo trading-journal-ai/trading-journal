@@ -287,7 +287,7 @@ function PrototypeHeader() {
           <Link href="/journal" className="font-semibold text-[var(--foreground)]">Journal</Link>
           <Link href="/calendar" className="hover:text-[var(--foreground)]">Calendar</Link>
           <Link href="/trades" className="hover:text-[var(--foreground)]">Trades</Link>
-          <Link href="/reports" className="hover:text-[var(--foreground)]">Analytics</Link>
+          <Link href="/analytics" className="hover:text-[var(--foreground)]">Analytics</Link>
         </nav>
         <span className="ml-auto rounded-md border border-[var(--border)] px-3 py-2 text-sm text-[var(--body)]">
           Prototype

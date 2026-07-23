@@ -34,6 +34,17 @@ const nextConfig: NextConfig = {
         destination: "/journal",
         permanent: false,
       },
+      // Analytics was renamed from /reports; keep old links/bookmarks working.
+      {
+        source: "/reports",
+        destination: "/analytics",
+        permanent: true,
+      },
+      {
+        source: "/reports/:path*",
+        destination: "/analytics/:path*",
+        permanent: true,
+      },
     ];
   },
   experimental: {
