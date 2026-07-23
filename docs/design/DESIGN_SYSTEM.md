@@ -154,7 +154,7 @@ Use named type roles rather than one-off sizes.
 | Body large | Journal prose | 15.5–18 / 1.62–1.75 | 300–400 | Sans | Reading mode, recap notes. |
 | Body | Standard copy | 16 / 1.6 | 400 | Sans | Default descriptive text. |
 | Label | Stat labels, form labels, meta | 12.5–13 / 1.4 | 500 | Sans | Quiet but legible. |
-| Metric strip | Header submetrics (trades, win rate, PF, P&L) | 13–14 / 1.4 | 400–500 | Mono | Muted, tabular, dot-separated. |
+| Metric strip | Header submetrics (trades, win rate, PF, P&L) | 13–14 / 1.4 | 400–500 | Mono\* | Muted, tabular, dot-separated. \*Theme-controlled via `--font-metric`: mono on cool themes, sans on warm. |
 | Figure | Prices, counts, P&L, percentages | Varies | 400–600 | Mono | Always tabular. |
 | Stat value | Stacked stat values | 18–20 / 1.2 | 600 | Mono | Reports/dashboard metrics. |
 | Pill text | Process/emotion pills | 11 / 1.3 | 400–600 | Mono | Text with tiny valence dot. |
@@ -186,7 +186,11 @@ Open items). Do not introduce serif faces ad hoc before that decision.
   **eyebrows / section labels** (title case, not all-caps).
 - Use `font-variant-numeric: tabular-nums` on every number.
 - Every P&L / figure span uses `white-space: nowrap`.
-- Metric strips: muted mono text, generous dot separators, red/green only on the
+- Metric strips use the `--font-metric` treatment token: **mono** on the cool
+  themes (dark, light) for the ledger/terminal feel, **sans** on the warm
+  editorial themes (daylight, evening). The component references the token; each
+  theme owns the look — theme-conditional typography stays inside the system.
+- Metric strips: muted text, generous dot separators, red/green only on the
   P&L value.
 - Letter spacing stays in a small set: Eyebrow `~0.02em` (sans, title case);
   mono table headers / small mono labels `0.16em`–`0.22em`; normal text `0`.

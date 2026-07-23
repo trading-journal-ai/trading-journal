@@ -37,7 +37,7 @@ export async function importCsvAction(
     const summary = await importBrokerCsv(csv, file.name, account.id);
     revalidatePath("/trades");
     revalidatePath("/calendar");
-    revalidatePath("/reports");
+    revalidatePath("/analytics");
     revalidatePath("/journal");
     revalidatePath("/");
     return { ok: true, summary };

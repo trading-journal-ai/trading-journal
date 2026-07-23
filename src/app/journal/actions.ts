@@ -20,7 +20,7 @@ function revalidateJournalLoop() {
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
   revalidatePath("/journal");
-  revalidatePath("/reports");
+  revalidatePath("/analytics");
 }
 
 export async function setNoTradeDayAction(formData: FormData) {

@@ -10,7 +10,7 @@ function revalidateAccountViews() {
   revalidatePath("/calendar");
   revalidatePath("/trades");
   revalidatePath("/journal");
-  revalidatePath("/reports");
+  revalidatePath("/analytics");
   revalidatePath("/settings");
 }
 
