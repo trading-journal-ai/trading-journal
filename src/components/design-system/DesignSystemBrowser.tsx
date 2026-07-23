@@ -9,6 +9,7 @@ import MetricStrip from "@/components/ui/MetricStrip";
 import Money from "@/components/ui/Money";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import StatBlock from "@/components/ui/StatBlock";
+import Tag from "@/components/ui/Tag";
 import ThemeSettings from "@/components/ThemeSettings";
 import { ALL_TOKEN_NAMES, TOKEN_GROUPS, TYPE_ROLES } from "@/lib/designSystem";
 
@@ -184,17 +185,19 @@ function Components() {
         <p className="mt-4 text-[11px] leading-5 text-[var(--faint)]">Theme-controlled via --font-metric: mono on dark/light, sans on daylight/evening. Switch themes above to compare.</p>
       </div>
 
-      {/* Tags */}
+      {/* Trade-review tags */}
       <div className="rounded-[8px] border border-[var(--hairline)] p-5">
-        <Eyebrow>Tags / pills</Eyebrow>
+        <Eyebrow>Trade-review tags</Eyebrow>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          {[["Disciplined", "--green"], ["Chased", "--red"], ["Planned", "--muted"]].map(([label, color]) => (
-            <span key={label} className="inline-flex items-center gap-1.5 rounded-[6px] px-2.5 py-1 font-mono text-[11px]" style={{ background: "var(--surface-2)", color: "var(--body)" }}>
-              <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: `var(${color})` }} />
-              {label}
-            </span>
-          ))}
+          <Tag label="Clean" category="execution" tone="reinforcing" />
+          <Tag label="Chased" category="execution" tone="review" />
+          <Tag label="Oversized" category="risk" tone="review" />
+          <Tag label="Micro pullback" category="pattern" tone="neutral" />
+          <Tag label="Calm" category="emotion" tone="neutral" sentiment="settled" />
+          <Tag label="FOMO" category="emotion" tone="neutral" sentiment="activated" />
+          <Tag label="Morning" category="context" tone="neutral" />
         </div>
+        <p className="mt-4 text-[11px] leading-5 text-[var(--faint)]">Icon = axis (check/x graded · glyph descriptive); color = verdict/sentiment. Spec: coach/TAG_VISUAL_SYSTEM.md.</p>
       </div>
 
       {/* Coach voice */}
