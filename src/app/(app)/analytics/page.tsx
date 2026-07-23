@@ -7,6 +7,7 @@ import { grossPnl, netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange, MARKET_TZ, timeZoneParts } from "@/lib/time";
 import ReportRangeFilter from "@/components/ReportRangeFilter";
 import PeriodTabs from "@/components/PeriodTabs";
+import Eyebrow from "@/components/ui/Eyebrow";
 
 export const dynamic = "force-dynamic";
 
@@ -201,7 +202,7 @@ function filterHref(filters: ReportFilters, updates: Partial<ReportFilters>) {
   if (next.tag) params.set("tag", next.tag);
   if (next.account) params.set("account", next.account);
   const query = params.toString();
-  return query ? `/reports?${query}` : "/reports";
+  return query ? `/analytics?${query}` : "/analytics";
 }
 
 async function loadTagOptions() {
@@ -502,7 +503,7 @@ function FilterBar({ filters, tagOptions }: { filters: ReportFilters; tagOptions
   const activePreset: DatePreset = filters.date ? "custom" : filters.preset;
   const presetBase = { date: undefined, from: undefined, to: undefined };
   return (
-    <form action="/reports" className="space-y-4">
+    <form action="/analytics" className="space-y-4">
       <input type="hidden" name="preset" value={activePreset} />
       {filters.date && <input type="hidden" name="date" value={filters.date} />}
       {filters.from && <input type="hidden" name="from" value={filters.from} />}
@@ -522,7 +523,7 @@ function FilterBar({ filters, tagOptions }: { filters: ReportFilters; tagOptions
             className="border-b border-[var(--hairline)]"
           />
           <div className="flex flex-wrap gap-2">
-            <ReportRangeFilter from={filters.from} to={filters.to} clearHref="/reports" />
+            <ReportRangeFilter from={filters.from} to={filters.to} clearHref="/analytics" />
           </div>
         </div>
       </div>
@@ -658,9 +659,7 @@ function StatsGrid({ sections }: { sections: StatSection[] }) {
 
   return (
     <section>
-      <h2 className="mb-4 font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">
-        Stats
-      </h2>
+      <Eyebrow as="h2" className="mb-4">Stats</Eyebrow>
 
       <div className="grid gap-[2px] overflow-hidden rounded-md bg-[var(--border)] p-[2px]">
         {rows.map((row, rowIndex) => {
@@ -690,7 +689,7 @@ function CountChart({ title, buckets }: { title: string; buckets: Bucket[] }) {
   const max = Math.max(1, ...buckets.map((bucket) => bucket.count));
   return (
     <section>
-      <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">{title}</h2>
+      <Eyebrow as="h2" className="mb-2">{title}</Eyebrow>
       <div className="mt-4 rounded-[6px] bg-[var(--surface)]">
         <div className="space-y-4 px-4 py-4">
           {buckets.map((bucket) => {
@@ -717,7 +716,7 @@ function PnlChart({ title, buckets }: { title: string; buckets: Bucket[] }) {
   const maxAbs = Math.max(1, ...buckets.map((bucket) => Math.abs(bucket.pnl)));
   return (
     <section>
-      <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">{title}</h2>
+      <Eyebrow as="h2" className="mb-2">{title}</Eyebrow>
       <div className="mt-4 rounded-[6px] bg-[var(--surface)]">
         <div className="space-y-4 px-4 py-4">
           {buckets.map((bucket) => {
@@ -916,7 +915,7 @@ function PerformanceSnapshot({ sections }: { sections: StatSection[] }) {
 
   return (
     <div className="flex h-full flex-col">
-      <h3 className="mb-4 font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">At a glance</h3>
+      <Eyebrow as="h3" className="mb-4">At a glance</Eyebrow>
       <div className="grid flex-1 auto-rows-fr grid-cols-2 gap-[2px] overflow-hidden rounded-md bg-[var(--border)] p-[2px]">
         {stats.map((stat, index) => {
           const countValue = stat.value.match(/^(\d+)\s+\(([^)]+)\)$/);
@@ -1000,9 +999,7 @@ function PnlModule({
       </details>
       <div className="grid items-stretch gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex h-full flex-col">
-          <h3 className="mb-4 font-mono text-xs font-semibold uppercase tracking-[0.3em] text-[var(--muted)]">
-            Cumulative P&L
-          </h3>
+          <Eyebrow as="h3" className="mb-4">Cumulative P&amp;L</Eyebrow>
           <div className="flex-1 overflow-hidden rounded-md bg-[var(--border)] p-[2px]">
             <div className="h-full rounded-md bg-[var(--surface)] py-5 pl-0 pr-6">
               <CumulativePnlLine points={points} />

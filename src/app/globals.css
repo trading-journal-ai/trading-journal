@@ -26,6 +26,7 @@
   --execution-sell: #ff6257;
   --green-tint: rgba(29, 178, 107, 0.14);
   --red-tint: rgba(240, 81, 67, 0.14);
+  --font-metric: var(--font-mono); /* cool themes (dark, light): mono metric strips */
   color-scheme: dark;
 }
 
@@ -85,6 +86,7 @@
   --execution-sell: #e54835;
   --green-tint: #e9f2ec;
   --red-tint: #f8eae5;
+  --font-metric: var(--font-sans); /* warm themes (daylight, evening): sans metric strips */
   color-scheme: light;
 }
 
@@ -115,6 +117,7 @@
   --execution-sell: #ff6b57;
   --green-tint: #223129;
   --red-tint: #362824;
+  --font-metric: var(--font-sans); /* warm themes (daylight, evening): sans metric strips */
   color-scheme: dark;
 }
 
