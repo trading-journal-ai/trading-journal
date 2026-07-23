@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import PeriodTabs from "@/components/PeriodTabs";
+import PeriodTabs from "@/components/ui/PeriodTabs";
 
 export type PnlPoint = { label: string; value: number };
 export type PnlSeries = { points: PnlPoint[]; trades: number };
