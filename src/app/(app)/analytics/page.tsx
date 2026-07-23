@@ -202,7 +202,7 @@ function filterHref(filters: ReportFilters, updates: Partial<ReportFilters>) {
   if (next.tag) params.set("tag", next.tag);
   if (next.account) params.set("account", next.account);
   const query = params.toString();
-  return query ? `/reports?${query}` : "/reports";
+  return query ? `/analytics?${query}` : "/analytics";
 }
 
 async function loadTagOptions() {
@@ -503,7 +503,7 @@ function FilterBar({ filters, tagOptions }: { filters: ReportFilters; tagOptions
   const activePreset: DatePreset = filters.date ? "custom" : filters.preset;
   const presetBase = { date: undefined, from: undefined, to: undefined };
   return (
-    <form action="/reports" className="space-y-4">
+    <form action="/analytics" className="space-y-4">
       <input type="hidden" name="preset" value={activePreset} />
       {filters.date && <input type="hidden" name="date" value={filters.date} />}
       {filters.from && <input type="hidden" name="from" value={filters.from} />}
@@ -523,7 +523,7 @@ function FilterBar({ filters, tagOptions }: { filters: ReportFilters; tagOptions
             className="border-b border-[var(--hairline)]"
           />
           <div className="flex flex-wrap gap-2">
-            <ReportRangeFilter from={filters.from} to={filters.to} clearHref="/reports" />
+            <ReportRangeFilter from={filters.from} to={filters.to} clearHref="/analytics" />
           </div>
         </div>
       </div>
