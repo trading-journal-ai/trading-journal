@@ -27,6 +27,17 @@
   --green-tint: rgba(29, 178, 107, 0.14);
   --red-tint: rgba(240, 81, 67, 0.14);
   --font-metric: var(--font-mono); /* cool themes (dark, light): mono metric strips */
+  /* Trade-review tag chips — dark tints (also inherited by evening). */
+  --tag-reinforcing-bg: #16301f;
+  --tag-reinforcing-fg: #86cf96;
+  --tag-review-bg: #3a1d1b;
+  --tag-review-fg: #f0a79d;
+  --tag-neutral-bg: #222831;
+  --tag-neutral-fg: #9aa4b0;
+  --tag-settled-bg: #133029;
+  --tag-settled-fg: #6ac7ae;
+  --tag-activated-bg: #382a14;
+  --tag-activated-fg: #d7a75f;
   color-scheme: dark;
 }
 
@@ -56,6 +67,16 @@
   --execution-sell: #f04438;
   --green-tint: #dafbe1;
   --red-tint: #ffebe9;
+  --tag-reinforcing-bg: #eaf3de;
+  --tag-reinforcing-fg: #3b6d11;
+  --tag-review-bg: #fcebeb;
+  --tag-review-fg: #a32d2d;
+  --tag-neutral-bg: #f1efe8;
+  --tag-neutral-fg: #5f5e5a;
+  --tag-settled-bg: #e1f5ee;
+  --tag-settled-fg: #085041;
+  --tag-activated-bg: #faeeda;
+  --tag-activated-fg: #633806;
   color-scheme: light;
 }
 
@@ -86,6 +107,16 @@
   --execution-sell: #e54835;
   --green-tint: #e9f2ec;
   --red-tint: #f8eae5;
+  --tag-reinforcing-bg: #eaf3de;
+  --tag-reinforcing-fg: #3b6d11;
+  --tag-review-bg: #fcebeb;
+  --tag-review-fg: #a32d2d;
+  --tag-neutral-bg: #f1efe8;
+  --tag-neutral-fg: #5f5e5a;
+  --tag-settled-bg: #e1f5ee;
+  --tag-settled-fg: #085041;
+  --tag-activated-bg: #faeeda;
+  --tag-activated-fg: #633806;
   --font-metric: var(--font-sans); /* warm themes (daylight, evening): sans metric strips */
   color-scheme: light;
 }

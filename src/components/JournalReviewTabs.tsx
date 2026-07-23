@@ -1,6 +1,6 @@
 "use client";
 
-import PeriodTabs from "@/components/PeriodTabs";
+import PeriodTabs from "@/components/ui/PeriodTabs";
 
 export type JournalDataScope = "day" | "week" | "month";
 export type JournalDataView =

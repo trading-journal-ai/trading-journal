@@ -234,10 +234,12 @@ Build once, reuse everywhere.
   signed (`+$…` / `-$…`), no wrap.
 - **Dot** (`src/components/ui/Dot.tsx`) — small valence circle
   (`tone="positive|negative|neutral"`). Use sparingly. Not on the calendar.
-- **SegmentedControl** (`src/components/ui/SegmentedControl.tsx`) — one control
-  for every peer-view choice (Today / Week / Month). Replaces the three ad-hoc
-  filters (`PeriodTabs`, `CalendarRangeFilter`, `ReportRangeFilter`). One outer
-  border; active segment uses `--surface-2` + foreground; inactive muted.
+- **PeriodTabs** (`src/components/ui/PeriodTabs.tsx`) — the peer-view selector
+  (Today / Week / Month, section tabs). **Underline** tabs, not bordered pills —
+  the active tab carries a `--foreground` bottom rule; inactive muted. Fits the
+  open/no-box ethos. Link mode (`href` per item) for URL-driven server pages,
+  button mode (`onChange`) for client state. (`CalendarRangeFilter` /
+  `ReportRangeFilter` are date-*range* pickers, a different control — not this.)
 - **Button** (`src/components/ui/Button.tsx`) — `ghost` for secondary actions
   (Prev/Next/Clear/Back), `action` for the strong dark Save/Done, `primary` for
   accent fill. 40px height; radius ≤ 6px; 14px semibold. Controls use fills, not
@@ -246,9 +248,12 @@ Build once, reuse everywhere.
   **icon** names the axis (check/x for graded axes, identity glyph for
   descriptive; colorblind-safe), the **color** names the verdict/sentiment.
   Icons are local SVG masks in `public/icons/tags/`; full spec in
-  [`../coach/TAG_VISUAL_SYSTEM.md`](../coach/TAG_VISUAL_SYSTEM.md).
-  *Follow-up:* the chip colors are still shipped light-tuned hex, not tokenized
-  per theme — tokenize `--tag-*` so chips adapt to dark/evening.
+  [`../coach/TAG_VISUAL_SYSTEM.md`](../coach/TAG_VISUAL_SYSTEM.md). Colors are
+  theme-owned `--tag-*` tokens (light values on light themes, dark tints on
+  dark/evening), so chips adapt to the theme.
+- **CoachVoice** (`src/components/ui/CoachVoice.tsx`) — a coach-authored block:
+  green (`--coach`) eyebrow + green left rule, so authorship reads at a glance.
+  The trader's own annotations use amber `--accent` instead.
 - **StatBlock** (`src/components/ui/StatBlock.tsx`) — stacked label above mono
   value for dashboard summary metrics.
 - **ReportsStatsMatrix** — diagnostic stats table for Reports (default when

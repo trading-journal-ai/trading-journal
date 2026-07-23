@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import Tag, { TagIcon, tagVisualStyle } from "@/components/ui/Tag";
+
 type TagCategory = "pattern" | "execution" | "risk" | "emotion";
 type TagTone = "neutral" | "reinforcing" | "review";
 type TagSentiment = "settled" | "activated";
@@ -97,56 +99,6 @@ const INITIAL_SELECTION: TagSelection = {
   emotion: [],
 };
 
-const TAG_VISUAL_STYLES = {
-  reinforcing: { background: "#EAF3DE", foreground: "#3B6D11" },
-  review: { background: "#FCEBEB", foreground: "#A32D2D" },
-  neutral: { background: "#F1EFE8", foreground: "#5F5E5A" },
-  settled: { background: "#E1F5EE", foreground: "#085041" },
-  activated: { background: "#FAEEDA", foreground: "#633806" },
-} as const;
-
-function tagVisualStyle(tag: TagOption) {
-  if (tag.category === "pattern") return TAG_VISUAL_STYLES.neutral;
-  if (tag.category === "emotion" && tag.sentiment) return TAG_VISUAL_STYLES[tag.sentiment];
-  return TAG_VISUAL_STYLES[tag.tone];
-}
-
-function tagIconPath(tag: TagOption) {
-  if (tag.category === "pattern") return "/icons/tags/activity.svg";
-  if (tag.category === "emotion") return "/icons/tags/emotion-face.svg";
-  return tag.tone === "review" ? "/icons/tags/circle-x.svg" : "/icons/tags/circle-check.svg";
-}
-
-function TagIcon({ tag, size = 14 }: { tag: TagOption; size?: number }) {
-  const iconPath = tagIconPath(tag);
-
-  return (
-    <span
-      aria-hidden="true"
-      className="inline-block shrink-0 bg-current"
-      style={{
-        width: size,
-        height: size,
-        WebkitMask: `url(${iconPath}) center / contain no-repeat`,
-        mask: `url(${iconPath}) center / contain no-repeat`,
-      }}
-    />
-  );
-}
-
-function SemanticTagChip({ tag }: { tag: TagOption }) {
-  const visualStyle = tagVisualStyle(tag);
-
-  return (
-    <span
-      className="inline-flex min-h-6 items-center gap-[5px] rounded-full px-[9px] py-1 font-mono text-[11px] font-medium leading-none"
-      style={{ backgroundColor: visualStyle.background, color: visualStyle.foreground }}
-    >
-      <TagIcon tag={tag} size={13} />
-      {tag.label}
-    </span>
-  );
-}
 
 const TICKERS = [
   { symbol: "CRVO", pnl: "+$234.60", tone: "positive" as const },
@@ -473,7 +425,9 @@ function InlineTagEditor({
 
       <div data-testid="selected-tags" className="mt-3 flex min-h-6 flex-wrap gap-1.5">
         {activeTags.length > 0 ? (
-          activeTags.map((tag) => <SemanticTagChip key={tag.slug} tag={tag} />)
+          activeTags.map((tag) => (
+            <Tag key={tag.slug} label={tag.label} category={tag.category} tone={tag.tone} sentiment={tag.sentiment} />
+          ))
         ) : (
           <span className="text-sm text-[var(--muted)]">No classification yet.</span>
         )}
