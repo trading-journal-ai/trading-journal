@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 
 import Button from "@/components/ui/Button";
+import CoachVoice from "@/components/ui/CoachVoice";
 import Dot from "@/components/ui/Dot";
 import Eyebrow from "@/components/ui/Eyebrow";
 import MetricStrip from "@/components/ui/MetricStrip";
 import Money from "@/components/ui/Money";
-import SegmentedControl from "@/components/ui/SegmentedControl";
+import PeriodTabs from "@/components/ui/PeriodTabs";
 import StatBlock from "@/components/ui/StatBlock";
 import Tag from "@/components/ui/Tag";
 import ThemeSettings from "@/components/ThemeSettings";
@@ -136,22 +137,22 @@ function Components() {
         <p className="mt-4 text-[11px] leading-5 text-[var(--faint)]">Controls use fills, not borders. Reserve --border for cards.</p>
       </div>
 
-      {/* Segmented control */}
+      {/* Period tabs */}
       <div className="rounded-[8px] border border-[var(--hairline)] p-5">
-        <Eyebrow>Segmented control</Eyebrow>
+        <Eyebrow>Period tabs</Eyebrow>
         <div className="mt-4">
-          <SegmentedControl
-            aria-label="Period"
+          <PeriodTabs
+            ariaLabel="Period"
             value={period}
             onChange={setPeriod}
-            options={[
+            items={[
               { label: "Today", value: "today" },
               { label: "Week", value: "week" },
               { label: "Month", value: "month" },
             ]}
           />
         </div>
-        <p className="mt-4 text-[11px] leading-5 text-[var(--faint)]">One control for every peer-view choice — click to try it.</p>
+        <p className="mt-4 text-[11px] leading-5 text-[var(--faint)]">Underline tabs for peer-view choices (period, section). Link mode for URL-driven pages, button mode for client state. Click to try it.</p>
       </div>
 
       {/* Money + dots */}
@@ -203,9 +204,8 @@ function Components() {
       {/* Coach voice */}
       <div className="rounded-[8px] border border-[var(--hairline)] p-5">
         <Eyebrow>Coach voice</Eyebrow>
-        <div className="mt-4 border-l-2 pl-3" style={{ borderColor: "var(--coach)" }}>
-          <Eyebrow tone="coach">Session verdict</Eyebrow>
-          <p className="mt-1.5 text-[13px] leading-6 text-[var(--body)]">Clean session — you leaned into the highest-quality mover.</p>
+        <div className="mt-4">
+          <CoachVoice label="Session verdict">Clean session — you leaned into the highest-quality mover.</CoachVoice>
         </div>
         <p className="mt-3 text-[11px] leading-5 text-[var(--faint)]">Coach = green eyebrow + left rule. Trader annotations use --accent.</p>
       </div>
@@ -230,6 +230,61 @@ function Components() {
   );
 }
 
+const FEATURE_MODULES = [
+  {
+    name: "Journal review",
+    href: "/review/journal",
+    doc: "docs/design/JOURNAL_DESIGN.md",
+    note: "Prose-first daily recap and coach interpretation.",
+    atoms: ["RecapNote", "TickerReviewRail", "CoachOutputTabs", "CoachVoice", "Eyebrow"],
+  },
+  {
+    name: "Trade review",
+    href: "/trades/review",
+    doc: "docs/design/TICKER_REVIEW_DESIGN_HANDOFF.md",
+    note: "Per-ticker review: chart, executions, and tags.",
+    atoms: ["TickerReviewWorkspace", "TickerReviewRail", "Tag", "Money"],
+  },
+  {
+    name: "Dashboard board",
+    href: "/dashboard",
+    doc: "docs/product/DASHBOARD_CONCEPT.md",
+    note: "The live trading-day loop and sticky cues.",
+    atoms: ["StatBlock", "Money", "PeriodTabs", "Eyebrow"],
+  },
+];
+
+function FeatureModules() {
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      {FEATURE_MODULES.map((module) => (
+        <div key={module.name} className="flex flex-col rounded-[8px] border border-[var(--hairline)] p-5">
+          <a
+            href={module.href}
+            target="_blank"
+            rel="noreferrer"
+            className="text-[15px] font-semibold text-[var(--foreground)] transition-colors hover:text-[var(--accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+          >
+            {module.name} ↗
+          </a>
+          <p className="mt-2 text-[12.5px] leading-5 text-[var(--body)]">{module.note}</p>
+          <p className="mt-3 truncate font-mono text-[10px] text-[var(--muted)]">{module.doc}</p>
+          <div className="mt-auto pt-4">
+            <Eyebrow className="!text-[10px]">Built from</Eyebrow>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {module.atoms.map((atom) => (
+                <span key={atom} className="rounded-[5px] bg-[var(--surface-2)] px-2 py-0.5 font-mono text-[10px] text-[var(--muted)]">
+                  {atom}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function DesignSystemBrowser() {
   return (
     <div>
@@ -250,6 +305,10 @@ export default function DesignSystemBrowser() {
 
       <Section eyebrow="Components" title="Primitives & components" description="The reusable building blocks, rendered with the real tokens so they track the active theme.">
         <Components />
+      </Section>
+
+      <Section eyebrow="Patterns" title="Feature modules" description="Page-level compositions that consume the system. They are linked, not embedded — the design system documents the atoms they're built from without duplicating the app (which is how the last system drifted).">
+        <FeatureModules />
       </Section>
     </div>
   );

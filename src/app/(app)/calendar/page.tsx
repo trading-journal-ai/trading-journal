@@ -10,7 +10,7 @@ import { isDemoReadOnly } from "@/lib/demoMode";
 import { journalDayState } from "@/lib/journalDayStatus";
 import CalendarRangeFilter from "@/components/CalendarRangeFilter";
 import PendingSubmitButton from "@/components/PendingSubmitButton";
-import PeriodTabs from "@/components/PeriodTabs";
+import PeriodTabs from "@/components/ui/PeriodTabs";
 import { setNoTradeDayAction } from "@/app/journal/actions";
 
 export const dynamic = "force-dynamic";

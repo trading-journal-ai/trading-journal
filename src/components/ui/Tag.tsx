@@ -19,19 +19,19 @@ type TagVisual = { background: string; foreground: string };
  *   *descriptive* axes (Pattern/Emotion/Context). check-vs-x is colorblind-safe.
  * - The **color** names the verdict (tone) or, for Emotion, the sentiment.
  *
- * NOTE: the chip colors below are the shipped light-tuned values, not yet
- * tokenized per theme — tracked as a follow-up in DESIGN_SYSTEM.md. The chip is
- * self-contained (own bg + fg) so it stays legible on any background.
+ * Colors are theme-owned tokens (`--tag-*` in globals.css): warm/light values on
+ * the light themes, darker tints on dark/evening, so chips adapt to the theme.
  */
 const TAG_VISUAL_STYLES: Record<TagTone | TagSentiment, TagVisual> = {
-  reinforcing: { background: "#EAF3DE", foreground: "#3B6D11" },
-  review: { background: "#FCEBEB", foreground: "#A32D2D" },
-  neutral: { background: "#F1EFE8", foreground: "#5F5E5A" },
-  settled: { background: "#E1F5EE", foreground: "#085041" },
-  activated: { background: "#FAEEDA", foreground: "#633806" },
+  reinforcing: { background: "var(--tag-reinforcing-bg)", foreground: "var(--tag-reinforcing-fg)" },
+  review: { background: "var(--tag-review-bg)", foreground: "var(--tag-review-fg)" },
+  neutral: { background: "var(--tag-neutral-bg)", foreground: "var(--tag-neutral-fg)" },
+  settled: { background: "var(--tag-settled-bg)", foreground: "var(--tag-settled-fg)" },
+  activated: { background: "var(--tag-activated-bg)", foreground: "var(--tag-activated-fg)" },
 };
 
-function tagVisualStyle(tag: TagChipData): TagVisual {
+/** Resolve a tag's fill + foreground. Exported for surfaces that style beyond the chip (e.g. selection buttons). */
+export function tagVisualStyle(tag: TagChipData): TagVisual {
   if (tag.category === "emotion" && tag.sentiment) return TAG_VISUAL_STYLES[tag.sentiment];
   if (tag.category === "pattern" || tag.category === "context" || tag.category === "emotion") {
     return TAG_VISUAL_STYLES.neutral;
@@ -47,7 +47,8 @@ function tagIconPath(tag: TagChipData): string {
   return tag.tone === "review" ? "/icons/tags/circle-x.svg" : "/icons/tags/circle-check.svg";
 }
 
-function TagIcon({ tag, size }: { tag: TagChipData; size: number }) {
+/** The axis-behavior glyph for a tag, rendered as a CSS mask over `bg-current`. */
+export function TagIcon({ tag, size = 13 }: { tag: TagChipData; size?: number }) {
   const iconPath = tagIconPath(tag);
   // Rendered as a CSS mask over `bg-current`, so the glyph inherits the chip's
   // foreground color from a single source.
