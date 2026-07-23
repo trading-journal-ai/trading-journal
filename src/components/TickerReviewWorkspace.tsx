@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { deleteTickerReviewAction, upsertTickerReviewAction } from "@/app/journal/actions";
 import DictationTextarea, { type DictationStatus } from "@/components/DictationTextarea";
-import { CHART_FOCUS_EVENT } from "@/components/LightweightTradeChart";
+import { CHART_FOCUS_EVENT } from "@/lib/chartFocusEvent";
 import SharedNoteComposer from "@/components/SharedNoteComposer";
 import {
   TradeAttachments,
@@ -12,13 +12,17 @@ import {
   type ReviewAttachment,
   type ReviewTagOption,
 } from "@/components/TickerReviewTradeExtras";
-import type { AnalyzedTradeExecution, TradeExecutionAnalysis } from "@/lib/executionAnalysis";
+import type { AnalyzedTradeExecution, TradeExecutionAnalysis, TradeSide } from "@/lib/executionAnalysis";
 
 export type TickerReviewTrade = {
   id: number;
   number: number;
+  side: TradeSide;
   /** Epoch seconds of the first entry — used to focus the chart on click. */
   entryAt?: number | null;
+  exitAt?: number | null;
+  avgEntryPrice?: number | null;
+  avgExitPrice?: number | null;
   entryTime: string;
   shares: string;
   executions: string;
@@ -695,15 +699,17 @@ export default function TickerReviewWorkspace({
                   <div className={`grid grid-cols-[minmax(0,1fr)_28px] items-center gap-1 px-1 py-1 transition-colors duration-200 ease-out motion-reduce:transition-none ${isExpanded ? "bg-[var(--surface-2)]" : ""}`}>
                     <button
                       type="button"
-                      onClick={() => setExpandedTradeId((current) => {
-                        const next = current === trade.id ? null : trade.id;
+                      onClick={() => {
+                        const next = expandedTradeId === trade.id ? null : trade.id;
+                        setExpandedTradeId(next);
                         // Bring the trade's moment into the chart window (it
                         // may sit off-screen when the ticker traded all day).
                         if (next != null && trade.entryAt != null) {
-                          window.dispatchEvent(new CustomEvent(CHART_FOCUS_EVENT, { detail: { time: trade.entryAt } }));
+                          window.dispatchEvent(new CustomEvent(CHART_FOCUS_EVENT, {
+                            detail: { time: trade.entryAt, tradeNumber: trade.number },
+                          }));
                         }
-                        return next;
-                      })}
+                      }}
                       aria-expanded={isExpanded}
                       aria-controls={executionRegionId}
                       className="grid grid-cols-[0.9fr_0.8fr_0.65fr_1.55fr_1fr_0.8fr_1fr] items-center gap-x-2 rounded px-1 py-2 text-left text-[12px] tabular-nums transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--blue)]"

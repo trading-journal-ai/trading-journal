@@ -175,6 +175,11 @@ export async function loadInlineTradeReview({
     return {
       id: trade.id,
       number: index + 1,
+      side: trade.side,
+      entryAt: trade.entryAt,
+      exitAt: trade.exitAt,
+      avgEntryPrice: trade.avgEntryPrice,
+      avgExitPrice: trade.avgExitPrice,
       entryTime: formatTradeTime(trade.entryAt),
       shares: Math.abs(trade.quantity).toLocaleString("en-US"),
       executions: (executionCountByTradeId.get(trade.id) ?? 0).toLocaleString("en-US"),

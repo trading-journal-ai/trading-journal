@@ -218,7 +218,11 @@ export default async function TickerDayReviewPage({
     return {
       id: trade.id,
       number: index + 1,
+      side: trade.side,
       entryAt: trade.entryAt,
+      exitAt: trade.exitAt,
+      avgEntryPrice: trade.avgEntryPrice,
+      avgExitPrice: trade.avgExitPrice,
       entryTime: formatTradeTime(trade.entryAt),
       shares: Math.abs(trade.quantity).toLocaleString("en-US"),
       executions: (executionCountByTradeId.get(trade.id) ?? 0).toLocaleString("en-US"),
@@ -257,6 +261,8 @@ export default async function TickerDayReviewPage({
   for (const tagName of DEFAULT_REVIEW_TAGS) {
     if (!tagOptionMap.has(tagName)) tagOptionMap.set(tagName, { name: tagName, uses: 0 });
   }
+  const initialChartTrade = initialTradeId == null ? undefined : tradeById.get(initialTradeId);
+  const initialChartTradeNumber = initialTradeId == null ? undefined : tradeNumberById.get(initialTradeId);
 
   return (
     <div className={dayTickers.length > 1 ? "mx-auto max-w-[1490px]" : "mx-auto max-w-[1280px]"}>
@@ -292,7 +298,10 @@ export default async function TickerDayReviewPage({
               <LightweightTradeChart
                 candles={chartCandles}
                 enableFullscreen
-                initialFocusTime={trades[0]?.entryAt ?? undefined}
+                enableTradeScopeToggle
+                excursionsEnabled={candleResult.status === "market"}
+                initialActiveTradeNumber={initialChartTradeNumber}
+                initialFocusTime={initialChartTrade?.entryAt ?? trades[0]?.entryAt ?? undefined}
                 markers={trades.flatMap((trade) => (
                   (executionAnalysisByTradeId.get(trade.id)?.executions ?? []).map((execution) => ({
                     id: execution.id,
@@ -307,6 +316,11 @@ export default async function TickerDayReviewPage({
                 ))}
                 tradeSummaries={workspaceTrades.flatMap((trade) => trade.executionAnalysis ? [{
                   tradeNumber: trade.number,
+                  side: trade.side,
+                  entryAt: trade.entryAt,
+                  exitAt: trade.exitAt,
+                  entryPrice: trade.avgEntryPrice,
+                  exitPrice: trade.avgExitPrice,
                   executionAnalysis: trade.executionAnalysis,
                   holdDuration: trade.holdDuration,
                   shares: trade.shares,

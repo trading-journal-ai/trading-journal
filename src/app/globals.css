@@ -253,3 +253,64 @@ body {
     transition: none;
   }
 }
+
+.trade-breathing-leader {
+  animation: trade-breathing-leader-reveal 140ms ease-out both;
+}
+
+.trade-breathing-value {
+  transform: translateY(-50%);
+  animation-duration: 170ms;
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.trade-breathing-value--right {
+  animation-name: trade-breathing-value-reveal-right;
+}
+
+.trade-breathing-value--left {
+  animation-name: trade-breathing-value-reveal-left;
+  transform: translateY(calc(-100% - 2px));
+}
+
+@keyframes trade-breathing-leader-reveal {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes trade-breathing-value-reveal-right {
+  from {
+    opacity: 0;
+    transform: translate(-8px, -50%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
+@keyframes trade-breathing-value-reveal-left {
+  from {
+    opacity: 0;
+    transform: translate(8px, calc(-100% - 2px));
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(0, calc(-100% - 2px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trade-breathing-leader,
+  .trade-breathing-value {
+    animation: none;
+  }
+}

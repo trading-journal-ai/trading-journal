@@ -136,16 +136,23 @@ export default function InlineTradeReviewPanel({
           <LightweightTradeChart
             candles={data.candles}
             chartHeightClass="h-[400px]"
+            excursionsEnabled={data.candleSource === "market" && data.candleStatus === "market"}
             focusMinutesAfter={43}
             focusMinutesBefore={12}
+            initialActiveTradeNumber={selectedTrade?.number}
             initialFocusTime={data.initialFocusTime}
             markers={data.markers}
-            tradeSummaries={selectedTrade?.executionAnalysis ? [{
-              tradeNumber: selectedTrade.number,
-              executionAnalysis: selectedTrade.executionAnalysis,
-              holdDuration: selectedTrade.holdDuration,
-              shares: selectedTrade.shares,
-            }] : undefined}
+            tradeSummaries={data.trades.flatMap((trade) => trade.executionAnalysis ? [{
+              tradeNumber: trade.number,
+              side: trade.side,
+              entryAt: trade.entryAt,
+              exitAt: trade.exitAt,
+              entryPrice: trade.avgEntryPrice,
+              exitPrice: trade.avgExitPrice,
+              executionAnalysis: trade.executionAnalysis,
+              holdDuration: trade.holdDuration,
+              shares: trade.shares,
+            }] : [])}
           />
         ) : (
           <div className="grid h-[400px] place-items-center border-y border-[var(--hairline)] px-6 text-center text-sm text-[var(--muted)]">
