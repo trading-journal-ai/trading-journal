@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
 import Dot from "@/components/ui/Dot";
 import Eyebrow from "@/components/ui/Eyebrow";
+import MetricStrip from "@/components/ui/MetricStrip";
 import Money from "@/components/ui/Money";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import StatBlock from "@/components/ui/StatBlock";
@@ -172,6 +173,15 @@ function Components() {
           <StatBlock label="Profit factor">2.1</StatBlock>
           <StatBlock label="Net P&L"><Money value={1284} /></StatBlock>
         </div>
+      </div>
+
+      {/* Metric strip */}
+      <div className="rounded-[8px] border border-[var(--hairline)] p-5">
+        <Eyebrow>Metric strip</Eyebrow>
+        <div className="mt-4">
+          <MetricStrip items={["14 trades", "64% win", "PF 2.1", <Money key="pnl" value={1284} />]} />
+        </div>
+        <p className="mt-4 text-[11px] leading-5 text-[var(--faint)]">Theme-controlled via --font-metric: mono on dark/light, sans on daylight/evening. Switch themes above to compare.</p>
       </div>
 
       {/* Tags */}
