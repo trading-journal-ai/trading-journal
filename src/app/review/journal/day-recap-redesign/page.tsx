@@ -42,7 +42,7 @@ export default function DayRecapRedesignPage() {
             <h1 className="mt-3 text-3xl font-semibold leading-tight text-[var(--foreground)] md:text-5xl">
               Journal day recap — redesign
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--prose)]">
+            <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--body)]">
               Pixel recreation of the Claude Design &quot;Journal Day Recap&quot;
               concept: one recap object with two voices, the trader&apos;s read on
               top and the coach&apos;s deterministic read below. Toggle the demo
