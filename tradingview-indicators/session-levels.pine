@@ -1,0 +1,151 @@
+//@version=6
+// ─────────────────────────────────────────────────────────────────────────────
+// SESSION LEVELS
+//
+// The execution-chart companion (1m / 5m): every level that is fixed once its
+// source bars close, so nothing here repaints.
+//   · Prior day high / low / close
+//   · Premarket high / low        (requires Extended Hours ON)
+//   · Opening range high / low    (first N minutes of RTH)
+//   · Today's RTH open + a causal gap % readout
+//   · Round numbers near price
+//   · Mapped levels — the handful you kept from the mapping pass
+//
+// "Map high, trade low": map levels on the daily/weekly/monthly with
+// level-map-assistant.pine, then type the keepers into the Mapped Levels
+// inputs below so they project onto the execution chart.
+//
+// Spec: docs/product/PINE_SETUP_INDICATOR.md · docs/coach/LEVELS.md
+// ─────────────────────────────────────────────────────────────────────────────
+indicator("Session Levels", overlay = true, max_lines_count = 100, max_labels_count = 100)
+
+gTog      = "Levels"
+inPrevDay = input.bool(true, "Prior day H / L / C", group = gTog)
+inPreMkt  = input.bool(true, "Premarket H / L",     group = gTog, tooltip = "Requires Extended Hours enabled on the chart, or these stay blank.")
+inOpenRng = input.bool(true, "Opening range H / L", group = gTog)
+inORMin   = input.int(5, "Opening range minutes", minval = 1, maxval = 120, group = gTog)
+inSessOpn = input.bool(true, "Today's RTH open",   group = gTog)
+inGapLbl  = input.bool(true, "Show gap % label",   group = gTog)
+
+gRound    = "Round numbers"
+inRound   = input.bool(true, "Show round numbers", group = gRound)
+inRoundSt = input.float(0.50, "Step ($)", minval = 0.01, step = 0.05, group = gRound)
+inRoundN  = input.int(2, "Levels each side", minval = 1, maxval = 10, group = gRound)
+
+gMap      = "Mapped levels (from the higher-timeframe pass)"
+inMap1    = input.float(0.0, "Level 1", group = gMap, tooltip = "0 = off")
+inMap1Txt = input.string("", "  note 1", group = gMap)
+inMap2    = input.float(0.0, "Level 2", group = gMap)
+inMap2Txt = input.string("", "  note 2", group = gMap)
+inMap3    = input.float(0.0, "Level 3", group = gMap)
+inMap3Txt = input.string("", "  note 3", group = gMap)
+inMap4    = input.float(0.0, "Level 4", group = gMap)
+inMap4Txt = input.string("", "  note 4", group = gMap)
+
+gCol      = "Colors"
+cPD       = input.color(color.new(color.orange, 0),  "Prior day",      group = gCol)
+cPMH      = input.color(color.new(color.lime, 0),    "Premarket high", group = gCol)
+cPML      = input.color(color.new(color.red, 0),     "Premarket low",  group = gCol)
+cOR       = input.color(color.new(color.aqua, 0),    "Opening range",  group = gCol)
+cOpen     = input.color(color.new(color.gray, 0),    "RTH open",       group = gCol)
+cRound    = input.color(color.new(color.gray, 60),   "Round numbers",  group = gCol)
+cMap      = input.color(color.new(color.fuchsia, 0), "Mapped levels",  group = gCol)
+
+// ═══ PRIOR DAY ══════════════════════════════════════════════════════════════
+// [1] offset + lookahead_on is TradingView's documented non-repainting idiom:
+// it returns the *previous completed* daily bar, identical live and historical.
+[pdH, pdL, pdC] = request.security(syminfo.tickerid, "D", [high[1], low[1], close[1]], lookahead = barmerge.lookahead_on)
+
+// ═══ SESSION STATE ══════════════════════════════════════════════════════════
+isIntra = timeframe.isintraday
+newDay  = ta.change(time("D")) != 0
+isMkt   = isIntra and session.ismarket
+isPre   = isIntra and session.ispremarket
+
+var float pmH      = na
+var float pmL      = na
+var float orH      = na
+var float orL      = na
+var float rthOpen  = na
+var int   mktStart = na
+
+if newDay
+    pmH      := na
+    pmL      := na
+    orH      := na
+    orL      := na
+    rthOpen  := na
+    mktStart := na
+
+// Premarket extremes.
+if isPre
+    pmH := na(pmH) ? high : math.max(pmH, high)
+    pmL := na(pmL) ? low  : math.min(pmL, low)
+
+// Today's RTH open, taken from the chart's own first market bar — causal, so
+// it reads the same live as in replay (unlike a lookahead daily request).
+if isMkt and not isMkt[1]
+    mktStart := time
+    rthOpen  := open
+
+// Opening range over the first N minutes of RTH.
+inOR = isMkt and not na(mktStart) and (time - mktStart) < inORMin * 60000
+if inOR
+    orH := na(orH) ? high : math.max(orH, high)
+    orL := na(orL) ? low  : math.min(orL, low)
+
+// Causal gap %: today's RTH open vs. prior close. Blank until the open.
+gapPct = not na(rthOpen) and not na(pdC) and pdC > 0 ? (rthOpen - pdC) / pdC * 100 : na
+
+// ═══ PLOTS ══════════════════════════════════════════════════════════════════
+// style_linebr keeps each session's levels from connecting across days.
+plot(inPrevDay and isIntra ? pdH     : na, "Prior day high", cPD,   1, plot.style_linebr)
+plot(inPrevDay and isIntra ? pdL     : na, "Prior day low",  cPD,   1, plot.style_linebr)
+plot(inPrevDay and isIntra ? pdC     : na, "Prior close",    cPD,   2, plot.style_linebr)
+plot(inPreMkt  and isIntra ? pmH     : na, "Premarket high", cPMH,  1, plot.style_linebr)
+plot(inPreMkt  and isIntra ? pmL     : na, "Premarket low",  cPML,  1, plot.style_linebr)
+plot(inOpenRng and isIntra ? orH     : na, "OR high",        cOR,   1, plot.style_linebr)
+plot(inOpenRng and isIntra ? orL     : na, "OR low",         cOR,   1, plot.style_linebr)
+plot(inSessOpn and isIntra ? rthOpen : na, "RTH open",       cOpen, 1, plot.style_linebr)
+
+// ═══ LAST-BAR DRAWINGS ══════════════════════════════════════════════════════
+// Arrays are passed in rather than captured, so the helper never mutates
+// globals from inside a function.
+drawLevel(float price, color col, string txt, bool dashed, line[] lns, label[] lbs) =>
+    array.push(lns, line.new(bar_index - 1, price, bar_index + 12, price, color = col, width = 1, style = dashed ? line.style_dashed : line.style_solid))
+    if txt != ""
+        array.push(lbs, label.new(bar_index + 12, price, txt, style = label.style_label_left, color = color.new(col, 85), textcolor = col, size = size.small))
+
+var line[]  drawLines  = array.new<line>()
+var label[] drawLabels = array.new<label>()
+
+if barstate.islast
+    if array.size(drawLines) > 0
+        for ln in drawLines
+            line.delete(ln)
+        array.clear(drawLines)
+    if array.size(drawLabels) > 0
+        for l in drawLabels
+            label.delete(l)
+        array.clear(drawLabels)
+
+    // Round numbers bracketing current price.
+    if inRound and inRoundSt > 0
+        anchor = math.round(close / inRoundSt) * inRoundSt
+        for i = -inRoundN to inRoundN
+            drawLevel(anchor + i * inRoundSt, cRound, "", true, drawLines, drawLabels)
+
+    // Mapped levels — the trader's own, carried down from the mapping pass.
+    if inMap1 > 0
+        drawLevel(inMap1, cMap, inMap1Txt == "" ? str.tostring(inMap1, format.mintick) : inMap1Txt, false, drawLines, drawLabels)
+    if inMap2 > 0
+        drawLevel(inMap2, cMap, inMap2Txt == "" ? str.tostring(inMap2, format.mintick) : inMap2Txt, false, drawLines, drawLabels)
+    if inMap3 > 0
+        drawLevel(inMap3, cMap, inMap3Txt == "" ? str.tostring(inMap3, format.mintick) : inMap3Txt, false, drawLines, drawLabels)
+    if inMap4 > 0
+        drawLevel(inMap4, cMap, inMap4Txt == "" ? str.tostring(inMap4, format.mintick) : inMap4Txt, false, drawLines, drawLabels)
+
+    // Gap % readout, anchored on the prior close.
+    if inGapLbl and not na(gapPct) and not na(pdC)
+        gapTxt = "gap " + (gapPct > 0 ? "+" : "") + str.tostring(gapPct, "#.#") + "%"
+        array.push(drawLabels, label.new(bar_index + 12, pdC, gapTxt, style = label.style_label_left, color = color.new(cPD, 85), textcolor = cPD, size = size.small))

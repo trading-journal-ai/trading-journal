@@ -18,7 +18,8 @@ principles, typography, color roles, spacing, primitives, and component rules.
 Journal-specific behavior and note structure live in
 [`JOURNAL_DESIGN.md`](JOURNAL_DESIGN.md). Coach tag chips have their own visual
 spec in [`../coach/TAG_VISUAL_SYSTEM.md`](../coach/TAG_VISUAL_SYSTEM.md).
-Superseded material is in [`_archive/`](./_archive/) — do not cite it.
+Superseded material is deleted and tombstoned in
+[`../ARCHIVE.md`](../ARCHIVE.md) — do not cite it.
 
 ## How to use this doc
 
@@ -347,4 +348,4 @@ Production surfaces live under the `(app)` route group.
 | Journal | [`src/app/(app)/journal/page.tsx`](../../src/app/(app)/journal/page.tsx) |
 | Trades list / detail | [`src/app/(app)/trades/page.tsx`](../../src/app/(app)/trades/page.tsx) · [`src/app/(app)/trades/[id]/page.tsx`](../../src/app/(app)/trades/[id]/page.tsx) |
 | Trade review | [`src/app/(app)/trades/review/page.tsx`](../../src/app/(app)/trades/review/page.tsx) |
-| Superseded material | [`_archive/`](./_archive/) |
+| Superseded material | deleted — tombstones in [`../ARCHIVE.md`](../ARCHIVE.md) |

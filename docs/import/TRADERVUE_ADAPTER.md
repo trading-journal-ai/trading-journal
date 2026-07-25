@@ -45,15 +45,10 @@ Price MAE Datetime
 
 ## Current Finding
 
-The private file:
+The private eval file (a DAS paper-trading export from TraderVue, kept under
+gitignored `data/evals/coach/raw/`) contains:
 
-```text
-data/evals/coach/raw/tradervue-export.csv
-```
-
-contains:
-
-- <N> trade-summary rows
+- roughly a thousand trade-summary rows
 - open and close timestamps
 - symbol, side, volume, entry price, exit price, and gross P&L
 - `Exec Count` on every row
@@ -108,7 +103,7 @@ Still needs human/playbook context:
 Run:
 
 ```bash
-npm run broker:inspect -- --file data/evals/coach/raw/tradervue-export.csv
+npm run broker:inspect -- --file data/evals/coach/raw/<your-tradervue-export>.csv
 ```
 
 Expected result:

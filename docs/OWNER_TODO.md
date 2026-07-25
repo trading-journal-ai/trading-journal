@@ -133,41 +133,27 @@ The audit's first pass flagged "duplicates." The prototype-era design-system
 one-sheet artifacts were retired on 2026-07-22; `DESIGN_SYSTEM.md` is now the
 single canonical reference. The two import docs (current adapter vs.
 rich-export gap analysis) still require a freshness/linking review.
-- [ ] **OWNER REVIEW — ThinkorSwim import docs: real overlap to reconcile.** You
-  flagged possible duplication here, and there is some. Precise picture:
-  - **Genuine overlap:** both `THINKORSWIM_ADAPTER.md` and
-    `TOS_TO_TRADERVUE_RECONSTRUCTION.md` carry the **same statement-section
-    catalog** (Cash Balance / Account Trade History / Account Order History /
-    Profits and Losses / Equities — headers + field meanings). That catalog is
-    duplicated and is the merge target.
-  - **Unique to ADAPTER** (keep): current app behavior + code paths
-    (`persist.ts`/`tos.ts`/`match.ts`), `broker:inspect` usage, Adapter Decision
-    Rules, Open Work.
-  - **Unique to RECONSTRUCTION** (keep — this is the work you did): TraderVue
-    target shape, the preferred/fallback/lower-confidence **reconstruction
-    strategy**, and the **real V2 rich-file findings** (<N> fills, <N> exact
-    matches, <N> `~` market orders, etc.). Its own note says the process "is now
-    called broker normalization" → it may be **partly superseded by**
-    `IMPORT_ARCHITECTURE.md` + `BROKER_NORMALIZER.md`.
-  - **Your call:** likely — collapse the duplicated section catalog into one home,
-    keep ADAPTER as "how the app reads ToS today," fold RECONSTRUCTION's strategy +
-    V2 findings into ADAPTER or IMPORT_ARCHITECTURE, then retire/trim
-    RECONSTRUCTION. Confirm before anything is deleted.
+- [x] **ThinkorSwim import docs overlap — resolved 2026-07-25.** Owner
+  confirmed `TOS_TO_TRADERVUE_RECONSTRUCTION.md` had served its purpose (it
+  produced the broker adapter/normalizer). Archived to
+  `import/_archive/` with a superseded banner; `THINKORSWIM_ADAPTER.md` is the
+  one home for the statement-section catalog, `BROKER_NORMALIZER.md` +
+  `IMPORT_ARCHITECTURE.md` own the normalization contract.
 - [ ] **Cross-link the "structured vs prose" principle** — stated in DATA_MODEL §3,
   NOTE_MODEL, and NOTES_DICTATION. Make DATA_MODEL canonical; point the other two
   at it. (Non-destructive; safe to do anytime — say the word and I'll do just this one.)
-- [ ] **Verify `PRODUCT_SPEC.md` currency** — Draft v2 (2026-06-11), the oldest
-  major doc; predates AI-first recap, reworked onboarding, and the coach object
-  model. Refresh or add "see newer docs" pointers.
+- [x] **`PRODUCT_SPEC.md` currency — resolved 2026-07-25.** Marked Historical
+  with a "read the newer docs first" banner pointing at DATA_MODEL, the recap
+  plan, coach architecture, and the import behavior contract.
 - [ ] **Capture the chosen visual direction in-repo** — the 1a/1b/1c tokens exist
   only in Claude Design; once C is decided, add the palette/type to `globals.css`
   notes or DESIGN_SYSTEM.
-- [ ] **Reconcile restored `coach/NEXT_BUILD.md` vs `coach/BUILD_TODO.md`** — both
-  were recovered/added around the rewrite; decide which is canonical and fold the
-  other in. (Restored 2026-07-11 from pre-rewrite history.)
-- [ ] **Update or retire `deployment/DEMO_RUNTIME.md`** — restored but **stale**:
-  it describes the Turso demo runtime that `main` removed (demo now reads a bundled
-  SQLite file). Refresh to the current runtime or delete.
+- [x] **`coach/NEXT_BUILD.md` — deleted 2026-07-25** (owner call). Its durable
+  content was already absorbed into `coach/COACH_ARCHITECTURE.md` and
+  `coach/PRIVATE_EVALS.md`. Tombstone in [ARCHIVE.md](ARCHIVE.md).
+- [x] **`deployment/DEMO_RUNTIME.md` — deleted 2026-07-25** (owner call).
+  Described the removed Turso demo runtime; `ARCHITECTURE.md` Part 2 owns
+  current demo ops. Tombstone in [ARCHIVE.md](ARCHIVE.md).
 - [ ] **Recapture audit — what else did the `main` history rewrite drop?** The
   rewrite (to purge sensitive P&L docs) also removed some non-sensitive docs. We
   recovered `NEXT_BUILD.md` + `DEMO_RUNTIME.md`; **deliberately deleted the P&L
@@ -198,9 +184,9 @@ them. Listed so they stop resurfacing — reopen only with a reason.
 - [x] **Daily output naming** is captured in §A but effectively settled: Daily
   Recap (artifact) containing a Coach Review (section).
 
-*(Older sources: [TRADING_COACH.md](coach/TRADING_COACH.md) Open Questions,
-[coach/NEXT_BUILD.md](coach/NEXT_BUILD.md). Update those docs to point here when
-convenient.)*
+*(Older source: [TRADING_COACH.md](coach/TRADING_COACH.md) Open Questions —
+update it to point here when convenient. `coach/NEXT_BUILD.md`, the other
+source, was deleted 2026-07-25; see [ARCHIVE.md](ARCHIVE.md).)*
 
 ---
 

@@ -36,6 +36,8 @@ One index for the product's design material. If a doc isn't listed here as
 
 ## Archived (superseded — do not cite)
 
-See [`_archive/`](_archive/) and its README. Contains the retired "Deep"
+Retired docs are deleted, not kept in an archive folder — see
+[`../ARCHIVE.md`](../ARCHIVE.md) for the tombstone index and how to read a
+deleted doc from git history. Formerly here: the retired "Deep"
 single-theme design-system one-sheet (`.md` + `.html`) and two one-off design-QA
 logs whose evidence paths no longer exist.

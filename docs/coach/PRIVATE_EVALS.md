@@ -70,7 +70,7 @@ Each private case is a JSON file:
 Inspect a raw broker export before building cases from it:
 
 ```bash
-npm run broker:inspect -- --file data/evals/coach/raw/account-statement.csv
+npm run broker:inspect -- --file data/evals/coach/raw/<your-account-statement>.csv
 ```
 
 The inspector is local-only. It reports whether the file has app-export trades,

@@ -1,6 +1,15 @@
 # Trading Journal AI — Design Doc
 
-> Status: **Draft v2** · Last updated: 2026-06-11
+> Status: **Historical — founding design doc** · Draft v2, last updated 2026-06-11
+>
+> ⚠️ **Read the newer docs first.** This spec predates a month of major
+> direction: the content-model finalization ([`../DATA_MODEL.md`](../DATA_MODEL.md)),
+> the AI-first recap ([`AI_FIRST_DAILY_RECAP_PLAN.md`](AI_FIRST_DAILY_RECAP_PLAN.md)),
+> the coach object model ([`../coach/COACH_ARCHITECTURE.md`](../coach/COACH_ARCHITECTURE.md)),
+> and Schwab **direct API import** ([`../import/TRADE_IMPORT_BEHAVIOR.md`](../import/TRADE_IMPORT_BEHAVIOR.md) —
+> data entry is no longer CSV-only as §2 states). Kept for the founding goals,
+> scope decisions, and prior-work record; where it conflicts with the docs
+> above, they win.
 
 A local-first web app for logging stock/ETF trades, reviewing them reflectively,
 and tracking performance over time.

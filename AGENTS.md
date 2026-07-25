@@ -60,6 +60,46 @@ Default priorities:
   unless the task is about those flows.
 - Be careful around ET date handling, `returnTo` links, import dedupe, and chart
   fallback behavior. Many screens depend on those assumptions.
+- Never put real trading data in committed files — no real broker-statement
+  filenames, account identifiers, row/fill counts, or P&L values, in docs or
+  fixtures. Use placeholders (`<your-account-statement>.csv`, `<N>`,
+  `<amount>`). Real exports live only under gitignored `data/evals/`.
+
+## Branching & Worktrees
+
+- Never commit directly to `main`. Every task starts on a fresh branch, named
+  `<area>/<short-slug>` (existing patterns: `codex/schwab-import`,
+  `feat/ai-first-recap-prototype`, `docs/...`, `perf/...`).
+- One branch per task. Do not stack unrelated changes onto a branch because it
+  happens to be checked out.
+- Multiple agents often work this repo in parallel. If another session may be
+  active, work in a **git worktree** (or your harness's worktree isolation)
+  instead of sharing the main checkout — a shared dirty tree is how work gets
+  lost or cross-contaminated.
+- Do not leave work sitting untracked or uncommitted at the end of a session.
+  Commit it on your branch (WIP commits are fine) or explicitly hand it off in
+  the worklog. Untracked files on someone else's branch are how docs disappear.
+
+## Session Handoffs
+
+The next agent starts with zero context. Before ending a work session:
+
+1. **Worklog:** add a dated entry to `docs/PROJECT_STATUS.md` (§Worklog) —
+   what happened, where you stopped, and any loose ends (failing checks,
+   skipped verification, half-wired features, open questions). Bump the
+   "Last worked" date.
+2. **Changelog:** when a feature or contract actually lands (merges), add a
+   short dated entry to `docs/CHANGELOG.md` with the PR link. Day-to-day
+   "where we stopped" notes belong in the worklog, not the changelog.
+3. **Contracts:** if your change touches a documented contract (import
+   behavior, coach schema, design tokens, data model), update that doc in the
+   same PR. Stale contract docs are worse than missing ones.
+4. **Owner items:** if you hit a decision only the owner can make, add it to
+   `docs/OWNER_TODO.md` instead of guessing or blocking.
+5. **Retiring docs:** delete the file and add a tombstone row to
+   `docs/ARCHIVE.md` (git history is the archive). Do not create `_archive/`
+   folders, and never rewrite history to remove a doc — plain deletion keeps
+   it recoverable.
 
 ## Validation Policy
 
