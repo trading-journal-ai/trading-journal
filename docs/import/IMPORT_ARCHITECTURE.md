@@ -1,5 +1,9 @@
 # Import Architecture
 
+For the implemented execution lifecycle, default behavior, edge-case matrix,
+and current correctness audit, see
+[`TRADE_IMPORT_BEHAVIOR.md`](TRADE_IMPORT_BEHAVIOR.md).
+
 The import system should treat every broker export as a source-specific raw
 format and convert it into one canonical trade contract before anything else in
 the app uses it.

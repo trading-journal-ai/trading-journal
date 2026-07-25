@@ -29,8 +29,8 @@ export default function InlineImportPrompt({ readOnly = false }: { readOnly?: bo
   return (
     <div className="max-w-xl space-y-5 pt-2">
       <p className="text-sm leading-6 text-[var(--body)]">
-        Upload a CSV file. Fills are parsed, deduped, and grouped into trades.
-        Re-importing the same file is safe.
+        Sync recent fills from Schwab or upload a broker file. Overlapping imports
+        are deduped without replacing your journal notes.
       </p>
       <ImportForm />
     </div>

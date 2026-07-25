@@ -36,6 +36,9 @@
     "market-context:backfill": "node scripts/backfill-market-context.mjs",
     "broker:inspect": "node scripts/inspect-broker-csv.mjs",
     "broker:normalize": "node scripts/normalize-broker-csv.mjs",
+    "schwab:authorize": "node scripts/schwab-authorize.mjs",
+    "schwab:migrate": "node scripts/schwab-migrate-credentials.mjs",
+    "schwab:probe": "node scripts/schwab-probe.mjs",
     "coach:coverage": "node scripts/coach-data-coverage.mjs",
     "coach:eval": "node scripts/coach-eval.mjs",
     "db:generate": "drizzle-kit generate",
@@ -50,7 +53,8 @@
     "lightweight-charts": "^5.2.0",
     "next": "16.2.9",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "schwab-client-js": "^1.1.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

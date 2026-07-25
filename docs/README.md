@@ -31,6 +31,10 @@ one product area:
 
 Key product-area specs referenced by the data model:
 
+- [`import/TRADE_IMPORT_BEHAVIOR.md`](import/TRADE_IMPORT_BEHAVIOR.md):
+  current and target import contract — grouping, dedupe, partial fills,
+  multi-day trades, error behavior, edge cases, and prioritized correctness
+  gaps.
 - [`product/COACH_RECAP_CONTENT_SPEC.md`](product/COACH_RECAP_CONTENT_SPEC.md):
   Trading Coach + Daily Recap content design specification (Rev 2) — coach content
   objects, progressive disclosure, and product decisions.
