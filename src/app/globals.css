@@ -9,6 +9,7 @@
   --hairline: rgba(255, 255, 255, 0.07);
   --foreground: #e6edf3;
   --body: #c3ccd8;
+  --prose: #9aa5b3;
   --muted: #7a8492;
   --faint: #4d5664;
   --green: #1db26b;
@@ -50,6 +51,7 @@
   --hairline: rgba(31, 35, 40, 0.08);
   --foreground: #24292f;
   --body: #414a56;
+  --prose: #4c5563;
   --muted: #57606a;
   --faint: #8c959f;
   --green: #1db26b;
