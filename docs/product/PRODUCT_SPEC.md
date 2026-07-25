@@ -59,8 +59,10 @@ There are **two distinct data inputs**, both currently **manual CSV exports**:
 - **Decision: TOS is the primary execution source for v1.** Its *Account
   Statement* export is stronger than the DAS log for our purposes (see §8 for
   the full format spec):
-  - **`Pos Effect` = `TO OPEN` / `TO CLOSE`** on every fill → round-trip
-    matching becomes *authoritative* instead of FIFO-inferred.
+  - **`Pos Effect` = `TO OPEN` / `TO CLOSE`** on every fill → the position
+    ledger can validate whether a fill opens or closes instead of relying only
+    on buy/sell direction. Universal close-first validation is still follow-up
+    work.
   - A built-in **Profits and Losses** section to **validate** our computed P&L.
 - DAS remains a **secondary** importer (the §8 prototype already parses two DAS
   formats) behind the same interface, for when a TOS export isn't handy.
@@ -103,8 +105,9 @@ a v1 deliverable.
 
 ### 3.1 Trade Logging
 - Store raw **executions** (fills) as the immutable source of truth.
-- **Group executions into trades** (round-trips / positions) via a matching
-  algorithm (FIFO by default) — opening and closing fills for the same symbol.
+- **Group executions into trades** (round-trips / positions) via an
+  account-scoped, chronological flat-to-flat matcher — opening and closing
+  fills for the same symbol. This is Journal grouping, not tax-lot accounting.
 - A *trade* exposes: symbol, side (long/short), avg entry & exit price, total
   quantity, first-entry & last-exit time, fees, derived stop/target, status
   (`open` | `closed`).
@@ -222,10 +225,13 @@ is a derived grouping of executions for one round-trip position.
 - Derived (computed, not stored): `pnl`, `pnl_pct`, `r_multiple`,
   `holding_period`, fill count.
 
-> Matching: a FIFO algorithm walks a symbol's executions chronologically,
-> opening a Trade on the first fill and closing it when net position returns to
-> zero. Scaling in/out stays within one Trade; a flip through zero starts a new
-> one. FIFO vs LIFO should be configurable.
+> Matching: a chronological position ledger walks one account/symbol's
+> executions, opening a Trade on the first fill and closing it when net position
+> returns to zero. Scaling in/out stays within one Trade. A flip through zero
+> requires an explicit split or review because one broker fill can affect two
+> logical trades. Tax-lot FIFO/LIFO is outside the Journal's behavioral
+> grouping contract; see
+> [TRADE_IMPORT_BEHAVIOR.md](../import/TRADE_IMPORT_BEHAVIOR.md).
 
 **Tag** + **TradeTag** (many-to-many)
 
@@ -254,7 +260,8 @@ is a derived grouping of executions for one round-trip position.
 - Next.js + TS scaffold, Tailwind, SQLite + migrations, base layout.
 
 ### Phase 1 — Execution & trade model (MVP)
-- `Execution` + `Trade` schema, FIFO matching engine, manual add/edit/delete,
+- `Execution` + `Trade` schema, chronological flat-to-flat matching engine,
+  manual add/edit/delete,
   trade list, trade detail, derived P&L/R.
 
 ### Phase 2 — Execution CSV import (TOS primary, DAS secondary)
@@ -306,15 +313,17 @@ is a derived grouping of executions for one round-trip position.
   candles. (Still want to confirm against an actual pre-market fill.)
 - **Trade chart renderer** — keep the prototype's canvas+SVG, or port to
   Lightweight Charts + keep SVG snapshot? (Either works; not blocking.)
-- **Matching edge cases:** position flips through zero, shorts, overnight holds
-  spanning export files, partial-day exports. FIFO vs LIFO default.
+- **Matching edge cases:** position flips through zero, close-first imports,
+  shorts, overnight holds spanning export files, partial-day exports, and
+  multiple strategies in one account/symbol.
 - Styling lib: confirm Tailwind.
 - ORM: Drizzle vs Prisma for SQLite.
 - Analytics charting lib choice.
 - Backup strategy for the SQLite file.
 
 > **Resolved:**
-> - Partial fills / scaling in & out — `Execution` → `Trade` FIFO matching (§5).
+> - Partial fills / scaling in & out — execution-level flat-to-flat matching
+>   (§5). Multi-day display and close-first validation remain follow-up work.
 > - Candle data source — **Massive**, app-auto-fetched, validated 91/91 (§9).
 > - TOS `Exec Time` zone — **Pacific → Eastern** (§9 Timezone).
 > - Trade-chart approach — adapt the proven §8 prototype.

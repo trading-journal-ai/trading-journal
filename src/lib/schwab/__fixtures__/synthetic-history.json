@@ -1,0 +1,138 @@
+{
+  "orders": [
+    {
+      "orderId": 900001,
+      "status": "FILLED",
+      "session": "NORMAL",
+      "orderType": "LIMIT",
+      "enteredTime": "2026-01-15T14:31:00+0000",
+      "closeTime": "2026-01-15T14:32:15+0000",
+      "quantity": 100,
+      "filledQuantity": 100,
+      "remainingQuantity": 0,
+      "orderLegCollection": [
+        {
+          "orderLegType": "EQUITY",
+          "legId": 1,
+          "instrument": {
+            "assetType": "EQUITY",
+            "symbol": "SYNTH"
+          },
+          "instruction": "BUY",
+          "positionEffect": "OPENING",
+          "quantity": 100
+        }
+      ],
+      "orderActivityCollection": [
+        {
+          "activityId": 910001,
+          "activityType": "EXECUTION",
+          "executionType": "FILL",
+          "executionLegs": [
+            {
+              "legId": 1,
+              "quantity": 40,
+              "price": 25.1,
+              "time": "2026-01-15T14:31:40+0000"
+            }
+          ]
+        },
+        {
+          "activityId": 910002,
+          "activityType": "EXECUTION",
+          "executionType": "FILL",
+          "executionLegs": [
+            {
+              "legId": 1,
+              "quantity": 60,
+              "price": 25.12,
+              "time": "2026-01-15T14:32:15+0000"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "orderId": 900002,
+      "status": "CANCELED",
+      "session": "NORMAL",
+      "orderType": "LIMIT",
+      "enteredTime": "2026-01-15T15:04:00+0000",
+      "closeTime": "2026-01-15T15:06:30+0000",
+      "quantity": 100,
+      "filledQuantity": 70,
+      "remainingQuantity": 30,
+      "orderLegCollection": [
+        {
+          "orderLegType": "EQUITY",
+          "legId": 1,
+          "instrument": {
+            "assetType": "EQUITY",
+            "symbol": "SYNTH"
+          },
+          "instruction": "SELL",
+          "positionEffect": "CLOSING",
+          "quantity": 100
+        }
+      ],
+      "orderActivityCollection": [
+        {
+          "activityId": 920001,
+          "activityType": "EXECUTION",
+          "executionType": "FILL",
+          "executionLegs": [
+            {
+              "legId": 1,
+              "quantity": 70,
+              "price": 25.7,
+              "time": "2026-01-15T15:05:10+0000"
+            }
+          ]
+        },
+        {
+          "activityId": 920002,
+          "activityType": "EXECUTION",
+          "executionType": "CANCELED",
+          "executionLegs": []
+        }
+      ]
+    }
+  ],
+  "transactions": [
+    {
+      "activityId": 930001,
+      "type": "TRADE",
+      "status": "VALID",
+      "orderId": "900002",
+      "tradeDate": "2026-01-15",
+      "time": "2026-01-15T15:05:10+0000",
+      "netAmount": 1798.75,
+      "transferItems": [
+        {
+          "amount": 70,
+          "cost": -1799,
+          "instrument": {
+            "assetType": "EQUITY",
+            "symbol": "SYNTH"
+          }
+        },
+        {
+          "amount": -0.07,
+          "feeType": "SEC_FEE",
+          "instrument": {
+            "assetType": "CURRENCY",
+            "symbol": "USD"
+          }
+        },
+        {
+          "amount": -0.18,
+          "feeType": "TAF_FEE",
+          "instrument": {
+            "assetType": "CURRENCY",
+            "symbol": "USD"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -10,7 +10,7 @@ export default function ImportPage() {
         <h1 className="text-xl font-semibold tracking-tight">Import</h1>
         <p className="text-sm text-[var(--muted)] mt-1">
           {showImport
-            ? "Upload a CSV file. Fills are parsed, deduped, and grouped into trades. Re-importing the same file is safe. Supported formats include ThinkorSwim account statements and DAS trade-summary exports."
+            ? "Sync recent fills from Schwab or upload a broker file. Executions are deduped and grouped into trades without replacing existing journal notes."
             : "This hosted demo is read-only and uses simulated paper-trading data. Download the app to import your own CSV data locally."}
         </p>
       </div>
