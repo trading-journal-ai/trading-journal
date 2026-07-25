@@ -161,7 +161,7 @@ questions like “was this entry late?” without order/trade rows and chart dat
 Before importing or building private coach cases, inspect the raw CSV:
 
 ```bash
-npm run broker:inspect -- --file data/evals/coach/raw/account-statement.csv
+npm run broker:inspect -- --file data/evals/coach/raw/<your-account-statement>.csv
 ```
 
 The inspector reports:
@@ -176,25 +176,21 @@ The inspector reports:
 Machine-readable output:
 
 ```bash
-npm run broker:inspect -- --file data/evals/coach/raw/account-statement.csv --json
+npm run broker:inspect -- --file data/evals/coach/raw/<your-account-statement>.csv --json
 ```
 
-## Current 2026-07-02 File Finding
+## Known Export Pitfall: Empty Trade Sections
 
-The local file currently at:
+A saved ThinkorSwim statement CSV can contain the `Account Order History` and
+`Account Trade History` **section headers with zero rows**, while still
+containing open-position and symbol-level P&L rows. This has been observed on
+a real export: the spreadsheet view showed filled orders, but the saved CSV
+did not include them.
 
-```text
-data/evals/coach/raw/account-statement.csv
-```
-
-contains section headers for `Account Order History` and `Account Trade
-History`, but both sections have zero rows in the saved CSV. It does contain
-open-position and symbol-level P&L rows.
-
-That means this local file can support statement-level review, but not
-trade-level import or chart reconstruction. If a spreadsheet view shows filled
-order rows, export/save that worksheet again and rerun `broker:inspect` before
-building an import adapter from it.
+Such a file can support statement-level review only — not trade-level import
+or chart reconstruction. If a spreadsheet view shows filled order rows,
+re-export/save that worksheet and rerun `broker:inspect` before importing or
+building an adapter from it.
 
 ## Adapter Decision Rules
 

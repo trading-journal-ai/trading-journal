@@ -43,3 +43,9 @@ Key product-area specs referenced by the data model:
   product position, and the evaluation needed to prove the coaching loop.
 - [`product/JOURNAL_REVIEW_MODULE.md`](product/JOURNAL_REVIEW_MODULE.md):
   component contract for the day-level 12-view review and annotation workspace.
+- [`product/CHART_READ_PANEL.md`](product/CHART_READ_PANEL.md): hindsight-aware
+  chart-read overlay for the ticker review — pattern, levels, implied plan,
+  setup match, outcome grading; `ChartRead` contract sketch.
+- [`product/PINE_SETUP_INDICATOR.md`](product/PINE_SETUP_INDICATOR.md):
+  real-time companion — TradingView Pine indicator mirroring the setup
+  checklist, with an optional webhook feeding `setup_event`s to the journal.

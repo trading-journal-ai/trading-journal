@@ -5,7 +5,7 @@ import { basename, dirname, resolve } from "node:path";
 import { createHash } from "node:crypto";
 
 const DEFAULTS = {
-  file: "data/evals/coach/raw/account-statement-V2.csv",
+  file: "data/evals/coach/raw/account-statement.csv",
   output: "",
   sourceTimeZone: "America/Los_Angeles",
   marketTimeZone: "America/New_York",

@@ -25,6 +25,13 @@ compute. The app should generate these automatically per ticker/day:
 - Whole and half dollar levels near the action.
 - Gap zones (gap-up / gap-down boundaries).
 - Classic pivots (P, R1–R3, S1–S3) if adopted.
+- High-volume candle levels on higher timeframes (trader's heuristic,
+  2026-07): on the daily/weekly/monthly chart, the candle with the highest
+  volume in the lookback marks the most significant resistance — that's where
+  the most business was done, so that's where supply sits. Computable: top-N
+  volume candles per timeframe → their high/low as a zone. Some key levels
+  exist *only* on the monthly; this is the main reason higher-timeframe data
+  matters at all.
 
 **Marked levels** — require human judgment; the trader draws them:
 

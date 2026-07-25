@@ -11,16 +11,18 @@ diagnostic model, and multi-broker plan.
 ## Command
 
 ```bash
-npm run broker:normalize -- --file data/evals/coach/raw/account-statement-V2.csv
+npm run broker:normalize -- --file data/evals/coach/raw/<your-account-statement>.csv
 ```
 
 Default output:
 
 ```text
-data/evals/coach/outputs/account-statement-V2.normalized-tradervue.csv
+data/evals/coach/outputs/<your-account-statement>.normalized-tradervue.csv
 ```
 
-Private outputs stay under `data/evals/`, which is gitignored.
+Private inputs and outputs stay under `data/evals/`, which is gitignored. Real
+filenames, row counts, and P&L values must never appear in committed docs —
+use placeholders like the ones below.
 
 ## Output Shape
 
@@ -52,35 +54,35 @@ Price MFE Datetime
 Price MAE Datetime
 ```
 
-## Current V2 Result
+## What A Run Reports
 
-For:
+On a rich statement (populated `Account Trade History`), the normalizer
+reports counts and totals in this shape (placeholder values):
 
 ```text
-data/evals/coach/raw/account-statement-V2.csv
+<N> fill rows read from Account Trade History
+<M> reconstructed trades
+<M-open> closed trade-summary rows written
+<open> still-open reconstructed trade(s) excluded by default
+closed gross P&L: <amount>
+fees: <amount>
+closed net P&L: <amount>
 ```
 
-The normalizer produced:
-
-- <N> fill rows read from `Account Trade History`
-- <N> reconstructed trades
-- <N> closed trade-summary rows written
-- 1 still-open reconstructed trade excluded by default
-- closed gross P&L: `-<redacted>`
-- fees: `<redacted>`
-- closed net P&L: `-<redacted>`
-
-The generated file is recognized by:
+This has been validated end-to-end against a real multi-thousand-fill Schwab
+statement: every trade-history fill was consumed, reconstructed trades
+reconciled against the statement's own totals, and the generated file is
+recognized by the inspector:
 
 ```bash
-npm run broker:inspect -- --file data/evals/coach/outputs/account-statement-V2.normalized-tradervue.csv
+npm run broker:inspect -- --file data/evals/coach/outputs/<your-account-statement>.normalized-tradervue.csv
 ```
 
 as:
 
 ```text
 das-trade-summary
-DAS/TraderVue trade rows: <N>
+DAS/TraderVue trade rows: <M-open>
 ```
 
 ## Current Limitations

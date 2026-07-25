@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-07-11 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-07-25 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -31,6 +31,43 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-07-25** — Docs audit + AI-first README + agent hygiene rules
+  (branch `codex/schwab-import`, on top of the append-only Schwab import).
+  - Full documentation audit of all 77 docs:
+    [DOCS_AUDIT_2026-07-25.md](DOCS_AUDIT_2026-07-25.md) — per-file verdicts,
+    duplication/staleness findings, recommended sequence.
+  - Added the **Built AI-First** section to the root README (broker-adapter
+    and coach-tuning extension paths with breadcrumbs).
+  - Archived `import/TOS_TO_TRADERVUE_RECONSTRUCTION.md` (owner call — its
+    reconstruction shipped as the broker normalizer); created
+    `import/_archive/`; resolved the OWNER_TODO §D item.
+  - Backfilled [CHANGELOG.md](CHANGELOG.md) for 2026-07-12 → 2026-07-25.
+  - Added **Branching & Worktrees** and **Session Handoffs** rules to
+    `AGENTS.md` (worklog + changelog upkeep is now part of finishing a session).
+  - Adopted the **delete + tombstone** retirement policy (owner call):
+    `DEMO_RUNTIME.md`, `NEXT_BUILD.md`, `TOS_TO_TRADERVUE_RECONSTRUCTION.md`,
+    and the `design/_archive/` files are deleted; [ARCHIVE.md](ARCHIVE.md) is
+    the tombstone index. Git history is the archive.
+  - Scrubbed real-account data from committed docs (audit F6, owner call):
+    BROKER_NORMALIZER, THINKORSWIM_ADAPTER, TRADERVUE_ADAPTER, PRIVATE_EVALS
+    now use placeholders for statement filenames, counts, and P&L values.
+  - **Rewrote git history** (`filter-repo --replace-text`, 376 commits) to
+    redact the same values from every past commit; verified zero occurrences
+    on all remote refs. Backup bundle:
+    `~/Working/trading-journal-pre-rewrite-2026-07-25.bundle`. Repo went
+    private for the rewrite window, then back to public (the hosted demo
+    deploys from it). Side effect caught and fixed: two vendored
+    `babel.min.js` sample files had digits rewritten by the numeric tokens
+    and were restored from pristine copies.
+  - **Post-rewrite caution for agents:** any branch or worktree created before
+    2026-07-25 sits on pre-rewrite history and must be rebased onto the new
+    history rather than pushed as-is, or it reintroduces the redacted values.
+  - **Loose ends:** this doc's Now/Next table + Docs Map refresh still pending
+    (audit F1).
+  - **Stopped at:** audit recommendations F1 (meta refresh) partially done —
+    worklog/changelog current, Now/Next table and `docs/README.md` not yet
+    rewritten.
 
 - **2026-07-11** — Recalibration + content-model finalization.
   - Explored the journal theme-switcher question; concluded structure needs

@@ -239,5 +239,5 @@ same Journal → Coach → Playbook → Dashboard loop at longer cadences.
 - `docs/product/DAILY_RECAP_FLOW.md`
 - `docs/product/TRADING_JOURNAL_LEARNING_LOOP.md`
 - `docs/product/NOTES_DICTATION_COACH_MODEL.md`
-- `docs/coach/NEXT_BUILD.md`
+- `docs/coach/COACH_ARCHITECTURE.md`
 - `docs/analytics/REVIEW_ENGINE_SPEC.md`
