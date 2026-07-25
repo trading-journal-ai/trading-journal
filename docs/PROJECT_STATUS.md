@@ -52,7 +52,17 @@ stopped. This is the "when did we last work on it" trail.
   - Scrubbed real-account data from committed docs (audit F6, owner call):
     BROKER_NORMALIZER, THINKORSWIM_ADAPTER, TRADERVUE_ADAPTER, PRIVATE_EVALS
     now use placeholders for statement filenames, counts, and P&L values.
-    Pre-scrub values remain in git history (no rewrite — accepted).
+  - **Rewrote git history** (`filter-repo --replace-text`, 376 commits) to
+    redact the same values from every past commit; verified zero occurrences
+    on all remote refs. Backup bundle:
+    `~/Working/trading-journal-pre-rewrite-2026-07-25.bundle`. Repo went
+    private for the rewrite window, then back to public (the hosted demo
+    deploys from it). Side effect caught and fixed: two vendored
+    `babel.min.js` sample files had digits rewritten by the numeric tokens
+    and were restored from pristine copies.
+  - **Post-rewrite caution for agents:** any branch or worktree created before
+    2026-07-25 sits on pre-rewrite history and must be rebased onto the new
+    history rather than pushed as-is, or it reintroduces the redacted values.
   - **Loose ends:** this doc's Now/Next table + Docs Map refresh still pending
     (audit F1).
   - **Stopped at:** audit recommendations F1 (meta refresh) partially done —

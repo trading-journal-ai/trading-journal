@@ -1,9 +1,8 @@
 # Trading Journal AI
 
-> **Development status:** This repository is private while Trading Journal AI
-> is under active development. It will reopen to the public with the first
-> stable release. The hosted demo at
-> [demo.trading-journal.ai](https://demo.trading-journal.ai) remains available.
+> **Development status:** Trading Journal AI is under active development ahead
+> of its first stable release. Expect rough edges and moving contracts — the
+> [docs](docs/) record what is settled and what is still in flight.
 
 [Trading Journal AI](https://trading-journal.ai) is a local-first trading
 journal built around reflection, context, and review.

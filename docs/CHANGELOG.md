@@ -42,11 +42,13 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
   genericized to match.
 
 ### Decided
-- **Repo private until stable release** (owner call, 2026-07-25): visibility
-  flipped to private during active development; reopens with the first stable
-  release. Git history scrubbed of real P&L values via a targeted
-  `filter-repo` rewrite (values redacted; commits, worklogs, and structure
-  preserved).
+- **Git history scrubbed of real P&L values** (owner call, 2026-07-25): a
+  targeted `filter-repo --replace-text` rewrite redacted the real statement
+  filenames, row/fill counts, and P&L totals from all 376 commits; commit
+  messages, dates, authorship, and structure preserved. Verified zero
+  occurrences across every remote ref. The repo was briefly private during the
+  rewrite window and returned to public afterward — it stays public because
+  the hosted demo deploys from it.
 
 ## 2026-07-24
 
