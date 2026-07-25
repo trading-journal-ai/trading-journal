@@ -3,12 +3,13 @@
 > **Status:** Working synthesis — captures how our data is imported, stored, and
 > used, and defines what "finalized" means for the Daily Recap, Coach Review, and
 > Notes before we build templates, themes, or export.
-> **Updated:** 2026-07-11
+> **Updated:** 2026-07-25
 > **Companions:** [product/COACH_RECAP_CONTENT_SPEC.md](product/COACH_RECAP_CONTENT_SPEC.md) ·
 > [product/NOTE_MODEL.md](product/NOTE_MODEL.md) ·
 > [product/AI_FIRST_DAILY_RECAP_PLAN.md](product/AI_FIRST_DAILY_RECAP_PLAN.md) ·
 > [analytics/REVIEW_ENGINE_SPEC.md](analytics/REVIEW_ENGINE_SPEC.md) ·
 > [import/IMPORT_ARCHITECTURE.md](import/IMPORT_ARCHITECTURE.md) ·
+> [import/TRADE_IMPORT_BEHAVIOR.md](import/TRADE_IMPORT_BEHAVIOR.md) ·
 > [design/JOURNAL_DESIGN.md](design/JOURNAL_DESIGN.md)
 
 ## Why this document exists

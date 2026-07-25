@@ -90,6 +90,8 @@ export const executions = sqliteTable(
     route: text("route"),
     posEffect: text("pos_effect"), // TO OPEN | TO CLOSE (from TOS) — drives matching
     brokerOrderKey: text("broker_order_key"), // hashed broker order reference; groups partial fills
+    brokerExecutionKey: text("broker_execution_key"), // hashed immutable API fill identity
+    canonicalExecutionKey: text("canonical_execution_key"), // cross-source fill fingerprint
     tradeId: integer("trade_id").references(() => trades.id),
     accountId: integer("account_id").references(() => accounts.id),
     importBatchId: integer("import_batch_id").references(() => importBatches.id),
@@ -100,6 +102,14 @@ export const executions = sqliteTable(
     index("executions_trade_executed_idx").on(t.tradeId, t.executedAt),
     index("executions_account_executed_idx").on(t.accountId, t.executedAt),
     index("executions_account_order_key_idx").on(t.accountId, t.brokerOrderKey),
+    uniqueIndex("executions_broker_execution_key_account_unq").on(
+      t.brokerExecutionKey,
+      t.accountId,
+    ),
+    uniqueIndex("executions_canonical_execution_key_account_unq").on(
+      t.canonicalExecutionKey,
+      t.accountId,
+    ),
   ],
 );
 
