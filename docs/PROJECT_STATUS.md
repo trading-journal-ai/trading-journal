@@ -63,11 +63,25 @@ stopped. This is the "when did we last work on it" trail.
   - **Post-rewrite caution for agents:** any branch or worktree created before
     2026-07-25 sits on pre-rewrite history and must be rebased onto the new
     history rather than pushed as-is, or it reintroduces the redacted values.
+  - **GitHub Support ticket submitted 2026-07-25** requesting removal of
+    cached views and `refs/pull/*` references for PRs #20 and #30, which
+    GitHub freezes for closed PRs and a force-push cannot update. This is the
+    documented remedy from "Removing sensitive data from a repository"; the
+    ticket authorizes deleting those two PRs. Draft kept outside the repo at
+    `~/Working/tj-private-notes/` (it names the affected SHAs, so it must not
+    be committed to a public repo). **Awaiting reply.** When it lands, verify
+    with a fresh anonymous mirror clone, then delete the pre-rewrite bundle.
+  - Merging PRs #47 and #54 back-to-back reintroduced the phantom `--prose`
+    token (#47 removed every usage, #54 re-added the definitions). Fix is
+    [PR #57](https://github.com/trading-journal-ai/trading-journal/pull/57).
   - **Loose ends:** this doc's Now/Next table + Docs Map refresh still pending
-    (audit F1).
+    (audit F1); PR #57 unmerged; the two `set-state-in-effect` lint errors in
+    `src/components/preview/` are still open; `claude/sleepy-hermann-87268a`
+    and three dormant local branches remain on pre-rewrite history and must be
+    rebased, never pushed as-is.
   - **Stopped at:** audit recommendations F1 (meta refresh) partially done —
     worklog/changelog current, Now/Next table and `docs/README.md` not yet
-    rewritten.
+    rewritten. Support ticket is the only item blocked on an external party.
 
 - **2026-07-11** — Recalibration + content-model finalization.
   - Explored the journal theme-switcher question; concluded structure needs
