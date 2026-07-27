@@ -198,11 +198,13 @@ boundary (STATISTICAL_REVIEW §10).
 
 ## 4. Data that would make it better (ranked wishlist)
 
-1. **Prior-day candle backfill for traded symbols** — fetch ~14 preceding
-   trading days per traded symbol (same Massive endpoint, no schema change).
+1. **Prior-day candle backfill for traded symbols** — the operator-run
+   `npm run market-data:sync` workflow now fetches ~14 preceding trading days
+   per traded ticker-day through the same Massive aggregate endpoint.
    Unlocks: true time-of-day **relative volume**, gap context vs prior close,
    prior-day high/low as structural levels. Highest value per unit of work;
-   turns `volumeState` from intraday-relative to genuinely comparative.
+   turns `volumeState` from intraday-relative to genuinely comparative once the
+   local backfill has completed.
 2. **Trade intent + planned stop at entry** (already open decision §8.7:
    lightweight setup + optional trigger/stop/thesis). Unlocks: distances in R,
    entry-vs-trigger drift, and eventually the full supported/contradicted

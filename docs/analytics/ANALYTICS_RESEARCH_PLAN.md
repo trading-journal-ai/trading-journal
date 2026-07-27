@@ -4,6 +4,10 @@
 > Last updated: 2026-06-20
 > Inputs: current `/reports` implementation, existing coach/statistics docs, and
 > examples of Tradervue-style reports.
+>
+> System boundary and source map:
+> [Analytics Architecture](ARCHITECTURE.md). Market-data dependency contract:
+> [Market Data Strategy](MARKET_DATA_STRATEGY.md).
 
 ## Purpose
 

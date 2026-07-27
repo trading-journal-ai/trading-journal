@@ -87,9 +87,11 @@ There are **two distinct data inputs**, both currently **manual CSV exports**:
   (TradingView/ToS, extended-hours session on) = last resort.
 - **⚠️ Extended hours required** (this style trades pre-market) — Massive
   includes it.
-- **Cost: $0** — the Massive **free tier** works (just per-minute rate-limited,
-  which is fine for a session's handful of symbols). Data stays local & private.
-  See §9.
+- **Default cost: $0** — the Massive **Free plan** is the production baseline
+  (rate-limited, end-of-day, and sufficient for post-session review). Temporary
+  paid access may accelerate finite backfills, but no core feature depends on
+  it. Data stays local and private. See §9 and
+  `docs/analytics/MARKET_DATA_STRATEGY.md`.
 
 **C. Manual entry** — a form to add/edit an execution or trade by hand
 (corrections, missing fills, non-broker trades).
@@ -314,7 +316,7 @@ is a derived grouping of executions for one round-trip position.
 - ~~Automate the candle data?~~ — **resolved: Massive, validated 91/91** (§9).
   App auto-fetches candles for the parsed symbols, key proxied server-side. Kills
   the per-symbol export drudgery; no UI scraping. Alpha Vantage = free fallback.
-  Massive **free tier confirmed working** (rate-limited, fine). *Loose end:*
+  Massive **Free plan confirmed working** (rate-limited, fine). *Loose end:*
   prove an actual pre-market fill (sample had none).
 - ~~DAS vs TOS for executions~~ — **resolved: TOS primary** (Pos Effect +
   built-in P&L), DAS secondary. See §8 for the confirmed TOS format.
@@ -463,9 +465,13 @@ The per-trade chart needs 1-minute OHLCV candles **with extended hours**.
   on an actual pre-market fill. Re-check when a pre-market trade appears.
 
 ### Cost
-- **Candles are $0** — the Massive **free tier** is sufficient (per-minute rate
-  limit only; a session's handful of symbols fits). This project **replaces
-  TraderVue ($29.95/mo)** with no new recurring data cost.
+- **Default recurring market-data cost is $0** — the Massive Free plan is
+  sufficient for post-session one-minute candle hydration. Its rate limit and
+  end-of-day recency fit the normal workflow.
+- A temporary paid plan can accelerate the initial traded-symbol baseline and
+  market-context backfills. Cached data survives cancellation; paid-only
+  snapshots, WebSockets, flat files, and second aggregates are not application
+  dependencies.
 - **Alpha Vantage = $0 fallback** if Massive's free tier ever changes. Privacy
   note: a candle API never sees trades — only public OHLCV requests for a
   ticker+date. Data stays local, private, and owned.
@@ -502,8 +508,8 @@ itself. Per-symbol manual exports drop to **zero**:
   work than this API call.
 
 ### Fallbacks
-1. **Alpha Vantage free tier** — the $0 automated option if we ever want to drop
-   the Massive cost. `TIME_SERIES_INTRADAY`, 1-min, `extended_hours=true` by
+1. **Alpha Vantage free tier** — the $0 fallback if Massive access or coverage
+   changes. `TIME_SERIES_INTRADAY`, 1-min, `extended_hours=true` by
    default, historical by `month=YYYY-MM`; ~25 req/day (fine for a session's
    handful of symbols). Coverage on thin penny names unverified.
 2. **Manual "Export chart data" CSV** (TradingView, already paid; or free ToS),
@@ -533,8 +539,10 @@ itself. Per-symbol manual exports drop to **zero**:
   sanity assertion.
 
 ### Backfill (old trades)
-- Massive carries deep historical 1-min, so old trades are reachable, not just
-  recent ones. (Fetch-once-and-cache still applies.)
+- Massive Free carries a rolling two years of historical data; temporary
+  Starter access extends that window to five years. Fetch only the ticker/date
+  windows required by imported trades and cache them locally before a temporary
+  subscription ends.
 - **How TraderVue does it (reference):** renders with TradingView's charting
   library but feeds it their **own licensed historical data vendor** — the deep
   history is the data feed, not TradingView.
@@ -542,7 +550,7 @@ itself. Per-symbol manual exports drop to **zero**:
 ### Provider options
 | Provider | Cost | Ext. hours | 1-min history | Notes |
 |---|---|---|---|---|
-| **Massive** ⭐ (Polygon platform) | **Free tier** (rate-limited) | ✅ full session | ✅ years | **Chosen + validated 91/91.** `/v2/aggs/ticker/.../range/1/minute/...`. Free tier sufficient. |
+| **Massive** ⭐ (Polygon platform) | **Free** baseline; paid backfill optional | ✅ full session | Free: rolling 2 years | **Chosen + validated 91/91.** `/v2/aggs/ticker/.../range/1/minute/...`. Free is sufficient for ongoing post-session review. |
 | **Alpha Vantage** | **Free** (~25 req/day) | ✅ `extended_hours=true` (default) | ✅ by month (years) | $0 fallback; thin-name coverage unverified. |
 | **Databento** | Usage-based (one-time) | ✅ | ✅ deepest quality | If a one-time deep backfill is ever needed. |
 | **Schwab Market Data** | Free w/ account | ✅ `needExtendedHoursData=true` | ⚠️ ~30–35 days | Ruled out: short window + 7-day OAuth re-auth. |

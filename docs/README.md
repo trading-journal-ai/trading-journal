@@ -31,6 +31,12 @@ one product area:
 
 Key product-area specs referenced by the data model:
 
+- [`analytics/ARCHITECTURE.md`](analytics/ARCHITECTURE.md): canonical Analytics
+  product/system map, delivery sequence, trust boundaries, and links to the
+  detailed calculation contracts.
+- [`analytics/MARKET_DATA_STRATEGY.md`](analytics/MARKET_DATA_STRATEGY.md):
+  Free-plan-safe Massive dependency policy and the local sync/backfill workflow.
+
 - [`import/TRADE_IMPORT_BEHAVIOR.md`](import/TRADE_IMPORT_BEHAVIOR.md):
   current and target import contract — grouping, dedupe, partial fills,
   multi-day trades, error behavior, edge cases, and prioritized correctness
