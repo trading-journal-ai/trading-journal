@@ -49,9 +49,11 @@ stopped. This is the "when did we last work on it" trail.
     passes; production build passes. Repository lint remains blocked only by
     the two known `react-hooks/set-state-in-effect` errors in preview
     components, unrelated to this branch.
-  - **Stopped at:** code and docs complete. The real local backfill was not run
-    because it would transmit journal-derived ticker/date request windows to
-    Massive; run it only after explicit owner approval of that data transfer.
+  - Owner approved sending ticker/date request windows to Massive. Completed
+    the local paid-speed candle backfill and caught market context up through
+    the latest imported session. All traded dates now have market context;
+    nearly all traded ticker-days have the full baseline, with a small
+    provider-limited subset retaining only the available post-listing history.
 
 - **2026-07-25** — Docs audit + AI-first README + agent hygiene rules
   (branch `codex/schwab-import`, on top of the append-only Schwab import).
