@@ -76,6 +76,16 @@ stopped. This is the "when did we last work on it" trail.
     nearly all traded ticker-days have the full baseline, with a small
     provider-limited subset retaining only the available post-listing history.
 
+- **2026-07-27** — Iterative agent workflow.
+  - Replaced edit-by-edit validation guidance with an explicit exploration →
+    stabilization → completion workflow.
+  - Prototype and design work now stays implementation-first while behavior is
+    moving; focused tests begin at settled contracts and dependency boundaries.
+  - Kept the repository's `verify:quick`, `verify:types`, and `verify:full`
+    commands as completion tiers, with earlier validation for high-risk work.
+  - **Stopped at:** workflow documented; docs-only change requires no automated
+    verification.
+
 - **2026-07-25** — Docs audit + AI-first README + agent hygiene rules
   (branch `codex/schwab-import`, on top of the append-only Schwab import).
   - Full documentation audit of all 77 docs:
