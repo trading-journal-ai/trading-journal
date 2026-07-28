@@ -13,6 +13,18 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
 
 ---
 
+## 2026-07-28
+
+### Added
+- Free-plan market-data sync for traded ticker-days, with idempotent caching,
+  rate-safe request planning, historical-symbol retries, and focused coverage
+  ([PR #60](https://github.com/trading-journal-ai/trading-journal/pull/60)).
+
+### Docs
+- Canonical Analytics architecture and market-data strategy, with related
+  product and opportunity-context contracts reconciled
+  ([PR #60](https://github.com/trading-journal-ai/trading-journal/pull/60)).
+
 ## 2026-07-25
 
 ### Added
