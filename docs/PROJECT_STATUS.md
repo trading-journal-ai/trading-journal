@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-07-27 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-07-28 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -31,6 +31,22 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-07-28** — Minimal Electron desktop proof of concept
+  (branch `feat/electron-desktop-shell`).
+  - Added a development-only Electron shell that starts the existing Next.js
+    dev server on `127.0.0.1:4317`, waits for readiness, and opens the journal
+    in a sandboxed macOS window. The web app, server actions, and current local
+    database remain unchanged.
+  - Added only the Electron development dependency and `npm run desktop:dev`;
+    packaging, a desktop data directory, signing, updates, and native
+    integrations remain intentionally deferred.
+  - Electron 43 requires Node 22.12 or newer. Verified with Node 22.13: the
+    native window launched, `/dashboard` rendered with HTTP 200, and shutdown
+    left no listener on port 4317.
+  - Targeted syntax and diff checks passed. Full-project verification was not
+    rerun for this exploratory shell; the two unrelated preview-component lint
+    errors documented above remain open.
 
 - **2026-07-27** — Free-plan market-data sync + Analytics architecture home
   (branch `feat/free-plan-market-data-sync`).
