@@ -369,7 +369,7 @@ function archiveWeeks(
     weekStart = isoAddDays(weekStart, 7);
   }
 
-  return weeks;
+  return weeks.reverse();
 }
 
 function isOptionalCoachReadError(error: unknown): boolean {
@@ -822,12 +822,14 @@ async function loadReviewRange({
   });
 
   const weeks: ReviewWeek[] = [...weeksByStart.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => preset === "month" ? b.localeCompare(a) : a.localeCompare(b))
     .map(([key, weekDays]) => ({
       key,
       label: archiveWeekLabel(preset === "month" ? range.from.slice(0, 7) : selectedMonthKey, key),
       displayDate: weekRangeLabel(key),
-      days: weekDays,
+      days: preset === "month"
+        ? [...weekDays].sort((a, b) => b.day.date.localeCompare(a.day.date))
+        : weekDays,
       chartRead: combineChartReads(weekDays.map((day) => day.chartRead)),
       ...summarizeDays(weekDays),
     }));

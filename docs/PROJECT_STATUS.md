@@ -45,10 +45,11 @@ stopped. This is the "when did we last work on it" trail.
     native window launched, `/dashboard` rendered with HTTP 200, and shutdown
     left no listener on port 4317.
   - Remapped month navigation after desktop testing: selecting a month now
-    anchors at that month's latest populated week, while the minimal Week 1–5
-    list remains chronological. The active week changes when its heading
-    crosses a stable viewport threshold, updates the hash without adding
-    browser history, and exposes its date range through accessible link text.
+    anchors at that month's latest populated week. Weeks and days are
+    newest-first, while the minimal Week 1–5 labels stay unchanged. The active
+    week changes when its heading crosses a stable viewport threshold, updates
+    the hash without adding browser history, and exposes its date range through
+    accessible link text.
   - Browser QA passed for latest-week landing, threshold handoff, URL/hash,
     rendered content, and console health. Targeted ESLint and TypeScript passed.
   - Targeted syntax and diff checks passed. Full-project verification was not

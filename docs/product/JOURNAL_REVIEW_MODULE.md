@@ -50,12 +50,14 @@ boundaries above.
 - After a successful import, the app opens the newest imported trading day from
   that import. If it falls on Wednesday of Week 3, Wednesday loads and Week 3 is
   selected.
-- Months are ordered newest-first. Weeks remain chronological within each month
-  so scrolling down always moves forward in time.
+- Months, weeks within each month, and days within each week are ordered
+  newest-first, so the journal opens on the latest trading day and scrolling
+  down moves backward in time.
 - The current/latest month lists weeks only through the week containing its
   latest imported day. Future Week 4 or Week 5 entries are not shown early.
 - Selecting a month anchors the continuous stream at that month's latest
-  populated week. The visible Week 1–5 labels remain unchanged.
+  populated week. The visible Week 1–5 labels remain unchanged and appear in
+  reverse order (for example, Week 5 through Week 1).
 - Opening a month renders its weeks and days as one continuous server-rendered
   journal stream. Week links target anchors within that stream rather than
   opening a separate week page.
