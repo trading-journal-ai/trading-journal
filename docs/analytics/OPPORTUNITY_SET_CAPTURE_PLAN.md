@@ -1,7 +1,8 @@
 # Opportunity Set Capture Plan
 
-> Status: V5 Study 05 approved as a vocabulary direction · capture and Journal
-> integration not yet implemented
+> Status: V5 Study 05 approved as a vocabulary direction · retrospective
+> Massive market context is integrated · scanner-owned alert capture and the
+> full candidate ledger are not yet implemented
 >
 > Product question: **Were you able to capitalize on the movers of the day?**
 

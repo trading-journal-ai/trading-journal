@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-07-25 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-07-27 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -31,6 +31,29 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-07-27** — Free-plan market-data sync + Analytics architecture home
+  (branch `feat/free-plan-market-data-sync`).
+  - Added `npm run market-data:sync`: an idempotent, Free-rate-safe workflow
+    that plans from local traded ticker-days, caches the traded session plus an
+    approximately 14-session baseline, deduplicates bars, skips unresolved
+    security identifiers, and retries historical ticker symbols.
+  - Added the canonical
+    [Analytics Architecture](analytics/ARCHITECTURE.md) and
+    [Market Data Strategy](analytics/MARKET_DATA_STRATEGY.md); reconciled the
+    product, opportunity-context, opportunity-set, and docs-map references.
+  - The production contract now treats Massive Free as the baseline and a paid
+    month as a finite backfill accelerator. Snapshots, WebSockets, flat files,
+    and second bars remain optional rather than runtime dependencies.
+  - Verified: focused market-data and market-context tests pass; TypeScript
+    passes; production build passes. Repository lint remains blocked only by
+    the two known `react-hooks/set-state-in-effect` errors in preview
+    components, unrelated to this branch.
+  - Owner approved sending ticker/date request windows to Massive. Completed
+    the local paid-speed candle backfill and caught market context up through
+    the latest imported session. All traded dates now have market context;
+    nearly all traded ticker-days have the full baseline, with a small
+    provider-limited subset retaining only the available post-listing history.
 
 - **2026-07-25** — Docs audit + AI-first README + agent hygiene rules
   (branch `codex/schwab-import`, on top of the append-only Schwab import).
