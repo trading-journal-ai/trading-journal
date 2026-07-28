@@ -44,6 +44,13 @@ stopped. This is the "when did we last work on it" trail.
   - Electron 43 requires Node 22.12 or newer. Verified with Node 22.13: the
     native window launched, `/dashboard` rendered with HTTP 200, and shutdown
     left no listener on port 4317.
+  - Remapped month navigation after desktop testing: selecting a month now
+    anchors at that month's latest populated week, while the minimal Week 1–5
+    list remains chronological. The active week changes when its heading
+    crosses a stable viewport threshold, updates the hash without adding
+    browser history, and exposes its date range through accessible link text.
+  - Browser QA passed for latest-week landing, threshold handoff, URL/hash,
+    rendered content, and console health. Targeted ESLint and TypeScript passed.
   - Targeted syntax and diff checks passed. Full-project verification was not
     rerun for this exploratory shell; the two unrelated preview-component lint
     errors documented above remain open.

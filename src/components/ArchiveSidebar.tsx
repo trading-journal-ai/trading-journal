@@ -69,15 +69,17 @@ export default function ArchiveSidebar({
 
     const updateActiveWeek = () => {
       const anchorY = window.innerHeight * 0.28;
-      const current = sections.reduce((best, entry) => {
-        const distance = Math.abs(entry.element.getBoundingClientRect().top - anchorY);
-        return distance < best.distance ? { key: entry.week.key, distance } : best;
-      }, { key: sections[0].week.key, distance: Number.POSITIVE_INFINITY });
+      let current = sections[0];
 
-      if (activeWeekRef.current === current.key) return;
-      activeWeekRef.current = current.key;
-      setActiveWeekKey(current.key);
-      const sectionId = sections.find((entry) => entry.week.key === current.key)?.week.sectionId;
+      for (const entry of sections) {
+        if (entry.element.getBoundingClientRect().top > anchorY) break;
+        current = entry;
+      }
+
+      if (activeWeekRef.current === current.week.key) return;
+      activeWeekRef.current = current.week.key;
+      setActiveWeekKey(current.week.key);
+      const sectionId = current.week.sectionId;
       if (sectionId) {
         window.history.replaceState(
           window.history.state,
@@ -87,14 +89,25 @@ export default function ArchiveSidebar({
       }
     };
 
-    const frame = window.requestAnimationFrame(updateActiveWeek);
-    window.addEventListener("scroll", updateActiveWeek, { passive: true });
-    window.addEventListener("resize", updateActiveWeek);
+    let frame: number | null = window.requestAnimationFrame(() => {
+      frame = null;
+      updateActiveWeek();
+    });
+    const scheduleUpdate = () => {
+      if (frame !== null) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = null;
+        updateActiveWeek();
+      });
+    };
+
+    window.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.addEventListener("resize", scheduleUpdate);
 
     return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", updateActiveWeek);
-      window.removeEventListener("resize", updateActiveWeek);
+      if (frame !== null) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
     };
   }, [enableWeekScrollSpy, spyWeeks]);
 
@@ -142,6 +155,8 @@ export default function ArchiveSidebar({
                       <Link
                         key={week.key}
                         href={week.href}
+                        aria-label={`${week.label}, ${month.label} ${week.rangeLabel}`}
+                        aria-current={weekActive ? "location" : undefined}
                         className={`flex items-center gap-2.5 text-[14px] ${
                           weekActive
                             ? "font-semibold text-[var(--foreground)]"

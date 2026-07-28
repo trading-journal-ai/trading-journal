@@ -1146,17 +1146,21 @@ async function loadReviewArchive(
   linkMode: ArchiveLinkMode,
 ): Promise<ReviewArchive> {
   const selectedMonthKey = month ?? anchor.slice(0, 7);
-  const selectedWeekKey = weekStartFor(anchor);
   const rows = await db
     .select({ entryAt: schema.trades.entryAt })
     .from(schema.trades)
     .where(eq(schema.trades.accountId, accountId))
     .limit(10000);
-  const latestDate = rows.reduce<string | undefined>((latest, row) => {
-    if (row.entryAt == null) return latest;
+  const latestDateByMonth = new Map<string, string>();
+  rows.forEach((row) => {
+    if (row.entryAt == null) return;
     const date = etDateString(row.entryAt);
-    return !latest || date > latest ? date : latest;
-  }, undefined);
+    const monthKey = date.slice(0, 7);
+    const latest = latestDateByMonth.get(monthKey);
+    if (!latest || date > latest) latestDateByMonth.set(monthKey, date);
+  });
+  const selectedMonthLatestDate = latestDateByMonth.get(selectedMonthKey);
+  const selectedWeekKey = weekStartFor(month && selectedMonthLatestDate ? selectedMonthLatestDate : anchor);
 
   const monthKeys = new Set<string>([selectedMonthKey]);
   const yearKeys = new Set<string>();
@@ -1174,17 +1178,24 @@ async function loadReviewArchive(
 
   const months = [...monthKeys]
     .sort((a, b) => b.localeCompare(a))
-    .map((key) => ({
-      key,
-      label: monthFmt.format(utcDate(`${key}-01`)).replace(/\s+\d{4}$/, ""),
-      active: key === selectedMonthKey,
-      href: linkMode === "review-module"
-        ? `${basePath}?month=${key}`
-        : journalReviewHref(basePath, { preset: "month", from: `${key}-01` }),
-      weeks: key === selectedMonthKey
-        ? archiveWeeks(key, selectedWeekKey, basePath, linkMode, latestDate)
-        : [],
-    }));
+    .map((key) => {
+      const latestMonthDate = latestDateByMonth.get(key);
+      const latestWeekHash = latestMonthDate
+        ? `#${journalWeekSectionId(weekStartFor(latestMonthDate))}`
+        : "";
+
+      return {
+        key,
+        label: monthFmt.format(utcDate(`${key}-01`)).replace(/\s+\d{4}$/, ""),
+        active: key === selectedMonthKey,
+        href: linkMode === "review-module"
+          ? `${basePath}?month=${key}${latestWeekHash}`
+          : journalReviewHref(basePath, { preset: "month", from: `${key}-01` }),
+        weeks: key === selectedMonthKey
+          ? archiveWeeks(key, selectedWeekKey, basePath, linkMode, selectedMonthLatestDate)
+          : [],
+      };
+    });
 
   const years = [...yearKeys].sort((a, b) => b.localeCompare(a)).map((year) => ({
     key: year,

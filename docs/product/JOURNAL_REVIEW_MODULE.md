@@ -54,12 +54,16 @@ boundaries above.
   so scrolling down always moves forward in time.
 - The current/latest month lists weeks only through the week containing its
   latest imported day. Future Week 4 or Week 5 entries are not shown early.
+- Selecting a month anchors the continuous stream at that month's latest
+  populated week. The visible Week 1–5 labels remain unchanged.
 - Opening a month renders its weeks and days as one continuous server-rendered
   journal stream. Week links target anchors within that stream rather than
   opening a separate week page.
-- As scrolling crosses from one week section into the next, the archive updates
-  its selected week. Scroll-driven selection may replace the URL hash, but must
-  not create browser-history entries or alter `JournalReviewModule` state.
+- As a week heading crosses the archive's viewport threshold, the archive
+  updates its selected week. Scroll-driven selection may replace the URL hash,
+  but must not create browser-history entries or alter `JournalReviewModule`
+  state. Week links expose their date range to assistive technology without
+  adding visible labels.
 
 ## View matrix
 
