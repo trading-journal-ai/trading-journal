@@ -78,8 +78,13 @@ export function JournalDateHeading({
   const { visualDate } = useJournalDateNavigation();
   const date = utcDate(visualDate);
   const content = `${weekdayFmt.format(date)}, ${monthDayFmt.format(date)}`;
+  const contentNode = (
+    <span key={visualDate} className="journal-date-heading-fade">
+      {content}
+    </span>
+  );
 
   return level === 1
-    ? <h1 className={className}>{content}</h1>
-    : <h2 className={className}>{content}</h2>;
+    ? <h1 className={className}>{contentNode}</h1>
+    : <h2 className={className}>{contentNode}</h2>;
 }
