@@ -291,8 +291,9 @@ Build once, reuse everywhere.
   radius, no dots; quiet compact day headers; clear day-number/P&L/count
   hierarchy; today uses the accent day number or a subtle marker; weekly total
   column flat, not filled; year mini-months may use subtle green/red heatmap
-  fills. The Journal week strip uses Geist Sans Regular throughout each cell:
-  weekday/date, P&L, and the grouped trades/win-rate/profit-factor pill.
+  fills. The Journal week strip uses a fixed Geist Sans lockup: weekday/date is
+  semibold 16px, P&L is semibold 14px, and the grouped
+  trades/win-rate/profit-factor pill is regular 11px.
 - **Journal** — prose-first. Headers use Display/Page title; recap text uses Body
   large; metrics sit under the header as quiet mono metadata; ticker rail compact
   and sorted best-to-worst; pills secondary; reading mode hides edit controls

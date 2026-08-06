@@ -83,10 +83,9 @@ stopped. This is the "when did we last work on it" trail.
     weekday/date first, P&L second, then trades, win rate, and profit factor as
     one grouped metric pill. Empty-day labels remain quiet and use the same cell
     rhythm without manufacturing metrics.
-  - Corrected that lockup to Geist Sans Regular throughout instead of carrying
-    forward the old semibold day labels and mono P&L. Increased the day/result
-    scale and the grouped metrics so the chosen typography is visible in the
-    production strip rather than merely structurally present.
+  - Locked the week-cell typography to the annotated Figma spec: Geist Sans
+    semibold 16px for weekday/date, semibold 14px for P&L, and regular 11px for
+    the grouped trades/win-rate/profit-factor pill.
   - Removed the redundant trailing Week summary cell. The review module already
     owns the Week scope, while the five daily cells now share the entire strip
     width and give the selected lockup more horizontal room.
