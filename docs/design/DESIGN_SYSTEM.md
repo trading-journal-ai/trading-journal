@@ -324,10 +324,10 @@ Build once, reuse everywhere.
 
 Journal motion preserves continuity rather than decorating the page. Day
 selection is immediate; while the new date loads, only changing fragments—the
-date header, chart, and ticker rail—ease out. Incoming text and data panels use a
-180ms ease-out with no more than 2px of settling distance. The ticker rail may
-follow the date header by 35ms, while tabs, cards, borders, and page geometry stay
-fixed. All motion is disabled when `prefers-reduced-motion` is enabled.
+date header, chart, and ticker rail—fade out. Incoming text and data panels use a
+150ms opacity-only ease-out. There is no positional motion or stagger; tabs,
+cards, borders, and page geometry stay fixed. All motion is disabled when
+`prefers-reduced-motion` is enabled.
 
 ## States
 
