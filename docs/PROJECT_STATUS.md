@@ -77,6 +77,9 @@ stopped. This is the "when did we last work on it" trail.
   - Kept the selected date, review tabs, and Coach available on zero-trade days
     instead of replacing the Journal with the generic imported-trades empty
     screen.
+  - Owner clarified that the Electron app is desktop-first. Future design and
+    routine visual QA should prioritize laptop/desktop windows; phone-specific
+    layouts are not a supported product target and only need basic resilience.
   - Verified the focused slice with targeted ESLint, TypeScript, the Impeccable
     detector, and desktop/mobile Browser checks. Full repository lint remains
     blocked by the two known `react-hooks/set-state-in-effect` errors under

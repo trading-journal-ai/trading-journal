@@ -47,7 +47,8 @@ and tracking performance over time.
 - Real-time market data or live position tracking.
 - Order execution or any broker write actions (read/import only).
 - Instruments beyond stocks & ETFs (options/futures/crypto are future work).
-- Mobile-native apps (responsive web is enough).
+- Mobile-native apps or phone-optimized responsive UI. The Electron desktop app
+  is the primary product; narrow web layouts are best-effort resilience only.
 
 ---
 

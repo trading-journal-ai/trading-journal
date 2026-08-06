@@ -33,6 +33,9 @@ correctable, and explicitly adopted before it becomes a durable rule or cue.
 
 ## Operating Context
 
+- The primary product is an Electron desktop app used at laptop and desktop
+  widths. The web stack is the implementation and demo surface, not a mandate
+  to design a phone-first product.
 - Import broker executions into a normalized local trade record.
 - Use Journal as the calendar-based source of truth: browse dates, focus one
   day, dictate or write reflection, and inspect supporting trades.
@@ -45,6 +48,9 @@ correctable, and explicitly adopted before it becomes a durable rule or cue.
 
 ## Capabilities and Constraints
 
+- Product design and routine visual QA target the Electron desktop window and
+  common laptop/desktop sizes. Phone layouts are not a supported product target;
+  narrow widths only need basic resilience rather than dedicated mobile UX.
 - Journal and Calendar are one product surface. Calendar is Journal's temporal
   index, not a peer destination.
 - Journal focuses one day at a time. Week and month scopes provide comparison

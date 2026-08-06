@@ -312,6 +312,9 @@ Disabled, Empty, and (where applicable) Loading, Error/success.
 
 ## Accessibility
 
+- Design and QA for the Electron desktop app first, covering common laptop and
+  desktop window sizes. Phone-specific composition is not a product requirement;
+  narrow windows should remain legible and recoverable without driving the layout.
 - Readable body/controls at common desktop and laptop sizes; no type below 10px.
 - Do not encode meaning with color alone.
 - Icon-only controls need accessible labels; form controls need visible or
