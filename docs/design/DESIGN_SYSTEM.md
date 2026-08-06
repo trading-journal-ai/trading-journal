@@ -61,7 +61,7 @@ light theme). Theme plumbing lives in [`src/lib/theme.ts`](../../src/lib/theme.t
 | Theme | `data-theme` | Character | `color-scheme` |
 | --- | --- | --- | --- |
 | Daylight | `daylight` (default) | Warm paper light; amber accent | light |
-| Light | `light` | Cool neutral light (GitHub-like); blue accent | light |
+| Light | `light` | White canvas, cool light-gray surfaces; blue accent | light |
 | Evening | `evening` | Warm charcoal dark; amber accent | dark |
 | Dark | `dark` (`:root`) | Cool blue-black dark; blue accent | dark |
 

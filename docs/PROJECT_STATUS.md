@@ -89,6 +89,9 @@ stopped. This is the "when did we last work on it" trail.
   - Removed the redundant trailing Week summary cell. The review module already
     owns the Week scope, while the five daily cells now share the entire strip
     width and give the selected lockup more horizontal room.
+  - Rebalanced the cool Light theme around a white app canvas with light-gray
+    review surfaces. P&L/chart modules and selected content now sit one neutral
+    step above the page while compact metric pills retain the stronger gray.
   - Reduced the selected day's P&L from three visible repetitions to two: the
     primary value remains in the selected week cell and the review rail's metric
     summary, while the redundant heading strip and chart-card total are hidden.

@@ -42,10 +42,10 @@
 }
 
 :root[data-theme="light"] {
-  --background: #f6f8fa;
-  --surface: #ffffff;
+  --background: #ffffff;
+  --surface: #f6f8fa;
   --surface-2: #f0f2f5;
-  --panel: #ffffff;
+  --panel: #f6f8fa;
   --border: #d0d7de;
   --hairline: rgba(31, 35, 40, 0.08);
   --foreground: #24292f;
@@ -59,7 +59,7 @@
   --accent-strong: #0550ae;
   --action: #24292f;
   --action-foreground: #ffffff;
-  --review-helper-bg: #f0f2f5;
+  --review-helper-bg: #f6f8fa;
   --coach: #1a7f37;
   --green-chart: #1db26b;
   --red-chart: #f05143;
