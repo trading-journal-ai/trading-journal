@@ -297,7 +297,9 @@ Build once, reuse everywhere.
   the page background with no added radius or elevation, using only a 1px
   semantic-accent bottom edge and small corner dot. The five-day strip uses a
   complete hairline outline with a 4px radius; it begins open above its
-  date-navigation header.
+  date-navigation header. Non-selected day content sits at 68% opacity and
+  returns to full opacity on hover or keyboard focus; the grid rules remain
+  fully opaque.
 - **Journal** — prose-first. Headers use Display/Page title; recap text uses Body
   large; metrics sit under the header as quiet mono metadata; ticker rail compact
   and sorted best-to-worst; pills secondary; reading mode hides edit controls
