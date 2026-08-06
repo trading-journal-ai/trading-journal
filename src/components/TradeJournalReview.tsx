@@ -18,6 +18,7 @@ import { etDateString, etDayRange } from "@/lib/time";
 import ArchiveSidebar, { type ArchiveSidebarMonth } from "@/components/ArchiveSidebar";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
 import InlineImportPrompt from "@/components/InlineImportPrompt";
+import JournalPnlChart, { type JournalPnlPoint } from "@/components/JournalPnlChart";
 import JournalWeekStrip, { type JournalWeekStripDay } from "@/components/JournalWeekStrip";
 import JournalReviewModule, {
   type JournalComparisonData,
@@ -67,10 +68,7 @@ type ReviewDay = ReviewSummary & {
   displayDate: string;
 };
 
-type PnlPoint = {
-  time: string;
-  value: number;
-};
+type PnlPoint = JournalPnlPoint;
 
 type JournalMarketContext = {
   available: boolean;
@@ -656,17 +654,32 @@ function buildDayData(
 
   const { start } = etDayRange(date);
   let cumulative = 0;
-  const pnlPoints: PnlPoint[] = [{ time: formatTime(trades[0]?.entryAt ?? start), value: 0 }];
+  const firstTimestamp = trades[0]?.entryAt ?? start;
+  const pnlPoints: PnlPoint[] = [{
+    time: formatTime(firstTimestamp),
+    timestamp: firstTimestamp,
+    value: 0,
+  }];
   trades
     .filter((trade) => trade.exitAt != null)
     .sort((a, b) => (a.exitAt ?? 0) - (b.exitAt ?? 0))
     .forEach((trade) => {
       cumulative += netPnl(trade) ?? 0;
-      pnlPoints.push({ time: formatTime(trade.exitAt ?? trade.entryAt ?? start), value: cumulative });
+      const timestamp = trade.exitAt ?? trade.entryAt ?? start;
+      pnlPoints.push({
+        time: formatTime(timestamp),
+        timestamp,
+        value: cumulative,
+      });
     });
 
   if (pnlPoints.length === 1) {
-    pnlPoints.push({ time: formatTime(trades.at(-1)?.entryAt ?? start), value: summary.pnl });
+    const timestamp = trades.at(-1)?.entryAt ?? start;
+    pnlPoints.push({
+      time: formatTime(timestamp),
+      timestamp,
+      value: summary.pnl,
+    });
   }
 
   const chartRead = summarizeChartContexts(
@@ -1224,39 +1237,9 @@ function RunningPnlChart({
   pnlPoints: PnlPoint[];
   showTotal?: boolean;
 }) {
-  const width = 940;
-  const height = 440;
-  const pad = { top: 24, right: 26, bottom: 58, left: 128 };
-  const plotW = width - pad.left - pad.right;
-  const plotH = height - pad.top - pad.bottom;
-  const values = pnlPoints.map((point) => point.value);
-  const minValue = Math.min(0, ...values);
-  const maxValue = Math.max(0, ...values);
-  const range = Math.max(1, maxValue - minValue);
-  const min = minValue - range * 0.18;
-  const max = maxValue + range * 0.18;
-  const y = (value: number) => pad.top + ((max - value) / (max - min)) * plotH;
-  const x = (index: number) => pad.left + (index / Math.max(1, pnlPoints.length - 1)) * plotW;
-  const line = pnlPoints.map((point, index) => `${x(index)},${y(point.value)}`).join(" ");
-  const area = `${pad.left},${y(0)} ${line} ${x(pnlPoints.length - 1)},${y(0)}`;
-  const ticks = [minValue, minValue + range / 2, maxValue];
-  const labelIndexes = Array.from(
-    new Set([
-      0,
-      Math.floor((pnlPoints.length - 1) * 0.33),
-      Math.floor((pnlPoints.length - 1) * 0.66),
-      pnlPoints.length - 1,
-    ]),
-  );
-  const zeroY = y(0);
-  const positiveFillId = `pnlPositiveFill-${day.date}`;
-  const negativeFillId = `pnlNegativeFill-${day.date}`;
-  const positiveClipId = `pnlPositiveClip-${day.date}`;
-  const negativeClipId = `pnlNegativeClip-${day.date}`;
-
   return (
     <section className="flex h-[380px] flex-col rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-4">
-      <div className="mb-1 flex items-center justify-between gap-4">
+      <div className="mb-2 flex items-center justify-between gap-4">
         <h2 className="text-[15px] font-semibold text-[var(--foreground)]">Daily P&L</h2>
         {showTotal ? (
           <span className={`font-mono text-sm font-semibold tabular-nums ${pnlClass(day.pnl)}`}>
@@ -1264,83 +1247,7 @@ function RunningPnlChart({
           </span>
         ) : null}
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="min-h-0 flex-1" role="img" aria-label="Daily P&L by time of day">
-        <defs>
-          <linearGradient id={positiveFillId} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="var(--green-chart)" stopOpacity="0.36" />
-            <stop offset="100%" stopColor="var(--green-chart)" stopOpacity="0.08" />
-          </linearGradient>
-          <linearGradient id={negativeFillId} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="var(--red-chart)" stopOpacity="0.08" />
-            <stop offset="100%" stopColor="var(--red-chart)" stopOpacity="0.36" />
-          </linearGradient>
-          <clipPath id={positiveClipId}>
-            <rect x={pad.left} y={pad.top} width={plotW} height={Math.max(0, zeroY - pad.top)} />
-          </clipPath>
-          <clipPath id={negativeClipId}>
-            <rect x={pad.left} y={zeroY} width={plotW} height={Math.max(0, height - pad.bottom - zeroY)} />
-          </clipPath>
-        </defs>
-        {ticks.map((tick, index) => (
-          <g key={`${tick}-${index}`}>
-            <line x1={pad.left} x2={width - pad.right} y1={y(tick)} y2={y(tick)} stroke="var(--hairline)" />
-            <text
-              x={pad.left - 10}
-              y={y(tick) + 5}
-              fill="var(--muted)"
-              fontFamily="var(--font-mono)"
-              fontSize="19"
-              fontWeight="500"
-              textAnchor="end"
-            >
-              {formatMoney(tick).replace("+", "")}
-            </text>
-          </g>
-        ))}
-        <line
-          x1={pad.left}
-          x2={width - pad.right}
-          y1={y(0)}
-          y2={y(0)}
-          stroke="var(--muted)"
-          strokeDasharray="5 7"
-          strokeOpacity="0.7"
-        />
-        <polygon points={area} fill={`url(#${positiveFillId})`} clipPath={`url(#${positiveClipId})`} />
-        <polygon points={area} fill={`url(#${negativeFillId})`} clipPath={`url(#${negativeClipId})`} />
-        <polyline
-          points={line}
-          fill="none"
-          stroke="var(--green-chart)"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-          clipPath={`url(#${positiveClipId})`}
-        />
-        <polyline
-          points={line}
-          fill="none"
-          stroke="var(--red-chart)"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-          clipPath={`url(#${negativeClipId})`}
-        />
-        {labelIndexes.map((index) => (
-          <text
-            key={`${index}-${pnlPoints[index].time}`}
-            x={x(index)}
-            y={height - 16}
-            fill="var(--muted)"
-            fontFamily="var(--font-sans)"
-            fontSize="19"
-            fontWeight="500"
-            textAnchor="middle"
-          >
-            {pnlPoints[index].time}
-          </text>
-        ))}
-      </svg>
+      <JournalPnlChart points={pnlPoints} />
     </section>
   );
 }

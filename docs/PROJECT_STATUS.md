@@ -82,6 +82,13 @@ stopped. This is the "when did we last work on it" trail.
   - Reduced the selected day's P&L from three visible repetitions to two: the
     primary value remains in the selected week cell and the review rail's metric
     summary, while the redundant heading strip and chart-card total are hidden.
+  - Replaced the focused day's hand-built P&L SVG with the app's existing
+    TradingView Lightweight Charts runtime. A zero-based Baseline series keeps
+    the positive/negative split, adds an exact crosshair, follows theme tokens,
+    and resizes with the review module; scroll and zoom handling stay disabled
+    so the chart does not interfere with Journal navigation. The Journal card
+    omits TradingView branding; the existing trade-chart surface retains the
+    app-level linked attribution.
   - Kept the selected date, review tabs, and Coach available on zero-trade days
     instead of replacing the Journal with the generic imported-trades empty
     screen.
@@ -89,7 +96,8 @@ stopped. This is the "when did we last work on it" trail.
     routine visual QA should prioritize laptop/desktop windows; phone-specific
     layouts are not a supported product target and only need basic resilience.
   - Verified the focused slice with targeted ESLint, TypeScript, the Impeccable
-    detector, and desktop Browser checks. Full repository lint remains
+    detector, desktop Browser checks, and a Webpack production build. Full
+    repository lint remains
     blocked by the two known `react-hooks/set-state-in-effect` errors under
     `src/components/preview/`.
   - **Stopped at:** working production-page exploration ready for visual review.
