@@ -86,9 +86,10 @@ stopped. This is the "when did we last work on it" trail.
     TradingView Lightweight Charts runtime. A zero-based Baseline series keeps
     the positive/negative split, adds an exact crosshair, follows theme tokens,
     and resizes with the review module; scroll and zoom handling stay disabled
-    so the chart does not interfere with Journal navigation. The Journal card
-    omits TradingView branding; the existing trade-chart surface retains the
-    app-level linked attribution.
+    so the chart does not interfere with Journal navigation. Its value scale is
+    on the right, leaving the plot edge aligned with the Daily P&L heading. The
+    Journal card omits TradingView branding; the existing trade-chart surface
+    retains the app-level linked attribution.
   - Kept the selected date, review tabs, and Coach available on zero-trade days
     instead of replacing the Journal with the generic imported-trades empty
     screen.

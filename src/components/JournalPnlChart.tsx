@@ -129,13 +129,13 @@ export default function JournalPnlChart({ points }: { points: JournalPnlPoint[] 
           style: LineStyle.Dotted,
         },
       },
-      leftPriceScale: {
+      leftPriceScale: { visible: false },
+      rightPriceScale: {
         visible: true,
         borderVisible: false,
         minimumWidth: 72,
         scaleMargins: { top: 0.08, bottom: 0.12 },
       },
-      rightPriceScale: { visible: false },
       timeScale: {
         borderVisible: false,
         fixLeftEdge: true,
@@ -169,7 +169,7 @@ export default function JournalPnlChart({ points }: { points: JournalPnlPoint[] 
         formatter: formatMoney,
       },
       priceLineVisible: false,
-      priceScaleId: "left",
+      priceScaleId: "right",
       topFillColor1: withAlpha(colors.positive, 0.28),
       topFillColor2: withAlpha(colors.positive, 0.06),
       topLineColor: colors.positive,
