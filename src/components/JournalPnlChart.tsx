@@ -84,6 +84,9 @@ export default function JournalPnlChart({ points }: { points: JournalPnlPoint[] 
   const [themeKey, setThemeKey] = useState(0);
   const data = useMemo(() => chartData(points), [points]);
   const finalPoint = points.at(-1);
+  const chartTransitionKey = points.length === 0
+    ? "empty"
+    : `${points[0].timestamp}-${finalPoint?.timestamp}-${points.length}`;
   const chartLabel = finalPoint == null
     ? "Daily cumulative P&L by time of day"
     : `Daily cumulative P&L ending at ${formatMoney(finalPoint.value)} at ${finalPoint.time}`;
@@ -192,8 +195,9 @@ export default function JournalPnlChart({ points }: { points: JournalPnlPoint[] 
   return (
     <div className="min-h-0 flex-1 pl-2">
       <div
+        key={chartTransitionKey}
         ref={containerRef}
-        className="h-full w-full"
+        className="journal-pnl-chart-enter h-full w-full"
         role="img"
         aria-label={chartLabel}
       />

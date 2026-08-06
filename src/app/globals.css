@@ -219,6 +219,26 @@ body {
   }
 }
 
+@keyframes journal-pnl-chart-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.journal-pnl-chart-enter {
+  animation: journal-pnl-chart-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journal-pnl-chart-enter {
+    animation: none;
+  }
+}
+
 .import-progress-track {
   position: relative;
   height: 8px;

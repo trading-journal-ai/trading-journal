@@ -305,7 +305,9 @@ Build once, reuse everywhere.
 - **Journal** — prose-first. Headers use Display/Page title; recap text uses Body
   large; metrics sit under the header as quiet mono metadata; ticker rail compact
   and sorted best-to-worst; pills secondary; reading mode hides edit controls
-  until interaction.
+  until interaction. When the selected day changes, only the daily P&L chart
+  surface fades in briefly; its card, heading, and surrounding review structure
+  remain fixed so the transition reads as updated data rather than a page reload.
 - **Coach voice** — content authored or interpreted by the Coach reads as a
   distinct voice: a green (`--coach`) mono eyebrow, and where it's a called-out
   block, a green left rule. In the recap wireframes this marks the session
