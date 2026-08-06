@@ -92,6 +92,9 @@ stopped. This is the "when did we last work on it" trail.
   - Rebalanced the cool Light theme around a white app canvas with light-gray
     review surfaces. P&L/chart modules and selected content now sit one neutral
     step above the page while compact metric pills retain the stronger gray.
+  - Refined the week-strip selected state with matching left/right borders and a
+    4px radius while retaining the bottom accent. Removed the outer top rule
+    above the date-range/navigation header so the strip stays open to the page.
   - Reduced the selected day's P&L from three visible repetitions to two: the
     primary value remains in the selected week cell and the review rail's metric
     summary, while the redundant heading strip and chart-card total are hidden.

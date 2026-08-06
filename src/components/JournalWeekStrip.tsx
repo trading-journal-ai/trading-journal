@@ -116,7 +116,7 @@ export default function JournalWeekStrip({
   basePath,
 }: JournalWeekStripProps) {
   return (
-    <nav aria-label="Journal week" className="border-y border-[var(--hairline)]">
+    <nav aria-label="Journal week" className="border-b border-[var(--hairline)]">
       <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-3 py-2 sm:px-4">
         <p className="font-sans text-[11px] font-normal uppercase tracking-[0.16em] text-[var(--muted)]">
           {rangeLabel(weekStart)}
@@ -151,7 +151,7 @@ export default function JournalWeekStrip({
                 href={dayHref(basePath, day.date)}
                 aria-current={selected ? "date" : undefined}
                 className={`relative flex min-h-[132px] flex-col border-r border-[var(--hairline)] px-3.5 py-4 font-sans transition-colors hover:bg-[var(--surface)] focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] ${
-                  selected ? "bg-[var(--surface)] after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-[var(--accent)]" : ""
+                  selected ? "z-[1] rounded-[4px] border-x border-[var(--border)] bg-[var(--surface)] after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-[var(--accent)]" : ""
                 }`}
               >
                 <span className="flex items-baseline gap-1.5 text-[16px] font-semibold leading-5 text-[var(--foreground)]">
