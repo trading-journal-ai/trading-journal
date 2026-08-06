@@ -308,9 +308,11 @@ Build once, reuse everywhere.
   until interaction. When the selected day changes, only the daily P&L chart
   surface fades in briefly; its card, heading, and surrounding review structure
   remain fixed so the transition reads as updated data rather than a page reload.
-  During slower date navigation, retain and dim the previous chart, then reveal
-  a compact loading indicator after a 120ms grace period. Do not preload adjacent
-  sessions until evidence shows that navigation latency requires data-layer work.
+  During slower date navigation, fade the outgoing chart completely, then reveal
+  a compact “Plotting P&L” loader after a 140ms grace period. Its miniature plot
+  line draws toward a terminal point in the semantic accent; the incoming chart
+  fades in after the new series arrives. Do not preload adjacent sessions until
+  evidence shows that navigation latency requires data-layer work.
 - **Coach voice** — content authored or interpreted by the Coach reads as a
   distinct voice: a green (`--coach`) mono eyebrow, and where it's a called-out
   block, a green left rule. In the recap wireframes this marks the session

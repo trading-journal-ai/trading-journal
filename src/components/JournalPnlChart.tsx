@@ -205,9 +205,33 @@ export default function JournalPnlChart({ points }: { points: JournalPnlPoint[] 
         className="journal-pnl-chart-loader pointer-events-none absolute inset-0 z-[1] flex items-center justify-center"
         aria-hidden="true"
       >
-        <span className="inline-flex items-center gap-2 rounded-full bg-[var(--surface)] px-3 py-1.5 font-sans text-[11px] font-medium text-[var(--muted)]">
-          <span className="journal-pnl-chart-spinner h-3 w-3 rounded-full border-2 border-current border-r-transparent" />
-          Loading chart
+        <span className="inline-flex flex-col items-center gap-2 font-sans text-[11px] font-medium text-[var(--muted)]">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 58 24"
+            className="h-6 w-[58px] overflow-visible"
+            fill="none"
+          >
+            <path
+              d="M1 20H57"
+              className="stroke-[var(--hairline)]"
+              strokeWidth="1"
+            />
+            <path
+              d="M2 18 11 15 18 17 27 9 35 12 43 5 56 2"
+              className="journal-pnl-loader-line stroke-[var(--accent)]"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.75"
+            />
+            <circle
+              cx="56"
+              cy="2"
+              r="2"
+              className="journal-pnl-loader-point fill-[var(--accent)]"
+            />
+          </svg>
+          Plotting P&amp;L
         </span>
       </div>
     </div>
