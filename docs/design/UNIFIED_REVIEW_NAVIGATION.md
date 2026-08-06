@@ -33,6 +33,86 @@ evidence with human context, emotional state, and a longitudinal improvement
 loop. Data should ground the reflection without becoming the emotional center
 of the experience.
 
+## What is actually solvable
+
+A journal cannot guarantee that reflection changes behavior. Requiring the
+trader to reread old entries is also a weak product dependency: even useful
+notes become difficult to retrieve once the archive grows.
+
+The product can solve three narrower problems:
+
+1. **Capture:** make it effortless to add human context to the current day.
+2. **Remember:** retain the note with its date, session, trades, and market
+   context so the trader does not have to organize it manually.
+3. **Selectively resurface:** bring back a small number of relevant observations
+   when recurrence or current context makes them useful.
+
+The minimum viable Journal is therefore quick capture, not a complete behavior
+change system. It should remain valuable even if the trader never opens Coach,
+never promotes a focus, and rarely browses old entries.
+
+### Quick-capture contract
+
+- Add a note to today without navigating through Calendar or opening a full
+  recap form.
+- Support short prose or dictation first; structured fields are optional
+  refinement, not a gate.
+- Save immediately into the focused day and preserve the trader's original
+  language.
+- Allow optional attachment to the whole day, a ticker/session, or a trade
+  without requiring classification.
+- Keep capture available from the focused Journal day and relevant in-session
+  Dashboard prompts.
+- Show a clear saved state and allow later editing.
+
+The first interaction prototype should target a useful note in roughly thirty
+seconds. The note can be as small as an emotion, an observation, or a sentence
+about what went right or wrong.
+
+## Pattern ledger, not an unread archive
+
+Notes should be inputs to a cited pattern ledger, not a library the trader must
+manually mine. The system may connect a note to deterministic trade evidence,
+but it should not silently rewrite the note or turn one difficult day into a
+durable identity label.
+
+Use the existing Coach recurrence vocabulary:
+
+```text
+session-only -> emerging -> repeated -> established -> resolving / resolved
+```
+
+Each pattern entry should retain:
+
+- the original note excerpts and source dates;
+- supporting and contradicting trade evidence;
+- recurrence state and last-observed date;
+- the behaviors or conditions that define it;
+- whether the trader confirmed, corrected, dismissed, or adopted it; and
+- any active experiment and its outcome.
+
+Positive and negative patterns should use the same machinery. "Waited for clean
+confirmation" deserves recurrence tracking just as much as "chased after a
+loss." Good habits should be reinforced; harmful habits should be investigated
+without moralizing the trader.
+
+### Overtrading is a diagnosis, not a trade-count threshold
+
+High frequency can be appropriate when the opportunity set is strong. A useful
+overtrading finding needs multiple signals, such as:
+
+- declining result quality by trade sequence;
+- short re-entry latency after a loss;
+- same-ticker churn;
+- size or frequency escalation after losses;
+- continued entries after the strongest opportunity window; and
+- the trader's stated intent, emotion, and market-quality context.
+
+Coach may call the pattern emerging when these signals align. Analytics should
+provide the cohort comparison and source trades. The trader should be able to
+correct the interpretation when legitimate scaling, partial exits, or an active
+market regime make raw trade count misleading.
+
 ## The closed improvement loop
 
 ```text
@@ -159,17 +239,19 @@ surface.
 
 ## Questions for the next prototype
 
-1. Is there exactly one active carry-forward focus, or can the trader pin a
+1. Can the trader add a useful day note in roughly thirty seconds without
+   completing the full recap?
+2. Is there exactly one active carry-forward focus, or can the trader pin a
    small set with one primary focus?
-2. Does the next day begin with a lightweight check-in before showing new Coach
+3. Does the next day begin with a lightweight check-in before showing new Coach
    analysis?
-3. What is the shortest useful resolution flow for upheld, missed, mixed, and
+4. What is the shortest useful resolution flow for upheld, missed, mixed, and
    untested focuses?
-4. Does Calendar live inside Journal as a browse mode, while `/calendar`
+5. Does Calendar live inside Journal as a browse mode, while `/calendar`
    remains a deep link for compatibility?
-5. Should the Journal date index show reflection/Coach completion state in
+6. Should the Journal date index show reflection/Coach completion state in
    addition to result and trade count?
-6. At what trade count does the UI switch from raw rows to ticker/session
+7. At what trade count does the UI switch from raw rows to ticker/session
    grouping by default?
 
 ## First prototype slice
@@ -177,11 +259,13 @@ surface.
 Use a representative imported day and prove these interactions before changing
 production contracts:
 
-1. Shared Day / Week / Month navigator with predictable previous/next movement.
-2. Focused Journal day with prior-focus check-in at the top.
-3. Reflection and Coach synthesis leading to one adopted next-session focus.
-4. Compact trade list using the shared inline inspection component.
-5. Calendar/date picker that selects the focused Journal day without requiring
+1. Thirty-second note capture into the focused day, with no classification
+   required.
+2. Shared Day / Week / Month navigator with predictable previous/next movement.
+3. Focused Journal day with prior-focus check-in at the top.
+4. Reflection and Coach synthesis leading to one adopted next-session focus.
+5. Compact trade list using the shared inline inspection component.
+6. Calendar/date picker that selects the focused Journal day without requiring
    a second navigation system.
 
 This prototype is successful when the trader can move to an earlier month,

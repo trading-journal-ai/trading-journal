@@ -80,6 +80,24 @@ create a new one. The recap should end by continuing, refining, completing, or
 replacing that focus. Otherwise each day starts from scratch and the Journal is
 an archive rather than a learning system.
 
+This contract is an enhancement to quick journaling, not a prerequisite for it.
+The product should not force every note through Coach or require every day to
+produce a new focus. Notes may remain useful day context; most Coach findings
+should remain session-only. Promotion is reserved for observations that recur,
+matter, and can be tested.
+
+### Three learning cadences
+
+| Cadence | Default product behavior |
+| --- | --- |
+| Daily | Capture human context quickly, review the day, and optionally check or adopt one focus. Avoid making durable pattern claims from one session. |
+| Weekly | Surface a short set of emerging or repeated behaviors with cited days and trades. Ask the trader to confirm, correct, dismiss, or test one. |
+| Monthly | Summarize where edge and friction appear across time, price, setup, market condition, and price-action cohorts. Promote only stable, sufficiently covered findings. |
+
+This gives the system permission to remember without making the trader maintain
+the archive manually. It also prevents daily Coach copy from turning every
+emotion or outlier into a permanent rule.
+
 The dashboard is not the source of truth. It is the active surface that asks the
 right question at the right moment and brings the active lesson back into view.
 The journal is the durable record. Trade evidence grounds the record. Insights
@@ -124,6 +142,12 @@ loop wherever it helps the user and coach understand the day.
 | Timing, sizing, and hold behavior | Coach pattern detection and current experiment selection. |
 | Charts and screenshots | Journal narrative and trade-specific review. |
 | Statistical patterns and contradictions | Coach synthesis and future focus selection. |
+
+Analytics should also maintain a longitudinal **Personal Edge Profile**: a
+small, confidence-aware summary of where the trader tends to perform well and
+where behavior tends to deteriorate. The profile is described in
+`docs/analytics/ANALYTICS_RESEARCH_PLAN.md`; Coach surfaces its most relevant
+finding, while Analytics owns the evidence and drilldown.
 
 ## The Coach Finding Lifecycle
 

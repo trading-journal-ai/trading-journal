@@ -44,9 +44,19 @@ stopped. This is the "when did we last work on it" trail.
   - Captured a shared period navigator for Journal, Calendar, Trades, and
     Analytics plus one reusable inline trade-inspection interaction for Journal
     and Trades.
+  - Clarified the minimum Journal contract: roughly thirty-second, unstructured
+    day-note capture must work even when the trader never opens Coach or mines
+    the archive manually.
+  - Defined a cited pattern ledger with recurrence states, trader correction,
+    positive-habit reinforcement, and an evidence-based overtrading diagnosis
+    rather than a raw trade-count threshold.
+  - Captured a weekly/monthly Personal Edge Profile for time window, price band,
+    trade sequence, setup, relative volume, opportunity quality, and
+    price-action cohorts, with sample and coverage guardrails.
   - No production UI, route, schema, or data-contract changes were made.
-  - **Stopped at:** product/IA direction captured; next step is a focused
-    interaction prototype before implementation decisions are locked.
+  - **Stopped at:** product/IA and learning-cadence direction captured; next
+    step is a focused quick-capture interaction prototype before implementation
+    decisions are locked.
 
 - **2026-07-27** — Free-plan market-data sync + Analytics architecture home
   (branch `feat/free-plan-market-data-sync`).
