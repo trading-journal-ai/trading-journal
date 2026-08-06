@@ -207,7 +207,10 @@ export default function JournalReviewModule({
         onViewChange={setView}
       />
 
-      <div className="mt-7">
+      <div
+        key={`${scope}-${view}`}
+        className={`mt-7 ${scope === "day" && view === "pnl" ? "" : "journal-review-panel-enter"}`}
+      >
         {scope === "day" ? (
           <DayViews
             view={view}

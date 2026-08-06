@@ -1450,6 +1450,7 @@ function JournalReviewModuleForDay({
               heightClassName="h-[420px]"
             />
             <TickerReviewRail
+              className="journal-day-rail-enter"
               rows={tickerRows.map((row) => ({
                 symbol: row.symbol,
                 pnl: row.pnl,
@@ -1506,13 +1507,13 @@ function DayReviewSection({
     <section>
       <div className="min-w-0">
           {compactDayHeader ? (
-            <div className="mb-5 pt-2">
+            <div key={day.date} className="journal-date-header-enter mb-5 pt-2">
               <h1 className="text-[20px] font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]">
                 {day.label}, {monthDayFmt.format(utcDate(day.date))}
               </h1>
             </div>
           ) : (
-            <div className="mb-7">
+            <div key={day.date} className="journal-date-header-enter mb-7">
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
                 <h2 className="text-[32px] font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
                   {day.label}, {monthDayFmt.format(utcDate(day.date))}

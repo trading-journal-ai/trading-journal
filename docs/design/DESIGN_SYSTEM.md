@@ -320,6 +320,15 @@ Build once, reuse everywhere.
   `--accent` is the trader's own annotation (constraints, "✎ you"); keep the two
   voices on their own colors so authorship is legible at a glance.
 
+## Motion
+
+Journal motion preserves continuity rather than decorating the page. Day
+selection is immediate; while the new date loads, only changing fragments—the
+date header, chart, and ticker rail—ease out. Incoming text and data panels use a
+180ms ease-out with no more than 2px of settling distance. The ticker rail may
+follow the date header by 35ms, while tabs, cards, borders, and page geometry stay
+fixed. All motion is disabled when `prefers-reduced-motion` is enabled.
+
 ## States
 
 Every reusable component defines: Default, Hover, Focus, Active/selected,
