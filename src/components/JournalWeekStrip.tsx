@@ -96,7 +96,7 @@ function MetricPill({
 }) {
   return (
     <span
-      className="mt-2 inline-flex w-fit max-w-full items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--surface-2)] px-[10px] py-1 font-sans text-[11px] font-normal leading-4 text-[var(--muted)] tabular-nums"
+      className="mt-[10px] inline-flex w-fit max-w-full items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--surface-2)] px-[11px] py-1 font-sans text-[11px] font-normal leading-4 text-[var(--muted)] tabular-nums"
       aria-label={`${trades} ${trades === 1 ? "trade" : "trades"}${accuracy == null ? "" : `, ${accuracy}% win rate`}${profitFactor == null ? "" : `, ${profitFactor.toFixed(2)} profit factor`}`}
     >
       <span>{trades} {trades === 1 ? "Trade" : "Trades"}</span>
