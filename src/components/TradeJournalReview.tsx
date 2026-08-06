@@ -2737,7 +2737,6 @@ export default async function TradeJournalReview({
               selectedDate={archiveAnchor}
               weekStart={comparisonData.week.key}
               days={weekStripDays}
-              weekSummary={comparisonData.week.summary}
               previousWeekHref={journalReviewModuleHref(basePath, isoAddDays(archiveAnchor, -7))}
               nextWeekHref={journalReviewModuleHref(basePath, isoAddDays(archiveAnchor, 7))}
               calendarHref={`/calendar?m=${archiveAnchor.slice(0, 7)}`}

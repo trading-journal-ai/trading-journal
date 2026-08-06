@@ -16,12 +16,6 @@ type JournalWeekStripProps = {
   selectedDate: string;
   weekStart: string;
   days: JournalWeekStripDay[];
-  weekSummary: {
-    trades: number;
-    accuracy: number | null;
-    profitFactor: number | null;
-    pnl: number;
-  };
   previousWeekHref: string;
   nextWeekHref: string;
   calendarHref: string;
@@ -116,7 +110,6 @@ export default function JournalWeekStrip({
   selectedDate,
   weekStart,
   days,
-  weekSummary,
   previousWeekHref,
   nextWeekHref,
   calendarHref,
@@ -148,7 +141,7 @@ export default function JournalWeekStrip({
       </div>
 
       <div className="overflow-x-auto border-t border-[var(--hairline)] [scrollbar-width:thin]">
-        <div className="grid min-w-[1080px] grid-cols-[repeat(5,minmax(0,1fr))_minmax(180px,1fr)]">
+        <div className="grid min-w-[900px] grid-cols-5">
           {days.map((day) => {
             const selected = day.date === selectedDate;
             const date = utcDate(day.date);
@@ -180,22 +173,6 @@ export default function JournalWeekStrip({
               </Link>
             );
           })}
-
-          <div className="flex min-h-[132px] flex-col px-3.5 py-4 font-sans font-normal">
-            <span className="text-[18px] font-normal leading-6 text-[var(--foreground)]">Week</span>
-            {weekSummary.trades > 0 ? (
-              <span className="mt-4 flex flex-col items-start">
-                <Money value={weekSummary.pnl} fontFamily="sans" className="text-[18px] font-normal leading-5" />
-                <MetricPill
-                  trades={weekSummary.trades}
-                  accuracy={weekSummary.accuracy}
-                  profitFactor={weekSummary.profitFactor}
-                />
-              </span>
-            ) : (
-              <span className="mt-5 flex min-h-14 items-center text-[12px] leading-4 text-[var(--muted)]">No sessions</span>
-            )}
-          </div>
         </div>
       </div>
     </nav>

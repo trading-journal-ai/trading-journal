@@ -68,7 +68,7 @@ stopped. This is the "when did we last work on it" trail.
     Analytics owns investigation, and Coach connects narrative with evidence.
   - Implemented the first production Journal structure directly on `/journal`:
     a reusable five-day week strip with previous/next week controls, an existing
-    Calendar shortcut, direct day selection, compact day/week P&L, and explicit
+    Calendar shortcut, direct day selection, compact daily P&L, and explicit
     no-trade/future/empty states.
   - Removed the archive sidebar from the focused-day route and made the existing
     Day/Week/Month review module the content core. Session verdict, market
@@ -87,6 +87,9 @@ stopped. This is the "when did we last work on it" trail.
     forward the old semibold day labels and mono P&L. Increased the day/result
     scale and the grouped metrics so the chosen typography is visible in the
     production strip rather than merely structurally present.
+  - Removed the redundant trailing Week summary cell. The review module already
+    owns the Week scope, while the five daily cells now share the entire strip
+    width and give the selected lockup more horizontal room.
   - Reduced the selected day's P&L from three visible repetitions to two: the
     primary value remains in the selected week cell and the review rail's metric
     summary, while the redundant heading strip and chart-card total are hidden.
