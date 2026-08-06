@@ -79,7 +79,7 @@ function IconLink({ href, label, children }: { href: string; label: string; chil
 function EmptyDayValue({ state }: { state: JournalWeekStripDay["state"] }) {
   const label = state === "no_trade" ? "No-trade" : state === "future" ? "Upcoming" : "No session";
   return (
-    <span className="mt-5 flex min-h-14 items-center">
+    <span className="mt-4 flex min-h-12 items-center">
       <span className="text-[12px] leading-4 text-[var(--muted)]">{label}</span>
     </span>
   );
@@ -150,7 +150,7 @@ export default function JournalWeekStrip({
                 key={day.date}
                 href={dayHref(basePath, day.date)}
                 aria-current={selected ? "date" : undefined}
-                className={`relative flex min-h-[132px] flex-col border-r border-[var(--hairline)] px-3.5 py-4 font-sans transition-colors last:border-r-0 hover:bg-[var(--surface)] focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] ${
+                className={`relative flex flex-col border-r border-[var(--hairline)] px-3.5 py-4 font-sans transition-colors last:border-r-0 hover:bg-[var(--surface)] focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] ${
                   selected ? "z-[1] rounded-[4px] border-x border-[var(--border)] bg-[var(--surface)] after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-[var(--accent)]" : ""
                 }`}
               >
