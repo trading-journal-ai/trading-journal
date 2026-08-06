@@ -133,7 +133,7 @@ export default function JournalPnlChart({ points }: { points: JournalPnlPoint[] 
       rightPriceScale: {
         visible: true,
         borderVisible: false,
-        minimumWidth: 72,
+        minimumWidth: 56,
         scaleMargins: { top: 0.08, bottom: 0.12 },
       },
       timeScale: {
@@ -190,11 +190,13 @@ export default function JournalPnlChart({ points }: { points: JournalPnlPoint[] 
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="min-h-0 flex-1"
-      role="img"
-      aria-label={chartLabel}
-    />
+    <div className="min-h-0 flex-1 pl-2">
+      <div
+        ref={containerRef}
+        className="h-full w-full"
+        role="img"
+        aria-label={chartLabel}
+      />
+    </div>
   );
 }
