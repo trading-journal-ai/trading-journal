@@ -190,6 +190,10 @@ body {
     color 220ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.journal-week-strip--navigating .journal-week-day__metrics {
+  transition: none;
+}
+
 .journal-week-day:hover::before,
 .journal-week-day:focus-visible::before,
 .journal-week-day--selected::before {
@@ -201,7 +205,6 @@ body {
   color: var(--accent);
 }
 
-.journal-week-day:active .journal-week-day__metrics,
 .journal-week-day--selected .journal-week-day__metrics,
 .journal-week-day--selected:hover .journal-week-day__metrics,
 .journal-week-day--selected:focus-visible .journal-week-day__metrics {

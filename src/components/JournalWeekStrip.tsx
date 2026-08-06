@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 
 import Money from "@/components/ui/Money";
@@ -115,8 +117,17 @@ export default function JournalWeekStrip({
   calendarHref,
   basePath,
 }: JournalWeekStripProps) {
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPendingDate(null);
+  }, [selectedDate, weekStart]);
+
   return (
-    <nav aria-label="Journal week">
+    <nav
+      aria-label="Journal week"
+      className={pendingDate ? "journal-week-strip--navigating" : undefined}
+    >
       <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-3 py-2 sm:px-4">
         <p className="font-sans text-[11px] font-normal uppercase tracking-[0.16em] text-[var(--muted)]">
           {rangeLabel(weekStart)}
@@ -144,14 +155,19 @@ export default function JournalWeekStrip({
         <div className="grid min-w-[900px] grid-cols-5">
           {days.map((day) => {
             const selected = day.date === selectedDate;
+            const visuallySelected = pendingDate ? day.date === pendingDate : selected;
             const date = utcDate(day.date);
             return (
               <Link
                 key={day.date}
                 href={dayHref(basePath, day.date)}
                 aria-current={selected ? "date" : undefined}
+                onPointerDown={(event) => {
+                  if (event.button === 0) setPendingDate(day.date);
+                }}
+                onClick={() => setPendingDate(day.date)}
                 className={`journal-week-day relative flex flex-col border-r border-[var(--hairline)] px-3.5 py-4 font-sans last:border-r-0 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] ${
-                  selected ? "journal-week-day--selected z-[1]" : ""
+                  visuallySelected ? "journal-week-day--selected z-[1]" : ""
                 }`}
               >
                 <span className="flex items-baseline gap-1.5 text-[16px] font-semibold leading-5 text-[var(--foreground)]">

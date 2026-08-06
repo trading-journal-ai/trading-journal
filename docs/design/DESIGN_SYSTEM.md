@@ -296,11 +296,12 @@ Build once, reuse everywhere.
   trades/win-rate/profit-factor pill is regular 11px. Hover and keyboard focus
   ease in a small semantic-accent corner dot and change the pill text to the
   semantic accent while its quiet surface remains unchanged. Selection keeps
-  the dot and fades the pill fill to the semantic accent with action-foreground
-  text; that fill begins on press so feedback does not wait for date navigation.
-  The page background remains flat with no added border, radius, elevation, or
-  bottom edge. The five-day strip uses a complete hairline outline with a 4px
-  radius; it begins open above its date-navigation header.
+  the dot and switches the pill fill immediately to the semantic accent with
+  action-foreground text. Selection is optimistic, so it moves on press and
+  remains stable while the new journal date loads; it never fades out while
+  waiting for navigation. The page background remains flat with no added border,
+  radius, elevation, or bottom edge. The five-day strip uses a complete hairline
+  outline with a 4px radius; it begins open above its date-navigation header.
 - **Journal** — prose-first. Headers use Display/Page title; recap text uses Body
   large; metrics sit under the header as quiet mono metadata; ticker rail compact
   and sorted best-to-worst; pills secondary; reading mode hides edit controls
