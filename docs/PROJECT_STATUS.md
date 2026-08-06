@@ -74,6 +74,14 @@ stopped. This is the "when did we last work on it" trail.
     Day/Week/Month review module the content core. Session verdict, market
     context, and chart-read prose no longer render above the module; Coach owns
     that interpretation through its tab.
+  - Refined the focused Journal for its desktop-first window: widened the week
+    strip and review module to 1040px, spelled out month and weekday labels, and
+    removed the account banner plus the oversized duplicate selected-day
+    heading. The week cell now provides orientation; the review begins directly
+    below it.
+  - Reduced the selected day's P&L from three visible repetitions to two: the
+    primary value remains in the selected week cell and the review rail's metric
+    summary, while the redundant heading strip and chart-card total are hidden.
   - Kept the selected date, review tabs, and Coach available on zero-trade days
     instead of replacing the Journal with the generic imported-trades empty
     screen.
@@ -81,7 +89,7 @@ stopped. This is the "when did we last work on it" trail.
     routine visual QA should prioritize laptop/desktop windows; phone-specific
     layouts are not a supported product target and only need basic resilience.
   - Verified the focused slice with targeted ESLint, TypeScript, the Impeccable
-    detector, and desktop/mobile Browser checks. Full repository lint remains
+    detector, and desktop Browser checks. Full repository lint remains
     blocked by the two known `react-hooks/set-state-in-effect` errors under
     `src/components/preview/`.
   - **Stopped at:** working production-page exploration ready for visual review.

@@ -1215,7 +1215,15 @@ async function loadReviewArchive(
   return { months, years };
 }
 
-function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoint[] }) {
+function RunningPnlChart({
+  day,
+  pnlPoints,
+  showTotal = true,
+}: {
+  day: ReviewDay;
+  pnlPoints: PnlPoint[];
+  showTotal?: boolean;
+}) {
   const width = 940;
   const height = 440;
   const pad = { top: 24, right: 26, bottom: 58, left: 128 };
@@ -1250,9 +1258,11 @@ function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoi
     <section className="flex h-[380px] flex-col rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-4">
       <div className="mb-1 flex items-center justify-between gap-4">
         <h2 className="text-[15px] font-semibold text-[var(--foreground)]">Daily P&L</h2>
-        <span className={`font-mono text-sm font-semibold tabular-nums ${pnlClass(day.pnl)}`}>
-          {formatMoney(day.pnl)}
-        </span>
+        {showTotal ? (
+          <span className={`font-mono text-sm font-semibold tabular-nums ${pnlClass(day.pnl)}`}>
+            {formatMoney(day.pnl)}
+          </span>
+        ) : null}
       </div>
       <svg viewBox={`0 0 ${width} ${height}`} className="min-h-0 flex-1" role="img" aria-label="Daily P&L by time of day">
         <defs>
@@ -1496,7 +1506,7 @@ function JournalReviewModuleForDay({
   const { topSurprise, chartFacts } = buildDayReviewPresentation(data);
 
   return (
-    <div className="max-w-[800px]">
+    <div className="max-w-[1040px]">
       <JournalReviewModule
         key={day.date}
         comparisons={comparisonData}
@@ -1524,7 +1534,7 @@ function JournalReviewModuleForDay({
         }}
         pnlContent={day.trades > 0 ? (
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
-            <RunningPnlChart day={day} pnlPoints={pnlPoints} />
+            <RunningPnlChart day={day} pnlPoints={pnlPoints} showTotal={false} />
             <TickerReviewRail
               rows={tickerRows.map((row) => ({
                 symbol: row.symbol,
@@ -1557,6 +1567,7 @@ function DayReviewSection({
   showReviewModule = false,
   showContextDetails = false,
   showLegacyPnl = true,
+  showDayHeader = true,
   coachSlots,
   dayCoach,
 }: {
@@ -1566,6 +1577,7 @@ function DayReviewSection({
   showReviewModule?: boolean;
   showContextDetails?: boolean;
   showLegacyPnl?: boolean;
+  showDayHeader?: boolean;
   coachSlots?: ModuleCoachSlots;
   dayCoach?: DayCoachPanelData;
 }) {
@@ -1578,30 +1590,36 @@ function DayReviewSection({
   return (
     <section>
       <div className="min-w-0">
-          <div className="mb-7">
-            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-              <h2 className="text-[32px] font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
-                {day.label}, {monthDayFmt.format(utcDate(day.date))}
-              </h2>
-              {!showContextDetails ? (
-                <a
-                  href={journalReviewModuleHref("/journal", day.date)}
-                  className="text-[13px] font-semibold text-[var(--accent)] transition-colors hover:text-[var(--accent-strong)]"
-                >
-                  Open day review · coach &amp; annotations →
-                </a>
-              ) : null}
+          {showDayHeader ? (
+            <div className="mb-7">
+              <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+                <h2 className="text-[32px] font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
+                  {day.label}, {monthDayFmt.format(utcDate(day.date))}
+                </h2>
+                {!showContextDetails ? (
+                  <a
+                    href={journalReviewModuleHref("/journal", day.date)}
+                    className="text-[13px] font-semibold text-[var(--accent)] transition-colors hover:text-[var(--accent-strong)]"
+                  >
+                    Open day review · coach &amp; annotations →
+                  </a>
+                ) : null}
+              </div>
+              <MetricStrip
+                className="mt-4"
+                items={[
+                  <Money key="pnl" value={day.pnl} className="font-semibold" />,
+                  `${day.trades} ${day.trades === 1 ? "trade" : "trades"}`,
+                  ...(day.accuracy == null ? [] : [`${day.accuracy}% win`]),
+                  ...(day.profitFactor == null ? [] : [`PF ${day.profitFactor.toFixed(2)}`]),
+                ]}
+              />
             </div>
-            <MetricStrip
-              className="mt-4"
-              items={[
-                <Money key="pnl" value={day.pnl} className="font-semibold" />,
-                `${day.trades} ${day.trades === 1 ? "trade" : "trades"}`,
-                ...(day.accuracy == null ? [] : [`${day.accuracy}% win`]),
-                ...(day.profitFactor == null ? [] : [`PF ${day.profitFactor.toFixed(2)}`]),
-              ]}
-            />
-          </div>
+          ) : (
+            <h1 className="sr-only">
+              {day.label}, {monthDayFmt.format(utcDate(day.date))}
+            </h1>
+          )}
 
           {!showReviewModule ? <div className="mb-8 max-w-[800px]">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -1773,6 +1791,7 @@ function ReviewDayRangeSection({
   showReviewModule = false,
   showContextDetails = false,
   showLegacyPnl = true,
+  showDayHeader = true,
   coachSlots,
   dayCoach,
 }: {
@@ -1782,6 +1801,7 @@ function ReviewDayRangeSection({
   showReviewModule?: boolean;
   showContextDetails?: boolean;
   showLegacyPnl?: boolean;
+  showDayHeader?: boolean;
   coachSlots?: ModuleCoachSlots;
   dayCoach?: DayCoachPanelData;
 }) {
@@ -1793,6 +1813,7 @@ function ReviewDayRangeSection({
       showReviewModule={showReviewModule}
       showContextDetails={showContextDetails}
       showLegacyPnl={showLegacyPnl}
+      showDayHeader={showDayHeader}
       coachSlots={coachSlots}
       dayCoach={dayCoach}
     />
@@ -2772,7 +2793,7 @@ export default async function TradeJournalReview({
     : { label: "Journal", href: basePath };
 
   return (
-    <div className={`mx-auto w-full pb-24 ${showArchiveSidebar ? "max-w-[1040px]" : "max-w-[800px]"}`}>
+    <div className={`mx-auto w-full pb-24 ${showArchiveSidebar || usesReviewModule ? "max-w-[1040px]" : "max-w-[800px]"}`}>
       {backHref ? (
         <Breadcrumbs
           back={breadcrumbBack}
@@ -2789,7 +2810,7 @@ export default async function TradeJournalReview({
           />
         ) : null}
         <div className="mt-8 min-w-0 space-y-8">
-          {showAccountIdentity ? (
+          {showAccountIdentity && !usesReviewModule ? (
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-[12px] font-semibold text-[var(--foreground)]">
                 {activeAccount!.name}
@@ -2834,6 +2855,7 @@ export default async function TradeJournalReview({
               showReviewModule
               showContextDetails
               showLegacyPnl={false}
+              showDayHeader={false}
               coachSlots={moduleCoachScopes && comparisonRanges ? {
                 week: (
                   <RangeCoachReview

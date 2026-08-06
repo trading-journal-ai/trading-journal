@@ -27,12 +27,12 @@ type JournalWeekStripProps = {
 
 const weekdayFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
-  weekday: "short",
+  weekday: "long",
 });
 
 const monthFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
-  month: "short",
+  month: "long",
 });
 
 function utcDate(date: string): Date {
@@ -125,7 +125,7 @@ export default function JournalWeekStrip({
       </div>
 
       <div className="overflow-x-auto border-t border-[var(--hairline)] [scrollbar-width:thin]">
-        <div className="grid min-w-[760px] grid-cols-[repeat(5,minmax(0,1fr))_minmax(140px,1fr)]">
+        <div className="grid min-w-[920px] grid-cols-[repeat(5,minmax(0,1fr))_minmax(160px,1fr)]">
           {days.map((day) => {
             const selected = day.date === selectedDate;
             const date = utcDate(day.date);
