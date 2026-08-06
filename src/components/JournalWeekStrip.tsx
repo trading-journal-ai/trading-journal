@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 
+import { useJournalDateNavigation } from "@/components/JournalDateNavigation";
 import Money from "@/components/ui/Money";
 
 export type JournalWeekStripDay = {
@@ -15,7 +16,6 @@ export type JournalWeekStripDay = {
 };
 
 type JournalWeekStripProps = {
-  selectedDate: string;
   weekStart: string;
   days: JournalWeekStripDay[];
   previousWeekHref: string;
@@ -109,7 +109,6 @@ function MetricPill({
 }
 
 export default function JournalWeekStrip({
-  selectedDate,
   weekStart,
   days,
   previousWeekHref,
@@ -117,11 +116,7 @@ export default function JournalWeekStrip({
   calendarHref,
   basePath,
 }: JournalWeekStripProps) {
-  const [pendingDate, setPendingDate] = useState<string | null>(null);
-
-  useEffect(() => {
-    setPendingDate(null);
-  }, [selectedDate, weekStart]);
+  const { pendingDate, selectedDate, setPendingDate } = useJournalDateNavigation();
 
   return (
     <nav

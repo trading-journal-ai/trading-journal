@@ -315,18 +315,15 @@ body {
   }
 }
 
-.journal-date-header-enter,
 .journal-day-rail-enter,
 .journal-review-panel-enter {
   animation: journal-content-enter 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.journal-date-header-enter,
 .journal-day-rail-enter {
   transition: opacity 90ms cubic-bezier(0.4, 0, 1, 1);
 }
 
-.journal-review-flow:has(.journal-week-strip--navigating) .journal-date-header-enter,
 .journal-review-flow:has(.journal-week-strip--navigating) .journal-day-rail-enter {
   animation: none;
   opacity: 0;
@@ -335,7 +332,6 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .journal-pnl-chart-enter,
   .journal-pnl-chart-loader,
-  .journal-date-header-enter,
   .journal-day-rail-enter,
   .journal-review-panel-enter {
     animation: none;

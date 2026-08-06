@@ -19,6 +19,10 @@ import ArchiveSidebar, { type ArchiveSidebarMonth } from "@/components/ArchiveSi
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
 import InlineImportPrompt from "@/components/InlineImportPrompt";
 import JournalPnlChart, { type JournalPnlPoint } from "@/components/JournalPnlChart";
+import {
+  JournalDateHeading,
+  JournalDateNavigationProvider,
+} from "@/components/JournalDateNavigation";
 import JournalWeekStrip, { type JournalWeekStripDay } from "@/components/JournalWeekStrip";
 import JournalReviewModule, {
   type JournalComparisonData,
@@ -1507,17 +1511,19 @@ function DayReviewSection({
     <section>
       <div className="min-w-0">
           {compactDayHeader ? (
-            <div key={day.date} className="journal-date-header-enter mb-5 pt-2">
-              <h1 className="text-[20px] font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]">
-                {day.label}, {monthDayFmt.format(utcDate(day.date))}
-              </h1>
+            <div className="mb-5 pt-2">
+              <JournalDateHeading
+                level={1}
+                className="text-[20px] font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]"
+              />
             </div>
           ) : (
-            <div key={day.date} className="journal-date-header-enter mb-7">
+            <div className="mb-7">
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-                <h2 className="text-[32px] font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
-                  {day.label}, {monthDayFmt.format(utcDate(day.date))}
-                </h2>
+                <JournalDateHeading
+                  level={2}
+                  className="text-[32px] font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]"
+                />
                 {!showContextDetails ? (
                   <a
                     href={journalReviewModuleHref("/journal", day.date)}
@@ -2729,7 +2735,10 @@ export default async function TradeJournalReview({
             enableWeekScrollSpy={preset === "month"}
           />
         ) : null}
-        <div className="journal-review-flow mt-8 min-w-0 space-y-8">
+        <JournalDateNavigationProvider
+          selectedDate={archiveAnchor}
+          className="journal-review-flow mt-8 min-w-0 space-y-8"
+        >
           {showAccountIdentity && !usesReviewModule ? (
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-[12px] font-semibold text-[var(--foreground)]">
@@ -2743,7 +2752,6 @@ export default async function TradeJournalReview({
 
           {usesReviewModule && preset === "today" && comparisonData ? (
             <JournalWeekStrip
-              selectedDate={archiveAnchor}
               weekStart={comparisonData.week.key}
               days={weekStripDays}
               previousWeekHref={journalReviewModuleHref(basePath, isoAddDays(archiveAnchor, -7))}
@@ -2851,7 +2859,7 @@ export default async function TradeJournalReview({
               showReviewActions
             />
           ) : null}
-        </div>
+        </JournalDateNavigationProvider>
       </div>
     </div>
   );
