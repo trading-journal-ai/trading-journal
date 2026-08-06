@@ -165,25 +165,6 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
-.journal-week-day > * {
-  transition: opacity 140ms ease-out;
-}
-
-.journal-week-day:not(.journal-week-day--selected) > * {
-  opacity: 0.68;
-}
-
-.journal-week-day:not(.journal-week-day--selected):hover > *,
-.journal-week-day:not(.journal-week-day--selected):focus-visible > * {
-  opacity: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .journal-week-day > * {
-    transition: none;
-  }
-}
-
 .journal-week-day--selected {
   background: var(--background);
 }
