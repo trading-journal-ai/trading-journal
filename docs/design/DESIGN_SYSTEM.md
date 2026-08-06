@@ -323,7 +323,7 @@ Build once, reuse everywhere.
 ## Motion
 
 Journal motion preserves continuity rather than decorating the page. Day
-selection is immediate, and its date heading updates optimistically with a 160ms
+selection is immediate, and its date heading updates optimistically with a 240ms
 incoming-only opacity fade because the clicked date is already known. Only
 data-dependent fragments—the chart and ticker rail—enter the loading handoff.
 Incoming data panels use a 150ms opacity-only ease-out. There is no positional

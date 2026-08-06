@@ -322,7 +322,7 @@ body {
 
 @keyframes journal-date-heading-fade {
   from {
-    opacity: 0.35;
+    opacity: 0.55;
   }
 
   to {
@@ -331,7 +331,7 @@ body {
 }
 
 .journal-date-heading-fade {
-  animation: journal-date-heading-fade 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: journal-date-heading-fade 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .journal-day-rail-enter {
