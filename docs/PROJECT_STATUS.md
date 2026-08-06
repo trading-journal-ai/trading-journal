@@ -66,10 +66,26 @@ stopped. This is the "when did we last work on it" trail.
   - Initialized the Impeccable `PRODUCT.md` with the confirmed product truth:
     Journal is the calendar-based record, Dashboard owns live carry-forward,
     Analytics owns investigation, and Coach connects narrative with evidence.
-  - No production UI, route, schema, or data-contract changes were made.
-  - **Stopped at:** product/IA and learning-cadence direction captured; next
-    step is a focused quick-capture interaction prototype before implementation
-    decisions are locked.
+  - Implemented the first production Journal structure directly on `/journal`:
+    a reusable five-day week strip with previous/next week controls, an existing
+    Calendar shortcut, direct day selection, compact day/week P&L, and explicit
+    no-trade/future/empty states.
+  - Removed the archive sidebar from the focused-day route and made the existing
+    Day/Week/Month review module the content core. Session verdict, market
+    context, and chart-read prose no longer render above the module; Coach owns
+    that interpretation through its tab.
+  - Kept the selected date, review tabs, and Coach available on zero-trade days
+    instead of replacing the Journal with the generic imported-trades empty
+    screen.
+  - Verified the focused slice with targeted ESLint, TypeScript, the Impeccable
+    detector, and desktop/mobile Browser checks. Full repository lint remains
+    blocked by the two known `react-hooks/set-state-in-effect` errors under
+    `src/components/preview/`.
+  - **Stopped at:** working production-page exploration ready for visual review.
+    The full month Calendar remains on `/calendar`; embedding it in Journal
+    should wait until its route-local grid/cells are extracted rather than
+    duplicated. Quick dictation capture and carry-forward behavior remain the
+    next interaction problems.
 
 - **2026-07-27** — Free-plan market-data sync + Analytics architecture home
   (branch `feat/free-plan-market-data-sync`).
