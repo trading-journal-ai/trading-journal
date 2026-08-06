@@ -1567,7 +1567,7 @@ function DayReviewSection({
   showReviewModule = false,
   showContextDetails = false,
   showLegacyPnl = true,
-  showDayHeader = true,
+  compactDayHeader = false,
   coachSlots,
   dayCoach,
 }: {
@@ -1577,7 +1577,7 @@ function DayReviewSection({
   showReviewModule?: boolean;
   showContextDetails?: boolean;
   showLegacyPnl?: boolean;
-  showDayHeader?: boolean;
+  compactDayHeader?: boolean;
   coachSlots?: ModuleCoachSlots;
   dayCoach?: DayCoachPanelData;
 }) {
@@ -1590,7 +1590,13 @@ function DayReviewSection({
   return (
     <section>
       <div className="min-w-0">
-          {showDayHeader ? (
+          {compactDayHeader ? (
+            <div className="mb-5 pt-2">
+              <h1 className="text-[20px] font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]">
+                {day.label}, {monthDayFmt.format(utcDate(day.date))}
+              </h1>
+            </div>
+          ) : (
             <div className="mb-7">
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
                 <h2 className="text-[32px] font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
@@ -1615,10 +1621,6 @@ function DayReviewSection({
                 ]}
               />
             </div>
-          ) : (
-            <h1 className="sr-only">
-              {day.label}, {monthDayFmt.format(utcDate(day.date))}
-            </h1>
           )}
 
           {!showReviewModule ? <div className="mb-8 max-w-[800px]">
@@ -1791,7 +1793,7 @@ function ReviewDayRangeSection({
   showReviewModule = false,
   showContextDetails = false,
   showLegacyPnl = true,
-  showDayHeader = true,
+  compactDayHeader = false,
   coachSlots,
   dayCoach,
 }: {
@@ -1801,7 +1803,7 @@ function ReviewDayRangeSection({
   showReviewModule?: boolean;
   showContextDetails?: boolean;
   showLegacyPnl?: boolean;
-  showDayHeader?: boolean;
+  compactDayHeader?: boolean;
   coachSlots?: ModuleCoachSlots;
   dayCoach?: DayCoachPanelData;
 }) {
@@ -1813,7 +1815,7 @@ function ReviewDayRangeSection({
       showReviewModule={showReviewModule}
       showContextDetails={showContextDetails}
       showLegacyPnl={showLegacyPnl}
-      showDayHeader={showDayHeader}
+      compactDayHeader={compactDayHeader}
       coachSlots={coachSlots}
       dayCoach={dayCoach}
     />
@@ -2855,7 +2857,7 @@ export default async function TradeJournalReview({
               showReviewModule
               showContextDetails
               showLegacyPnl={false}
-              showDayHeader={false}
+              compactDayHeader
               coachSlots={moduleCoachScopes && comparisonRanges ? {
                 week: (
                   <RangeCoachReview

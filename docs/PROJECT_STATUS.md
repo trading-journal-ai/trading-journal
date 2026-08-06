@@ -77,8 +77,8 @@ stopped. This is the "when did we last work on it" trail.
   - Refined the focused Journal for its desktop-first window: widened the week
     strip and review module to 1040px, spelled out month and weekday labels, and
     removed the account banner plus the oversized duplicate selected-day
-    heading. The week cell now provides orientation; the review begins directly
-    below it.
+    heading. A compact day heading now separates the selected week cell from the
+    review without repeating its metrics.
   - Reduced the selected day's P&L from three visible repetitions to two: the
     primary value remains in the selected week cell and the review rail's metric
     summary, while the redundant heading strip and chart-card total are hidden.
