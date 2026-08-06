@@ -96,7 +96,7 @@ function MetricPill({
 }) {
   return (
     <span
-      className="mt-[6px] inline-flex w-fit max-w-full items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--surface-2)] px-[11px] py-1 font-sans text-[11px] font-normal leading-4 text-[var(--muted)] tabular-nums"
+      className="journal-week-day__metrics mt-[6px] inline-flex w-fit max-w-full items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--surface-2)] px-[11px] py-1 font-sans text-[11px] font-normal leading-4 text-[var(--muted)] tabular-nums"
       aria-label={`${trades} ${trades === 1 ? "trade" : "trades"}${accuracy == null ? "" : `, ${accuracy}% win rate`}${profitFactor == null ? "" : `, ${profitFactor.toFixed(2)} profit factor`}`}
     >
       <span>{trades} {trades === 1 ? "Trade" : "Trades"}</span>
@@ -150,7 +150,7 @@ export default function JournalWeekStrip({
                 key={day.date}
                 href={dayHref(basePath, day.date)}
                 aria-current={selected ? "date" : undefined}
-                className={`relative flex flex-col border-r border-[var(--hairline)] px-3.5 py-4 font-sans transition-colors last:border-r-0 hover:bg-[var(--surface)] focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] ${
+                className={`journal-week-day relative flex flex-col border-r border-[var(--hairline)] px-3.5 py-4 font-sans last:border-r-0 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] ${
                   selected ? "journal-week-day--selected z-[1]" : ""
                 }`}
               >

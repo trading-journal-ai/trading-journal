@@ -293,11 +293,12 @@ Build once, reuse everywhere.
   column flat, not filled; year mini-months may use subtle green/red heatmap
   fills. The Journal week strip uses a fixed Geist Sans lockup: weekday/date is
   semibold 16px, P&L is semibold 14px, and the grouped
-  trades/win-rate/profit-factor pill is regular 11px. Its selected day stays on
-  the page background with no added radius or elevation, using only a 1px
-  semantic-accent bottom edge and small corner dot. The five-day strip uses a
-  complete hairline outline with a 4px radius; it begins open above its
-  date-navigation header.
+  trades/win-rate/profit-factor pill is regular 11px. Hover, keyboard focus,
+  and selected share the same treatment: the page background remains flat, a
+  small semantic-accent corner dot eases in, and the metric pill transitions to
+  the semantic accent with action-foreground text. There is no added border,
+  radius, elevation, or bottom edge. The five-day strip uses a complete hairline
+  outline with a 4px radius; it begins open above its date-navigation header.
 - **Journal** — prose-first. Headers use Display/Page title; recap text uses Body
   large; metrics sit under the header as quiet mono metadata; ticker rail compact
   and sorted best-to-worst; pills secondary; reading mode hides edit controls

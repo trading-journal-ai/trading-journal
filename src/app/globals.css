@@ -165,15 +165,12 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
+.journal-week-day,
 .journal-week-day--selected {
   background: var(--background);
 }
 
-.journal-week-day--selected:hover {
-  background: var(--background);
-}
-
-.journal-week-day--selected::before {
+.journal-week-day::before {
   position: absolute;
   top: 16px;
   right: 14px;
@@ -182,18 +179,39 @@ body {
   border-radius: 999px;
   background: var(--accent);
   content: "";
+  opacity: 0;
   pointer-events: none;
+  transform: scale(0.72);
+  transition:
+    opacity 150ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.journal-week-day--selected::after {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 1px;
+.journal-week-day__metrics {
+  transition:
+    background-color 150ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.journal-week-day:hover::before,
+.journal-week-day:focus-visible::before,
+.journal-week-day--selected::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.journal-week-day:hover .journal-week-day__metrics,
+.journal-week-day:focus-visible .journal-week-day__metrics,
+.journal-week-day--selected .journal-week-day__metrics {
   background: var(--accent);
-  content: "";
-  pointer-events: none;
+  color: var(--action-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journal-week-day::before,
+  .journal-week-day__metrics {
+    transition: none;
+  }
 }
 
 .import-progress-track {
