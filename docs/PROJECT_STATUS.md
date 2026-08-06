@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-07-27 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-08-06 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -31,6 +31,22 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-08-06** — Journal learning-loop and unified navigation exploration
+  (branch `design/journal-formatting`).
+  - Audited the production Journal -> Calendar -> day -> trade flow after
+    hands-on use exposed slow retrieval in the continuous-scroll model.
+  - Reopened the 2026-07-21 Journal navigation decision while preserving its
+    useful canonical-day principle.
+  - Captured the missing stepping-stone contract: reflection -> Coach
+    distillation -> trader-adopted focus -> next-session resurfacing -> evidence
+    -> explicit resolution.
+  - Captured a shared period navigator for Journal, Calendar, Trades, and
+    Analytics plus one reusable inline trade-inspection interaction for Journal
+    and Trades.
+  - No production UI, route, schema, or data-contract changes were made.
+  - **Stopped at:** product/IA direction captured; next step is a focused
+    interaction prototype before implementation decisions are locked.
 
 - **2026-07-27** — Free-plan market-data sync + Analytics architecture home
   (branch `feat/free-plan-market-data-sync`).

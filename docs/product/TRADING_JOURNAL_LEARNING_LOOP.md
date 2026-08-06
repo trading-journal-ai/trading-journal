@@ -19,6 +19,14 @@ timing, sizing, charts, and statistical patterns make the coach more grounded,
 but they are not a separate emotional or product destination. They support the
 conversation between Journal, Coach, and Dashboard.
 
+> **Hands-on finding, 2026-08-06:** The conceptual loop exists, but the product
+> does not yet make its state transitions operational. A reflection can produce
+> a carry-forward sentence, but the next day does not consistently begin by
+> resurfacing and resolving it. The missing contract is **capture -> distill ->
+> adopt -> resurface -> test -> resolve**. Navigation and interaction implications
+> are captured in
+> [Unified Review Navigation and Learning Loop](../design/UNIFIED_REVIEW_NAVIGATION.md).
+
 For the product flow of importing trades, opening the daily recap editor,
 attaching coach review, and promoting carry-forward cues, see
 `docs/product/DAILY_RECAP_FLOW.md`.
@@ -53,6 +61,24 @@ Durable learning branch
   -> Trader accepts, edits, or dismisses it
   -> Playbook updates the standards used by future reviews
 ```
+
+## The stepping-stone contract
+
+The loop only closes when a lesson changes state across sessions. Each adopted
+carry-forward focus needs:
+
+- a source recap and source voice (trader, Coach proposal, or joint edit);
+- one observable behavior or experiment;
+- a review horizon or expiry;
+- a next-session cue;
+- evidence gathered while it is active; and
+- an explicit resolution: upheld, missed, mixed, untested, revised, completed,
+  or retired.
+
+The next Journal day should surface the prior focus before asking the trader to
+create a new one. The recap should end by continuing, refining, completing, or
+replacing that focus. Otherwise each day starts from scratch and the Journal is
+an archive rather than a learning system.
 
 The dashboard is not the source of truth. It is the active surface that asks the
 right question at the right moment and brings the active lesson back into view.

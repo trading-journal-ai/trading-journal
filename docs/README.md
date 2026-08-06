@@ -49,6 +49,9 @@ Key product-area specs referenced by the data model:
   product position, and the evaluation needed to prove the coaching loop.
 - [`product/JOURNAL_REVIEW_MODULE.md`](product/JOURNAL_REVIEW_MODULE.md):
   component contract for the day-level 12-view review and annotation workspace.
+- [`design/UNIFIED_REVIEW_NAVIGATION.md`](design/UNIFIED_REVIEW_NAVIGATION.md):
+  active exploration of the closed reflection-to-next-session loop, shared
+  period navigation, Calendar/Journal relationship, and shared trade inspection.
 - [`product/CHART_READ_PANEL.md`](product/CHART_READ_PANEL.md): hindsight-aware
   chart-read overlay for the ticker review — pattern, levels, implied plan,
   setup match, outcome grading; `ChartRead` contract sketch.
