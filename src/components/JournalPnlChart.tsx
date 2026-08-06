@@ -213,11 +213,6 @@ export default function JournalPnlChart({ points }: { points: JournalPnlPoint[] 
             fill="none"
           >
             <path
-              d="M1 20H57"
-              className="stroke-[var(--hairline)]"
-              strokeWidth="1"
-            />
-            <path
               d="M2 18 11 15 18 17 27 9 35 12 43 5 56 2"
               className="journal-pnl-loader-line stroke-[var(--accent)]"
               strokeLinecap="round"
