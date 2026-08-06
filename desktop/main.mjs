@@ -5,6 +5,7 @@ import { app, BrowserWindow } from "electron";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const nextBin = path.join(repoRoot, "node_modules", "next", "dist", "bin", "next");
+const appIcon = path.join(repoRoot, "public", "brand", "trading-journal-ai-icon.png");
 const port = 4317;
 const appUrl = `http://127.0.0.1:${port}`;
 let mainWindow;
@@ -67,10 +68,11 @@ function createWindow() {
   void mainWindow.loadURL(appUrl);
 }
 
-app.setName("Trading Journal");
+app.setName("Trading Journal AI");
 
 app.whenReady().then(async () => {
   try {
+    if (process.platform === "darwin") app.dock.setIcon(appIcon);
     startNextServer();
     await waitForNextServer();
     createWindow();

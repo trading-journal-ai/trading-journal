@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-07-28 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-08-06 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -31,6 +31,14 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-08-06** — Branded the development Electron shell
+  (branch `feat/electron-desktop-shell`).
+  - The macOS process now uses the **Trading Journal AI** name and the existing
+    brand icon in the Dock.
+  - Documented how to retain the running icon in the Dock while keeping the
+    repository command as the reliable launch path. Packaged app/installer work
+    remains deferred.
 
 - **2026-07-28** — Minimal Electron desktop proof of concept
   (branch `feat/electron-desktop-shell`).
