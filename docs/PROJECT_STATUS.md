@@ -53,6 +53,16 @@ stopped. This is the "when did we last work on it" trail.
   - Captured a weekly/monthly Personal Edge Profile for time window, price band,
     trade sequence, setup, relative volume, opportunity quality, and
     price-action cohorts, with sample and coverage guardrails.
+  - Separated the work into two tracks: dictation-first human reflection with
+    Dashboard carry-forward, and Analytics/Coach evidence-based pattern
+    detection. The tracks may reinforce each other without being forced to
+    merge on every day.
+  - Confirmed Calendar as Journal's browse/index mode rather than a separate
+    destination, with one canonical focused-day view behind date selection.
+  - Added the emotional execution spiral as the representative quick-capture
+    use case: preserve the trader's narrative, reflect a tentative behavior
+    chain, locate an intervention, and carry it forward only with trader
+    acceptance.
   - No production UI, route, schema, or data-contract changes were made.
   - **Stopped at:** product/IA and learning-cadence direction captured; next
     step is a focused quick-capture interaction prototype before implementation

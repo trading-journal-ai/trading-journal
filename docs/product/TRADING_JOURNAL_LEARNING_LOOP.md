@@ -19,6 +19,16 @@ timing, sizing, charts, and statistical patterns make the coach more grounded,
 but they are not a separate emotional or product destination. They support the
 conversation between Journal, Coach, and Dashboard.
 
+This system contains two related tracks:
+
+- **Reflection track:** Journal captures the trader's free-form account;
+  Dashboard carries one accepted lesson into the next live session.
+- **Evidence track:** Analytics detects longitudinal cohorts and recurrence;
+  Coach translates the relevant evidence without replacing the trader's voice.
+
+They meet when a narrated behavior is supported, contradicted, or clarified by
+trade evidence. They do not need to meet on every day.
+
 > **Hands-on finding, 2026-08-06:** The conceptual loop exists, but the product
 > does not yet make its state transitions operational. A reflection can produce
 > a carry-forward sentence, but the next day does not consistently begin by
@@ -244,6 +254,25 @@ Every check-in can become the next session's focus.
 4. Dashboard cue: "Missing the first move is not a reason to lower standards."
 5. Dashboard prompt: "Are you lowering standards because you missed the first
    move?" The answer attaches back to the daily recap.
+
+### Dictation-first spiral example
+
+1. Journal dictation preserves the sequence: urgency to participate, a rushed
+   entry, a loss, pursuit when the stock moves without the trader, another loss,
+   size escalation, and a worse outcome.
+2. Coach reflects the chain back without prematurely assigning a permanent
+   label: `trigger -> rushed entry -> loss -> pursuit -> size escalation`.
+3. Trade evidence checks entry latency, re-entry timing, same-symbol churn,
+   sequence quality, and sizing changes.
+4. The trader corrects the interpretation and may adopt one intervention, such
+   as requiring a deliberate reset after the first stopped attempt.
+5. Dashboard shows that accepted intervention during the next session.
+6. The next Journal entry records whether the situation occurred and whether
+   the intervention was followed, missed, mixed, or untested.
+
+The system's job is not to sanitize the emotional story into a metric. It is to
+preserve the story, identify the decision point, and make an accepted response
+available when the pattern begins again.
 
 ## Coach Chat Preview
 

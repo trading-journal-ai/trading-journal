@@ -1,9 +1,11 @@
 # Unified Review Navigation and Learning Loop
 
-> **Status:** exploration captured 2026-08-06 from hands-on product use
+> **Status:** direction clarified 2026-08-06 from hands-on product use
 > **Scope:** Journal, Calendar, Trades, Analytics, daily reflection, and
 > carry-forward behavior
-> **Not yet locked:** route consolidation, persistence model, and final visual
+> **Locked here:** Calendar becomes the Journal's date index rather than a peer
+> destination
+> **Not yet locked:** migration details, persistence model, and final visual
 > treatment
 
 ## Product realization
@@ -32,6 +34,21 @@ data is the evidence substrate. The product distinction is how it combines that
 evidence with human context, emotional state, and a longitudinal improvement
 loop. Data should ground the reflection without becoming the emotional center
 of the experience.
+
+### Two tracks, one product
+
+The earlier exploration diluted two separate jobs by asking one surface to do
+both:
+
+| Track | Primary question | Product ownership |
+| --- | --- | --- |
+| Human reflection and behavior change | What happened inside me, what did I learn, and what should I remember tomorrow? | Journal captures; Dashboard carries the adopted cue forward. |
+| Evidence and pattern detection | Where does my edge appear, and which behaviors recur in the data? | Analytics computes and exposes evidence; Coach interprets it at the appropriate cadence. |
+
+Coach bridges the tracks, but it should not collapse them. A trader's emotional
+account can be important before it is statistically measurable. A statistical
+pattern can also be useful without requiring the trader to manufacture a
+matching journal narrative.
 
 ## What is actually solvable
 
@@ -68,6 +85,30 @@ never promotes a focus, and rarely browses old entries.
 The first interaction prototype should target a useful note in roughly thirty
 seconds. The note can be as small as an emotion, an observation, or a sentence
 about what went right or wrong.
+
+### Dictation-first behavioral narrative
+
+The central Journal input should allow the trader to speak through the sequence
+of a difficult day in their own language. A representative narrative is:
+
+```text
+The stock began moving and I felt triggered to participate. I entered too
+quickly and took a loss. When it moved without me, I chased another entry,
+lost again, increased size, and made the next loss worse. Then it moved without
+me anyway.
+```
+
+The product should preserve that story before trying to categorize it. Coach
+may then reflect the sequence back as a tentative chain:
+
+```text
+trigger -> rushed entry -> loss -> pursuit -> another loss -> size escalation
+```
+
+That chain is more useful than a generic "overtrading" label because it locates
+the intervention. The candidate lesson may be patience after the first stopped
+attempt, but it becomes tomorrow's cue only after the trader accepts or edits
+it. The original dictation remains visible and editable beside any synthesis.
 
 ## Pattern ledger, not an unread archive
 
@@ -171,8 +212,8 @@ position.
 
 ## One temporal navigation model
 
-Calendar, Trades, Journal, and Analytics currently express similar time-range
-navigation with different controls and behaviors. They should share one
+Trades, Journal, and Analytics currently express similar time-range navigation
+with different controls and behaviors. They should share one
 temporal vocabulary and interaction contract.
 
 ### Shared `PeriodNavigator`
@@ -194,14 +235,23 @@ model should work in Trades and Analytics.
 
 | Surface | Primary job |
 | --- | --- |
-| Journal | Reflect, receive Coach feedback, adopt a focus, and resolve the previous focus. |
-| Calendar | Scan time visually and select a day or period. It may become a Journal browse mode rather than a peer destination. |
+| Journal | Scan the calendar, select a day, dictate or write reflection, receive Coach feedback, adopt a focus, and resolve the previous focus. |
 | Trades | Inspect imported evidence quickly, filter it, and open trade detail without losing the list context. |
 | Analytics | Investigate patterns across periods and send a finding or experiment back into the learning loop. |
+| Dashboard | Carry the active focus into today's behavior and accept lightweight in-session check-ins. |
 
-Whether Calendar becomes a Journal view or remains a separate route is not yet
-decided. Either implementation should reuse the same date state and selection
-model. Calendar should not be the only efficient way to navigate Journal days.
+Calendar is the Journal's browse/index mode, not a peer product destination.
+Selecting a date opens the canonical focused Journal day. The existing
+`/calendar` route may remain temporarily as a compatibility redirect or alias,
+but it should not keep an independent navigation vocabulary or information
+architecture.
+
+The Journal therefore has two complementary views of the same record:
+
+- **Calendar/index:** fast month and year scanning, period movement, and direct
+  day selection.
+- **Focused day:** dictation, reflection, Coach synthesis, evidence, and
+  carry-forward resolution.
 
 ## Shared trade inspection
 
@@ -224,18 +274,20 @@ For high-trade-count sessions, ticker/session grouping should precede the raw
 trade list. Raw rows remain available, but they should not be the first retrieval
 surface.
 
-## Decisions reopened
+## Decisions clarified
 
 - Keep one canonical day template.
 - Replace month-length continuous Journal scrolling with a focused day plus
   direct date navigation.
-- Preserve Calendar's strong visual overview while deciding whether it is a
-  Journal browse mode or a separate route.
-- Standardize period movement across Trades, Analytics, Calendar, and Journal.
+- Make Calendar the Journal's browse/index mode rather than a separate product
+  destination.
+- Standardize period movement across Trades, Analytics, and Journal.
 - Standardize inline trade inspection across Trades and Journal.
 - Treat reflection plus evidence as complementary; do not try to make the
   Journal non-data-based.
 - Make carry-forward resolution a first-class product state, not display copy.
+- Keep Dashboard responsible for carrying the selected lesson into the live
+  day; do not make Journal duplicate that job.
 
 ## Questions for the next prototype
 
@@ -247,11 +299,9 @@ surface.
    analysis?
 4. What is the shortest useful resolution flow for upheld, missed, mixed, and
    untested focuses?
-5. Does Calendar live inside Journal as a browse mode, while `/calendar`
-   remains a deep link for compatibility?
-6. Should the Journal date index show reflection/Coach completion state in
+5. Should the Journal date index show reflection/Coach completion state in
    addition to result and trade count?
-7. At what trade count does the UI switch from raw rows to ticker/session
+6. At what trade count does the UI switch from raw rows to ticker/session
    grouping by default?
 
 ## First prototype slice
@@ -265,7 +315,7 @@ production contracts:
 3. Focused Journal day with prior-focus check-in at the top.
 4. Reflection and Coach synthesis leading to one adopted next-session focus.
 5. Compact trade list using the shared inline inspection component.
-6. Calendar/date picker that selects the focused Journal day without requiring
+6. Journal calendar/index that selects the focused day without requiring
    a second navigation system.
 
 This prototype is successful when the trader can move to an earlier month,
