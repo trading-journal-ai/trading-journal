@@ -181,29 +181,31 @@ body {
   content: "";
   opacity: 0;
   pointer-events: none;
-  transform: scale(0.72);
-  transition:
-    opacity 150ms cubic-bezier(0.16, 1, 0.3, 1),
-    transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 180ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .journal-week-day__metrics {
   transition:
-    background-color 150ms cubic-bezier(0.16, 1, 0.3, 1),
-    color 150ms cubic-bezier(0.16, 1, 0.3, 1);
+    background-color 260ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 220ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .journal-week-day:hover::before,
 .journal-week-day:focus-visible::before,
 .journal-week-day--selected::before {
   opacity: 1;
-  transform: scale(1);
 }
 
 .journal-week-day:hover .journal-week-day__metrics,
-.journal-week-day:focus-visible .journal-week-day__metrics,
-.journal-week-day--selected .journal-week-day__metrics {
-  background: var(--accent);
+.journal-week-day:focus-visible .journal-week-day__metrics {
+  color: var(--accent);
+}
+
+.journal-week-day:active .journal-week-day__metrics,
+.journal-week-day--selected .journal-week-day__metrics,
+.journal-week-day--selected:hover .journal-week-day__metrics,
+.journal-week-day--selected:focus-visible .journal-week-day__metrics {
+  background-color: var(--accent);
   color: var(--action-foreground);
 }
 
