@@ -2728,7 +2728,7 @@ export default async function TradeJournalReview({
             enableWeekScrollSpy={preset === "month"}
           />
         ) : null}
-        <div className="mt-8 min-w-0 space-y-8">
+        <div className="journal-review-flow mt-8 min-w-0 space-y-8">
           {showAccountIdentity && !usesReviewModule ? (
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-[12px] font-semibold text-[var(--foreground)]">

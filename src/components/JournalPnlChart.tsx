@@ -193,7 +193,7 @@ export default function JournalPnlChart({ points }: { points: JournalPnlPoint[] 
   }
 
   return (
-    <div className="min-h-0 flex-1 pl-2">
+    <div className="journal-pnl-chart-shell relative min-h-0 flex-1 pl-2">
       <div
         key={chartTransitionKey}
         ref={containerRef}
@@ -201,6 +201,15 @@ export default function JournalPnlChart({ points }: { points: JournalPnlPoint[] 
         role="img"
         aria-label={chartLabel}
       />
+      <div
+        className="journal-pnl-chart-loader pointer-events-none absolute inset-0 z-[1] flex items-center justify-center"
+        aria-hidden="true"
+      >
+        <span className="inline-flex items-center gap-2 rounded-full bg-[var(--surface)] px-3 py-1.5 font-sans text-[11px] font-medium text-[var(--muted)]">
+          <span className="journal-pnl-chart-spinner h-3 w-3 rounded-full border-2 border-current border-r-transparent" />
+          Loading chart
+        </span>
+      </div>
     </div>
   );
 }
