@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -76,10 +77,37 @@ export function JournalDateHeading({
   level: 1 | 2;
 }) {
   const { visualDate } = useJournalDateNavigation();
-  const date = utcDate(visualDate);
+  const [displayedDate, setDisplayedDate] = useState(visualDate);
+  const [phase, setPhase] = useState<"idle" | "out" | "in">("idle");
+
+  useEffect(() => {
+    if (visualDate === displayedDate) return;
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setDisplayedDate(visualDate);
+      setPhase("idle");
+      return;
+    }
+
+    setPhase("out");
+    const swapTimer = window.setTimeout(() => {
+      setDisplayedDate(visualDate);
+      setPhase("in");
+    }, 80);
+
+    return () => window.clearTimeout(swapTimer);
+  }, [displayedDate, visualDate]);
+
+  const date = utcDate(displayedDate);
   const content = `${weekdayFmt.format(date)}, ${monthDayFmt.format(date)}`;
   const contentNode = (
-    <span key={visualDate} className="journal-date-heading-fade">
+    <span
+      key={displayedDate}
+      className={`journal-date-heading-fade${phase === "idle" ? "" : ` journal-date-heading-fade--${phase}`}`}
+      onAnimationEnd={() => {
+        if (phase === "in") setPhase("idle");
+      }}
+    >
       {content}
     </span>
   );

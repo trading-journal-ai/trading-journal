@@ -320,9 +320,19 @@ body {
   animation: journal-content-enter 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-@keyframes journal-date-heading-fade {
+@keyframes journal-date-heading-fade-out {
   from {
-    opacity: 0.55;
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes journal-date-heading-fade-in {
+  from {
+    opacity: 0;
   }
 
   to {
@@ -330,8 +340,12 @@ body {
   }
 }
 
-.journal-date-heading-fade {
-  animation: journal-date-heading-fade 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+.journal-date-heading-fade--out {
+  animation: journal-date-heading-fade-out 80ms linear both;
+}
+
+.journal-date-heading-fade--in {
+  animation: journal-date-heading-fade-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .journal-day-rail-enter {

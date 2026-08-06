@@ -323,12 +323,12 @@ Build once, reuse everywhere.
 ## Motion
 
 Journal motion preserves continuity rather than decorating the page. Day
-selection is immediate, and its date heading updates optimistically with a 240ms
-incoming-only opacity fade because the clicked date is already known. Only
-data-dependent fragments—the chart and ticker rail—enter the loading handoff.
-Incoming data panels use a 150ms opacity-only ease-out. There is no positional
-motion or stagger; tabs, cards, borders, and page geometry stay fixed. All
-motion is disabled when `prefers-reduced-motion` is enabled.
+selection is immediate, while its known date heading uses an 80ms outgoing fade
+followed by a 180ms incoming fade. Only data-dependent fragments—the chart and
+ticker rail—enter the loading handoff. Incoming data panels use a 150ms
+opacity-only ease-out. There is no positional motion or stagger; tabs, cards,
+borders, and page geometry stay fixed. All motion is disabled when
+`prefers-reduced-motion` is enabled.
 
 ## States
 
