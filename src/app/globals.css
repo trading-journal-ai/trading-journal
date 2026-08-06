@@ -175,11 +175,10 @@ body {
 
 .journal-week-day--selected::after {
   position: absolute;
-  top: 16px;
-  right: 14px;
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
   background: var(--accent);
   content: "";
   pointer-events: none;
