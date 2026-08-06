@@ -227,6 +227,11 @@ Every review surface should compose the same primitives:
 - URL-backed state so links preserve the selected account, scope, and period.
 - Optional filters after the period controls, not mixed into date navigation.
 
+The interaction and data-loading contract for these controls is captured in
+[Journal Loading and Performance Plan](JOURNAL_LOADING_PERFORMANCE_PLAN.md).
+Period navigation should feel immediate in the local Electron app; loaders are
+bounded fallbacks for uncached data, not the primary navigation experience.
+
 The speed test is simple: after selecting Month, the trader should be able to
 move three months backward with three predictable presses. The same mental
 model should work in Trades and Analytics.
@@ -288,6 +293,9 @@ surface.
 - Make carry-forward resolution a first-class product state, not display copy.
 - Keep Dashboard responsible for carrying the selected lesson into the live
   day; do not make Journal duplicate that job.
+- Treat instant local period/day navigation and bounded loading states as part
+  of the product contract; see
+  [Journal Loading and Performance Plan](JOURNAL_LOADING_PERFORMANCE_PLAN.md).
 
 ## Questions for the next prototype
 
