@@ -173,6 +173,18 @@ body {
   background: var(--background);
 }
 
+.journal-week-day--selected::before {
+  position: absolute;
+  top: 16px;
+  right: 14px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  content: "";
+  pointer-events: none;
+}
+
 .journal-week-day--selected::after {
   position: absolute;
   right: 0;
