@@ -2686,6 +2686,8 @@ export default async function TradeJournalReview({
         return {
           date: weekDate,
           trades: session?.trades ?? 0,
+          accuracy: session?.accuracy ?? null,
+          profitFactor: session?.profitFactor ?? null,
           pnl: session?.pnl ?? 0,
           state: session
             ? "trades"
@@ -2702,7 +2704,7 @@ export default async function TradeJournalReview({
     : { label: "Journal", href: basePath };
 
   return (
-    <div className={`mx-auto w-full pb-24 ${showArchiveSidebar || usesReviewModule ? "max-w-[1040px]" : "max-w-[800px]"}`}>
+    <div className={`mx-auto w-full pb-24 ${showArchiveSidebar || usesReviewModule ? "max-w-[1240px]" : "max-w-[800px]"}`}>
       {backHref ? (
         <Breadcrumbs
           back={breadcrumbBack}

@@ -6,6 +6,8 @@ import Money from "@/components/ui/Money";
 export type JournalWeekStripDay = {
   date: string;
   trades: number;
+  accuracy: number | null;
+  profitFactor: number | null;
   pnl: number;
   state: "trades" | "no_trade" | "future" | "empty";
 };
@@ -17,6 +19,7 @@ type JournalWeekStripProps = {
   weekSummary: {
     trades: number;
     accuracy: number | null;
+    profitFactor: number | null;
     pnl: number;
   };
   previousWeekHref: string;
@@ -82,9 +85,29 @@ function IconLink({ href, label, children }: { href: string; label: string; chil
 function EmptyDayValue({ state }: { state: JournalWeekStripDay["state"] }) {
   const label = state === "no_trade" ? "No-trade" : state === "future" ? "Upcoming" : "No session";
   return (
-    <span className="mt-auto pt-3">
-      <span className="block font-mono text-[14px] leading-5 text-[var(--faint)]">—</span>
-      <span className="block text-[11.5px] leading-4 text-[var(--muted)]">{label}</span>
+    <span className="mt-5 flex min-h-14 items-center">
+      <span className="text-[12px] leading-4 text-[var(--muted)]">{label}</span>
+    </span>
+  );
+}
+
+function MetricPill({
+  trades,
+  accuracy,
+  profitFactor,
+}: {
+  trades: number;
+  accuracy: number | null;
+  profitFactor: number | null;
+}) {
+  return (
+    <span
+      className="mt-2 inline-flex w-fit max-w-full items-center gap-2 whitespace-nowrap rounded-full bg-[var(--surface-2)] px-2.5 py-1 font-[family-name:var(--font-metric)] text-[11px] leading-4 text-[var(--muted)] tabular-nums"
+      aria-label={`${trades} ${trades === 1 ? "trade" : "trades"}${accuracy == null ? "" : `, ${accuracy}% win rate`}${profitFactor == null ? "" : `, ${profitFactor.toFixed(2)} profit factor`}`}
+    >
+      <span>{trades} {trades === 1 ? "trade" : "trades"}</span>
+      {accuracy == null ? null : <span>{accuracy}% Win</span>}
+      {profitFactor == null ? null : <span>{profitFactor.toFixed(2)} PF</span>}
     </span>
   );
 }
@@ -125,7 +148,7 @@ export default function JournalWeekStrip({
       </div>
 
       <div className="overflow-x-auto border-t border-[var(--hairline)] [scrollbar-width:thin]">
-        <div className="grid min-w-[920px] grid-cols-[repeat(5,minmax(0,1fr))_minmax(160px,1fr)]">
+        <div className="grid min-w-[1080px] grid-cols-[repeat(5,minmax(0,1fr))_minmax(180px,1fr)]">
           {days.map((day) => {
             const selected = day.date === selectedDate;
             const date = utcDate(day.date);
@@ -134,20 +157,22 @@ export default function JournalWeekStrip({
                 key={day.date}
                 href={dayHref(basePath, day.date)}
                 aria-current={selected ? "date" : undefined}
-                className={`relative flex min-h-[82px] flex-col border-r border-[var(--hairline)] px-3 py-2.5 transition-colors hover:bg-[var(--surface)] focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] ${
+                className={`relative flex min-h-[132px] flex-col border-r border-[var(--hairline)] px-4 py-4 transition-colors hover:bg-[var(--surface)] focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] ${
                   selected ? "bg-[var(--surface)] after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-[var(--accent)]" : ""
                 }`}
               >
-                <span className="flex items-baseline gap-1.5 text-[12px] font-semibold text-[var(--foreground)]">
+                <span className="flex items-baseline gap-1.5 text-[16px] font-semibold leading-5 text-[var(--foreground)]">
                   {weekdayFmt.format(date)}
                   <span className="font-normal text-[var(--muted)]">{date.getUTCDate()}</span>
                 </span>
                 {day.state === "trades" ? (
-                  <span className="mt-auto flex items-baseline justify-between gap-2 pt-3">
-                    <Money value={day.pnl} className="text-[13px] font-semibold" />
-                    <span className="whitespace-nowrap text-[11.5px] text-[var(--muted)]">
-                      {day.trades} {day.trades === 1 ? "trade" : "trades"}
-                    </span>
+                  <span className="mt-4 flex flex-col items-start">
+                    <Money value={day.pnl} className="text-[17px] font-semibold leading-5" />
+                    <MetricPill
+                      trades={day.trades}
+                      accuracy={day.accuracy}
+                      profitFactor={day.profitFactor}
+                    />
                   </span>
                 ) : (
                   <EmptyDayValue state={day.state} />
@@ -156,17 +181,19 @@ export default function JournalWeekStrip({
             );
           })}
 
-          <div className="flex min-h-[82px] flex-col px-3 py-2.5">
-            <span className="text-[12px] font-semibold text-[var(--foreground)]">Week</span>
+          <div className="flex min-h-[132px] flex-col px-4 py-4">
+            <span className="text-[16px] font-semibold leading-5 text-[var(--foreground)]">Week</span>
             {weekSummary.trades > 0 ? (
-              <span className="mt-auto pt-3">
-                <Money value={weekSummary.pnl} className="block text-[13px] font-semibold" />
-                <span className="block whitespace-nowrap text-[11.5px] text-[var(--muted)]">
-                  {weekSummary.trades} trades{weekSummary.accuracy == null ? "" : ` · ${weekSummary.accuracy}% win`}
-                </span>
+              <span className="mt-4 flex flex-col items-start">
+                <Money value={weekSummary.pnl} className="text-[17px] font-semibold leading-5" />
+                <MetricPill
+                  trades={weekSummary.trades}
+                  accuracy={weekSummary.accuracy}
+                  profitFactor={weekSummary.profitFactor}
+                />
               </span>
             ) : (
-              <span className="mt-auto pt-3 text-[11.5px] leading-5 text-[var(--muted)]">No sessions</span>
+              <span className="mt-5 flex min-h-14 items-center text-[12px] leading-4 text-[var(--muted)]">No sessions</span>
             )}
           </div>
         </div>

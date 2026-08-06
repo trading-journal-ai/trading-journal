@@ -75,10 +75,14 @@ stopped. This is the "when did we last work on it" trail.
     context, and chart-read prose no longer render above the module; Coach owns
     that interpretation through its tab.
   - Refined the focused Journal for its desktop-first window: widened the week
-    strip and review module to 1040px, spelled out month and weekday labels, and
+    strip and review module to 1240px, spelled out month and weekday labels, and
     removed the account banner plus the oversized duplicate selected-day
     heading. A compact day heading now separates the selected week cell from the
     review without repeating its metrics.
+  - Reworked each active week-strip cell around the selected structural lockup:
+    weekday/date first, P&L second, then trades, win rate, and profit factor as
+    one grouped metric pill. Empty-day labels remain quiet and use the same cell
+    rhythm without manufacturing metrics.
   - Reduced the selected day's P&L from three visible repetitions to two: the
     primary value remains in the selected week cell and the review rail's metric
     summary, while the redundant heading strip and chart-card total are hidden.
@@ -102,7 +106,9 @@ stopped. This is the "when did we last work on it" trail.
     repository lint remains
     blocked by the two known `react-hooks/set-state-in-effect` errors under
     `src/components/preview/`.
-  - **Stopped at:** working production-page exploration ready for visual review.
+  - **Stopped at:** working production-page exploration ready for visual review;
+    the new week-cell lockup is a WIP design checkpoint, intentionally left
+    without another full lint/build pass while typography and color remain open.
     The full month Calendar remains on `/calendar`; embedding it in Journal
     should wait until its route-local grid/cells are extracted rather than
     duplicated. Quick dictation capture and carry-forward behavior remain the
