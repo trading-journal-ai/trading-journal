@@ -83,6 +83,10 @@ stopped. This is the "when did we last work on it" trail.
     weekday/date first, P&L second, then trades, win rate, and profit factor as
     one grouped metric pill. Empty-day labels remain quiet and use the same cell
     rhythm without manufacturing metrics.
+  - Corrected that lockup to Geist Sans Regular throughout instead of carrying
+    forward the old semibold day labels and mono P&L. Increased the day/result
+    scale and the grouped metrics so the chosen typography is visible in the
+    production strip rather than merely structurally present.
   - Reduced the selected day's P&L from three visible repetitions to two: the
     primary value remains in the selected week cell and the review rail's metric
     summary, while the redundant heading strip and chart-card total are hidden.

@@ -231,8 +231,9 @@ Build once, reuse everywhere.
   earlier mono-UPPERCASE "terminal" eyebrow was retired — it read too technical
   for the warm editorial themes, so the sans title-case treatment is now the
   single eyebrow across all four themes.
-- **Money** (`src/components/ui/Money.tsx`) — mono tabular figure, P&L-colored,
-  signed (`+$…` / `-$…`), no wrap.
+- **Money** (`src/components/ui/Money.tsx`) — tabular figure, P&L-colored,
+  signed (`+$…` / `-$…`), no wrap. Mono is the default; the Journal week strip
+  opts into Geist Sans to keep its selected regular-weight lockup consistent.
 - **Dot** (`src/components/ui/Dot.tsx`) — small valence circle
   (`tone="positive|negative|neutral"`). Use sparingly. Not on the calendar.
 - **PeriodTabs** (`src/components/ui/PeriodTabs.tsx`) — the peer-view selector
@@ -289,7 +290,9 @@ Build once, reuse everywhere.
 - **Calendar** — month view earns its grid; cells use `--hairline` rules, modest
   radius, no dots; quiet compact day headers; clear day-number/P&L/count
   hierarchy; today uses the accent day number or a subtle marker; weekly total
-  column flat, not filled; year mini-months may use subtle green/red heatmap fills.
+  column flat, not filled; year mini-months may use subtle green/red heatmap
+  fills. The Journal week strip uses Geist Sans Regular throughout each cell:
+  weekday/date, P&L, and the grouped trades/win-rate/profit-factor pill.
 - **Journal** — prose-first. Headers use Display/Page title; recap text uses Body
   large; metrics sit under the header as quiet mono metadata; ticker rail compact
   and sorted best-to-worst; pills secondary; reading mode hides edit controls
