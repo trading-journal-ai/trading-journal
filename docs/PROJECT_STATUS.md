@@ -63,6 +63,9 @@ stopped. This is the "when did we last work on it" trail.
     use case: preserve the trader's narrative, reflect a tentative behavior
     chain, locate an intervention, and carry it forward only with trader
     acceptance.
+  - Initialized the Impeccable `PRODUCT.md` with the confirmed product truth:
+    Journal is the calendar-based record, Dashboard owns live carry-forward,
+    Analytics owns investigation, and Coach connects narrative with evidence.
   - No production UI, route, schema, or data-contract changes were made.
   - **Stopped at:** product/IA and learning-cadence direction captured; next
     step is a focused quick-capture interaction prototype before implementation
