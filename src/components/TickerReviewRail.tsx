@@ -35,16 +35,18 @@ export default function TickerReviewRail({
   profitFactor,
   pnl,
   className = "",
+  heightClassName = "h-[380px]",
 }: {
   rows: TickerReviewRailRow[];
   accuracy: number | null;
   profitFactor: number | null;
   pnl: number;
   className?: string;
+  heightClassName?: string;
 }) {
   return (
     <aside className={className}>
-      <section className="flex h-[380px] flex-col px-1 py-1">
+      <section className={`flex ${heightClassName} flex-col px-1 py-1`}>
         <div className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1 pt-1">
           {rows.length > 0 ? (
             rows.map((row) => (

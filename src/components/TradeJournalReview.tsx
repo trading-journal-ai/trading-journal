@@ -1232,13 +1232,15 @@ function RunningPnlChart({
   day,
   pnlPoints,
   showTotal = true,
+  heightClassName = "h-[380px]",
 }: {
   day: ReviewDay;
   pnlPoints: PnlPoint[];
   showTotal?: boolean;
+  heightClassName?: string;
 }) {
   return (
-    <section className="flex h-[380px] flex-col rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-4">
+    <section className={`flex ${heightClassName} flex-col rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-4`}>
       <div className="mb-2 flex items-center justify-between gap-4">
         <h2 className="text-[15px] font-semibold text-[var(--foreground)]">Daily P&L</h2>
         {showTotal ? (
@@ -1413,7 +1415,7 @@ function JournalReviewModuleForDay({
   const { topSurprise, chartFacts } = buildDayReviewPresentation(data);
 
   return (
-    <div className="max-w-[1040px]">
+    <div className="w-full">
       <JournalReviewModule
         key={day.date}
         comparisons={comparisonData}
@@ -1440,8 +1442,13 @@ function JournalReviewModuleForDay({
           confidence: coachRead.confidence.label,
         }}
         pnlContent={day.trades > 0 ? (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
-            <RunningPnlChart day={day} pnlPoints={pnlPoints} showTotal={false} />
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+            <RunningPnlChart
+              day={day}
+              pnlPoints={pnlPoints}
+              showTotal={false}
+              heightClassName="h-[420px]"
+            />
             <TickerReviewRail
               rows={tickerRows.map((row) => ({
                 symbol: row.symbol,
@@ -1452,6 +1459,7 @@ function JournalReviewModuleForDay({
               accuracy={day.accuracy}
               profitFactor={day.profitFactor}
               pnl={day.pnl}
+              heightClassName="h-[420px]"
             />
           </div>
         ) : (
