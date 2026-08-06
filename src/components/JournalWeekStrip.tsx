@@ -151,7 +151,7 @@ export default function JournalWeekStrip({
                 href={dayHref(basePath, day.date)}
                 aria-current={selected ? "date" : undefined}
                 className={`relative flex flex-col border-r border-[var(--hairline)] px-3.5 py-4 font-sans transition-colors last:border-r-0 hover:bg-[var(--surface)] focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] ${
-                  selected ? "journal-week-day--selected z-[1] rounded-[4px]" : ""
+                  selected ? "journal-week-day--selected z-[1]" : ""
                 }`}
               >
                 <span className="flex items-baseline gap-1.5 text-[16px] font-semibold leading-5 text-[var(--foreground)]">
