@@ -180,6 +180,42 @@ Before pushing to `main` or deploying, run `npm run verify:full`.
 - Give journal prose and review sections room to breathe.
 - Avoid decorative UI that reduces speed or clarity.
 
+## Browser Tweaks Workflow
+
+Visual edits are made in the browser against the dev server using the
+**Browser Tweaks** Chrome extension (`~/Working/design-chrome-extention`), whose
+local bridge is registered here as the `browser-tweaks` MCP server. Pull the
+edits and persist them to source when asked.
+
+- `get_pending_tweaks` returns exact before/after `class` strings. Find the
+  `before` string **verbatim** in a JSX `className` and replace it with `after`.
+  If a before-string matches in more than one file, list the matches and ask —
+  do not guess.
+- `get_theme_snapshots` returns a map of CSS custom property names to values.
+  Write them into `src/app/globals.css`. **Not** the `@theme inline` block at
+  the bottom — that is the Tailwind utility-mapping layer. Token values live in:
+  - `:root` — the base (dark) theme
+  - `:root[data-theme="light"]`, `[data-theme="daylight"]`, `[data-theme="evening"]`
+  Apply a snapshot to the block matching the theme that was active when it was
+  captured; ask which one if it is ambiguous. A token changed in only one theme
+  belongs in that block alone, never in `:root`.
+- Tweaks flagged **"needs translation"** are inline-style mutations, not class
+  edits. Translate to the nearest token or Tailwind utility rather than writing
+  an inline style; if no token fits, say so — that usually means a token is
+  missing from the design system.
+- **Flag arbitrary values before writing them.** A tweak containing a bracket
+  value (`pt-[13px]`, `gap-[7px]`, `text-[15px]`) means the design system was
+  deliberately stepped outside to solve a problem. Do not silently commit it to
+  JSX. List every arbitrary value in the batch and offer to fold it in:
+  - a spacing value that recurs, or reads as a real step → add it to the scale
+  - a one-off that belongs to a component → propose a token in `globals.css`
+  - genuinely single-use → say so, and write it only after Justin confirms
+  The goal is extending the system when a design problem requires it, never
+  accumulating one-offs that erode it.
+- Call `clear_tweaks` only after the edits are applied and confirmed.
+- Tell Justin to switch **Record off** before asking for edits to be applied;
+  hot reload re-renders with the new classes and re-captures them otherwise.
+
 ## Response Style
 
 - Start with a brief plan only when needed.

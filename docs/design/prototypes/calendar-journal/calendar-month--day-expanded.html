@@ -1,0 +1,454 @@
+<!doctype html>
+<html data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>calendar-month--day-expanded</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap");
+
+.sc-placeholder{background:color-mix(in srgb,currentColor 8%,transparent);
+      border:1px solid color-mix(in srgb,currentColor 50%,transparent);
+      border-radius:2px;box-sizing:border-box;overflow:hidden}
+    @keyframes sc-shine{0%{background-position:100% 50%}100%{background-position:0% 50%}}
+    html.sc-dc-streaming .sc-placeholder,
+    html.sc-dc-streaming .sc-interp.sc-missing{position:relative;
+      background:color-mix(in srgb,currentColor 5%,transparent);
+      border-color:transparent}
+    html.sc-dc-streaming .sc-placeholder::before,
+    html.sc-dc-streaming .sc-interp.sc-missing::before{content:'';
+      position:absolute;inset:0;pointer-events:none;
+      background:linear-gradient(90deg,rgba(217,119,87,0) 25%,rgba(247,225,211,.95) 37%,rgba(217,119,87,0) 63%);
+      background-size:400% 100%;animation:sc-shine 1.4s ease infinite}
+    html.sc-dc-streaming .sc-placeholder:nth-child(n+9 of .sc-placeholder)::before,
+    html.sc-dc-streaming .sc-interp.sc-missing:nth-child(n+9 of .sc-interp.sc-missing)::before{animation:none;
+      background:color-mix(in srgb,currentColor 8%,transparent)}
+    .sc-placeholder-error{padding:4px 8px;font:11px/1.4 ui-monospace,monospace;
+      color:color-mix(in srgb,currentColor 70%,transparent);word-break:break-word}
+    .sc-interp.sc-missing{display:inline-block;width:2em;height:1em;overflow:hidden;
+      vertical-align:text-bottom;background:rgba(255,255,255,.3);border:1px solid rgba(0,0,0,.5);
+      border-radius:2px;box-sizing:border-box;color:transparent;
+      user-select:none}
+    .sc-interp.sc-unresolved{font-family:ui-monospace,monospace;font-size:.85em;
+      color:color-mix(in srgb,currentColor 50%,transparent);
+      background:color-mix(in srgb,currentColor 10%,transparent);border-radius:3px;
+      padding:0 3px}
+    .sc-host.sc-has-error{position:relative}
+    .sc-logic-error{position:absolute;top:8px;left:8px;z-index:2147483647;max-width:60ch;
+      padding:6px 10px;background:#b00020;color:#fff;font:12px/1.4 ui-monospace,monospace;
+      border-radius:4px;white-space:pre-wrap;pointer-events:none}
+    
+    @media print {
+      @page { margin: 0.5cm; }
+      figure, table { break-inside: avoid; }
+      #dc-root, #dc-root > .sc-host { height: auto; }
+      *, *::before, *::after {
+        print-color-adjust: exact; -webkit-print-color-adjust: exact;
+        backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+        animation-delay: -99s !important; animation-duration: .001s !important;
+        animation-iteration-count: 1 !important; animation-fill-mode: both !important;
+        animation-play-state: running !important; transition-duration: 0s !important;
+      }
+    }
+  
+
+x-dc{display:none!important}
+
+:root {
+  
+  --font-geist-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-geist-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --font-hanken: "Hanken Grotesk", var(--font-geist-sans);
+
+  
+  --font-display: var(--font-hanken); 
+  --font-sans: var(--font-geist-sans); 
+  --font-mono: var(--font-geist-mono); 
+
+  
+  --font-metric: var(--font-sans);
+}
+
+:root {
+  color-scheme: light;
+
+  
+  --background: #f6f8fa; 
+  --surface: #ffffff; 
+  --surface-2: #f0f2f5; 
+  --panel: #ffffff; 
+  --border: #d0d7de; 
+  --hairline: rgba(31, 35, 40, 0.08); 
+
+  
+  --foreground: #24292f; 
+  --body: #414a56; 
+  --muted: #57606a; 
+  --faint: #8c959f; 
+
+  
+  --accent: #0969da; 
+  --accent-strong: #0550ae; 
+  --blue: #0969da; 
+  --action: #24292f; 
+  --action-foreground: #ffffff;
+  --coach: #1a7f37; 
+  --review-helper-bg: #f0f2f5;
+
+  
+  --green: #1db26b;
+  --red: #f05143;
+  --green-chart: #1db26b;
+  --red-chart: #f05143;
+  --green-tint: #dafbe1;
+  --red-tint: #ffebe9;
+  --execution-buy: #00a95c;
+  --execution-sell: #f04438;
+
+  
+  --tag-reinforcing-bg: #eaf3de;
+  --tag-reinforcing-fg: #3b6d11;
+  --tag-review-bg: #fcebeb;
+  --tag-review-fg: #a32d2d;
+  --tag-neutral-bg: #f1efe8;
+  --tag-neutral-fg: #5f5e5a;
+  --tag-settled-bg: #e1f5ee;
+  --tag-settled-fg: #085041;
+  --tag-activated-bg: #faeeda;
+  --tag-activated-fg: #633806;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #080c12;
+  --surface: #111821;
+  --surface-2: #151e2a;
+  --panel: #1a2432;
+  --border: #273040;
+  --hairline: rgba(255, 255, 255, 0.07);
+  --foreground: #e6edf3;
+  --body: #c3ccd8;
+  --muted: #7a8492;
+  --faint: #4d5664;
+  --accent: #58a6ff;
+  --accent-strong: #79b8ff;
+  --blue: #58a6ff;
+  --action: #242a35;
+  --action-foreground: #f1f4f8;
+  --coach: #3fb950;
+  --review-helper-bg: transparent;
+  --green: #1db26b;
+  --red: #f05143;
+  --green-chart: #1db26b;
+  --red-chart: #f05143;
+  --green-tint: rgba(29, 178, 107, 0.14);
+  --red-tint: rgba(240, 81, 67, 0.14);
+  --execution-buy: #2bd576;
+  --execution-sell: #ff6257;
+  --font-metric: var(--font-mono);
+  --tag-reinforcing-bg: #16301f;
+  --tag-reinforcing-fg: #86cf96;
+  --tag-review-bg: #3a1d1b;
+  --tag-review-fg: #f0a79d;
+  --tag-neutral-bg: #222831;
+  --tag-neutral-fg: #9aa4b0;
+  --tag-settled-bg: #133029;
+  --tag-settled-fg: #6ac7ae;
+  --tag-activated-bg: #382a14;
+  --tag-activated-fg: #d7a75f;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --background: #f6f8fa;
+  --surface: #ffffff;
+  --surface-2: #f0f2f5;
+  --panel: #ffffff;
+  --border: #d0d7de;
+  --hairline: rgba(31, 35, 40, 0.08);
+  --foreground: #24292f;
+  --body: #414a56;
+  --muted: #57606a;
+  --faint: #8c959f;
+  --accent: #0969da;
+  --accent-strong: #0550ae;
+  --blue: #0969da;
+  --action: #24292f;
+  --action-foreground: #ffffff;
+  --coach: #1a7f37;
+  --review-helper-bg: #f0f2f5;
+  --green: #1db26b;
+  --red: #f05143;
+  --green-chart: #1db26b;
+  --red-chart: #f05143;
+  --green-tint: #dafbe1;
+  --red-tint: #ffebe9;
+  --execution-buy: #00a95c;
+  --execution-sell: #f04438;
+  --font-metric: var(--font-mono);
+}
+
+[data-theme="daylight"] {
+  color-scheme: light;
+  --background: #fcfaf7;
+  --surface: #ffffff;
+  --surface-2: #f3efe6;
+  --panel: #f6f2ea;
+  --border: #ecebde;
+  --hairline: rgba(33, 30, 24, 0.08);
+  --foreground: #211e18;
+  --body: #4a463e;
+  --muted: #8a8375;
+  --faint: #b0a892;
+  --accent: #b06e2a;
+  --accent-strong: #c98a2e;
+  --blue: #0969da; 
+  --action: #211e18;
+  --action-foreground: #fcfaf7;
+  --coach: #2e7d5b;
+  --review-helper-bg: #f6f2ea;
+  --green: #217a4b;
+  --red: #bc4b38;
+  --green-chart: #2c9a63;
+  --red-chart: #c4553f;
+  --green-tint: #e9f2ec;
+  --red-tint: #f8eae5;
+  --execution-buy: #00a95c;
+  --execution-sell: #e54835;
+  --font-metric: var(--font-sans);
+  --tag-reinforcing-bg: #eaf3de;
+  --tag-reinforcing-fg: #3b6d11;
+  --tag-review-bg: #fcebeb;
+  --tag-review-fg: #a32d2d;
+  --tag-neutral-bg: #f1efe8;
+  --tag-neutral-fg: #5f5e5a;
+  --tag-settled-bg: #e1f5ee;
+  --tag-settled-fg: #085041;
+  --tag-activated-bg: #faeeda;
+  --tag-activated-fg: #633806;
+}
+
+[data-theme="evening"] {
+  color-scheme: dark;
+  --background: #191918;
+  --surface: #222221;
+  --surface-2: #2a2a28;
+  --panel: #2e2e2b;
+  --border: #383835;
+  --hairline: rgba(240, 239, 235, 0.07);
+  --foreground: #f0efeb;
+  --body: #c9c7bf;
+  --muted: #93918a;
+  --faint: #6c6b64;
+  --accent: #d99a4e;
+  --accent-strong: #d99a4e;
+  --blue: #58a6ff; 
+  --action: #383835;
+  --action-foreground: #f0efeb;
+  --coach: #6fae8f;
+  --review-helper-bg: transparent;
+  --green: #55b183;
+  --red: #d97a63;
+  --green-chart: #3fa873;
+  --red-chart: #c9604b;
+  --green-tint: #223129;
+  --red-tint: #362824;
+  --execution-buy: #3ddc97;
+  --execution-sell: #ff6b57;
+  --font-metric: var(--font-sans);
+  --tag-reinforcing-bg: #16301f;
+  --tag-reinforcing-fg: #86cf96;
+  --tag-review-bg: #3a1d1b;
+  --tag-review-fg: #f0a79d;
+  --tag-neutral-bg: #222831;
+  --tag-neutral-fg: #9aa4b0;
+  --tag-settled-bg: #133029;
+  --tag-settled-fg: #6ac7ae;
+  --tag-activated-bg: #382a14;
+  --tag-activated-fg: #d7a75f;
+}
+
+:root {
+  
+  --text-display-size: 52px;
+  --text-display-line: 1.0;
+  --text-display-tracking: -0.035em;
+  --text-display-weight: 600;
+
+  
+  --text-title-size: 32px;
+  --text-title-line: 1.08;
+  --text-title-tracking: -0.03em;
+  --text-title-weight: 600;
+
+  
+  --text-section-size: 24px;
+  --text-section-line: 1.16;
+  --text-section-tracking: -0.02em;
+  --text-section-weight: 600;
+
+  
+  --text-subhead-size: 19px;
+  --text-subhead-line: 1.25;
+  --text-subhead-tracking: -0.015em;
+  --text-subhead-weight: 600;
+
+  
+  --text-body-lg-size: 17px;
+  --text-body-lg-line: 1.62;
+  --text-body-lg-tracking: 0;
+
+  
+  --text-body-size: 15px;
+  --text-body-line: 1.6;
+  --text-body-tracking: 0;
+
+  
+  --text-label-size: 13px;
+  --text-label-line: 1.4;
+  --text-label-weight: 500;
+
+  
+  --text-meta-size: 12.5px;
+  --text-meta-line: 1.45;
+
+  
+  --text-micro-size: 11px;
+  --text-micro-line: 1.55;
+
+  
+  --text-figure-size: 15px;
+  --text-stat-value-size: 20px;
+
+  
+  --tracking-display: -0.035em;
+  --tracking-title: -0.03em;
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-mono-header: 0.16em; 
+  --tracking-mono-wide: 0.22em;
+
+  
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  
+  --measure-prose: 64ch;
+  --measure-narrow: 46ch;
+}
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+
+  
+  --radius-sm: 5px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-full: 999px;
+
+  
+  --control-height: 40px;
+  --control-height-sm: 32px;
+  --control-padding-x: 16px;
+
+  
+  --page-padding-x: 20px;
+  --content-max: 1152px; 
+  --marketing-max: 1200px; 
+  --rule-width: 1px;
+}
+
+:root {
+  --shadow-none: none;
+  --shadow-popover: 0 8px 24px -12px rgba(31, 35, 40, 0.28);
+  --shadow-frame: 0 30px 70px -34px rgba(0, 0, 0, 0.6); 
+
+  
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-color: var(--accent);
+
+  
+  --hover-surface: var(--surface);
+  --selected-rule: var(--foreground);
+}
+
+:root {
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1); 
+  --ease-out: ease-out; 
+  --ease-in-out: ease-in-out; 
+
+  --duration-micro: 140ms; 
+  --duration-fast: 170ms; 
+  --duration-base: 200ms; 
+  --duration-slow: 500ms; 
+  --duration-sweep: 1150ms; 
+
+  --transition-colors: color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-micro: 0ms; 
+    --duration-fast: 0ms; 
+    --duration-base: 0ms; 
+    --duration-slow: 0ms; 
+  }
+}
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 { margin: 0; font-weight: var(--weight-semibold); text-wrap: balance; }
+p { margin: 0; text-wrap: pretty; }
+
+.tj-display { font-family: var(--font-display); font-size: var(--text-display-size); line-height: var(--text-display-line); letter-spacing: var(--text-display-tracking); font-weight: var(--text-display-weight); color: var(--foreground); }
+.tj-title { font-family: var(--font-display); font-size: var(--text-title-size); line-height: var(--text-title-line); letter-spacing: var(--text-title-tracking); font-weight: var(--text-title-weight); color: var(--foreground); }
+
+.tj-figure { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+a { color: var(--accent); text-decoration: none; transition: var(--transition-colors); }
+a:hover { color: var(--accent-strong); text-decoration: underline; text-underline-offset: 2px; }
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+::selection { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+
+.import-progress-track { position: relative; height: 8px; overflow: hidden; border-radius: var(--radius-full); background: var(--surface-2); }
+.import-progress-bar { position: absolute; inset-block: 0; width: 38%; border-radius: inherit; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 72%, white 12%), var(--accent), transparent); animation: import-progress-sweep var(--duration-sweep) var(--ease-in-out) infinite; }
+@keyframes import-progress-sweep { 0% { transform: translateX(-110%); } 100% { transform: translateX(270%); } }
+
+body{margin:0;background:var(--page, var(--surface));color:var(--foreground);font-family:var(--font-sans)}a{color:var(--accent)}a:hover{color:var(--accent-strong)}
+[data-hoverable="true"]:hover{background:color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))) !important}
+</style>
+</head>
+<body >
+<div id="dc-root"><div class="sc-host" data-sc-name="Calendar Month.dc"><div data-dc-tpl="12" style="min-height: 100vh; background: var(--page, var(--surface)); font-weight: 500;"><header data-dc-tpl="13" style="position: sticky; top: 0px; z-index: 40; display: flex; align-items: center; gap: 24px; padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border);"><span data-dc-tpl="14" style="display: inline-flex; align-items: center; gap: 9px; font-weight: 600; letter-spacing: -0.02em; color: var(--foreground); white-space: nowrap;">Trading&nbsp;Journal&nbsp;AI</span><nav data-dc-tpl="15" style="display: flex; gap: 18px; font-size: 14px;"><a data-dc-tpl="16" href="#" style="color: var(--muted); text-decoration: none;">Dashboard</a><a data-dc-tpl="17" href="Journal Day v2 richer.dc.html" style="color: var(--muted); text-decoration: none;">Journal</a><a data-dc-tpl="18" href="#" style="color: var(--foreground); font-weight: 600; text-decoration: none;">Calendar</a><a data-dc-tpl="19" href="#" style="color: var(--muted); text-decoration: none;">Trades</a><a data-dc-tpl="20" href="#" style="color: var(--muted); text-decoration: none;">Analytics</a></nav><span data-dc-tpl="21" style="margin-left: auto; display: flex; gap: 10px;"><button data-dc-tpl="22" style="height: 32px; padding: 0px 12px; font-family: var(--font-sans); font-size: 13px; font-weight: 600; color: var(--body); background: transparent; border: 1px solid var(--border); border-radius: 6px; cursor: pointer;">Import</button><button data-dc-tpl="23" style="height: 32px; padding: 0px 12px; font-family: var(--font-sans); font-size: 13px; font-weight: 600; color: var(--muted); background: transparent; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; border-radius: 6px; cursor: pointer;">Settings</button></span></header><main data-dc-tpl="24" style="max-width: 1152px; margin: 0px auto; padding: 28px 20px 72px; display: grid; gap: 28px;"><section data-dc-tpl="25" data-screen-label="Calendar header" style="display: grid; gap: 0px; padding-top: 12px;"><div data-dc-tpl="26" style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;"><h1 data-dc-tpl="27" style="margin: 0px; font-family: var(--font-sans); font-size: 28px; line-height: 1.1; letter-spacing: -0.02em; font-weight: 600; color: var(--foreground);"><span class="sc-interp">August 2026</span></h1><span data-dc-tpl="28" style="display: flex; align-items: center; gap: 8px;"><div class="sc-host-x" data-dc-tpl="29" style="display: contents;"><button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--font-sans); font-weight: var(--weight-semibold); border-radius: var(--radius-md); cursor: pointer; opacity: 1; transition: var(--transition-colors); white-space: nowrap; height: var(--control-height-sm); padding: 0px 12px; font-size: 13px; background: transparent; color: var(--muted); border: 1px solid transparent;">Today</button></div><div class="sc-host-x" data-dc-tpl="30" style="display: contents;"><button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--font-sans); font-weight: var(--weight-semibold); border-radius: var(--radius-md); cursor: pointer; opacity: 1; transition: var(--transition-colors); white-space: nowrap; height: var(--control-height-sm); padding: 0px 12px; font-size: 13px; background: transparent; color: var(--body); border: 1px solid var(--border);">Previous</button></div><div class="sc-host-x" data-dc-tpl="31" style="display: contents;"><button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--font-sans); font-weight: var(--weight-semibold); border-radius: var(--radius-md); cursor: pointer; opacity: 1; transition: var(--transition-colors); white-space: nowrap; height: var(--control-height-sm); padding: 0px 12px; font-size: 13px; background: transparent; color: var(--body); border: 1px solid var(--border);">Next</button></div></span></div><div data-dc-tpl="32" style="display: flex; align-items: flex-end; margin-top: 20px;"><div data-dc-tpl="33" role="tablist" aria-label="Zoom" style="display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--hairline);"><button data-dc-tpl="35" type="button" role="tab" style="margin-bottom: -1px; display: inline-flex; align-items: center; min-height: 44px; padding: 12px 16px; background: none; border-top-width: medium; border-right-width: medium; border-bottom: 2px solid var(--foreground); border-left-width: medium; border-top-style: none; border-right-style: none; border-left-style: none; border-top-color: currentcolor; border-right-color: currentcolor; border-left-color: currentcolor; border-image: initial; color: var(--foreground); font-family: var(--font-sans); font-size: 14px; font-weight: 600; cursor: pointer; transition: var(--transition-colors);"><span class="sc-interp">Month</span></button><button data-dc-tpl="35" type="button" role="tab" style="margin-bottom: -1px; display: inline-flex; align-items: center; min-height: 44px; padding: 12px 16px; background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: initial; color: var(--muted); font-family: var(--font-sans); font-size: 14px; font-weight: 600; cursor: pointer; transition: var(--transition-colors);"><span class="sc-interp">Year</span></button></div><div data-dc-tpl="36" style="flex: 1 1 0%; align-self: stretch; border-bottom: 1px solid var(--hairline);"></div></div></section><section data-dc-tpl="38" data-screen-label="Month summary" style="display: flex; align-items: flex-end; justify-content: space-between; gap: 48px; flex-wrap: wrap;"><div data-dc-tpl="39" style="display: flex; gap: 40px; flex-wrap: wrap;"><div data-dc-tpl="41" style="display: grid; gap: 2px; justify-content: flex-start; align-items: stretch;"><p data-dc-tpl="42" style="margin: 0px; font-size: 13px; font-weight: 500; color: var(--muted);"><span class="sc-interp">Sessions</span></p><p data-dc-tpl="43" style="margin: 0px; font-size: 20px; line-height: 1.2; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--foreground); text-align: center;"><span class="sc-interp">4</span></p></div><div data-dc-tpl="41" style="display: grid; gap: 2px; justify-content: flex-start; align-items: stretch;"><p data-dc-tpl="42" style="margin: 0px; font-size: 13px; font-weight: 500; color: var(--muted);"><span class="sc-interp">Trades</span></p><p data-dc-tpl="43" style="margin: 0px; font-size: 20px; line-height: 1.2; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--foreground); text-align: center;"><span class="sc-interp">109</span></p></div><div data-dc-tpl="41" style="display: grid; gap: 2px; justify-content: flex-start; align-items: stretch;"><p data-dc-tpl="42" style="margin: 0px; font-size: 13px; font-weight: 500; color: var(--muted);"><span class="sc-interp">Accuracy</span></p><p data-dc-tpl="43" style="margin: 0px; font-size: 20px; line-height: 1.2; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--foreground); text-align: center;"><span class="sc-interp">54%</span></p></div><div data-dc-tpl="41" style="display: grid; gap: 2px; justify-content: flex-start; align-items: stretch;"><p data-dc-tpl="42" style="margin: 0px; font-size: 13px; font-weight: 500; color: var(--muted);"><span class="sc-interp">Profit factor</span></p><p data-dc-tpl="43" style="margin: 0px; font-size: 20px; line-height: 1.2; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--foreground); text-align: center;"><span class="sc-interp">9.99+</span></p></div></div><div data-dc-tpl="44" style="display: grid; gap: 2px; justify-items: end;"><p data-dc-tpl="45" style="margin: 0px; font-size: 13px; font-weight: 500; color: var(--muted);"><span class="sc-interp">P&amp;L</span></p><p data-dc-tpl="46" style="margin: 0px; font-size: 20px; line-height: 1.2; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--green);"><span class="sc-interp">+$16.62</span></p></div></section><section data-dc-tpl="47" data-screen-label="Month grid" style="display: grid; gap: 10px;"><div data-dc-tpl="48" style="display: grid; grid-template-columns: repeat(5, minmax(0px, 1fr)) 205px; gap: 1px; font-size: 12.5px; font-weight: 600; color: var(--muted);"><span data-dc-tpl="50" style="padding-left: 15px;"><span class="sc-interp">Monday</span></span><span data-dc-tpl="50" style="padding-left: 15px;"><span class="sc-interp">Tuesday</span></span><span data-dc-tpl="50" style="padding-left: 15px;"><span class="sc-interp">Wednesday</span></span><span data-dc-tpl="50" style="padding-left: 15px;"><span class="sc-interp">Thursday</span></span><span data-dc-tpl="50" style="padding-left: 15px;"><span class="sc-interp">Friday</span></span><span data-dc-tpl="50" style="padding-left: 15px;"><span class="sc-interp"></span></span></div><div data-dc-tpl="51" style="display: grid; gap: 1px; background: color-mix(in srgb, var(--foreground) 6%, transparent); border-color: rgba(193, 193, 193, 0.1); border-top-style: ; border-top-width: ; border-right-style: ; border-right-width: ; border-bottom-style: ; border-bottom-width: ; border-left-style: ; border-left-width: ; border-image-source: ; border-image-slice: ; border-image-width: ; border-image-outset: ; border-image-repeat: ; border-radius: 8px; overflow: hidden;"><div data-dc-tpl="53" style="display: grid;"><div data-dc-tpl="54" style="display: grid; grid-template-columns: repeat(5, minmax(0px, 1fr)) 205px; gap: 1px;"><button data-dc-tpl="56" type="button" data-hoverable="true" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: var(--card, var(--surface)); opacity: 1; cursor: pointer; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--foreground);"><span class="sc-interp">3</span></span></span><span data-dc-tpl="67" style="font-size: 17px; line-height: 1.25; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--red);"><span class="sc-interp">−$0.03</span></span><span data-dc-tpl="68" style="font-size: 11.5px; line-height: 1.5; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums;"><span class="sc-interp">25 trades · 54%</span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--accent) 6%, var(--card, var(--surface))); opacity: 1; cursor: pointer; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--foreground);"><span class="sc-interp">4</span></span></span><span data-dc-tpl="67" style="font-size: 17px; line-height: 1.25; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--green);"><span class="sc-interp">+$4.33</span></span><span data-dc-tpl="68" style="font-size: 11.5px; line-height: 1.5; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums;"><span class="sc-interp">32 trades · 66%</span></span></button><button data-dc-tpl="56" type="button" data-hoverable="true" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: var(--card, var(--surface)); opacity: 1; cursor: pointer; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--foreground);"><span class="sc-interp">5</span></span></span><span data-dc-tpl="67" style="font-size: 17px; line-height: 1.25; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--green);"><span class="sc-interp">+$10.75</span></span><span data-dc-tpl="68" style="font-size: 11.5px; line-height: 1.5; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums;"><span class="sc-interp">47 trades · 44%</span></span></button><button data-dc-tpl="56" type="button" data-hoverable="true" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: var(--card, var(--surface)); opacity: 1; cursor: pointer; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--foreground);"><span class="sc-interp">6</span></span></span><span data-dc-tpl="67" style="font-size: 17px; line-height: 1.25; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--green);"><span class="sc-interp">+$1.57</span></span><span data-dc-tpl="68" style="font-size: 11.5px; line-height: 1.5; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums;"><span class="sc-interp">5 trades · 80%</span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: var(--card, var(--surface)); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--foreground);"><span class="sc-interp">7</span></span><span data-dc-tpl="61" style="font-size: 11px; line-height: 1.4; font-weight: 500; color: var(--accent);">Today</span></span><span data-dc-tpl="70" style="font-size: 12.5px; line-height: 1.5; color: var(--faint);"><span class="sc-interp">Not imported yet</span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: center; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: var(--card, var(--surface)); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="63" style="display: flex; align-items: baseline; justify-content: center; gap: 10px;"><span data-dc-tpl="64" style="font-size: 17px; line-height: 1.25; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--green);"><span class="sc-interp">+$16.62</span></span><span data-dc-tpl="65" style="font-size: 11.5px; line-height: 1.5; color: var(--faint); white-space: nowrap; font-variant-numeric: tabular-nums;"><span class="sc-interp">109 trades · 54%</span></span></span></button></div><div data-dc-tpl="71" style="display: grid; grid-template-rows: 1fr; transition: grid-template-rows 200ms cubic-bezier(0.22, 1, 0.36, 1);"><div data-dc-tpl="72" style="overflow: hidden; min-height: 0px; background: var(--card, var(--surface));"><div data-dc-tpl="74" style="padding: 20px 24px 18px; display: grid; gap: 14px; border-top: 2px solid var(--accent);"><div data-dc-tpl="75" style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px; flex-wrap: wrap;"><p data-dc-tpl="76" style="margin: 0px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; color: var(--foreground);"><span class="sc-interp">Tuesday, August 4</span></p><span data-dc-tpl="77" style="display: flex; gap: 28px;"><span data-dc-tpl="78" style="display: flex; gap: 6px; align-items: baseline;"><span data-dc-tpl="79" style="font-size: 12.5px; font-weight: 500; color: var(--muted);">P&amp;L</span><span data-dc-tpl="80" style="font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--green);"><span class="sc-interp">+$4.33</span></span></span><span data-dc-tpl="81" style="display: flex; gap: 6px; align-items: baseline;"><span data-dc-tpl="82" style="font-size: 12.5px; font-weight: 500; color: var(--muted);">Trades</span><span data-dc-tpl="83" style="font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--foreground);"><span class="sc-interp">32</span></span></span><span data-dc-tpl="84" style="display: flex; gap: 6px; align-items: baseline;"><span data-dc-tpl="85" style="font-size: 12.5px; font-weight: 500; color: var(--muted);">Accuracy</span><span data-dc-tpl="86" style="font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--foreground);"><span class="sc-interp">66%</span></span></span><span data-dc-tpl="87" style="display: flex; gap: 6px; align-items: baseline;"><span data-dc-tpl="88" style="font-size: 12.5px; font-weight: 500; color: var(--muted);">PF</span><span data-dc-tpl="89" style="font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--foreground);"><span class="sc-interp">2.82</span></span></span></span></div><div data-dc-tpl="90" style="display: grid;"><div data-dc-tpl="91" style="display: grid; grid-template-columns: 90px 110px 1fr 120px; gap: 16px; padding: 0px 0px 8px; border-bottom: 1px solid var(--hairline); font-size: 12.5px; font-weight: 600; color: var(--muted);"><span data-dc-tpl="92">Time</span><span data-dc-tpl="93">Symbol</span><span data-dc-tpl="94">Context</span><span data-dc-tpl="95" style="text-align: right;">P&amp;L</span></div><div data-dc-tpl="97" class="scp0" style="display: grid; grid-template-columns: 90px 110px 1fr 120px; gap: 16px; align-items: center; padding: 9px 0px; border-bottom: 1px solid var(--hairline); font-size: 13px; line-height: 1.4;"><span data-dc-tpl="98" style="color: var(--muted); font-variant-numeric: tabular-nums;"><span class="sc-interp">08:21</span></span><span data-dc-tpl="99" style="font-weight: 600; color: var(--foreground);"><span class="sc-interp">MOVE</span></span><span data-dc-tpl="100"><span data-dc-tpl="102" style="display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 11px; line-height: 1.4; font-weight: 500; background: color-mix(in srgb, var(--red) 10%, transparent); color: var(--red);"><span class="sc-interp">Chased</span></span></span><span data-dc-tpl="105" style="text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--green);"><span class="sc-interp">+$1.82</span></span></div><div data-dc-tpl="97" class="scp0" style="display: grid; grid-template-columns: 90px 110px 1fr 120px; gap: 16px; align-items: center; padding: 9px 0px; border-bottom: 1px solid var(--hairline); font-size: 13px; line-height: 1.4;"><span data-dc-tpl="98" style="color: var(--muted); font-variant-numeric: tabular-nums;"><span class="sc-interp">08:43</span></span><span data-dc-tpl="99" style="font-weight: 600; color: var(--foreground);"><span class="sc-interp">SOUN</span></span><span data-dc-tpl="100"><span data-dc-tpl="104" style="color: var(--faint);"><span class="sc-interp">—</span></span></span><span data-dc-tpl="105" style="text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--green);"><span class="sc-interp">+$1.88</span></span></div><div data-dc-tpl="97" class="scp0" style="display: grid; grid-template-columns: 90px 110px 1fr 120px; gap: 16px; align-items: center; padding: 9px 0px; border-bottom: 1px solid var(--hairline); font-size: 13px; line-height: 1.4;"><span data-dc-tpl="98" style="color: var(--muted); font-variant-numeric: tabular-nums;"><span class="sc-interp">09:01</span></span><span data-dc-tpl="99" style="font-weight: 600; color: var(--foreground);"><span class="sc-interp">NVAX</span></span><span data-dc-tpl="100"><span data-dc-tpl="104" style="color: var(--faint);"><span class="sc-interp">—</span></span></span><span data-dc-tpl="105" style="text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--red);"><span class="sc-interp">−$1.26</span></span></div><div data-dc-tpl="97" class="scp0" style="display: grid; grid-template-columns: 90px 110px 1fr 120px; gap: 16px; align-items: center; padding: 9px 0px; border-bottom: 1px solid var(--hairline); font-size: 13px; line-height: 1.4;"><span data-dc-tpl="98" style="color: var(--muted); font-variant-numeric: tabular-nums;"><span class="sc-interp">09:25</span></span><span data-dc-tpl="99" style="font-weight: 600; color: var(--foreground);"><span class="sc-interp">MOVE</span></span><span data-dc-tpl="100"><span data-dc-tpl="102" style="display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 11px; line-height: 1.4; font-weight: 500; background: color-mix(in srgb, var(--red) 10%, transparent); color: var(--red);"><span class="sc-interp">Chased</span></span></span><span data-dc-tpl="105" style="text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--green);"><span class="sc-interp">+$0.76</span></span></div><div data-dc-tpl="97" class="scp0" style="display: grid; grid-template-columns: 90px 110px 1fr 120px; gap: 16px; align-items: center; padding: 9px 0px; border-bottom: 1px solid var(--hairline); font-size: 13px; line-height: 1.4;"><span data-dc-tpl="98" style="color: var(--muted); font-variant-numeric: tabular-nums;"><span class="sc-interp">09:49</span></span><span data-dc-tpl="99" style="font-weight: 600; color: var(--foreground);"><span class="sc-interp">SOUN</span></span><span data-dc-tpl="100"><span data-dc-tpl="104" style="color: var(--faint);"><span class="sc-interp">—</span></span></span><span data-dc-tpl="105" style="text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--green);"><span class="sc-interp">+$1.87</span></span></div><div data-dc-tpl="97" class="scp0" style="display: grid; grid-template-columns: 90px 110px 1fr 120px; gap: 16px; align-items: center; padding: 9px 0px; border-bottom: 1px solid var(--hairline); font-size: 13px; line-height: 1.4;"><span data-dc-tpl="98" style="color: var(--muted); font-variant-numeric: tabular-nums;"><span class="sc-interp">10:06</span></span><span data-dc-tpl="99" style="font-weight: 600; color: var(--foreground);"><span class="sc-interp">MOVE</span></span><span data-dc-tpl="100"><span data-dc-tpl="104" style="color: var(--faint);"><span class="sc-interp">—</span></span></span><span data-dc-tpl="105" style="text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--green);"><span class="sc-interp">+$0.99</span></span></div></div><div data-dc-tpl="106" style="display: flex; align-items: center; gap: 10px;"><span data-dc-tpl="107" style="font-size: 13px; color: var(--faint);"><span class="sc-interp">Showing 6 of 32 trades</span></span><span data-dc-tpl="108" style="margin-left: auto; display: flex; gap: 8px;"><div class="sc-host-x" data-dc-tpl="109" style="display: contents;"><button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--font-sans); font-weight: var(--weight-semibold); border-radius: var(--radius-md); cursor: pointer; opacity: 1; transition: var(--transition-colors); white-space: nowrap; height: var(--control-height-sm); padding: 0px 12px; font-size: 13px; background: transparent; color: var(--muted); border: 1px solid transparent;"><span class="sc-interp">Show all</span></button></div><div class="sc-host-x" data-dc-tpl="110" style="display: contents;"><button type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--font-sans); font-weight: var(--weight-semibold); border-radius: var(--radius-md); cursor: pointer; opacity: 1; transition: var(--transition-colors); white-space: nowrap; height: var(--control-height-sm); padding: 0px 12px; font-size: 13px; background: transparent; color: var(--body); border: 1px solid var(--border);">Open in journal</button></div></span></div></div></div></div></div><div data-dc-tpl="53" style="display: grid;"><div data-dc-tpl="54" style="display: grid; grid-template-columns: repeat(5, minmax(0px, 1fr)) 205px; gap: 1px;"><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted);"><span class="sc-interp">10</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted);"><span class="sc-interp">11</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted);"><span class="sc-interp">12</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted);"><span class="sc-interp">13</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted);"><span class="sc-interp">14</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: center; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: var(--card, var(--surface)); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"></button></div><div data-dc-tpl="71" style="display: grid; grid-template-rows: 0fr; transition: grid-template-rows 200ms cubic-bezier(0.22, 1, 0.36, 1);"><div data-dc-tpl="72" style="overflow: hidden; min-height: 0px; background: var(--card, var(--surface));"></div></div></div><div data-dc-tpl="53" style="display: grid;"><div data-dc-tpl="54" style="display: grid; grid-template-columns: repeat(5, minmax(0px, 1fr)) 205px; gap: 1px;"><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted);"><span class="sc-interp">17</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted);"><span class="sc-interp">18</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted);"><span class="sc-interp">19</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted);"><span class="sc-interp">20</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted);"><span class="sc-interp">21</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: center; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: var(--card, var(--surface)); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"></button></div><div data-dc-tpl="71" style="display: grid; grid-template-rows: 0fr; transition: grid-template-rows 200ms cubic-bezier(0.22, 1, 0.36, 1);"><div data-dc-tpl="72" style="overflow: hidden; min-height: 0px; background: var(--card, var(--surface));"></div></div></div><div data-dc-tpl="53" style="display: grid;"><div data-dc-tpl="54" style="display: grid; grid-template-columns: repeat(5, minmax(0px, 1fr)) 205px; gap: 1px;"><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted);"><span class="sc-interp">24</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted);"><span class="sc-interp">25</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted);"><span class="sc-interp">26</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted);"><span class="sc-interp">27</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted);"><span class="sc-interp">28</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: center; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: var(--card, var(--surface)); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"></button></div><div data-dc-tpl="71" style="display: grid; grid-template-rows: 0fr; transition: grid-template-rows 200ms cubic-bezier(0.22, 1, 0.36, 1);"><div data-dc-tpl="72" style="overflow: hidden; min-height: 0px; background: var(--card, var(--surface));"></div></div></div><div data-dc-tpl="53" style="display: grid;"><div data-dc-tpl="54" style="display: grid; grid-template-columns: repeat(5, minmax(0px, 1fr)) 205px; gap: 1px;"><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted);"><span class="sc-interp">31</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 0.35; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--faint);"><span class="sc-interp">1</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 0.35; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--faint);"><span class="sc-interp">2</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 0.35; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--faint);"><span class="sc-interp">3</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: start; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: color-mix(in srgb, var(--background) 55%, var(--card, var(--surface))); opacity: 0.35; cursor: default; transition: background var(--transition-colors, 170ms);"><span data-dc-tpl="58" style="display: flex; align-items: baseline; gap: 6px; padding-bottom: 11px;"><span data-dc-tpl="59" style="font-size: 12.5px; line-height: 1.3; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--faint);"><span class="sc-interp">4</span></span></span></button><button data-dc-tpl="56" type="button" data-hoverable="false" style="position: relative; display: grid; gap: 4px; align-content: center; min-height: 96px; padding: 12px 14px; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-family: var(--font-sans); background: var(--card, var(--surface)); opacity: 1; cursor: default; transition: background var(--transition-colors, 170ms);"></button></div><div data-dc-tpl="71" style="display: grid; grid-template-rows: 0fr; transition: grid-template-rows 200ms cubic-bezier(0.22, 1, 0.36, 1);"><div data-dc-tpl="72" style="overflow: hidden; min-height: 0px; background: var(--card, var(--surface));"></div></div></div></div><p data-dc-tpl="111" style="margin: 0px; font-size: 12.5px; line-height: 1.5; color: var(--faint);">Click a traded day to open it in place. Click again to collapse.</p></section></main></div></div></div>
+</body>
+</html>
