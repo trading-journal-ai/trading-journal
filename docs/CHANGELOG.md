@@ -20,6 +20,11 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
   `PRODUCT.md`/`DESIGN.md` context and Apache 2.0 attribution
   ([PR #61](https://github.com/trading-journal-ai/trading-journal/pull/61)).
 
+### Changed
+- Agent validation now follows explicit exploration, stabilization, and
+  completion phases while retaining the existing verification tiers
+  ([PR #63](https://github.com/trading-journal-ai/trading-journal/pull/63)).
+
 ## 2026-07-28
 
 ### Added
