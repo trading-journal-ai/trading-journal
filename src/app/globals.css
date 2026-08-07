@@ -41,6 +41,151 @@
   color-scheme: dark;
 }
 
+/* ---------------------------------------------------------------------------
+ * Design system — type, spacing, radii, motion, elevation.
+ *
+ * Theme-independent: these carry no colour, so they sit outside the four
+ * [data-theme] blocks above and apply to all of them. The values are the scale
+ * DESIGN_SYSTEM.md already specifies; they simply had never been expressed as
+ * tokens. Tokens that *reference* a colour (--hover-surface, --selected-rule,
+ * --focus-ring-color) resolve lazily, so a single definition here picks up
+ * whichever theme is active.
+ *
+ * Font tokens are deliberately absent: --font-geist-sans/mono come from
+ * next/font in layout.tsx and are aliased in the @theme block below.
+ * ------------------------------------------------------------------------- */
+:root {
+  /* Spacing — roles, not a raw 4px grid: 4 micro · 8 control internals ·
+     12 label→control · 16 component · 24 filter→content · 32 header→content ·
+     48 section break · 64 editorial break · 96 marketing band. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+
+  /* Radii — containers 5–7px; nothing above 10px without a reason.
+     Full-round is for chips and the coach CTA only. */
+  --radius-sm: 5px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-full: 999px;
+
+  /* Controls and layout */
+  --control-height: 40px;
+  --control-height-sm: 32px;
+  --control-padding-x: 16px;
+  --page-padding-x: 20px;
+  --content-max: 1152px;
+  --marketing-max: 1200px;
+  --rule-width: 1px;
+
+  /* Type scale — named roles, not one-off sizes. */
+  --text-display-size: 52px;
+  --text-display-line: 1;
+  --text-display-tracking: -0.035em;
+  --text-display-weight: 600;
+
+  --text-title-size: 32px;
+  --text-title-line: 1.08;
+  --text-title-tracking: -0.03em;
+  --text-title-weight: 600;
+
+  --text-section-size: 24px;
+  --text-section-line: 1.16;
+  --text-section-tracking: -0.02em;
+  --text-section-weight: 600;
+
+  --text-subhead-size: 19px;
+  --text-subhead-line: 1.25;
+  --text-subhead-tracking: -0.015em;
+  --text-subhead-weight: 600;
+
+  --text-body-lg-size: 17px;
+  --text-body-lg-line: 1.62;
+  --text-body-lg-tracking: 0;
+
+  --text-body-size: 15px;
+  --text-body-line: 1.6;
+  --text-body-tracking: 0;
+
+  --text-label-size: 13px;
+  --text-label-line: 1.4;
+  --text-label-weight: 500;
+
+  --text-meta-size: 12.5px;
+  --text-meta-line: 1.45;
+
+  --text-micro-size: 11px;
+  --text-micro-line: 1.55;
+
+  /* Figures — mono, always tabular. */
+  --text-figure-size: 15px;
+  --text-stat-value-size: 20px;
+
+  /* Tracking — keep letter-spacing in this small, named set. */
+  --tracking-display: -0.035em;
+  --tracking-title: -0.03em;
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-mono-header: 0.16em;
+  --tracking-mono-wide: 0.22em;
+
+  /* Weights */
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Reading measure */
+  --measure-prose: 64ch;
+  --measure-narrow: 46ch;
+
+  /* Motion — short and functional, never bouncy. */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: ease-out;
+  --ease-in-out: ease-in-out;
+  --duration-micro: 140ms;
+  --duration-fast: 170ms;
+  --duration-base: 200ms;
+  --duration-slow: 500ms;
+  --duration-sweep: 1150ms;
+  --transition-colors:
+    color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+
+  /* Elevation — flat by default; structure comes from hairlines and
+     whitespace. Two sanctioned shadows only. */
+  --shadow-none: none;
+  --shadow-popover: 0 8px 24px -12px rgba(31, 35, 40, 0.28);
+  --shadow-frame: 0 30px 70px -34px rgba(0, 0, 0, 0.6);
+
+  /* Focus is a ring, visible in all four themes. */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-color: var(--accent);
+
+  /* Selection / hover affordances instead of shadow. */
+  --hover-surface: var(--surface);
+  --selected-rule: var(--foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-micro: 0ms;
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+    --duration-sweep: 0ms;
+  }
+}
+
 :root[data-theme="light"] {
   --background: #ffffff;
   --surface: #f6f8fa;
