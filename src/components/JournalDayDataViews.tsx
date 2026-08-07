@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import JournalReviewTabs, {
   JOURNAL_SCOPE_VIEWS,
   type JournalDataScope,
@@ -667,6 +667,11 @@ function WeekPnlTrajectory({
   );
 }
 
+/** Local calendar date as YYYY-MM-DD; en-CA formats in exactly that shape. */
+const subscribeToNothing = () => () => {};
+const getTodayIso = () => new Date().toLocaleDateString("en-CA");
+const getNoTodayOnServer = () => null;
+
 /**
  * Month calendar from the Claude Design handoff: an open grid with a week-total
  * column, and a traded day that opens a detail band in place beneath its own
@@ -678,12 +683,11 @@ function WeekPnlTrajectory({
  */
 function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalSessionRow[] }) {
   const [openDate, setOpenDate] = useState<string | null>(null);
-  // Resolved after mount: "today" differs between the server and the client
-  // near midnight, and marking it during SSR risks a hydration mismatch.
-  const [today, setToday] = useState<string | null>(null);
-  useEffect(() => {
-    setToday(new Date().toLocaleDateString("en-CA"));
-  }, []);
+  // Client-only: the server and the browser can disagree about the date near
+  // midnight or across timezones, so the server snapshot is null and the marker
+  // appears on hydration. useSyncExternalStore rather than an effect, which
+  // would be a setState-in-effect.
+  const today = useSyncExternalStore(subscribeToNothing, getTodayIso, getNoTodayOnServer);
 
   const sessionsByDate = new Map(rows.map((row) => [row.date, row]));
   const weeks = tradingCalendarWeeks(monthKey);
