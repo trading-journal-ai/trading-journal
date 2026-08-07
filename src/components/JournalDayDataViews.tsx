@@ -372,7 +372,7 @@ function MonthViews({ view, data, coachSlot }: { view: JournalDataView; data: Jo
   if (view === "pnl") {
     return (
       <div role="tabpanel">
-        <RangeHeader summary={data.summary} question="How were outcomes distributed across the month?" />
+        <RangeHeader summary={data.summary} question="How were outcomes distributed across the month?" rows={data.sessions} />
         <MonthPnlCalendar monthKey={data.key} rows={data.sessions} />
         <EvidenceBoundary>This is a read-only map of imported trading sessions. Blank dates remain unconfirmed; no-trade-day management stays in Calendar.</EvidenceBoundary>
       </div>
@@ -678,6 +678,13 @@ function WeekPnlTrajectory({
  */
 function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalSessionRow[] }) {
   const [openDate, setOpenDate] = useState<string | null>(null);
+  // Resolved after mount: "today" differs between the server and the client
+  // near midnight, and marking it during SSR risks a hydration mismatch.
+  const [today, setToday] = useState<string | null>(null);
+  useEffect(() => {
+    setToday(new Date().toLocaleDateString("en-CA"));
+  }, []);
+
   const sessionsByDate = new Map(rows.map((row) => [row.date, row]));
   const weeks = tradingCalendarWeeks(monthKey);
   const openSession = openDate ? sessionsByDate.get(openDate) : undefined;
@@ -692,43 +699,48 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
           {WEEKDAYS.map((day) => (
             <div key={day} className="flex-1 px-3.5">{day}</div>
           ))}
-          <div className="w-[190px] shrink-0" />
         </div>
 
-        <div className="flex flex-col border-t border-[var(--hairline)]">
-          {weeks.map((week) => {
-            const weekSessions = week
-              .filter((day) => day.inMonth)
-              .map((day) => sessionsByDate.get(day.date))
-              .filter((session): session is JournalSessionRow => Boolean(session));
-            const weekPnl = weekSessions.reduce((total, session) => total + session.pnl, 0);
-            const weekTrades = weekSessions.reduce((total, session) => total + session.trades, 0);
+        <div className="flex flex-col overflow-hidden rounded-[10px] border border-[var(--border)]">
+          {weeks.map((week, weekIndex) => {
             const bandInThisWeek = openDate != null && week.some((day) => day.date === openDate);
 
             return (
               <Fragment key={week[0].date}>
-                <div className={`flex ${bandInThisWeek ? "" : "border-b border-[var(--hairline)]"}`}>
-                  {week.map((day) => {
-                    const session = day.inMonth ? sessionsByDate.get(day.date) : undefined;
+                <div className={`flex ${weekIndex > 0 ? "border-t border-[var(--hairline)]" : ""}`}>
+                  {week.map((day, dayIndex) => {
+                    // Adjacent-month days still render their session when the
+                    // payload happens to carry one, so a leading week reads as
+                    // real trading rather than a blank.
+                    const session = sessionsByDate.get(day.date);
                     const isOpen = day.date === openDate;
+                    const isToday = today != null && day.date === today;
                     const label = session
                       ? `${longDateLabel(day.date)}: ${money(session.pnl)}, ${session.trades} trades`
                       : `${longDateLabel(day.date)}: no imported session`;
 
-                    const cellClass = `flex min-h-24 flex-1 flex-col gap-1 border-r border-[var(--hairline)] px-3.5 py-3 text-left ${
-                      day.inMonth ? "" : "bg-[var(--surface-2)]"
+                    const cellClass = `flex min-h-[104px] flex-1 flex-col gap-1 px-3.5 py-3 text-left ${
+                      dayIndex > 0 ? "border-l border-[var(--hairline)]" : ""
                     }`;
+                    const tone = !day.inMonth
+                      ? "bg-[var(--surface-2)]"
+                      : isToday
+                        ? "bg-[color-mix(in_oklch,var(--accent)_7%,var(--surface))]"
+                        : "bg-[var(--surface)]";
+
+                    const dayNumber = (
+                      <span className="flex items-baseline gap-2 pb-2">
+                        <span className={`text-[12.5px] font-medium tabular-nums ${day.inMonth ? "text-[var(--foreground)]" : "text-[var(--faint)]"}`}>
+                          {day.day}
+                        </span>
+                        {isToday ? <span className="text-[11.5px] text-[var(--muted)]">Today</span> : null}
+                      </span>
+                    );
 
                     if (!session) {
                       return (
-                        <div
-                          key={day.date}
-                          className={`${cellClass} ${day.inMonth ? "bg-[var(--background)]" : ""}`}
-                          aria-label={label}
-                        >
-                          <span className={`text-[12.5px] font-medium tabular-nums ${day.inMonth ? "text-[var(--muted)]" : "text-[var(--faint)]"}`}>
-                            {day.day}
-                          </span>
+                        <div key={day.date} className={`${cellClass} ${tone}`} aria-label={label}>
+                          {dayNumber}
                         </div>
                       );
                     }
@@ -740,34 +752,22 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
                         aria-expanded={isOpen}
                         onClick={() => setOpenDate(isOpen ? null : day.date)}
                         className={`${cellClass} cursor-pointer transition-colors ${
-                          isOpen ? "bg-[var(--surface-2)]" : "bg-[var(--surface)] hover:bg-[var(--surface-2)]"
+                          isOpen ? "bg-[var(--surface-2)]" : `${tone} hover:bg-[var(--surface-2)]`
                         }`}
                         aria-label={label}
                       >
-                        <span className="pb-2 text-[12.5px] font-medium tabular-nums text-[var(--foreground)]">{day.day}</span>
+                        {dayNumber}
                         <span className={`whitespace-nowrap text-[17px] font-medium tabular-nums ${pnlClass(session.pnl)}`}>
                           {money(session.pnl)}
                         </span>
                         <span className="whitespace-nowrap text-[11.5px] text-[var(--faint)]">
                           {session.trades} {session.trades === 1 ? "trade" : "trades"}
                           {session.accuracy == null ? "" : ` · ${session.accuracy}%`}
+                          {session.profitFactor == null ? "" : ` · PF ${ratio(session.profitFactor)}`}
                         </span>
                       </button>
                     );
                   })}
-
-                  <div className="flex w-[190px] shrink-0 items-baseline justify-center gap-2.5 px-3.5 py-3">
-                    {weekSessions.length === 0 ? null : (
-                      <>
-                        <span className={`whitespace-nowrap text-[17px] font-medium tabular-nums ${pnlClass(weekPnl)}`}>
-                          {money(weekPnl)}
-                        </span>
-                        <span className="whitespace-nowrap text-[11.5px] text-[var(--faint)]">
-                          {weekTrades} {weekTrades === 1 ? "trade" : "trades"}
-                        </span>
-                      </>
-                    )}
-                  </div>
                 </div>
 
                 {bandInThisWeek && openSession ? <MonthDayBand session={openSession} /> : null}
@@ -847,19 +847,42 @@ function longDateLabel(date: string): string {
   return longDateFormatter.format(isoDate(date));
 }
 
-function RangeHeader({ summary, question }: { summary: JournalRangeSummary; question: string }) {
+/**
+ * Month summary. Only the Month scope uses this, so the stat row can be
+ * month-specific: the boxed MetricGrid is replaced with the open label-over-
+ * value row from the design, and P&L moves into the row rather than floating
+ * opposite the heading.
+ *
+ * The eyebrow and question are kept deliberately — they are the module's
+ * read-first framing (see ReadFirst / EvidenceBoundary), which is product
+ * content rather than styling, and the design mock simply had no equivalent
+ * because it was a standalone page.
+ */
+function RangeHeader({ summary, question, rows }: { summary: JournalRangeSummary; question: string; rows: JournalSessionRow[] }) {
+  const green = rows.filter((row) => row.pnl >= 0).length;
+  const red = rows.length - green;
   return (
     <div>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><SectionLabel>{summary.label}</SectionLabel><p className="mt-2 text-[14px] leading-6 text-[var(--body)]">{question}</p></div>
-        <div className={`font-mono text-[18px] font-semibold tabular-nums ${pnlClass(summary.pnl)}`}>{money(summary.pnl)}</div>
+      <SectionLabel>{summary.label}</SectionLabel>
+      <p className="mt-2 text-[14px] leading-6 text-[var(--body)]">{question}</p>
+      <div className="mt-5 flex flex-wrap items-start gap-x-12 gap-y-4">
+        <MonthStat label="P&L" value={money(summary.pnl)} className={pnlClass(summary.pnl)} />
+        <MonthStat label="Win rate" value={percent(summary.accuracy)} />
+        <MonthStat label="Profit factor" value={ratio(summary.profitFactor)} />
+        <MonthStat
+          label="Trading days"
+          value={rows.length === 0 ? "—" : `${green} green · ${red} red`}
+        />
       </div>
-      <MetricGrid className="mt-5">
-        <Metric label="Sessions" value={String(summary.sessions)} />
-        <Metric label="Trades" value={String(summary.trades)} />
-        <Metric label="Accuracy" value={percent(summary.accuracy)} />
-        <Metric label="Profit factor" value={ratio(summary.profitFactor)} />
-      </MetricGrid>
+    </div>
+  );
+}
+
+function MonthStat({ label, value, className }: { label: string; value: string; className?: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[13px] text-[var(--muted)]">{label}</span>
+      <span className={`text-[22px] font-semibold tabular-nums ${className ?? "text-[var(--foreground)]"}`}>{value}</span>
     </div>
   );
 }
