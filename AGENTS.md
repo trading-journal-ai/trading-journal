@@ -101,34 +101,67 @@ The next agent starts with zero context. Before ending a work session:
    folders, and never rewrite history to remove a doc — plain deletion keeps
    it recoverable.
 
-## Validation Policy
+## Iterative Development and Validation
 
-For small UI, copy, CSS, and landing page changes:
+Follow the exploration, stabilization, and completion workflow from the global
+agent guidance. For new feature and design work in this repository, assume the
+work remains exploratory while requirements, behavior, or presentation are
+still changing.
 
-- Prefer `npm run verify:quick`.
-- Do not run a full production build after every small edit.
+### During exploration
 
-For local TypeScript/React logic changes that do not affect routing, database,
-imports, charting, APIs, or shared contracts:
+- Work implementation-first and batch related changes before validating.
+- Do not keep tests synchronized with every prototype iteration.
+- Do not run full-project tests, lint, type-checking, or production builds after
+  every edit or intermediate agent turn.
+- Use targeted checks, browser smoke tests, or manual verification only when
+  they answer a specific question, protect a likely regression point, or
+  validate a completed feature slice.
+- Cosmetic and low-risk UI iteration may proceed without automated validation.
+- Do not rerun an unchanged check unless subsequent changes could affect it.
 
-- Run `npm run verify:types`.
+### Stabilization checkpoints
 
-For routing, database, import, charting, API, or shared component changes:
+Stabilize behavior after Justin accepts the direction, when it becomes a
+durable contract or dependency, or when further work will build on it.
 
-- Run `npm run verify:full`.
+At a stabilization checkpoint:
 
-For docs-only changes:
+- Clean up temporary implementation decisions.
+- Add or update focused tests for important settled behavior.
+- Validate the completed slice with the narrowest relevant checks.
 
-- No verification is required unless scripts or executable examples changed.
+Good candidates for earlier focused tests include bug fixes, parsing, data
+transforms, ET date handling, shared business logic, APIs, import dedupe, and
+previously regressed behavior.
 
-Before committing:
+### Completion tiers
 
-- Run the smallest relevant verification command.
-- Mention any skipped verification in the final response.
+Before marking work complete, run the smallest complete validation tier
+appropriate to the final scope:
 
-Before pushing to `main` or deploying:
+- Small UI, copy, CSS, and landing-page changes: `npm run verify:quick`.
+- Local TypeScript/React logic that does not affect routing, database, imports,
+  charting, APIs, or shared contracts: `npm run verify:types`.
+- Routing, database, import, charting, API, or shared-component changes:
+  `npm run verify:full`.
+- Docs-only changes: no automated verification unless scripts or executable
+  examples changed.
 
-- Run `npm run verify:full`.
+An intermediate iteration or WIP handoff is not feature completion. It may
+defer the completion tier when the worklog and final response clearly identify
+the remaining validation.
+
+Fix failures caused by the change before marking it complete. Do not chase
+unrelated pre-existing failures; report them clearly. Report exactly which
+checks ran, their results, and anything intentionally skipped.
+
+For security, authentication, authorization, payments, database migrations,
+destructive data operations, concurrency, and core shared infrastructure,
+validate earlier at each meaningful risk boundary and run the full relevant
+validation before handoff.
+
+Before pushing to `main` or deploying, run `npm run verify:full`.
 
 ## Verification Notes
 
