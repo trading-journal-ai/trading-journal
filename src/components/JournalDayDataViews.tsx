@@ -667,6 +667,14 @@ function WeekPnlTrajectory({
   );
 }
 
+/**
+ * Calendar-cell money: no "+" on gains, per the cell mock. Losses keep their
+ * minus, so sign is never carried by colour alone.
+ */
+function cellMoney(value: number) {
+  return `${value < 0 ? "−" : ""}$${Math.abs(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 /** Local calendar date as YYYY-MM-DD; en-CA formats in exactly that shape. */
 const subscribeToNothing = () => () => {};
 const getTodayIso = () => new Date().toLocaleDateString("en-CA");
@@ -703,11 +711,17 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
           {WEEKDAYS.map((day) => (
             <div key={day} className="flex-1 px-3.5">{day}</div>
           ))}
+          <div className="w-[190px] shrink-0" />
         </div>
 
         <div className="flex flex-col overflow-hidden rounded-[10px] border border-[var(--border)]">
           {weeks.map((week, weekIndex) => {
             const bandInThisWeek = openDate != null && week.some((day) => day.date === openDate);
+            const weekSessions = week
+              .map((day) => sessionsByDate.get(day.date))
+              .filter((session): session is JournalSessionRow => Boolean(session));
+            const weekPnl = weekSessions.reduce((total, session) => total + session.pnl, 0);
+            const weekTrades = weekSessions.reduce((total, session) => total + session.trades, 0);
 
             return (
               <Fragment key={week[0].date}>
@@ -723,18 +737,19 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
                       ? `${longDateLabel(day.date)}: ${money(session.pnl)}, ${session.trades} trades`
                       : `${longDateLabel(day.date)}: no imported session`;
 
-                    const cellClass = `flex min-h-[104px] flex-1 flex-col gap-1 px-3.5 py-3 text-left ${
+                    const cellClass = `flex min-h-[116px] flex-1 flex-col items-start gap-2 px-4 py-3.5 text-left ${
                       dayIndex > 0 ? "border-l border-[var(--hairline)]" : ""
                     }`;
+                    // Grid reads white; only adjacent months take a subtle grey.
                     const tone = !day.inMonth
-                      ? "bg-[var(--surface-2)]"
+                      ? "bg-[var(--surface)]"
                       : isToday
-                        ? "bg-[color-mix(in_oklch,var(--accent)_7%,var(--surface))]"
-                        : "bg-[var(--surface)]";
+                        ? "bg-[color-mix(in_oklch,var(--accent)_7%,var(--background))]"
+                        : "bg-[var(--background)]";
 
                     const dayNumber = (
-                      <span className="flex items-baseline gap-2 pb-2">
-                        <span className={`text-[12.5px] font-medium tabular-nums ${day.inMonth ? "text-[var(--foreground)]" : "text-[var(--faint)]"}`}>
+                      <span className="flex items-baseline gap-2">
+                        <span className={`text-[15px] font-semibold tabular-nums ${day.inMonth ? "text-[var(--foreground)]" : "text-[var(--faint)]"}`}>
                           {day.day}
                         </span>
                         {isToday ? <span className="text-[11.5px] text-[var(--muted)]">Today</span> : null}
@@ -756,22 +771,36 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
                         aria-expanded={isOpen}
                         onClick={() => setOpenDate(isOpen ? null : day.date)}
                         className={`${cellClass} cursor-pointer transition-colors ${
-                          isOpen ? "bg-[var(--surface-2)]" : `${tone} hover:bg-[var(--surface-2)]`
+                          isOpen ? "bg-[var(--surface-2)]" : `${tone} hover:bg-[var(--surface)]`
                         }`}
                         aria-label={label}
                       >
                         {dayNumber}
-                        <span className={`whitespace-nowrap text-[17px] font-medium tabular-nums ${pnlClass(session.pnl)}`}>
-                          {money(session.pnl)}
+                        <span className={`whitespace-nowrap text-[20px] font-semibold tabular-nums ${pnlClass(session.pnl)}`}>
+                          {cellMoney(session.pnl)}
                         </span>
-                        <span className="whitespace-nowrap text-[11.5px] text-[var(--faint)]">
-                          {session.trades} {session.trades === 1 ? "trade" : "trades"}
-                          {session.accuracy == null ? "" : ` · ${session.accuracy}%`}
-                          {session.profitFactor == null ? "" : ` · PF ${ratio(session.profitFactor)}`}
+                        {/* Meta sits in its own pill, echoing the header stat pill. */}
+                        <span className="inline-flex items-center gap-x-2 rounded-[var(--radius-full)] bg-[var(--surface-2)] px-2 py-1 text-[11px] tabular-nums text-[var(--muted)]">
+                          <span className="whitespace-nowrap">{session.trades} Trades</span>
+                          {session.accuracy == null ? null : <span className="whitespace-nowrap">{session.accuracy}% Win</span>}
+                          {session.profitFactor == null ? null : <span className="whitespace-nowrap">{ratio(session.profitFactor)} PF</span>}
                         </span>
                       </button>
                     );
                   })}
+
+                  <div className="flex w-[190px] shrink-0 items-baseline justify-center gap-2.5 px-3.5 py-3.5">
+                    {weekSessions.length === 0 ? null : (
+                      <>
+                        <span className={`whitespace-nowrap text-[17px] font-semibold tabular-nums ${pnlClass(weekPnl)}`}>
+                          {cellMoney(weekPnl)}
+                        </span>
+                        <span className="whitespace-nowrap text-[11.5px] text-[var(--faint)]">
+                          {weekTrades} {weekTrades === 1 ? "trade" : "trades"}
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {bandInThisWeek && openSession ? <MonthDayBand session={openSession} /> : null}
@@ -868,17 +897,16 @@ function RangeHeader({ summary, question }: { summary: JournalRangeSummary; ques
       <SectionLabel>{summary.label}</SectionLabel>
       <p className="mt-2 text-[14px] leading-6 text-[var(--body)]">{question}</p>
       <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-        {/* One solid pill holding the stat text; P&L stays out on the right. */}
-        <span className="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-[var(--radius-full)] bg-[var(--surface-2)] px-5 py-2.5 text-[15px] tabular-nums">
-          <StatText label="Sessions" value={String(summary.sessions)} />
-          <PillSep />
+        {/* One solid pill holding the stat text; the P&L figure sits opposite it
+            on the same line, unlabelled — the figure reads as P&L on its own. */}
+        <span className="inline-flex flex-wrap items-center gap-x-7 gap-y-1 rounded-[var(--radius-full)] bg-[var(--surface-2)] px-5 py-2.5 text-[15px] tabular-nums">
           <StatText label="Trades" value={String(summary.trades)} />
-          <PillSep />
           <StatText label="Accuracy" value={percent(summary.accuracy)} />
-          <PillSep />
           <StatText label="Profit factor" value={ratio(summary.profitFactor)} />
         </span>
-        <MonthStat label="P&L" value={money(summary.pnl)} className={pnlClass(summary.pnl)} align="right" />
+        <span className={`text-[22px] font-semibold tabular-nums ${pnlClass(summary.pnl)}`}>
+          {money(summary.pnl)}
+        </span>
       </div>
     </div>
   );
@@ -891,29 +919,6 @@ function StatText({ label, value }: { label: string; value: string }) {
       <span className="text-[var(--muted)]">{label}</span>
       <span className="font-semibold text-[var(--foreground)]">{value}</span>
     </span>
-  );
-}
-
-function PillSep() {
-  return <span aria-hidden="true" className="text-[var(--faint)]">·</span>;
-}
-
-function MonthStat({
-  label,
-  value,
-  className,
-  align = "left",
-}: {
-  label: string;
-  value: string;
-  className?: string;
-  align?: "left" | "right";
-}) {
-  return (
-    <div className={`flex flex-col gap-1.5 ${align === "right" ? "items-end" : "items-start"}`}>
-      <span className="text-[13px] text-[var(--muted)]">{label}</span>
-      <span className={`text-[22px] font-semibold tabular-nums ${className ?? "text-[var(--foreground)]"}`}>{value}</span>
-    </div>
   );
 }
 
