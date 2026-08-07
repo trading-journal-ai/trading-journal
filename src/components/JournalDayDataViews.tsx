@@ -667,53 +667,120 @@ function WeekPnlTrajectory({
   );
 }
 
+/**
+ * Month calendar from the Claude Design handoff: an open grid with a week-total
+ * column, and a traded day that opens a detail band in place beneath its own
+ * week rather than navigating away.
+ *
+ * Adapted rather than transplanted — the prototype carried its own page chrome
+ * (Month/Year tabs, Today/Prev/Next), which the review module already provides
+ * one level up. Bringing it across would have duplicated the controls.
+ */
 function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalSessionRow[] }) {
+  const [openDate, setOpenDate] = useState<string | null>(null);
   const sessionsByDate = new Map(rows.map((row) => [row.date, row]));
   const weeks = tradingCalendarWeeks(monthKey);
+  const openSession = openDate ? sessionsByDate.get(openDate) : undefined;
+
   return (
     <figure className="mt-6 overflow-x-auto" aria-labelledby="month-pnl-calendar-title">
       <figcaption id="month-pnl-calendar-title" className="sr-only">
         Trading calendar showing imported daily P&amp;L and trade counts for the selected month.
       </figcaption>
-      <div className="min-w-[560px]">
-        <div className="grid grid-cols-5 border-b border-[var(--hairline)] pb-2">
+      <div className="min-w-[720px]">
+        <div className="flex pb-2 text-[12.5px] font-semibold text-[var(--muted)]">
           {WEEKDAYS.map((day) => (
-            <div key={day} className="px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
-              {day}
-            </div>
+            <div key={day} className="flex-1 px-3.5">{day}</div>
           ))}
+          <div className="w-[190px] shrink-0" />
         </div>
-        <div className="grid grid-cols-5 gap-px bg-[var(--hairline)]">
-          {weeks.flatMap((week) => week).map((day) => {
-            const session = day.inMonth ? sessionsByDate.get(day.date) : undefined;
-            const positive = (session?.pnl ?? 0) >= 0;
+
+        <div className="flex flex-col border-t border-[var(--hairline)]">
+          {weeks.map((week) => {
+            const weekSessions = week
+              .filter((day) => day.inMonth)
+              .map((day) => sessionsByDate.get(day.date))
+              .filter((session): session is JournalSessionRow => Boolean(session));
+            const weekPnl = weekSessions.reduce((total, session) => total + session.pnl, 0);
+            const weekTrades = weekSessions.reduce((total, session) => total + session.trades, 0);
+            const bandInThisWeek = openDate != null && week.some((day) => day.date === openDate);
+
             return (
-              <div
-                key={day.date}
-                className={`flex min-h-24 flex-col bg-[var(--surface)] px-3 py-3 ${day.inMonth ? "" : "opacity-30"}`}
-                style={session
-                  ? { backgroundColor: positive ? "color-mix(in oklch, var(--green) 8%, var(--surface))" : "color-mix(in oklch, var(--red) 8%, var(--surface))" }
-                  : undefined}
-                aria-label={session
-                  ? `${longDateLabel(day.date)}: ${money(session.pnl)}, ${session.trades} trades`
-                  : `${longDateLabel(day.date)}: no imported session`}
-              >
-                <span className="font-mono text-[12px] font-semibold tabular-nums text-[var(--foreground)]">{day.day}</span>
-                {session ? (
-                  <span className="mt-auto pt-5">
-                    <span className={`block whitespace-nowrap font-mono text-[13px] font-semibold tabular-nums ${pnlClass(session.pnl)}`}>
-                      {money(session.pnl)}
-                    </span>
-                    <span className="mt-0.5 block text-[11px] text-[var(--muted)]">
-                      {session.trades} {session.trades === 1 ? "trade" : "trades"}
-                    </span>
-                  </span>
-                ) : null}
-              </div>
+              <Fragment key={week[0].date}>
+                <div className={`flex ${bandInThisWeek ? "" : "border-b border-[var(--hairline)]"}`}>
+                  {week.map((day) => {
+                    const session = day.inMonth ? sessionsByDate.get(day.date) : undefined;
+                    const isOpen = day.date === openDate;
+                    const label = session
+                      ? `${longDateLabel(day.date)}: ${money(session.pnl)}, ${session.trades} trades`
+                      : `${longDateLabel(day.date)}: no imported session`;
+
+                    const cellClass = `flex min-h-24 flex-1 flex-col gap-1 border-r border-[var(--hairline)] px-3.5 py-3 text-left ${
+                      day.inMonth ? "" : "bg-[var(--surface-2)]"
+                    }`;
+
+                    if (!session) {
+                      return (
+                        <div
+                          key={day.date}
+                          className={`${cellClass} ${day.inMonth ? "bg-[var(--background)]" : ""}`}
+                          aria-label={label}
+                        >
+                          <span className={`text-[12.5px] font-medium tabular-nums ${day.inMonth ? "text-[var(--muted)]" : "text-[var(--faint)]"}`}>
+                            {day.day}
+                          </span>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={day.date}
+                        type="button"
+                        aria-expanded={isOpen}
+                        onClick={() => setOpenDate(isOpen ? null : day.date)}
+                        className={`${cellClass} cursor-pointer transition-colors ${
+                          isOpen ? "bg-[var(--surface-2)]" : "bg-[var(--surface)] hover:bg-[var(--surface-2)]"
+                        }`}
+                        aria-label={label}
+                      >
+                        <span className="pb-2 text-[12.5px] font-medium tabular-nums text-[var(--foreground)]">{day.day}</span>
+                        <span className={`whitespace-nowrap text-[17px] font-medium tabular-nums ${pnlClass(session.pnl)}`}>
+                          {money(session.pnl)}
+                        </span>
+                        <span className="whitespace-nowrap text-[11.5px] text-[var(--faint)]">
+                          {session.trades} {session.trades === 1 ? "trade" : "trades"}
+                          {session.accuracy == null ? "" : ` · ${session.accuracy}%`}
+                        </span>
+                      </button>
+                    );
+                  })}
+
+                  <div className="flex w-[190px] shrink-0 items-baseline justify-center gap-2.5 px-3.5 py-3">
+                    {weekSessions.length === 0 ? null : (
+                      <>
+                        <span className={`whitespace-nowrap text-[17px] font-medium tabular-nums ${pnlClass(weekPnl)}`}>
+                          {money(weekPnl)}
+                        </span>
+                        <span className="whitespace-nowrap text-[11.5px] text-[var(--faint)]">
+                          {weekTrades} {weekTrades === 1 ? "trade" : "trades"}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {bandInThisWeek && openSession ? <MonthDayBand session={openSession} /> : null}
+              </Fragment>
             );
           })}
         </div>
       </div>
+
+      <p className="mt-3 text-[12.5px] text-[var(--faint)]">
+        Click a traded day to open it in place. Click again to collapse.
+      </p>
+
       <ul className="sr-only">
         {rows.map((session) => (
           <li key={session.date}>{longDateLabel(session.date)}: {money(session.pnl)}, {session.trades} trades</li>
@@ -723,7 +790,43 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
   );
 }
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+/**
+ * The in-place day band. The handoff also showed a per-trade ledger here, which
+ * this cannot render: `JournalSessionRow` carries a trade *count*, not rows, so
+ * the month payload has no per-trade data. Adding it is a data-contract change,
+ * not a styling one.
+ */
+function MonthDayBand({ session }: { session: JournalSessionRow }) {
+  return (
+    <div className="border-y-2 border-[var(--accent)] bg-[var(--surface)] px-6 py-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-6">
+        <span className="text-[19px] font-semibold tracking-[-0.015em] text-[var(--foreground)]">
+          {longDateLabel(session.date)}
+        </span>
+        <span className="flex flex-wrap items-baseline gap-6 text-[13px]">
+          <BandStat label="P&L" value={money(session.pnl)} className={pnlClass(session.pnl)} />
+          <BandStat label="Trades" value={String(session.trades)} />
+          <BandStat label="Accuracy" value={percent(session.accuracy)} />
+          <BandStat label="PF" value={ratio(session.profitFactor)} />
+        </span>
+      </div>
+      {session.activityRead ? (
+        <p className="mt-3 text-[13px] leading-6 text-[var(--body)]">{session.activityRead}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function BandStat({ label, value, className }: { label: string; value: string; className?: string }) {
+  return (
+    <span className="flex items-baseline gap-1.5">
+      <span className="text-[var(--muted)]">{label}</span>
+      <span className={`font-semibold tabular-nums ${className ?? "text-[var(--foreground)]"}`}>{value}</span>
+    </span>
+  );
+}
+
+const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 const weekdayFormatter = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short" });
 const shortDateFormatter = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric" });
 const longDateFormatter = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "long", month: "long", day: "numeric" });
