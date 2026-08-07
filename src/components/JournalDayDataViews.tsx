@@ -315,7 +315,7 @@ function WeekViews({
           weekStart={data.key}
           rows={data.sessions}
         />
-        <EvidenceBoundary>The path uses imported sessions only. An unplotted weekday is upcoming or has no imported session; it does not infer an intentional no-trade day.</EvidenceBoundary>
+        <EvidenceBoundary>The timeline uses imported sessions only. An unplotted weekday is upcoming or has no imported session; it does not infer an intentional no-trade day.</EvidenceBoundary>
       </div>
     );
   }
@@ -517,97 +517,142 @@ function WeekPnlTrajectory({
   rows: JournalSessionRow[];
 }) {
   const sessionsByDate = new Map(rows.map((row) => [row.date, row]));
-  let cumulative = 0;
   const slots = tradingWeekDates(weekStart).map((date, index) => {
     const session = sessionsByDate.get(date);
-    if (session) cumulative += session.pnl;
     return {
-      cumulative,
       date,
       session,
       x: 10 + index * 20,
     };
   });
-  const points = slots.flatMap((slot) => slot.session ? [{ ...slot, session: slot.session }] : []);
-  const values = [0, ...points.map((point) => point.cumulative)];
-  const rawMin = Math.min(...values);
-  const rawMax = Math.max(...values);
-  const rawSpan = Math.max(1, rawMax - rawMin);
-  const domainMin = rawMin - rawSpan * 0.14;
-  const domainMax = rawMax + rawSpan * 0.14;
-  const plotTop = 10;
-  const plotBottom = 68;
-  const yFor = (value: number) => plotBottom - ((value - domainMin) / (domainMax - domainMin)) * (plotBottom - plotTop);
-  const zeroY = yFor(0);
-  const polyline = points.map((point) => `${point.x},${yFor(point.cumulative)}`).join(" ");
+  const maxAbsPnl = Math.max(1, ...rows.map((row) => Math.abs(row.pnl)));
+  const elapsedIndex = slots.reduce((lastIndex, slot, index) => slot.date <= asOfDate ? index : lastIndex, -1);
+  const elapsedEndX = elapsedIndex >= 0 ? slots[elapsedIndex].x : slots[0].x;
 
   return (
     <figure className="mt-7 overflow-x-auto border-y border-[var(--hairline)] py-5" aria-labelledby="week-pnl-trajectory-title">
       <div className="min-w-[720px]">
         <figcaption id="week-pnl-trajectory-title" className="flex items-center justify-between gap-4 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">
-          <span>Cumulative P&amp;L</span>
-          <span className="font-normal normal-case tracking-normal">Imported session path</span>
+          <span>Daily P&amp;L by session</span>
+          <span className="font-normal normal-case tracking-normal">Hover or focus a day for details</span>
         </figcaption>
-        <div className="relative mt-3 h-[230px]" aria-hidden="true">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
+        <div className="relative mt-4 h-[160px]">
+          <svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
             <line
               x1="10"
               x2="90"
-              y1={zeroY}
-              y2={zeroY}
+              y1="50"
+              y2="50"
               stroke="var(--hairline)"
               strokeWidth="1"
               vectorEffect="non-scaling-stroke"
             />
-            {points.length > 1 ? (
-              <polyline
-                points={polyline}
-                fill="none"
-                stroke="var(--accent)"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                vectorEffect="non-scaling-stroke"
-              />
-            ) : null}
+            <line
+              x1="10"
+              x2={elapsedEndX}
+              y1="50"
+              y2="50"
+              stroke="var(--muted)"
+              strokeOpacity="0.7"
+              strokeWidth="1.5"
+              vectorEffect="non-scaling-stroke"
+            />
           </svg>
 
-          {points.map((point) => {
-            const selected = point.date === selectedDate;
+          {slots.map((slot, index) => {
+            const session = slot.session;
+            const selected = slot.date === selectedDate;
+            const upcoming = slot.date > asOfDate;
+
+            if (!session) {
+              return (
+                <span
+                  aria-hidden="true"
+                  key={slot.date}
+                  className={`absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border ${upcoming ? "border-[var(--faint)] bg-[var(--background)]" : "border-[var(--muted)] bg-[var(--surface)]"}`}
+                  style={{ left: `${slot.x}%` }}
+                />
+              );
+            }
+
+            const positive = session.pnl > 0;
+            const negative = session.pnl < 0;
+            const barHeight = session.pnl === 0 ? 0 : Math.max(7, (Math.abs(session.pnl) / maxAbsPnl) * 36);
+            const markColor = positive
+              ? "var(--green-chart)"
+              : negative
+                ? "var(--red-chart)"
+                : "var(--muted)";
+            const tooltipAlignment = index === 0
+              ? "left-0"
+              : index === slots.length - 1
+                ? "right-0"
+                : "left-1/2 -translate-x-1/2";
+
             return (
-              <span
-                key={point.date}
-                title={`${longDateLabel(point.date)}: ${money(point.session.pnl)}; cumulative ${money(point.cumulative)}`}
-                className={`absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--accent)] ${selected ? "bg-[var(--accent)] ring-4 ring-[var(--surface)]" : "bg-[var(--surface)]"}`}
-                style={{ left: `${point.x}%`, top: `${yFor(point.cumulative)}%` }}
-              />
+              <div
+                key={slot.date}
+                role="group"
+                tabIndex={0}
+                aria-label={`${longDateLabel(slot.date)}: ${money(session.pnl)}, ${session.trades} trades, ${percent(session.accuracy)} win rate, ${ratio(session.profitFactor)} profit factor`}
+                className="group absolute inset-y-0 w-14 -translate-x-1/2 cursor-default focus-visible:outline-none"
+                style={{ left: `${slot.x}%` }}
+              >
+                {session.pnl !== 0 ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-1/2 w-2 -translate-x-1/2 rounded-[2px] transition-[width,opacity] duration-150 ease-out group-hover:w-2.5 group-focus-visible:w-2.5"
+                    style={positive
+                      ? { backgroundColor: markColor, bottom: "50%", height: `${barHeight}%` }
+                      : { backgroundColor: markColor, top: "50%", height: `${barHeight}%` }}
+                  />
+                ) : null}
+                <span
+                  aria-hidden="true"
+                  className={`absolute left-1/2 top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-[var(--surface)] outline-offset-2 transition-transform duration-150 ease-out group-hover:scale-125 group-focus-visible:scale-125 group-focus-visible:outline group-focus-visible:outline-2 group-focus-visible:outline-[var(--accent)] ${selected ? "outline outline-2 outline-[var(--accent)]" : ""}`}
+                  style={{ borderColor: markColor }}
+                />
+                <span
+                  role="tooltip"
+                  className={`pointer-events-none absolute top-1 z-20 w-52 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-left text-[12px] leading-5 text-[var(--body)] opacity-0 shadow-lg transition-opacity duration-150 ease-out group-hover:opacity-100 group-focus-visible:opacity-100 ${tooltipAlignment}`}
+                >
+                  <span className="mb-1.5 flex items-baseline justify-between gap-3">
+                    <span className="font-semibold text-[var(--foreground)]">{weekdayLabel(slot.date)}</span>
+                    <span className={`font-mono font-semibold tabular-nums ${pnlClass(session.pnl)}`}>{money(session.pnl)}</span>
+                  </span>
+                  <span className="flex items-baseline justify-between gap-4"><span className="text-[var(--muted)]">Trades</span><span className="font-mono tabular-nums text-[var(--foreground)]">{session.trades}</span></span>
+                  <span className="flex items-baseline justify-between gap-4"><span className="text-[var(--muted)]">Win rate</span><span className="font-mono tabular-nums text-[var(--foreground)]">{percent(session.accuracy)}</span></span>
+                  <span className="flex items-baseline justify-between gap-4"><span className="text-[var(--muted)]">Profit factor</span><span className="font-mono tabular-nums text-[var(--foreground)]">{ratio(session.profitFactor)}</span></span>
+                </span>
+              </div>
             );
           })}
-
-          <div className="absolute inset-x-0 bottom-0 grid grid-cols-5">
-            {slots.map((slot) => {
-              const upcoming = slot.date > asOfDate;
-              return (
-                <div key={slot.date} className="text-center">
-                  <div className={`text-[12px] font-semibold ${slot.session ? "text-[var(--foreground)]" : "text-[var(--muted)]"}`}>
-                    {weekdayLabel(slot.date)}
-                  </div>
-                  <div className="mt-1 font-mono text-[10px] tabular-nums text-[var(--muted)]">
-                    {shortDateLabel(slot.date)}
-                  </div>
-                  {!slot.session ? (
-                    <div className="mt-1 text-[10px] text-[var(--faint)]">{upcoming ? "Upcoming" : "No import"}</div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
         </div>
+
+        <div className="grid grid-cols-5">
+          {slots.map((slot) => {
+            const upcoming = slot.date > asOfDate;
+            return (
+              <div key={slot.date} className="text-center">
+                <div className={`text-[12px] font-semibold ${slot.session ? "text-[var(--foreground)]" : "text-[var(--muted)]"}`}>
+                  {weekdayLabel(slot.date)}
+                </div>
+                <div className="mt-1 font-mono text-[10px] tabular-nums text-[var(--muted)]">
+                  {shortDateLabel(slot.date)}
+                </div>
+                {!slot.session ? (
+                  <div className="mt-1 text-[10px] text-[var(--faint)]">{upcoming ? "Upcoming" : "No import"}</div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+
         <ul className="sr-only">
           {slots.map((slot) => (
             <li key={slot.date}>
               {longDateLabel(slot.date)}: {slot.session
-                ? `${money(slot.session.pnl)}, cumulative ${money(slot.cumulative)}`
+                ? `${money(slot.session.pnl)}, ${slot.session.trades} trades, ${percent(slot.session.accuracy)} win rate, ${ratio(slot.session.profitFactor)} profit factor`
                 : slot.date > asOfDate ? "upcoming" : "no imported session"}
             </li>
           ))}

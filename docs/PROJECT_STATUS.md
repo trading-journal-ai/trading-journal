@@ -110,6 +110,14 @@ stopped. This is the "when did we last work on it" trail.
   - Kept the selected date, review tabs, and Coach available on zero-trade days
     instead of replacing the Journal with the generic imported-trades empty
     screen.
+  - Reframed Week -> P&L so it no longer repeats the five-cell navigation strip:
+    a compact week-state flag and evidence-based concentration read now lead a
+    horizontal session timeline. Daily P&L bars rise or fall from the shared
+    baseline with redundant green/red encoding, and hover or keyboard focus
+    reveals that day's trades, win rate, and profit factor.
+  - Added explicit in-progress, completed, upcoming, no-import, and future-day
+    states to the weekly visualization while keeping the underlying evidence
+    boundary visible.
   - Owner clarified that the Electron app is desktop-first. Future design and
     routine visual QA should prioritize laptop/desktop windows; phone-specific
     layouts are not a supported product target and only need basic resilience.
@@ -119,12 +127,12 @@ stopped. This is the "when did we last work on it" trail.
     blocked by the two known `react-hooks/set-state-in-effect` errors under
     `src/components/preview/`.
   - **Stopped at:** working production-page exploration ready for visual review;
-    the new week-cell lockup is a WIP design checkpoint, intentionally left
-    without another full lint/build pass while typography and color remain open.
-    The full month Calendar remains on `/calendar`; embedding it in Journal
-    should wait until its route-local grid/cells are extracted rather than
-    duplicated. Quick dictation capture and carry-forward behavior remain the
-    next interaction problems.
+    the week strip and Week -> P&L timeline are WIP design checkpoints,
+    intentionally left without another full lint/build pass while the review
+    vocabulary remains open. The full month Calendar remains on `/calendar`;
+    embedding it in Journal should wait until its route-local grid/cells are
+    extracted rather than duplicated. Quick dictation capture and carry-forward
+    behavior remain the next interaction problems.
 
 - **2026-07-27** — Free-plan market-data sync + Analytics architecture home
   (branch `feat/free-plan-market-data-sync`).
