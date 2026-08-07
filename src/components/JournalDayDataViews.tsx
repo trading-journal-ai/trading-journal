@@ -99,6 +99,7 @@ export type JournalHorizonRow = {
 export type JournalComparisonData = {
   week: {
     key: string;
+    asOfDate: string;
     summary: JournalRangeSummary;
     sessions: JournalSessionRow[];
     edgeRows: JournalEdgeRow[];
@@ -224,7 +225,7 @@ export default function JournalReviewModule({
             returnTo={returnTo}
           />
         ) : null}
-        {scope === "week" ? <WeekViews view={view} data={comparisons.week} coachSlot={weekCoachSlot} /> : null}
+        {scope === "week" ? <WeekViews view={view} data={comparisons.week} coachSlot={weekCoachSlot} selectedDate={date} /> : null}
         {scope === "month" ? <MonthViews view={view} data={comparisons.month} coachSlot={monthCoachSlot} /> : null}
       </div>
     </section>
@@ -293,13 +294,28 @@ function DayViews({
   return coachSlot ? <div role="tabpanel">{coachSlot}</div> : <CoachRead coach={coach} label="Deterministic diagnosis" />;
 }
 
-function WeekViews({ view, data, coachSlot }: { view: JournalDataView; data: JournalComparisonData["week"]; coachSlot?: ReactNode }) {
+function WeekViews({
+  view,
+  data,
+  coachSlot,
+  selectedDate,
+}: {
+  view: JournalDataView;
+  data: JournalComparisonData["week"];
+  coachSlot?: ReactNode;
+  selectedDate: string;
+}) {
   if (view === "pnl") {
     return (
       <div role="tabpanel">
-        <RangeHeader summary={data.summary} question="Was the week carried by one session or built consistently?" />
-        <WeekPnlBars weekStart={data.key} rows={data.sessions} />
-        <EvidenceBoundary>Every weekday shares the same zero line. A blank column means no imported session; it does not infer an intentional no-trade day.</EvidenceBoundary>
+        <WeekTrajectoryHeader data={data} />
+        <WeekPnlTrajectory
+          asOfDate={data.asOfDate}
+          selectedDate={selectedDate}
+          weekStart={data.key}
+          rows={data.sessions}
+        />
+        <EvidenceBoundary>The path uses imported sessions only. An unplotted weekday is upcoming or has no imported session; it does not infer an intentional no-trade day.</EvidenceBoundary>
       </div>
     );
   }
@@ -395,65 +411,208 @@ function MonthViews({ view, data, coachSlot }: { view: JournalDataView; data: Jo
   return <div role="tabpanel">{coachSlot ?? <CoachRead coach={data.coach} label="Monthly read" />}</div>;
 }
 
-function WeekPnlBars({ weekStart, rows }: { weekStart: string; rows: JournalSessionRow[] }) {
-  const sessionsByDate = new Map(rows.map((row) => [row.date, row]));
-  const slots = tradingWeekDates(weekStart).map((date) => ({ date, session: sessionsByDate.get(date) }));
-  const maxAbs = Math.max(1, ...rows.map((row) => Math.abs(row.pnl)));
+type WeekState = "in_progress" | "completed" | "upcoming";
+
+function weekState(weekStart: string, asOfDate: string): { state: WeekState; label: string; detail: string | null } {
+  const weekDates = tradingWeekDates(weekStart);
+  const weekEnd = weekDates.at(-1) ?? weekStart;
+
+  if (asOfDate < weekStart) return { state: "upcoming", label: "Upcoming week", detail: null };
+  if (asOfDate > weekEnd) return { state: "completed", label: "Completed week", detail: null };
+
+  return {
+    state: "in_progress",
+    label: "Week in progress",
+    detail: `Through ${longDateLabel(asOfDate).split(",")[0]}`,
+  };
+}
+
+function weekInsight(rows: JournalSessionRow[], totalPnl: number): string {
+  if (rows.length === 0) return "No imported sessions yet. The week remains open for planning and reflection.";
+
+  const greenSessions = rows.filter((row) => row.pnl > 0).length;
+  const best = rows.reduce((current, row) => row.pnl > current.pnl ? row : current, rows[0]);
+  const worst = rows.reduce((current, row) => row.pnl < current.pnl ? row : current, rows[0]);
+  const bestDay = longDateLabel(best.date).split(",")[0];
+  const worstDay = longDateLabel(worst.date).split(",")[0];
+  const withoutBest = totalPnl - best.pnl;
+
+  if (totalPnl > 0) {
+    if (best.pnl > 0 && withoutBest <= 0) {
+      return `${bestDay} is carrying the week; without it, the other sessions total ${money(withoutBest)}.`;
+    }
+
+    const bestShare = best.pnl > 0 ? Math.round((best.pnl / totalPnl) * 100) : 0;
+    if (bestShare >= 60) {
+      return `${bestDay} produced ${bestShare}% of net P&L, but the other sessions remain ${money(withoutBest)}.`;
+    }
+
+    if (greenSessions > 1) {
+      return `The result is building across ${greenSessions} green sessions; no single day accounts for most of the week.`;
+    }
+
+    return `${bestDay} supplied the strongest session while the week remains positive at ${money(totalPnl)}.`;
+  }
+
+  if (totalPnl < 0) {
+    const withoutWorst = totalPnl - worst.pnl;
+    if (withoutWorst > 0) {
+      return `${worstDay} caused the weekly loss; the other sessions total ${money(withoutWorst)}.`;
+    }
+    return `${worstDay} was the largest drag in a week that remains ${money(totalPnl)}.`;
+  }
+
+  return "The week is effectively flat; activity has not produced a durable result yet.";
+}
+
+function WeekTrajectoryHeader({ data }: { data: JournalComparisonData["week"] }) {
+  const status = weekState(data.key, data.asOfDate);
+  const summary = data.summary;
+  const metrics = [
+    `${summary.sessions} ${summary.sessions === 1 ? "session" : "sessions"}`,
+    `${summary.trades.toLocaleString()} ${summary.trades === 1 ? "trade" : "trades"}`,
+    `${percent(summary.accuracy)} win`,
+    `PF ${ratio(summary.profitFactor)}`,
+  ];
 
   return (
-    <figure className="mt-6 overflow-x-auto" aria-labelledby="week-pnl-bars-title">
-      <figcaption id="week-pnl-bars-title" className="sr-only">
-        Daily P&amp;L for each weekday, with gains above zero and losses below zero.
-      </figcaption>
-      <div className="grid min-w-[560px] grid-cols-5 border-y border-[var(--hairline)]">
-        {slots.map(({ date, session }, index) => {
-          const value = session?.pnl ?? 0;
-          const barHeight = session ? Math.max(5, (Math.abs(value) / maxAbs) * 46) : 0;
-          const positive = value >= 0;
-          return (
-            <div
-              key={date}
-              className={`min-w-0 px-3 py-4 ${index > 0 ? "border-l border-[var(--hairline)]" : ""}`}
-              aria-label={session
-                ? `${weekdayLabel(date)} ${shortDateLabel(date)}: ${money(value)}, ${session.trades} trades`
-                : `${weekdayLabel(date)} ${shortDateLabel(date)}: no imported session`}
-            >
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[12px] font-semibold text-[var(--foreground)]">{weekdayLabel(date)}</span>
-                <span className="font-mono text-[11px] tabular-nums text-[var(--muted)]">{shortDateLabel(date)}</span>
-              </div>
-              <div className="relative mt-3 h-32" aria-hidden="true">
-                <div className="absolute inset-x-0 top-1/2 h-px bg-[var(--border)]" />
-                {session ? (
-                  <div
-                    className={`absolute left-1/2 w-8 -translate-x-1/2 ${positive ? "bg-[var(--green)]" : "bg-[var(--red)]"}`}
-                    style={positive
-                      ? { height: `${barHeight}%`, bottom: "50%" }
-                      : { height: `${barHeight}%`, top: "50%" }}
-                  />
-                ) : (
-                  <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-[12px] text-[var(--faint)]">—</span>
-                )}
-              </div>
-              <div className="mt-2 text-center">
-                <div className={`whitespace-nowrap font-mono text-[12px] font-semibold tabular-nums ${session ? pnlClass(value) : "text-[var(--faint)]"}`}>
-                  {session ? money(value) : "No session"}
-                </div>
-                <div className="mt-1 text-[11px] text-[var(--muted)]">
-                  {session ? `${session.trades} ${session.trades === 1 ? "trade" : "trades"}` : "Not imported"}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+    <header>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2.5 text-[11px]">
+            <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-1 font-semibold text-[var(--foreground)]">
+              {status.label}
+            </span>
+            {status.detail ? <span className="text-[var(--muted)]">{status.detail}</span> : null}
+          </div>
+          <p className="mt-4 max-w-[70ch] text-[18px] font-medium leading-7 tracking-[-0.01em] text-[var(--foreground)]">
+            {weekInsight(data.sessions, summary.pnl)}
+          </p>
+          <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-[var(--muted)]">
+            {metrics.map((metric, index) => (
+              <Fragment key={metric}>
+                {index > 0 ? <span aria-hidden="true" className="text-[var(--faint)]">·</span> : null}
+                <span>{metric}</span>
+              </Fragment>
+            ))}
+          </p>
+        </div>
+        <div className={`font-mono text-[20px] font-semibold tabular-nums ${pnlClass(summary.pnl)}`}>
+          {money(summary.pnl)}
+        </div>
       </div>
-      <ul className="sr-only">
-        {slots.map(({ date, session }) => (
-          <li key={date}>
-            {weekdayLabel(date)} {shortDateLabel(date)}: {session ? `${money(session.pnl)}, ${session.trades} trades` : "no imported session"}
-          </li>
-        ))}
-      </ul>
+    </header>
+  );
+}
+
+function WeekPnlTrajectory({
+  asOfDate,
+  selectedDate,
+  weekStart,
+  rows,
+}: {
+  asOfDate: string;
+  selectedDate: string;
+  weekStart: string;
+  rows: JournalSessionRow[];
+}) {
+  const sessionsByDate = new Map(rows.map((row) => [row.date, row]));
+  let cumulative = 0;
+  const slots = tradingWeekDates(weekStart).map((date, index) => {
+    const session = sessionsByDate.get(date);
+    if (session) cumulative += session.pnl;
+    return {
+      cumulative,
+      date,
+      session,
+      x: 10 + index * 20,
+    };
+  });
+  const points = slots.flatMap((slot) => slot.session ? [{ ...slot, session: slot.session }] : []);
+  const values = [0, ...points.map((point) => point.cumulative)];
+  const rawMin = Math.min(...values);
+  const rawMax = Math.max(...values);
+  const rawSpan = Math.max(1, rawMax - rawMin);
+  const domainMin = rawMin - rawSpan * 0.14;
+  const domainMax = rawMax + rawSpan * 0.14;
+  const plotTop = 10;
+  const plotBottom = 68;
+  const yFor = (value: number) => plotBottom - ((value - domainMin) / (domainMax - domainMin)) * (plotBottom - plotTop);
+  const zeroY = yFor(0);
+  const polyline = points.map((point) => `${point.x},${yFor(point.cumulative)}`).join(" ");
+
+  return (
+    <figure className="mt-7 overflow-x-auto border-y border-[var(--hairline)] py-5" aria-labelledby="week-pnl-trajectory-title">
+      <div className="min-w-[720px]">
+        <figcaption id="week-pnl-trajectory-title" className="flex items-center justify-between gap-4 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">
+          <span>Cumulative P&amp;L</span>
+          <span className="font-normal normal-case tracking-normal">Imported session path</span>
+        </figcaption>
+        <div className="relative mt-3 h-[230px]" aria-hidden="true">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
+            <line
+              x1="10"
+              x2="90"
+              y1={zeroY}
+              y2={zeroY}
+              stroke="var(--hairline)"
+              strokeWidth="1"
+              vectorEffect="non-scaling-stroke"
+            />
+            {points.length > 1 ? (
+              <polyline
+                points={polyline}
+                fill="none"
+                stroke="var(--accent)"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                vectorEffect="non-scaling-stroke"
+              />
+            ) : null}
+          </svg>
+
+          {points.map((point) => {
+            const selected = point.date === selectedDate;
+            return (
+              <span
+                key={point.date}
+                title={`${longDateLabel(point.date)}: ${money(point.session.pnl)}; cumulative ${money(point.cumulative)}`}
+                className={`absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--accent)] ${selected ? "bg-[var(--accent)] ring-4 ring-[var(--surface)]" : "bg-[var(--surface)]"}`}
+                style={{ left: `${point.x}%`, top: `${yFor(point.cumulative)}%` }}
+              />
+            );
+          })}
+
+          <div className="absolute inset-x-0 bottom-0 grid grid-cols-5">
+            {slots.map((slot) => {
+              const upcoming = slot.date > asOfDate;
+              return (
+                <div key={slot.date} className="text-center">
+                  <div className={`text-[12px] font-semibold ${slot.session ? "text-[var(--foreground)]" : "text-[var(--muted)]"}`}>
+                    {weekdayLabel(slot.date)}
+                  </div>
+                  <div className="mt-1 font-mono text-[10px] tabular-nums text-[var(--muted)]">
+                    {shortDateLabel(slot.date)}
+                  </div>
+                  {!slot.session ? (
+                    <div className="mt-1 text-[10px] text-[var(--faint)]">{upcoming ? "Upcoming" : "No import"}</div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <ul className="sr-only">
+          {slots.map((slot) => (
+            <li key={slot.date}>
+              {longDateLabel(slot.date)}: {slot.session
+                ? `${money(slot.session.pnl)}, cumulative ${money(slot.cumulative)}`
+                : slot.date > asOfDate ? "upcoming" : "no imported session"}
+            </li>
+          ))}
+        </ul>
+      </div>
     </figure>
   );
 }

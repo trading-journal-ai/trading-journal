@@ -990,6 +990,7 @@ function buildJournalComparisonData(week: ReviewRange, month: ReviewRange): Jour
   return {
     week: {
       key: weekStartFor(week.anchor),
+      asOfDate: currentEtDate(),
       summary: {
         label: week.displayDate,
         sessions: week.days.filter((day) => day.day.trades > 0).length,
