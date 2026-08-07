@@ -124,24 +124,14 @@ stopped. This is the "when did we last work on it" trail.
   - Stabilized the optimistic date-navigation handoff so pointer activation is
     recorded once, resolved navigation clears the plotting state, and selecting
     the active date cannot strand the chart loader.
-  - Replaced the duplicate module-level Day/Week/Month scope control with one
-    URL-backed Journal period navigator. Today returns to the current ET date;
-    previous/next now steps by trading day, week, or month; Day keeps the
-    five-session strip while Week and Month open their full-period summaries
-    directly.
-  - Kept the secondary review tabs focused on questions within the selected
-    period (`P&L`, `Edge`, `Risk`, `Coach`, and related lenses), eliminating the
-    earlier two-level time-navigation ambiguity.
   - Verified the completed slice with targeted ESLint across every changed app
     file, TypeScript, the bundled demo schema, a Webpack production build, and
     Browser interaction checks at 1440×1000 and 1024×768. Date selection, chart
-    handoff, URL-backed Day/Week/Month switching, period-aware movement, the
-    weekly P&L timeline, and page-level
+    handoff, Day/Week scope switching, the weekly P&L timeline, and page-level
     overflow all passed. Full repository lint remains blocked only by the two
     known `react-hooks/set-state-in-effect` errors under `src/components/preview/`.
-  - **Completed at:** the Journal formatting, unified period navigation,
-    five-day navigation, daily P&L, and Week -> P&L timeline are stabilized and
-    updated onto current `main`.
+  - **Completed at:** the Journal formatting, five-day navigation, daily P&L,
+    and Week -> P&L timeline are stabilized and updated onto current `main`.
     The full month Calendar intentionally remains on `/calendar`; embedding it
     should wait until its route-local grid/cells are extracted rather than
     duplicated. Quick dictation capture and Dashboard carry-forward remain a

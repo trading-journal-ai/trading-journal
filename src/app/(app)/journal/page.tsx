@@ -1,5 +1,4 @@
 import TradeJournalReview from "@/components/TradeJournalReview";
-import type { JournalDataScope } from "@/components/JournalReviewTabs";
 import { getActiveAccount } from "@/lib/accountScope";
 import { db, schema } from "@/lib/db";
 import { etDateString } from "@/lib/time";
@@ -27,10 +26,6 @@ function validDate(value: string | undefined): string | undefined {
 
 function validMonth(value: string | undefined): string | undefined {
   return value && /^\d{4}-\d{2}$/.test(value) ? value : undefined;
-}
-
-function validScope(value: string | undefined): JournalDataScope {
-  return value === "week" || value === "month" ? value : "day";
 }
 
 async function latestJournalDate(accountId: number): Promise<string | undefined> {
@@ -66,13 +61,11 @@ export default async function JournalPage({
     preset?: string;
     from?: string;
     month?: string;
-    scope?: string;
     returnTo?: string;
   }>;
 }) {
   const params = await searchParams;
   const activeAccount = await getActiveAccount();
-  const reviewModuleScope = validScope(params.scope);
   const requestedDate = validDate(params.date);
   const requestedMonth = validMonth(params.month)
     ?? (params.preset === "month" || params.preset === "week"
@@ -87,7 +80,7 @@ export default async function JournalPage({
   const journalHref = requestedMonth
     ? `/journal?month=${requestedMonth}`
     : journalDate
-      ? `/journal?date=${journalDate}${reviewModuleScope === "day" ? "" : `&scope=${reviewModuleScope}`}`
+      ? `/journal?date=${journalDate}`
       : "/journal";
   const returnTo = appendReturnTo(journalHref, params.returnTo);
 
@@ -100,7 +93,6 @@ export default async function JournalPage({
       accountId={activeAccount.id}
       showArchiveSidebar={false}
       archiveLinkMode="review-module"
-      reviewModuleScope={reviewModuleScope}
     />
   );
 }

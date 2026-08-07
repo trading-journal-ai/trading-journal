@@ -40,37 +40,33 @@ export const JOURNAL_SCOPE_VIEWS: Record<
 export default function JournalReviewTabs({
   scope,
   view,
-  onViewChange,
-  showScopeTabs = true,
   onScopeChange,
+  onViewChange,
 }: {
   scope: JournalDataScope;
   view: JournalDataView;
+  onScopeChange: (scope: JournalDataScope) => void;
   onViewChange: (view: JournalDataView) => void;
-  showScopeTabs?: boolean;
-  onScopeChange?: (scope: JournalDataScope) => void;
 }) {
   const views = JOURNAL_SCOPE_VIEWS[scope];
 
   return (
     <div className="flex flex-wrap items-end justify-between gap-2 border-b border-[var(--hairline)]">
-      {showScopeTabs ? (
-        <PeriodTabs
-          ariaLabel="Journal time range"
-          items={[
-            { value: "day", label: "Day" },
-            { value: "week", label: "Week" },
-            { value: "month", label: "Month" },
-          ]}
-          value={scope}
-          onChange={(nextScope) => onScopeChange?.(nextScope as JournalDataScope)}
-        />
-      ) : null}
+      <PeriodTabs
+        ariaLabel="Journal time range"
+        items={[
+          { value: "day", label: "Day" },
+          { value: "week", label: "Week" },
+          { value: "month", label: "Month" },
+        ]}
+        value={scope}
+        onChange={(nextScope) => onScopeChange(nextScope as JournalDataScope)}
+      />
 
       <div
         role="tablist"
         aria-label={`${scope} data view`}
-        className={`flex min-w-0 gap-1 overflow-x-auto pb-2.5 ${showScopeTabs ? "" : "ml-auto"}`}
+        className="flex min-w-0 gap-1 overflow-x-auto pb-2.5"
       >
         {views.map((item) => (
           <button
