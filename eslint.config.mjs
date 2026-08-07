@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     ".venv*/**",
     ".claude/**",
+    // Project-local agent skills are generated third-party tooling.
+    ".agents/**",
     "**/__pycache__/**",
     // Local/private databases and generated provider backfills are not source.
     "data/**",

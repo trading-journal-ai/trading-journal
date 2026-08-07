@@ -15,3 +15,7 @@
 *.html text eol=lf
 *.sh text eol=lf
 *.py text eol=lf
+
+# Impeccable is a generated provider build. Preserve upstream whitespace and
+# keep vendored detector/runtime code out of repository language statistics.
+.agents/skills/impeccable/** -whitespace linguist-vendored

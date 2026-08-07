@@ -39,14 +39,19 @@ stopped. This is the "when did we last work on it" trail.
   - Added root `PRODUCT.md` from owner-confirmed product truth: an active
     day/momentum trader audience, local-first journal positioning, grounded
     post-trade coaching, and trader-controlled playbook knowledge.
+  - Added root `DESIGN.md` and `.impeccable/design.json`, distilled from the
+    existing canonical design-system contract so Impeccable and other
+    DESIGN.md-aware tools inherit the shipped visual language without replacing
+    `docs/design/DESIGN_SYSTEM.md` or the runtime tokens in `globals.css`.
   - Added Impeccable's ephemeral runtime paths to `.gitignore`; shared future
     design artifacts remain trackable.
-  - Left the incumbent design system untouched. Live-mode configuration stopped
-    at Impeccable's expected missing-root-`DESIGN.md` gate; the optional next
-    step is `$impeccable document` to record the existing system.
-  - Verification: Impeccable context scan completed, and the live preflight
-    resolved the new `PRODUCT.md`. App verification was intentionally skipped
-    because no application code changed.
+  - Preserved Impeccable's Apache 2.0 attribution and license alongside the
+    vendored project-local skill.
+  - Verification: Impeccable context resolved `PRODUCT.md` and `DESIGN.md`; hook
+    and sidecar JSON parsed; all vendored `.mjs` files passed Node syntax
+    checking; the production build passed. Repository lint remains blocked only
+    by the two known `react-hooks/set-state-in-effect` errors in the preview
+    components, unrelated to this branch.
 
 - **2026-07-27** — Free-plan market-data sync + Analytics architecture home
   (branch `feat/free-plan-market-data-sync`).
