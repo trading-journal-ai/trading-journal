@@ -170,6 +170,15 @@ edits and persist them to source when asked.
   edits. Translate to the nearest token or Tailwind utility rather than writing
   an inline style; if no token fits, say so — that usually means a token is
   missing from the design system.
+- **Flag arbitrary values before writing them.** A tweak containing a bracket
+  value (`pt-[13px]`, `gap-[7px]`, `text-[15px]`) means the design system was
+  deliberately stepped outside to solve a problem. Do not silently commit it to
+  JSX. List every arbitrary value in the batch and offer to fold it in:
+  - a spacing value that recurs, or reads as a real step → add it to the scale
+  - a one-off that belongs to a component → propose a token in `globals.css`
+  - genuinely single-use → say so, and write it only after Justin confirms
+  The goal is extending the system when a design problem requires it, never
+  accumulating one-offs that erode it.
 - Call `clear_tweaks` only after the edits are applied and confirmed.
 - Tell Justin to switch **Record off** before asking for edits to be applied;
   hot reload re-renders with the new classes and re-captures them otherwise.
