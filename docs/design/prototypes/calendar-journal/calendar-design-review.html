@@ -1,0 +1,453 @@
+<!doctype html>
+<html data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>calendar-design-review</title>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap");
+
+.sc-placeholder{background:color-mix(in srgb,currentColor 8%,transparent);
+      border:1px solid color-mix(in srgb,currentColor 50%,transparent);
+      border-radius:2px;box-sizing:border-box;overflow:hidden}
+    @keyframes sc-shine{0%{background-position:100% 50%}100%{background-position:0% 50%}}
+    html.sc-dc-streaming .sc-placeholder,
+    html.sc-dc-streaming .sc-interp.sc-missing{position:relative;
+      background:color-mix(in srgb,currentColor 5%,transparent);
+      border-color:transparent}
+    html.sc-dc-streaming .sc-placeholder::before,
+    html.sc-dc-streaming .sc-interp.sc-missing::before{content:'';
+      position:absolute;inset:0;pointer-events:none;
+      background:linear-gradient(90deg,rgba(217,119,87,0) 25%,rgba(247,225,211,.95) 37%,rgba(217,119,87,0) 63%);
+      background-size:400% 100%;animation:sc-shine 1.4s ease infinite}
+    html.sc-dc-streaming .sc-placeholder:nth-child(n+9 of .sc-placeholder)::before,
+    html.sc-dc-streaming .sc-interp.sc-missing:nth-child(n+9 of .sc-interp.sc-missing)::before{animation:none;
+      background:color-mix(in srgb,currentColor 8%,transparent)}
+    .sc-placeholder-error{padding:4px 8px;font:11px/1.4 ui-monospace,monospace;
+      color:color-mix(in srgb,currentColor 70%,transparent);word-break:break-word}
+    .sc-interp.sc-missing{display:inline-block;width:2em;height:1em;overflow:hidden;
+      vertical-align:text-bottom;background:rgba(255,255,255,.3);border:1px solid rgba(0,0,0,.5);
+      border-radius:2px;box-sizing:border-box;color:transparent;
+      user-select:none}
+    .sc-interp.sc-unresolved{font-family:ui-monospace,monospace;font-size:.85em;
+      color:color-mix(in srgb,currentColor 50%,transparent);
+      background:color-mix(in srgb,currentColor 10%,transparent);border-radius:3px;
+      padding:0 3px}
+    .sc-host.sc-has-error{position:relative}
+    .sc-logic-error{position:absolute;top:8px;left:8px;z-index:2147483647;max-width:60ch;
+      padding:6px 10px;background:#b00020;color:#fff;font:12px/1.4 ui-monospace,monospace;
+      border-radius:4px;white-space:pre-wrap;pointer-events:none}
+    
+    @media print {
+      @page { margin: 0.5cm; }
+      figure, table { break-inside: avoid; }
+      #dc-root, #dc-root > .sc-host { height: auto; }
+      *, *::before, *::after {
+        print-color-adjust: exact; -webkit-print-color-adjust: exact;
+        backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+        animation-delay: -99s !important; animation-duration: .001s !important;
+        animation-iteration-count: 1 !important; animation-fill-mode: both !important;
+        animation-play-state: running !important; transition-duration: 0s !important;
+      }
+    }
+  
+
+x-dc{display:none!important}
+
+:root {
+  
+  --font-geist-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-geist-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --font-hanken: "Hanken Grotesk", var(--font-geist-sans);
+
+  
+  --font-display: var(--font-hanken); 
+  --font-sans: var(--font-geist-sans); 
+  --font-mono: var(--font-geist-mono); 
+
+  
+  --font-metric: var(--font-sans);
+}
+
+:root {
+  color-scheme: light;
+
+  
+  --background: #f6f8fa; 
+  --surface: #ffffff; 
+  --surface-2: #f0f2f5; 
+  --panel: #ffffff; 
+  --border: #d0d7de; 
+  --hairline: rgba(31, 35, 40, 0.08); 
+
+  
+  --foreground: #24292f; 
+  --body: #414a56; 
+  --muted: #57606a; 
+  --faint: #8c959f; 
+
+  
+  --accent: #0969da; 
+  --accent-strong: #0550ae; 
+  --blue: #0969da; 
+  --action: #24292f; 
+  --action-foreground: #ffffff;
+  --coach: #1a7f37; 
+  --review-helper-bg: #f0f2f5;
+
+  
+  --green: #1db26b;
+  --red: #f05143;
+  --green-chart: #1db26b;
+  --red-chart: #f05143;
+  --green-tint: #dafbe1;
+  --red-tint: #ffebe9;
+  --execution-buy: #00a95c;
+  --execution-sell: #f04438;
+
+  
+  --tag-reinforcing-bg: #eaf3de;
+  --tag-reinforcing-fg: #3b6d11;
+  --tag-review-bg: #fcebeb;
+  --tag-review-fg: #a32d2d;
+  --tag-neutral-bg: #f1efe8;
+  --tag-neutral-fg: #5f5e5a;
+  --tag-settled-bg: #e1f5ee;
+  --tag-settled-fg: #085041;
+  --tag-activated-bg: #faeeda;
+  --tag-activated-fg: #633806;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #080c12;
+  --surface: #111821;
+  --surface-2: #151e2a;
+  --panel: #1a2432;
+  --border: #273040;
+  --hairline: rgba(255, 255, 255, 0.07);
+  --foreground: #e6edf3;
+  --body: #c3ccd8;
+  --muted: #7a8492;
+  --faint: #4d5664;
+  --accent: #58a6ff;
+  --accent-strong: #79b8ff;
+  --blue: #58a6ff;
+  --action: #242a35;
+  --action-foreground: #f1f4f8;
+  --coach: #3fb950;
+  --review-helper-bg: transparent;
+  --green: #1db26b;
+  --red: #f05143;
+  --green-chart: #1db26b;
+  --red-chart: #f05143;
+  --green-tint: rgba(29, 178, 107, 0.14);
+  --red-tint: rgba(240, 81, 67, 0.14);
+  --execution-buy: #2bd576;
+  --execution-sell: #ff6257;
+  --font-metric: var(--font-mono);
+  --tag-reinforcing-bg: #16301f;
+  --tag-reinforcing-fg: #86cf96;
+  --tag-review-bg: #3a1d1b;
+  --tag-review-fg: #f0a79d;
+  --tag-neutral-bg: #222831;
+  --tag-neutral-fg: #9aa4b0;
+  --tag-settled-bg: #133029;
+  --tag-settled-fg: #6ac7ae;
+  --tag-activated-bg: #382a14;
+  --tag-activated-fg: #d7a75f;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --background: #f6f8fa;
+  --surface: #ffffff;
+  --surface-2: #f0f2f5;
+  --panel: #ffffff;
+  --border: #d0d7de;
+  --hairline: rgba(31, 35, 40, 0.08);
+  --foreground: #24292f;
+  --body: #414a56;
+  --muted: #57606a;
+  --faint: #8c959f;
+  --accent: #0969da;
+  --accent-strong: #0550ae;
+  --blue: #0969da;
+  --action: #24292f;
+  --action-foreground: #ffffff;
+  --coach: #1a7f37;
+  --review-helper-bg: #f0f2f5;
+  --green: #1db26b;
+  --red: #f05143;
+  --green-chart: #1db26b;
+  --red-chart: #f05143;
+  --green-tint: #dafbe1;
+  --red-tint: #ffebe9;
+  --execution-buy: #00a95c;
+  --execution-sell: #f04438;
+  --font-metric: var(--font-mono);
+}
+
+[data-theme="daylight"] {
+  color-scheme: light;
+  --background: #fcfaf7;
+  --surface: #ffffff;
+  --surface-2: #f3efe6;
+  --panel: #f6f2ea;
+  --border: #ecebde;
+  --hairline: rgba(33, 30, 24, 0.08);
+  --foreground: #211e18;
+  --body: #4a463e;
+  --muted: #8a8375;
+  --faint: #b0a892;
+  --accent: #b06e2a;
+  --accent-strong: #c98a2e;
+  --blue: #0969da; 
+  --action: #211e18;
+  --action-foreground: #fcfaf7;
+  --coach: #2e7d5b;
+  --review-helper-bg: #f6f2ea;
+  --green: #217a4b;
+  --red: #bc4b38;
+  --green-chart: #2c9a63;
+  --red-chart: #c4553f;
+  --green-tint: #e9f2ec;
+  --red-tint: #f8eae5;
+  --execution-buy: #00a95c;
+  --execution-sell: #e54835;
+  --font-metric: var(--font-sans);
+  --tag-reinforcing-bg: #eaf3de;
+  --tag-reinforcing-fg: #3b6d11;
+  --tag-review-bg: #fcebeb;
+  --tag-review-fg: #a32d2d;
+  --tag-neutral-bg: #f1efe8;
+  --tag-neutral-fg: #5f5e5a;
+  --tag-settled-bg: #e1f5ee;
+  --tag-settled-fg: #085041;
+  --tag-activated-bg: #faeeda;
+  --tag-activated-fg: #633806;
+}
+
+[data-theme="evening"] {
+  color-scheme: dark;
+  --background: #191918;
+  --surface: #222221;
+  --surface-2: #2a2a28;
+  --panel: #2e2e2b;
+  --border: #383835;
+  --hairline: rgba(240, 239, 235, 0.07);
+  --foreground: #f0efeb;
+  --body: #c9c7bf;
+  --muted: #93918a;
+  --faint: #6c6b64;
+  --accent: #d99a4e;
+  --accent-strong: #d99a4e;
+  --blue: #58a6ff; 
+  --action: #383835;
+  --action-foreground: #f0efeb;
+  --coach: #6fae8f;
+  --review-helper-bg: transparent;
+  --green: #55b183;
+  --red: #d97a63;
+  --green-chart: #3fa873;
+  --red-chart: #c9604b;
+  --green-tint: #223129;
+  --red-tint: #362824;
+  --execution-buy: #3ddc97;
+  --execution-sell: #ff6b57;
+  --font-metric: var(--font-sans);
+  --tag-reinforcing-bg: #16301f;
+  --tag-reinforcing-fg: #86cf96;
+  --tag-review-bg: #3a1d1b;
+  --tag-review-fg: #f0a79d;
+  --tag-neutral-bg: #222831;
+  --tag-neutral-fg: #9aa4b0;
+  --tag-settled-bg: #133029;
+  --tag-settled-fg: #6ac7ae;
+  --tag-activated-bg: #382a14;
+  --tag-activated-fg: #d7a75f;
+}
+
+:root {
+  
+  --text-display-size: 52px;
+  --text-display-line: 1.0;
+  --text-display-tracking: -0.035em;
+  --text-display-weight: 600;
+
+  
+  --text-title-size: 32px;
+  --text-title-line: 1.08;
+  --text-title-tracking: -0.03em;
+  --text-title-weight: 600;
+
+  
+  --text-section-size: 24px;
+  --text-section-line: 1.16;
+  --text-section-tracking: -0.02em;
+  --text-section-weight: 600;
+
+  
+  --text-subhead-size: 19px;
+  --text-subhead-line: 1.25;
+  --text-subhead-tracking: -0.015em;
+  --text-subhead-weight: 600;
+
+  
+  --text-body-lg-size: 17px;
+  --text-body-lg-line: 1.62;
+  --text-body-lg-tracking: 0;
+
+  
+  --text-body-size: 15px;
+  --text-body-line: 1.6;
+  --text-body-tracking: 0;
+
+  
+  --text-label-size: 13px;
+  --text-label-line: 1.4;
+  --text-label-weight: 500;
+
+  
+  --text-meta-size: 12.5px;
+  --text-meta-line: 1.45;
+
+  
+  --text-micro-size: 11px;
+  --text-micro-line: 1.55;
+
+  
+  --text-figure-size: 15px;
+  --text-stat-value-size: 20px;
+
+  
+  --tracking-display: -0.035em;
+  --tracking-title: -0.03em;
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-mono-header: 0.16em; 
+  --tracking-mono-wide: 0.22em;
+
+  
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  
+  --measure-prose: 64ch;
+  --measure-narrow: 46ch;
+}
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+
+  
+  --radius-sm: 5px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-full: 999px;
+
+  
+  --control-height: 40px;
+  --control-height-sm: 32px;
+  --control-padding-x: 16px;
+
+  
+  --page-padding-x: 20px;
+  --content-max: 1152px; 
+  --marketing-max: 1200px; 
+  --rule-width: 1px;
+}
+
+:root {
+  --shadow-none: none;
+  --shadow-popover: 0 8px 24px -12px rgba(31, 35, 40, 0.28);
+  --shadow-frame: 0 30px 70px -34px rgba(0, 0, 0, 0.6); 
+
+  
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-color: var(--accent);
+
+  
+  --hover-surface: var(--surface);
+  --selected-rule: var(--foreground);
+}
+
+:root {
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1); 
+  --ease-out: ease-out; 
+  --ease-in-out: ease-in-out; 
+
+  --duration-micro: 140ms; 
+  --duration-fast: 170ms; 
+  --duration-base: 200ms; 
+  --duration-slow: 500ms; 
+  --duration-sweep: 1150ms; 
+
+  --transition-colors: color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-micro: 0ms; 
+    --duration-fast: 0ms; 
+    --duration-base: 0ms; 
+    --duration-slow: 0ms; 
+  }
+}
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-line);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 { margin: 0; font-weight: var(--weight-semibold); text-wrap: balance; }
+p { margin: 0; text-wrap: pretty; }
+
+.tj-display { font-family: var(--font-display); font-size: var(--text-display-size); line-height: var(--text-display-line); letter-spacing: var(--text-display-tracking); font-weight: var(--text-display-weight); color: var(--foreground); }
+.tj-title { font-family: var(--font-display); font-size: var(--text-title-size); line-height: var(--text-title-line); letter-spacing: var(--text-title-tracking); font-weight: var(--text-title-weight); color: var(--foreground); }
+
+.tj-figure { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+a { color: var(--accent); text-decoration: none; transition: var(--transition-colors); }
+a:hover { color: var(--accent-strong); text-decoration: underline; text-underline-offset: 2px; }
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+::selection { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+
+.import-progress-track { position: relative; height: 8px; overflow: hidden; border-radius: var(--radius-full); background: var(--surface-2); }
+.import-progress-bar { position: absolute; inset-block: 0; width: 38%; border-radius: inherit; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 72%, white 12%), var(--accent), transparent); animation: import-progress-sweep var(--duration-sweep) var(--ease-in-out) infinite; }
+@keyframes import-progress-sweep { 0% { transform: translateX(-110%); } 100% { transform: translateX(270%); } }
+
+body{margin:0;background:var(--background);color:var(--foreground);font-family:var(--font-sans)}a{color:var(--accent)}a:hover{color:var(--accent-strong)}
+</style>
+</head>
+<body >
+<div id="dc-root"><div class="sc-host" data-sc-name="Calendar Design Review.dc"><main data-dc-tpl="12" style="max-width: 880px; margin: 0px auto; padding: 56px 24px 96px; display: grid; gap: 48px;"><section data-dc-tpl="13" data-screen-label="Header" style="display: grid; gap: 0px;"><div class="sc-host-x" data-dc-tpl="14" style="display: contents;"><div style="border-bottom: 1px solid var(--hairline); padding-bottom: 12px;"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px;"><h2 style="font-family: var(--font-display); font-size: var(--text-title-size); line-height: var(--text-title-line); letter-spacing: var(--tracking-title); font-weight: var(--weight-semibold); color: var(--foreground);">Calendar — design review</h2></div><p style="margin-top: 8px; max-width: var(--measure-prose); font-size: var(--text-body-size); line-height: var(--text-body-line); color: var(--muted);">What the month view should surface, how a day opens, and which parts already exist. August 7, 2026.</p></div></div><p data-dc-tpl="15" style="margin: 16px 0px 0px; font-size: 15px; line-height: 1.65; color: var(--body); max-width: 66ch;">The calendar's job is not to show data — the journal does that. Its job is to let a trader scan a month in five seconds, spot the day that needs review, and get to it in one click. Every decision below follows from that.</p></section><section data-dc-tpl="16" data-screen-label="Starting point" style="display: grid; gap: 12px;"><div class="sc-host-x" data-dc-tpl="17" style="display: contents;"><div style="border-bottom: 1px solid var(--hairline); padding-bottom: 12px;"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px;"><h2 style="font-family: var(--font-display); font-size: var(--text-section-size); line-height: var(--text-section-line); letter-spacing: var(--tracking-tight); font-weight: var(--weight-semibold); color: var(--foreground);">Starting point</h2></div></div></div><ul data-dc-tpl="18" style="margin: 0px; padding-left: 18px; display: grid; gap: 8px; font-size: 15px; line-height: 1.6; color: var(--body); max-width: 70ch;"><li data-dc-tpl="19">The journal prototype (Journal Day v2) already has a month grid: Mon–Fri columns, P&amp;L + trade count per cell, click navigates to the day view.</li><li data-dc-tpl="20">The design system specs <strong data-dc-tpl="21">CalendarCell</strong>: four states, a trailing week-total column, <em data-dc-tpl="22">no status dots and no filled cell backgrounds</em>.</li><li data-dc-tpl="23">The day level is largely built: trade table grid, intraday P&amp;L chart, ticker rail, stat row. Whatever opens from a cell can reuse these as-is.</li></ul></section><section data-dc-tpl="24" data-screen-label="Available parts" style="display: grid; gap: 16px;"><div class="sc-host-x" data-dc-tpl="25" style="display: contents;"><div style="border-bottom: 1px solid var(--hairline); padding-bottom: 12px;"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px;"><h2 style="font-family: var(--font-display); font-size: var(--text-section-size); line-height: var(--text-section-line); letter-spacing: var(--tracking-tight); font-weight: var(--weight-semibold); color: var(--foreground);">Available parts</h2></div><p style="margin-top: 8px; max-width: var(--measure-prose); font-size: var(--text-body-size); line-height: var(--text-body-line); color: var(--muted);">Nothing below needs to be invented — only composed.</p></div></div><div data-dc-tpl="26" style="max-width: 100%; overflow: hidden;"><div class="sc-host-x" data-dc-tpl="27" style="display: contents;"><div style="overflow-x: auto; border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline);"><table style="width: 100%; border-collapse: collapse; font-size: 14px;"><thead><tr style="border-bottom: 1px solid var(--hairline);"><th scope="col" style="padding: 10px 12px; text-align: left; font-family: var(--font-sans); font-size: var(--text-meta-size); font-weight: var(--weight-semibold); color: var(--muted); white-space: nowrap;">Part</th><th scope="col" style="padding: 10px 12px; text-align: left; font-family: var(--font-sans); font-size: var(--text-meta-size); font-weight: var(--weight-semibold); color: var(--muted); white-space: nowrap;">Where</th><th scope="col" style="padding: 10px 12px; text-align: left; font-family: var(--font-sans); font-size: var(--text-meta-size); font-weight: var(--weight-semibold); color: var(--muted); white-space: nowrap;">What it gives the calendar</th></tr></thead><tbody><tr style="border-bottom: 1px solid var(--hairline); cursor: default;"><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">CalendarCell</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">design system</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">Grid primitive: day number, P&amp;L, count, four states</td></tr><tr style="border-bottom: 1px solid var(--hairline); cursor: default;"><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">Trade table module</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">Journal Day v2</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">The 10-column day trade grid with context tags — drops into an opened day as-is</td></tr><tr style="border-bottom: 1px solid var(--hairline); cursor: default;"><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">LedgerTable</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">design system</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">Lighter trade list for narrow spaces (time · symbol · context · P&amp;L)</td></tr><tr style="border-bottom: 1px solid var(--hairline); cursor: default;"><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">PnlChart</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">design system</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">Intraday line for an opened day; daily closes make a month equity line</td></tr><tr style="border-bottom: 1px solid var(--hairline); cursor: default;"><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">MetricStrip</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">design system</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">Month summary row and per-day stat blocks</td></tr><tr style="border-bottom: 1px solid var(--hairline); cursor: default;"><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">HBar / DivBar</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">design system</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">Weekday performance (signed) and rule-break counts (neutral)</td></tr><tr style="border-bottom: 1px solid var(--hairline); cursor: default;"><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">Tag + TagIcon</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">design system</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">Trade-note labels inside an opened day; candidate rule-break mark at cell level</td></tr><tr style="border-bottom: 1px solid var(--hairline); cursor: default;"><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">TickerRail</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">design system</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">Per-ticker P&amp;L for a day peek</td></tr><tr style="border-bottom: 1px solid var(--hairline); cursor: default;"><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">PeriodTabs</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">design system</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">Month / week / day zoom, already used in the journal</td></tr><tr style="border-bottom-width: medium; border-bottom-style: none; border-bottom-color: currentcolor; cursor: default;"><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">CoachVoice</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">design system</td><td style="padding: 11px 12px; text-align: left; white-space: nowrap; color: var(--body); font-family: var(--font-sans); font-variant-numeric: normal;">One coach line for the month — evidence, then a single action</td></tr></tbody></table></div></div></div></section><section data-dc-tpl="28" data-screen-label="Cell contents" style="display: grid; gap: 20px;"><div class="sc-host-x" data-dc-tpl="29" style="display: contents;"><div style="border-bottom: 1px solid var(--hairline); padding-bottom: 12px;"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px;"><h2 style="font-family: var(--font-display); font-size: var(--text-section-size); line-height: var(--text-section-line); letter-spacing: var(--tracking-tight); font-weight: var(--weight-semibold); color: var(--foreground);">What a day cell carries</h2></div><p style="margin-top: 8px; max-width: var(--measure-prose); font-size: var(--text-body-size); line-height: var(--text-body-line); color: var(--muted);">The spec's ceiling — P&amp;L and trade count — is deliberate. Everything added taxes all twenty-two cells.</p></div></div><div data-dc-tpl="30" style="display: grid; gap: 8px;"><div data-dc-tpl="31" style="display: grid; grid-template-columns: repeat(5, minmax(0px, 1fr)); gap: 2px; background: var(--border); border: 1px solid var(--border); border-radius: 6px; overflow: hidden;"><div class="sc-host-x" data-dc-tpl="32" style="display: contents;"><div style="display: flex; flex-direction: column; min-height: 128px; padding: 14px; background: var(--surface); opacity: 1; cursor: default;"><span style="font-size: 15px; font-weight: var(--weight-semibold); line-height: 1; color: var(--foreground);">4</span><span style="margin-top: auto;"><span style="font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--green); font-size: 17px; font-weight: var(--weight-semibold);">+$1,240</span><span style="display: block; margin-top: 2px; font-size: var(--text-meta-size); color: var(--muted);">4 trades</span></span></div></div><div class="sc-host-x" data-dc-tpl="33" style="display: contents;"><div style="display: flex; flex-direction: column; min-height: 128px; padding: 14px; background: var(--surface); opacity: 1; cursor: default;"><span style="font-size: 15px; font-weight: var(--weight-semibold); line-height: 1; color: var(--foreground);">5</span><span style="margin-top: auto;"><span style="font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--red); font-size: 17px; font-weight: var(--weight-semibold);">-$880</span><span style="display: block; margin-top: 2px; font-size: var(--text-meta-size); color: var(--muted);">6 trades</span></span></div></div><div class="sc-host-x" data-dc-tpl="34" style="display: contents;"><div style="display: flex; flex-direction: column; min-height: 128px; padding: 14px; background: var(--surface); opacity: 1; cursor: default;"><span style="font-size: 15px; font-weight: var(--weight-semibold); line-height: 1; color: var(--foreground);">6</span><span style="margin-top: auto; font-size: var(--text-meta-size); font-weight: var(--weight-medium); color: var(--muted);">No-trade day</span></div></div><div class="sc-host-x" data-dc-tpl="35" style="display: contents;"><div style="display: flex; flex-direction: column; min-height: 128px; padding: 14px; background: var(--surface); opacity: 1; cursor: default;"><span style="font-size: 15px; font-weight: var(--weight-semibold); line-height: 1; color: var(--accent);">7</span><button type="button" style="margin-top: auto; padding: 0px; background: none; border-width: medium; border-style: none; border-color: currentcolor; border-image: initial; text-align: left; font-size: var(--text-meta-size); font-weight: var(--weight-medium); color: var(--faint); cursor: pointer;">Mark no-trade</button></div></div><div class="sc-host-x" data-dc-tpl="36" style="display: contents;"><div style="display: flex; flex-direction: column; min-height: 128px; padding: 14px; background: var(--surface); opacity: 1; cursor: default;"><span style="font-size: var(--text-label-size); font-weight: var(--weight-semibold); line-height: 1; color: var(--foreground);">Week 1</span><span style="margin-top: auto;"><span style="font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--green); font-size: 17px; font-weight: var(--weight-semibold);">+$2,180</span><span style="display: block; margin-top: 2px; font-size: var(--text-meta-size); color: var(--muted);">64% accuracy</span></span></div></div></div><p data-dc-tpl="37" style="margin: 0px; font-size: 12.5px; line-height: 1.5; color: var(--muted);">Live CalendarCell states: green day · red day · confirmed rest day · unconfirmed empty · week total column.</p></div><div data-dc-tpl="38" style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;"><div data-dc-tpl="39" style="display: grid; gap: 8px; align-content: start;"><p data-dc-tpl="40" style="margin: 0px; font-size: 13px; font-weight: 600; color: var(--foreground);">In the cell — legible at arm's length</p><ul data-dc-tpl="41" style="margin: 0px; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; line-height: 1.55; color: var(--body);"><li data-dc-tpl="42">Day number</li><li data-dc-tpl="43">Signed P&amp;L — the one number that matters</li><li data-dc-tpl="44">Trade count</li><li data-dc-tpl="45">State: no-trade day vs. not-yet-imported</li></ul></div><div data-dc-tpl="46" style="display: grid; gap: 8px; align-content: start;"><p data-dc-tpl="47" style="margin: 0px; font-size: 13px; font-weight: 600; color: var(--foreground);">Behind the click — the day peek</p><ul data-dc-tpl="48" style="margin: 0px; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; line-height: 1.55; color: var(--body);"><li data-dc-tpl="49">Accuracy and profit factor</li><li data-dc-tpl="50">Per-ticker P&amp;L (ticker rail)</li><li data-dc-tpl="51">Trade-note tags, rule breaks</li><li data-dc-tpl="52">Note / coach-review status</li><li data-dc-tpl="53">The trades themselves</li></ul></div></div><p data-dc-tpl="54" style="margin: 0px; font-size: 14px; line-height: 1.6; color: var(--muted); max-width: 70ch;"><strong data-dc-tpl="55" style="color: var(--body);">One open tension:</strong> the journal prototype marks the selected day with an accent dot; the CalendarCell spec bans status dots. If "note written" or "rule break" deserves cell-level presence, it needs a sanctioned form — a labelled glyph or a text mark, not a bare colored dot.</p></section><section data-dc-tpl="56" data-screen-label="Opening a day" style="display: grid; gap: 20px;"><div class="sc-host-x" data-dc-tpl="57" style="display: contents;"><div style="border-bottom: 1px solid var(--hairline); padding-bottom: 12px;"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px;"><h2 style="font-family: var(--font-display); font-size: var(--text-section-size); line-height: var(--text-section-line); letter-spacing: var(--tracking-tight); font-weight: var(--weight-semibold); color: var(--foreground);">Opening a day</h2></div><p style="margin-top: 8px; max-width: var(--measure-prose); font-size: var(--text-body-size); line-height: var(--text-body-line); color: var(--muted);">Four models for the click on August 4.</p></div></div><div data-dc-tpl="58" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;"><div data-dc-tpl="59" style="display: grid; gap: 10px; align-content: start; padding: 16px; border: 1px solid var(--hairline); border-radius: 6px;"><div data-dc-tpl="60" style="display: grid; gap: 3px;"><div data-dc-tpl="61" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px;"><span data-dc-tpl="62" style="height: 16px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="63" style="height: 16px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent); outline: 1.5px solid var(--accent); outline-offset: -1.5px;"></span><span data-dc-tpl="64" style="height: 16px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="65" style="height: 16px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="66" style="height: 16px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span></div><div data-dc-tpl="67" style="display: grid; gap: 4px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 4px;"><span data-dc-tpl="68" style="height: 4px; width: 34%; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 14%, transparent);"></span><span data-dc-tpl="69" style="height: 4px; width: 88%; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 8%, transparent);"></span><span data-dc-tpl="70" style="height: 4px; width: 80%; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 8%, transparent);"></span></div><div data-dc-tpl="71" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px;"><span data-dc-tpl="72" style="height: 16px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="73" style="height: 16px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="74" style="height: 16px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="75" style="height: 16px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="76" style="height: 16px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span></div></div><p data-dc-tpl="77" style="margin: 0px; font-size: 15px; font-weight: 600; color: var(--foreground);">A · Inline expander</p><p data-dc-tpl="78" style="margin: 0px; font-size: 13.5px; line-height: 1.55; color: var(--body);">Click August 4 → a band slides open below that week: day stat row, trade table, "Open in journal." Click again or Esc collapses.</p><p data-dc-tpl="79" style="margin: 0px; font-size: 12.5px; line-height: 1.5; color: var(--muted);">Stays in month context; reuses the trade table module directly. Cost: pushes lower weeks down; one day open at a time.</p></div><div data-dc-tpl="80" style="display: grid; gap: 10px; align-content: start; padding: 16px; border: 1px solid var(--hairline); border-radius: 6px;"><div data-dc-tpl="81" style="display: flex; gap: 6px;"><div data-dc-tpl="82" style="flex: 1.5 1 0%; display: grid; grid-template-rows: repeat(3, 1fr); gap: 3px;"><div data-dc-tpl="83" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px;"><span data-dc-tpl="84" style="border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="85" style="border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent); outline: 1.5px solid var(--accent); outline-offset: -1.5px;"></span><span data-dc-tpl="86" style="border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="87" style="border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span></div><div data-dc-tpl="88" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px;"><span data-dc-tpl="89" style="border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="90" style="border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="91" style="border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="92" style="border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span></div><div data-dc-tpl="93" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px;"><span data-dc-tpl="94" style="border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="95" style="border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="96" style="border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="97" style="border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span></div></div><div data-dc-tpl="98" style="flex: 1 1 0%; display: grid; gap: 4px; align-content: start; padding: 7px 8px; border: 1px solid var(--border); border-radius: 4px; min-height: 62px;"><span data-dc-tpl="99" style="height: 4px; width: 50%; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 14%, transparent);"></span><span data-dc-tpl="100" style="height: 4px; width: 85%; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 8%, transparent);"></span><span data-dc-tpl="101" style="height: 4px; width: 70%; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 8%, transparent);"></span></div></div><p data-dc-tpl="102" style="margin: 0px; font-size: 15px; font-weight: 600; color: var(--foreground);">B · Docked day panel</p><p data-dc-tpl="103" style="margin: 0px; font-size: 13.5px; line-height: 1.55; color: var(--body);">The grid keeps its shape; a panel docks right with stats, ticker rail, and a compact trade list. Arrow keys walk days.</p><p data-dc-tpl="104" style="margin: 0px; font-size: 12.5px; line-height: 1.5; color: var(--muted);">Grid never reflows; great for day-to-day comparison. Cost: panel is too narrow for the full 10-column table.</p></div><div data-dc-tpl="105" style="display: grid; gap: 10px; align-content: start; padding: 16px; border: 1px solid var(--hairline); border-radius: 6px;"><div data-dc-tpl="106" style="display: flex; align-items: center; gap: 8px;"><div data-dc-tpl="107" style="flex: 1 1 0%; display: grid; grid-template-rows: repeat(3, 1fr); gap: 3px;"><div data-dc-tpl="108" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px;"><span data-dc-tpl="109" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="110" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent); outline: 1.5px solid var(--accent); outline-offset: -1.5px;"></span><span data-dc-tpl="111" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="112" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span></div><div data-dc-tpl="113" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px;"><span data-dc-tpl="114" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="115" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="116" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="117" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span></div><div data-dc-tpl="118" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px;"><span data-dc-tpl="119" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="120" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="121" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="122" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span></div></div><span data-dc-tpl="123" style="font-size: 14px; color: var(--muted);">→</span><div data-dc-tpl="124" style="flex: 0.8 1 0%; display: grid; gap: 4px; align-content: start; padding: 7px 8px; border: 1px solid var(--border); border-radius: 4px; min-height: 62px;"><span data-dc-tpl="125" style="height: 4px; width: 45%; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 14%, transparent);"></span><span data-dc-tpl="126" style="height: 4px; width: 90%; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 8%, transparent);"></span><span data-dc-tpl="127" style="height: 4px; width: 78%; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 8%, transparent);"></span><span data-dc-tpl="128" style="height: 4px; width: 84%; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 8%, transparent);"></span></div></div><p data-dc-tpl="129" style="margin: 0px; font-size: 15px; font-weight: 600; color: var(--foreground);">C · Zoom through</p><p data-dc-tpl="130" style="margin: 0px; font-size: 13.5px; line-height: 1.55; color: var(--body);">The cell is pure navigation: click goes straight to the day view already built in the journal. The calendar itself stays passive.</p><p data-dc-tpl="131" style="margin: 0px; font-size: 12.5px; line-height: 1.5; color: var(--muted);">Zero new UI; one canonical day surface. Cost: loses month context on every look; back-and-forth to compare days.</p></div><div data-dc-tpl="132" style="display: grid; gap: 10px; align-content: start; padding: 16px; border: 1px solid var(--hairline); border-radius: 6px;"><div data-dc-tpl="133" style="position: relative; display: grid; grid-template-rows: repeat(3, 1fr); gap: 3px;"><div data-dc-tpl="134" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px;"><span data-dc-tpl="135" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="136" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent); outline: 1.5px solid var(--accent); outline-offset: -1.5px;"></span><span data-dc-tpl="137" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="138" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="139" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span></div><div data-dc-tpl="140" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px;"><span data-dc-tpl="141" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="142" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="143" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="144" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="145" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span></div><div data-dc-tpl="146" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px;"><span data-dc-tpl="147" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="148" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="149" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="150" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span><span data-dc-tpl="151" style="height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 5%, transparent);"></span></div><div data-dc-tpl="152" style="position: absolute; left: 22%; top: 14px; width: 44%; display: grid; gap: 4px; padding: 7px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; box-shadow: var(--shadow-popover);"><span data-dc-tpl="153" style="height: 4px; width: 50%; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 14%, transparent);"></span><span data-dc-tpl="154" style="height: 4px; width: 85%; border-radius: 2px; background: color-mix(in srgb, var(--foreground) 8%, transparent);"></span></div></div><p data-dc-tpl="155" style="margin: 0px; font-size: 15px; font-weight: 600; color: var(--foreground);">D · Peek, then go</p><p data-dc-tpl="156" style="margin: 0px; font-size: 13.5px; line-height: 1.55; color: var(--body);">Hover or first click shows a light popover — P&amp;L, accuracy, top tickers, note status — with "Open day" as the real action.</p><p data-dc-tpl="157" style="margin: 0px; font-size: 12.5px; line-height: 1.5; color: var(--muted);">Cheapest scan of many days. Cost: hover UI is fragile, invisible on touch, and popovers are rare in this product.</p></div></div><p data-dc-tpl="158" style="margin: 0px; font-size: 14px; line-height: 1.65; color: var(--body); max-width: 70ch;"><strong data-dc-tpl="159">Working recommendation: A, with C as its escape hatch.</strong> The inline expander matches your instinct — click August 4, the week slides open, and the existing trade table module drops in with a day stat row above it. "Open in journal" at the band's foot hands off to the full day view for charts, notes, and coach. B is the strongest alternative if comparing adjacent days matters more than reading full trade detail in place.</p></section><section data-dc-tpl="160" data-screen-label="Other visualizations" style="display: grid; gap: 12px;"><div class="sc-host-x" data-dc-tpl="161" style="display: contents;"><div style="border-bottom: 1px solid var(--hairline); padding-bottom: 12px;"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px;"><h2 style="font-family: var(--font-display); font-size: var(--text-section-size); line-height: var(--text-section-line); letter-spacing: var(--tracking-tight); font-weight: var(--weight-semibold); color: var(--foreground);">Other visualizations worth weighing</h2></div></div></div><div data-dc-tpl="162" style="display: grid; gap: 0px;"><div data-dc-tpl="163" style="display: grid; grid-template-columns: 200px 1fr; gap: 24px; padding: 12px 0px; border-top: 1px solid var(--hairline);"><p data-dc-tpl="164" style="margin: 0px; font-size: 14px; font-weight: 600; color: var(--foreground);">Week-total column</p><p data-dc-tpl="165" style="margin: 0px; font-size: 14px; line-height: 1.55; color: var(--body);">The sixth column from the CalendarCell spec: week P&amp;L + accuracy. Cheap, already designed, answers "which week went wrong" without a chart.</p></div><div data-dc-tpl="166" style="display: grid; grid-template-columns: 200px 1fr; gap: 24px; padding: 12px 0px; border-top: 1px solid var(--hairline);"><p data-dc-tpl="167" style="margin: 0px; font-size: 14px; font-weight: 600; color: var(--foreground);">Month equity line</p><p data-dc-tpl="168" style="margin: 0px; font-size: 14px; line-height: 1.55; color: var(--body);">PnlChart fed daily closes, sitting above the grid beside the month stat row. Gives the month a shape the grid alone can't.</p></div><div data-dc-tpl="169" style="display: grid; grid-template-columns: 200px 1fr; gap: 24px; padding: 12px 0px; border-top: 1px solid var(--hairline);"><p data-dc-tpl="170" style="margin: 0px; font-size: 14px; font-weight: 600; color: var(--foreground);">Weekday DivBars</p><p data-dc-tpl="171" style="margin: 0px; font-size: 14px; line-height: 1.55; color: var(--body);">Signed P&amp;L per weekday (Mon–Fri) from the Reports vocabulary. Surfaces "Mondays bleed" — a real coaching input.</p></div><div data-dc-tpl="172" style="display: grid; grid-template-columns: 200px 1fr; gap: 24px; padding: 12px 0px; border-top: 1px solid var(--hairline);"><p data-dc-tpl="173" style="margin: 0px; font-size: 14px; font-weight: 600; color: var(--foreground);">Rule-break counts</p><p data-dc-tpl="174" style="margin: 0px; font-size: 14px; line-height: 1.55; color: var(--body);">Neutral HBars of rule-break tags per week. Counts, not outcomes — stays out of red/green by design.</p></div><div data-dc-tpl="175" style="display: grid; grid-template-columns: 200px 1fr; gap: 24px; padding: 12px 0px; border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline);"><p data-dc-tpl="176" style="margin: 0px; font-size: 14px; font-weight: 600; color: var(--foreground);">Year mini-months</p><p data-dc-tpl="177" style="margin: 0px; font-size: 14px; line-height: 1.55; color: var(--body);">Twelve tiny grids with the one sanctioned green/red tint per day. The zoom-out level above month; likely a later phase.</p></div></div><p data-dc-tpl="178" style="margin: 4px 0px 0px; font-size: 13px; line-height: 1.6; color: var(--muted); max-width: 70ch;">Constraints that rule ideas out: red/green mean outcome only, so no heat-map saturation scales; no color-only encoding, so every mark pairs with a sign or label; flat surfaces, so no floating overlay charts.</p></section><section data-dc-tpl="179" data-screen-label="Decisions" style="display: grid; gap: 12px;"><div class="sc-host-x" data-dc-tpl="180" style="display: contents;"><div style="border-bottom: 1px solid var(--hairline); padding-bottom: 12px;"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px;"><h2 style="font-family: var(--font-display); font-size: var(--text-section-size); line-height: var(--text-section-line); letter-spacing: var(--tracking-tight); font-weight: var(--weight-semibold); color: var(--foreground);">Decided</h2></div><p style="margin-top: 8px; max-width: var(--measure-prose); font-size: var(--text-body-size); line-height: var(--text-body-line); color: var(--muted);">Answered August 7. Built in Calendar Month.</p></div></div><div data-dc-tpl="181" style="display: grid;"><div data-dc-tpl="182" style="display: grid; grid-template-columns: 210px 1fr; gap: 24px; padding: 12px 0px; border-top: 1px solid var(--hairline);"><p data-dc-tpl="183" style="margin: 0px; font-size: 14px; font-weight: 600; color: var(--foreground);">Opening a day</p><p data-dc-tpl="184" style="margin: 0px; font-size: 14px; line-height: 1.55; color: var(--body);">Model A, the inline expander. Click a traded day, a band slides open beneath that week; click again to collapse.</p></div><div data-dc-tpl="185" style="display: grid; grid-template-columns: 210px 1fr; gap: 24px; padding: 12px 0px; border-top: 1px solid var(--hairline);"><p data-dc-tpl="186" style="margin: 0px; font-size: 14px; font-weight: 600; color: var(--foreground);">Inside the band</p><p data-dc-tpl="187" style="margin: 0px; font-size: 14px; line-height: 1.55; color: var(--body);">Day stat row, then the light ledger — time, symbol, context tag, P&amp;L. "Show all" expands; "Open in journal" hands off.</p></div><div data-dc-tpl="188" style="display: grid; grid-template-columns: 210px 1fr; gap: 24px; padding: 12px 0px; border-top: 1px solid var(--hairline);"><p data-dc-tpl="189" style="margin: 0px; font-size: 14px; font-weight: 600; color: var(--foreground);">Cell contents</p><p data-dc-tpl="190" style="margin: 0px; font-size: 14px; line-height: 1.55; color: var(--body);">Day number, signed P&amp;L, trade count and accuracy. No note or rule-break marks — the no-dots rule holds.</p></div><div data-dc-tpl="191" style="display: grid; grid-template-columns: 210px 1fr; gap: 24px; padding: 12px 0px; border-top: 1px solid var(--hairline);"><p data-dc-tpl="192" style="margin: 0px; font-size: 14px; font-weight: 600; color: var(--foreground);">Month header</p><p data-dc-tpl="193" style="margin: 0px; font-size: 14px; line-height: 1.55; color: var(--body);">Stat row only: sessions, trades, accuracy, profit factor on the left; P&amp;L pushed right, over the week-total column. The equity curve moved to Analytics.</p></div><div data-dc-tpl="194" style="display: grid; grid-template-columns: 210px 1fr; gap: 24px; padding: 12px 0px; border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline);"><p data-dc-tpl="195" style="margin: 0px; font-size: 14px; font-weight: 600; color: var(--foreground);">Zoom</p><p data-dc-tpl="196" style="margin: 0px; font-size: 14px; line-height: 1.55; color: var(--body);">Month and Year only. Year draws twelve tinted mini-months with readable day numbers; click one to open it. Previous / Next / Today walk both levels.</p></div></div></section><section data-dc-tpl="197" data-screen-label="Ranges and reports" style="display: grid; gap: 12px;"><div class="sc-host-x" data-dc-tpl="198" style="display: contents;"><div style="border-bottom: 1px solid var(--hairline); padding-bottom: 12px;"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px;"><h2 style="font-family: var(--font-display); font-size: var(--text-section-size); line-height: var(--text-section-line); letter-spacing: var(--tracking-tight); font-weight: var(--weight-semibold); color: var(--foreground);">Date ranges belong to Analytics, not the calendar</h2></div><p style="margin-top: 8px; max-width: var(--measure-prose); font-size: var(--text-body-size); line-height: var(--text-body-line); color: var(--muted);">What the market does, and why we are not copying all of it.</p></div></div><p data-dc-tpl="199" style="margin: 0px; font-size: 15px; line-height: 1.65; color: var(--body); max-width: 70ch;">Question raised: should the calendar have a From–To range filter, and what would selecting several months even render? Looking at how the established journals handle it:</p><ul data-dc-tpl="200" style="margin: 0px; padding-left: 18px; display: grid; gap: 8px; font-size: 15px; line-height: 1.6; color: var(--body); max-width: 70ch;"><li data-dc-tpl="201">None of them render an arbitrary range as calendars. The calendar only ever draws real calendar units — one month in detail, or a fixed twelve-month year.</li><li data-dc-tpl="202">Tradervue's year view is twelve full mini-months with an "Open" per month and a year switcher — the same structure as our Year tab.</li><li data-dc-tpl="203">Their range filter lives on a separate Reports page, alongside symbol, tags, side and duration. When a range is applied, the calendar keeps its full shape and days outside the range simply lose their color.</li><li data-dc-tpl="204">Calendar and Reports are separate items in their sidebar. The calendar is navigation; the filtered calendar is one report among many.</li></ul><p data-dc-tpl="205" style="margin: 0px; font-size: 15px; line-height: 1.65; color: var(--body); max-width: 70ch;"><strong data-dc-tpl="206">Our position:</strong> the calendar stays a navigation surface — month, year, previous/next, no filters. Previous and next already reach any year, so no separate year picker is needed. Arbitrary ranges and cross-cutting filters are an Analytics problem, and Analytics is its own project.</p><p data-dc-tpl="207" style="margin: 0px; font-size: 14px; line-height: 1.65; color: var(--muted); max-width: 70ch;">A note on why we are drawing that line: the reference product puts a filter bar, three report selectors, a tab row and a view switcher above the same grid, and jumps between report and calendar modes without warning. It is a cockpit. Depth is worth building — later, deliberately, on a page that is about depth.</p></section><section data-dc-tpl="208" data-screen-label="Open questions" style="display: grid; gap: 12px;"><div class="sc-host-x" data-dc-tpl="209" style="display: contents;"><div style="border-bottom: 1px solid var(--hairline); padding-bottom: 12px;"><div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px;"><h2 style="font-family: var(--font-display); font-size: var(--text-section-size); line-height: var(--text-section-line); letter-spacing: var(--tracking-tight); font-weight: var(--weight-semibold); color: var(--foreground);">Still open</h2></div></div></div><ol data-dc-tpl="210" style="margin: 0px; padding-left: 20px; display: grid; gap: 8px; font-size: 15px; line-height: 1.6; color: var(--body); max-width: 70ch;"><li data-dc-tpl="211">Week-total column — kept in the build as a toggle, not yet committed.</li><li data-dc-tpl="212">Keyboard navigation between days once a band is open.</li><li data-dc-tpl="213">Whether a no-trade day should be confirmable as a rest day from the cell, or only from the journal.</li><li data-dc-tpl="214">Analytics: filter vocabulary, report types, and where the equity curve lands. A separate project.</li></ol></section></main></div></div>
+</body>
+</html>
