@@ -46,6 +46,7 @@ export function JournalDateNavigationProvider({
   const [pendingSelection, setPendingSelection] = useState<{ date: string; from: string } | null>(null);
   const pendingDate = pendingSelection?.from === selectedDate ? pendingSelection.date : null;
   const setPendingDate = useCallback((date: string) => {
+    if (date === selectedDate) return;
     setPendingSelection({ date, from: selectedDate });
   }, [selectedDate]);
   const visualDate = pendingDate ?? selectedDate;
@@ -78,35 +79,33 @@ export function JournalDateHeading({
 }) {
   const { visualDate } = useJournalDateNavigation();
   const [displayedDate, setDisplayedDate] = useState(visualDate);
-  const [phase, setPhase] = useState<"idle" | "out" | "in">("idle");
+  const [hasTransitioned, setHasTransitioned] = useState(false);
+  const isChangingDate = visualDate !== displayedDate;
 
   useEffect(() => {
-    if (visualDate === displayedDate) return;
+    if (!isChangingDate) return;
 
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setDisplayedDate(visualDate);
-      setPhase("idle");
-      return;
-    }
-
-    setPhase("out");
+    const delay = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 80;
     const swapTimer = window.setTimeout(() => {
+      setHasTransitioned(true);
       setDisplayedDate(visualDate);
-      setPhase("in");
-    }, 80);
+    }, delay);
 
     return () => window.clearTimeout(swapTimer);
-  }, [displayedDate, visualDate]);
+  }, [isChangingDate, visualDate]);
 
   const date = utcDate(displayedDate);
   const content = `${weekdayFmt.format(date)}, ${monthDayFmt.format(date)}`;
   const contentNode = (
     <span
       key={displayedDate}
-      className={`journal-date-heading-fade${phase === "idle" ? "" : ` journal-date-heading-fade--${phase}`}`}
-      onAnimationEnd={() => {
-        if (phase === "in") setPhase("idle");
-      }}
+      className={`journal-date-heading-fade${
+        isChangingDate
+          ? " journal-date-heading-fade--out"
+          : hasTransitioned
+            ? " journal-date-heading-fade--in"
+            : ""
+      }`}
     >
       {content}
     </span>

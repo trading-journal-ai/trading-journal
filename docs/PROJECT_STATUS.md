@@ -121,18 +121,22 @@ stopped. This is the "when did we last work on it" trail.
   - Owner clarified that the Electron app is desktop-first. Future design and
     routine visual QA should prioritize laptop/desktop windows; phone-specific
     layouts are not a supported product target and only need basic resilience.
-  - Verified the focused slice with targeted ESLint, TypeScript, the Impeccable
-    detector, desktop Browser checks, and a Webpack production build. Full
-    repository lint remains
-    blocked by the two known `react-hooks/set-state-in-effect` errors under
-    `src/components/preview/`.
-  - **Stopped at:** working production-page exploration ready for visual review;
-    the week strip and Week -> P&L timeline are WIP design checkpoints,
-    intentionally left without another full lint/build pass while the review
-    vocabulary remains open. The full month Calendar remains on `/calendar`;
-    embedding it in Journal should wait until its route-local grid/cells are
-    extracted rather than duplicated. Quick dictation capture and carry-forward
-    behavior remain the next interaction problems.
+  - Stabilized the optimistic date-navigation handoff so pointer activation is
+    recorded once, resolved navigation clears the plotting state, and selecting
+    the active date cannot strand the chart loader.
+  - Verified the completed slice with targeted ESLint across every changed app
+    file, TypeScript, the bundled demo schema, a Webpack production build, and
+    Browser interaction checks at 1440×1000 and 1024×768. Date selection, chart
+    handoff, Day/Week scope switching, the weekly P&L timeline, and page-level
+    overflow all passed. Full repository lint remains blocked only by the two
+    known `react-hooks/set-state-in-effect` errors under `src/components/preview/`.
+  - **Completed at:** the Journal formatting, five-day navigation, daily P&L,
+    and Week -> P&L timeline are stabilized and updated onto current `main`.
+    The full month Calendar intentionally remains on `/calendar`; embedding it
+    should wait until its route-local grid/cells are extracted rather than
+    duplicated. Quick dictation capture and Dashboard carry-forward remain a
+    separate next interaction slice.
+
 - **2026-08-07** — Impeccable project initialization
   (branch `codex/impeccable-init`).
   - Installed the project-local Impeccable skill and Codex design hook under

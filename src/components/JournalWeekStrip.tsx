@@ -160,7 +160,12 @@ export default function JournalWeekStrip({
                 onPointerDown={(event) => {
                   if (event.button === 0) setPendingDate(day.date);
                 }}
-                onClick={() => setPendingDate(day.date)}
+                onClick={(event) => {
+                  // Pointer activation is handled on pointer-down for immediate
+                  // feedback. A zero-detail click covers keyboard/programmatic use
+                  // without replaying the pending state after navigation resolves.
+                  if (event.detail === 0) setPendingDate(day.date);
+                }}
                 className={`journal-week-day relative flex flex-col border-r border-[var(--hairline)] px-3.5 py-4 font-sans last:border-r-0 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] ${
                   visuallySelected ? "journal-week-day--selected z-[1]" : ""
                 }`}
