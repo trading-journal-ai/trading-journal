@@ -24,6 +24,8 @@ import {
   JournalDateNavigationProvider,
 } from "@/components/JournalDateNavigation";
 import JournalWeekStrip, { type JournalWeekStripDay } from "@/components/JournalWeekStrip";
+import JournalPeriodNavigator from "@/components/JournalPeriodNavigator";
+import type { JournalDataScope } from "@/components/JournalReviewTabs";
 import JournalReviewModule, {
   type JournalComparisonData,
   type JournalChartReadSummary,
@@ -285,6 +287,22 @@ function weekStartFor(date: string): string {
   return isoAddDays(date, -((isoWeekday(date) + 6) % 7));
 }
 
+function shiftTradingDay(date: string, direction: -1 | 1): string {
+  let candidate = isoAddDays(date, direction);
+  while (isoWeekday(candidate) === 0 || isoWeekday(candidate) === 6) {
+    candidate = isoAddDays(candidate, direction);
+  }
+  return candidate;
+}
+
+function shiftMonth(date: string, direction: -1 | 1): string {
+  const [year, month, day] = date.split("-").map(Number);
+  const target = new Date(Date.UTC(year, month - 1 + direction, 1));
+  const targetMonth = `${target.getUTCFullYear()}-${String(target.getUTCMonth() + 1).padStart(2, "0")}`;
+  const targetDay = Math.min(day, Number(lastDayOfMonth(`${targetMonth}-01`).slice(-2)));
+  return `${targetMonth}-${String(targetDay).padStart(2, "0")}`;
+}
+
 function lastDayOfMonth(date: string): string {
   const [year, month] = date.split("-").map(Number);
   const day = new Date(Date.UTC(year, month, 0)).getUTCDate();
@@ -336,8 +354,10 @@ type ArchiveLinkMode = "legacy" | "review-module";
 function journalReviewModuleHref(
   basePath: string,
   date: string,
+  scope: JournalDataScope = "day",
 ): string {
   const params = new URLSearchParams({ date });
+  if (scope !== "day") params.set("scope", scope);
   return `${basePath}?${params.toString()}`;
 }
 
@@ -1410,11 +1430,13 @@ function JournalReviewModuleForDay({
   returnTo,
   comparisonData,
   coachSlots,
+  scope,
 }: {
   data: ReviewData;
   returnTo: string;
   comparisonData: JournalComparisonData;
   coachSlots?: ModuleCoachSlots;
+  scope: JournalDataScope;
 }) {
   const { day, tickerRows, tradeRows, taggedTrades, pnlPoints, coachRead } = data;
   const { topSurprise, chartFacts } = buildDayReviewPresentation(data);
@@ -1422,10 +1444,11 @@ function JournalReviewModuleForDay({
   return (
     <div className="w-full">
       <JournalReviewModule
-        key={day.date}
+        key={`${day.date}-${scope}`}
         comparisons={comparisonData}
         date={day.date}
         returnTo={returnTo}
+        scope={scope}
         dayCoachSlot={coachSlots?.day}
         weekCoachSlot={coachSlots?.week}
         monthCoachSlot={coachSlots?.month}
@@ -1491,6 +1514,7 @@ function DayReviewSection({
   compactDayHeader = false,
   coachSlots,
   dayCoach,
+  reviewModuleScope = "day",
 }: {
   data: ReviewData;
   returnTo: string;
@@ -1501,6 +1525,7 @@ function DayReviewSection({
   compactDayHeader?: boolean;
   coachSlots?: ModuleCoachSlots;
   dayCoach?: DayCoachPanelData;
+  reviewModuleScope?: JournalDataScope;
 }) {
   const { day, tickerRows, pnlPoints, coachRead, chartRead, marketContext } = data;
   const { verdictText } = buildDayReviewPresentation(data);
@@ -1512,12 +1537,14 @@ function DayReviewSection({
     <section>
       <div className="min-w-0">
           {compactDayHeader ? (
-            <div className="mb-5 pt-2">
-              <JournalDateHeading
-                level={1}
-                className="text-[20px] font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]"
-              />
-            </div>
+            reviewModuleScope === "day" ? (
+              <div className="mb-5 pt-2">
+                <JournalDateHeading
+                  level={1}
+                  className="text-[20px] font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]"
+                />
+              </div>
+            ) : null
           ) : (
             <div className="mb-7">
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
@@ -1609,6 +1636,7 @@ function DayReviewSection({
                 returnTo={returnTo}
                 comparisonData={comparisonData}
                 coachSlots={resolvedCoachSlots}
+                scope={reviewModuleScope}
               />
             </div>
           ) : null}
@@ -1719,6 +1747,7 @@ function ReviewDayRangeSection({
   compactDayHeader = false,
   coachSlots,
   dayCoach,
+  reviewModuleScope,
 }: {
   data: ReviewData;
   returnTo: string;
@@ -1729,6 +1758,7 @@ function ReviewDayRangeSection({
   compactDayHeader?: boolean;
   coachSlots?: ModuleCoachSlots;
   dayCoach?: DayCoachPanelData;
+  reviewModuleScope?: JournalDataScope;
 }) {
   return (
     <DayReviewSection
@@ -1741,6 +1771,7 @@ function ReviewDayRangeSection({
       compactDayHeader={compactDayHeader}
       coachSlots={coachSlots}
       dayCoach={dayCoach}
+      reviewModuleScope={reviewModuleScope}
     />
   );
 }
@@ -2550,6 +2581,7 @@ export default async function TradeJournalReview({
   accountId,
   showArchiveSidebar = true,
   archiveLinkMode = "legacy",
+  reviewModuleScope = "day",
 }: {
   preset?: JournalReviewPreset;
   date?: string;
@@ -2561,6 +2593,7 @@ export default async function TradeJournalReview({
   accountId: number;
   showArchiveSidebar?: boolean;
   archiveLinkMode?: ArchiveLinkMode;
+  reviewModuleScope?: JournalDataScope;
 }) {
   const archiveAnchor = validDate(date) ?? validDate(from) ?? currentEtDate();
   const usesReviewModule = archiveLinkMode === "review-module";
@@ -2693,6 +2726,26 @@ export default async function TradeJournalReview({
   }
   const currentHref = returnTo ?? journalReviewHref(basePath, { preset, date, from, month });
   const today = currentEtDate();
+  const previousPeriodDate = reviewModuleScope === "day"
+    ? shiftTradingDay(archiveAnchor, -1)
+    : reviewModuleScope === "week"
+      ? isoAddDays(archiveAnchor, -7)
+      : shiftMonth(archiveAnchor, -1);
+  const nextPeriodDate = reviewModuleScope === "day"
+    ? shiftTradingDay(archiveAnchor, 1)
+    : reviewModuleScope === "week"
+      ? isoAddDays(archiveAnchor, 7)
+      : shiftMonth(archiveAnchor, 1);
+  const periodLabel = reviewModuleScope === "day"
+    ? dateFmt.format(utcDate(archiveAnchor))
+    : reviewModuleScope === "week"
+      ? weekRangeLabel(selectedWeekStart)
+      : monthFmt.format(utcDate(archiveAnchor));
+  const scopeHrefs: Record<JournalDataScope, string> = {
+    day: journalReviewModuleHref(basePath, archiveAnchor, "day"),
+    week: journalReviewModuleHref(basePath, archiveAnchor, "week"),
+    month: journalReviewModuleHref(basePath, archiveAnchor, "month"),
+  };
   const weekSessionsByDate = new Map(
     comparisonData?.week.sessions.map((session) => [session.date, session]) ?? [],
   );
@@ -2752,14 +2805,23 @@ export default async function TradeJournalReview({
           ) : null}
 
           {usesReviewModule && preset === "today" && comparisonData ? (
-            <JournalWeekStrip
-              weekStart={comparisonData.week.key}
-              days={weekStripDays}
-              previousWeekHref={journalReviewModuleHref(basePath, isoAddDays(archiveAnchor, -7))}
-              nextWeekHref={journalReviewModuleHref(basePath, isoAddDays(archiveAnchor, 7))}
-              calendarHref={`/calendar?m=${archiveAnchor.slice(0, 7)}`}
-              basePath={basePath}
-            />
+            <div className="space-y-5">
+              <JournalPeriodNavigator
+                scope={reviewModuleScope}
+                periodLabel={periodLabel}
+                todayHref={journalReviewModuleHref(basePath, today)}
+                previousHref={journalReviewModuleHref(basePath, previousPeriodDate, reviewModuleScope)}
+                nextHref={journalReviewModuleHref(basePath, nextPeriodDate, reviewModuleScope)}
+                calendarHref={`/calendar?m=${archiveAnchor.slice(0, 7)}`}
+                scopeHrefs={scopeHrefs}
+              />
+              {reviewModuleScope === "day" ? (
+                <JournalWeekStrip
+                  days={weekStripDays}
+                  basePath={basePath}
+                />
+              ) : null}
+            </div>
           ) : null}
 
           {preset === "week" ? (
@@ -2784,6 +2846,7 @@ export default async function TradeJournalReview({
               showContextDetails
               showLegacyPnl={false}
               compactDayHeader
+              reviewModuleScope={reviewModuleScope}
               coachSlots={moduleCoachScopes && comparisonRanges ? {
                 week: (
                   <RangeCoachReview

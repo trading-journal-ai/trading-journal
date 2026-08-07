@@ -242,6 +242,11 @@ Build once, reuse everywhere.
   open/no-box ethos. Link mode (`href` per item) for URL-driven server pages,
   button mode (`onChange`) for client state. (`CalendarRangeFilter` /
   `ReportRangeFilter` are date-*range* pickers, a different control — not this.)
+- **JournalPeriodNavigator** — the Journal's single temporal control: a quiet
+  Today action, URL-backed Day / Week / Month tabs, a plain current-period label,
+  period-aware previous/next actions, and the Calendar shortcut. Day alone keeps
+  the five-session strip below it; Week and Month open their period summaries
+  directly. Do not repeat Day / Week / Month inside the review module.
 - **Button** (`src/components/ui/Button.tsx`) — `ghost` for secondary actions
   (Prev/Next/Clear/Back), `action` for the strong dark Save/Done, `primary` for
   accent fill. 40px height; radius ≤ 6px; 14px semibold. Controls use fills, not
@@ -312,7 +317,9 @@ Build once, reuse everywhere.
   a compact “Plotting P&L” loader after a 140ms grace period. Its miniature plot
   line draws toward a terminal point in the semantic accent; the incoming chart
   fades in after the new series arrives. Do not preload adjacent sessions until
-  evidence shows that navigation latency requires data-layer work.
+  evidence shows that navigation latency requires data-layer work. Period scope
+  lives in the top Journal navigator and is URL-backed. Secondary review tabs
+  name analytical lenses for the current period; they do not change the period.
 - **Coach voice** — content authored or interpreted by the Coach reads as a
   distinct voice: a green (`--coach`) mono eyebrow, and where it's a called-out
   block, a green left rule. In the recap wireframes this marks the session

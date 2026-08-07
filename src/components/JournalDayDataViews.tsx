@@ -166,6 +166,7 @@ export default function JournalReviewModule({
   weekCoachSlot,
   monthCoachSlot,
   dayCoachSlot,
+  scope = "day",
 }: {
   pnlContent: ReactNode;
   tradeRows: JournalDayTradeRow[];
@@ -185,36 +186,28 @@ export default function JournalReviewModule({
   weekCoachSlot?: ReactNode;
   monthCoachSlot?: ReactNode;
   dayCoachSlot?: ReactNode;
+  scope?: JournalDataScope;
 }) {
-  const [scope, setScope] = useState<JournalDataScope>("day");
   const [view, setView] = useState<JournalDataView>("pnl");
-
-  function selectScope(nextScope: JournalDataScope) {
-    setScope(nextScope);
-    // Keep the current view when the next scope offers it (e.g. Coach exists
-    // in all three scopes) — resetting to P&L made content "disappear".
-    const nextViews = JOURNAL_SCOPE_VIEWS[nextScope];
-    if (!nextViews.some((item) => item.key === view)) {
-      setView(nextViews[0].key);
-    }
-  }
+  const scopeViews = JOURNAL_SCOPE_VIEWS[scope];
+  const activeView = scopeViews.some((item) => item.key === view) ? view : scopeViews[0].key;
 
   return (
     <section>
       <JournalReviewTabs
         scope={scope}
-        view={view}
-        onScopeChange={selectScope}
+        view={activeView}
         onViewChange={setView}
+        showScopeTabs={false}
       />
 
       <div
-        key={`${scope}-${view}`}
-        className={`mt-7 ${scope === "day" && view === "pnl" ? "" : "journal-review-panel-enter"}`}
+        key={`${scope}-${activeView}`}
+        className={`mt-7 ${scope === "day" && activeView === "pnl" ? "" : "journal-review-panel-enter"}`}
       >
         {scope === "day" ? (
           <DayViews
-            view={view}
+            view={activeView}
             pnlContent={pnlContent}
             tradeRows={tradeRows}
             processFacts={processFacts}
@@ -225,8 +218,8 @@ export default function JournalReviewModule({
             returnTo={returnTo}
           />
         ) : null}
-        {scope === "week" ? <WeekViews view={view} data={comparisons.week} coachSlot={weekCoachSlot} selectedDate={date} /> : null}
-        {scope === "month" ? <MonthViews view={view} data={comparisons.month} coachSlot={monthCoachSlot} /> : null}
+        {scope === "week" ? <WeekViews view={activeView} data={comparisons.week} coachSlot={weekCoachSlot} selectedDate={date} /> : null}
+        {scope === "month" ? <MonthViews view={activeView} data={comparisons.month} coachSlot={monthCoachSlot} /> : null}
       </div>
     </section>
   );

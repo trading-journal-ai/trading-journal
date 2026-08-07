@@ -1,12 +1,11 @@
 # Unified Review Navigation and Learning Loop
 
-> **Status:** direction clarified 2026-08-06 from hands-on product use
+> **Status:** period-navigation direction locked 2026-08-07 from hands-on use
 > **Scope:** Journal, Calendar, Trades, Analytics, daily reflection, and
 > carry-forward behavior
 > **Locked here:** Calendar becomes the Journal's date index rather than a peer
-> destination
-> **Not yet locked:** migration details, persistence model, and final visual
-> treatment
+> destination; Journal uses one URL-backed Day / Week / Month navigator
+> **Not yet locked:** persistence model and the remaining Calendar integration
 
 ## Product realization
 
@@ -235,6 +234,23 @@ bounded fallbacks for uncached data, not the primary navigation experience.
 The speed test is simple: after selecting Month, the trader should be able to
 move three months backward with three predictable presses. The same mental
 model should work in Trades and Analytics.
+
+### Journal production contract
+
+The Journal treats period scope as navigation rather than local module state:
+
+- `Today` returns to the current ET date and Day scope.
+- `Day`, `Week`, and `Month` are URL-backed and change the whole review horizon.
+- Previous/next steps by trading day, week, or month to match the selected
+  horizon.
+- Day keeps the five-session week strip for fast neighboring-day selection.
+- Week and Month remove that strip and open their period summary directly.
+- The secondary module tabs describe the selected horizon (`P&L`, `Edge`,
+  `Risk`, `Coach`, and related lenses); they no longer repeat temporal scope.
+
+This resolves the earlier two-level Day / Week / Month ambiguity without
+creating a second page shape. The same focused record and comparison data remain
+underneath each URL-backed view.
 
 ### Surface roles
 
