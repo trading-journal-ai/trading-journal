@@ -372,7 +372,7 @@ function MonthViews({ view, data, coachSlot }: { view: JournalDataView; data: Jo
   if (view === "pnl") {
     return (
       <div role="tabpanel">
-        <RangeHeader summary={data.summary} question="How were outcomes distributed across the month?" rows={data.sessions} />
+        <RangeHeader summary={data.summary} question="How were outcomes distributed across the month?" />
         <MonthPnlCalendar monthKey={data.key} rows={data.sessions} />
         <EvidenceBoundary>This is a read-only map of imported trading sessions. Blank dates remain unconfirmed; no-trade-day management stays in Calendar.</EvidenceBoundary>
       </div>
@@ -862,29 +862,55 @@ function longDateLabel(date: string): string {
  * content rather than styling, and the design mock simply had no equivalent
  * because it was a standalone page.
  */
-function RangeHeader({ summary, question, rows }: { summary: JournalRangeSummary; question: string; rows: JournalSessionRow[] }) {
-  const green = rows.filter((row) => row.pnl >= 0).length;
-  const red = rows.length - green;
+function RangeHeader({ summary, question }: { summary: JournalRangeSummary; question: string }) {
   return (
     <div>
       <SectionLabel>{summary.label}</SectionLabel>
       <p className="mt-2 text-[14px] leading-6 text-[var(--body)]">{question}</p>
-      <div className="mt-5 flex flex-wrap items-start gap-x-12 gap-y-4">
-        <MonthStat label="P&L" value={money(summary.pnl)} className={pnlClass(summary.pnl)} />
-        <MonthStat label="Win rate" value={percent(summary.accuracy)} />
-        <MonthStat label="Profit factor" value={ratio(summary.profitFactor)} />
-        <MonthStat
-          label="Trading days"
-          value={rows.length === 0 ? "—" : `${green} green · ${red} red`}
-        />
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+        {/* One solid pill holding the stat text; P&L stays out on the right. */}
+        <span className="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-[var(--radius-full)] bg-[var(--surface-2)] px-5 py-2.5 text-[15px] tabular-nums">
+          <StatText label="Sessions" value={String(summary.sessions)} />
+          <PillSep />
+          <StatText label="Trades" value={String(summary.trades)} />
+          <PillSep />
+          <StatText label="Accuracy" value={percent(summary.accuracy)} />
+          <PillSep />
+          <StatText label="Profit factor" value={ratio(summary.profitFactor)} />
+        </span>
+        <MonthStat label="P&L" value={money(summary.pnl)} className={pnlClass(summary.pnl)} align="right" />
       </div>
     </div>
   );
 }
 
-function MonthStat({ label, value, className }: { label: string; value: string; className?: string }) {
+/** Label + figure as inline text, for use inside the stat pill. */
+function StatText({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1">
+    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
+      <span className="text-[var(--muted)]">{label}</span>
+      <span className="font-semibold text-[var(--foreground)]">{value}</span>
+    </span>
+  );
+}
+
+function PillSep() {
+  return <span aria-hidden="true" className="text-[var(--faint)]">·</span>;
+}
+
+function MonthStat({
+  label,
+  value,
+  className,
+  align = "left",
+}: {
+  label: string;
+  value: string;
+  className?: string;
+  align?: "left" | "right";
+}) {
+  return (
+    <div className={`flex flex-col gap-1.5 ${align === "right" ? "items-end" : "items-start"}`}>
       <span className="text-[13px] text-[var(--muted)]">{label}</span>
       <span className={`text-[22px] font-semibold tabular-nums ${className ?? "text-[var(--foreground)]"}`}>{value}</span>
     </div>
