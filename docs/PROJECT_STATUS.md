@@ -32,6 +32,25 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-07** — Week-at-a-glance placement pass
+  (branch `design/journal-formatting`).
+  - Split the week range/navigation header from the reusable five-session strip.
+  - Removed the strip from the persistent focused-Day header and placed it first
+    inside Week → P&L, directly above the existing week-state summary and daily
+    progress timeline.
+  - Preserved the strip's complete hairline border, selected-day treatment,
+    direct day links, optimistic navigation, and no-trade/future/empty states.
+  - Verified Day has no duplicate strip; Week leads with the at-a-glance strip;
+    selecting a weekday returns to that Day view; 1423×1047 and 1024×768 have no
+    page overflow; and the browser console remains clean.
+  - Targeted ESLint, TypeScript, the bundled demo-schema check, and a Webpack
+    production build passed. Full-repository lint remains blocked only by the
+    two known `react-hooks/set-state-in-effect` errors under
+    `src/components/preview/`.
+  - **Stopped at:** placement and hierarchy are implemented for owner review.
+    The week-progress visualization and its evidence model are intentionally
+    unchanged and remain the next design iteration.
+
 - **2026-08-07** — Journal learning-loop and unified navigation exploration
   (branch `design/journal-formatting`).
   - Audited the production Journal -> Calendar -> day -> trade flow after

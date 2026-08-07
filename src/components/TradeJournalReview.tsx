@@ -23,7 +23,10 @@ import {
   JournalDateHeading,
   JournalDateNavigationProvider,
 } from "@/components/JournalDateNavigation";
-import JournalWeekStrip, { type JournalWeekStripDay } from "@/components/JournalWeekStrip";
+import JournalWeekStrip, {
+  JournalWeekNavigation,
+  type JournalWeekStripDay,
+} from "@/components/JournalWeekStrip";
 import JournalReviewModule, {
   type JournalComparisonData,
   type JournalChartReadSummary,
@@ -1410,11 +1413,13 @@ function JournalReviewModuleForDay({
   returnTo,
   comparisonData,
   coachSlots,
+  weekOverview,
 }: {
   data: ReviewData;
   returnTo: string;
   comparisonData: JournalComparisonData;
   coachSlots?: ModuleCoachSlots;
+  weekOverview?: ReactNode;
 }) {
   const { day, tickerRows, tradeRows, taggedTrades, pnlPoints, coachRead } = data;
   const { topSurprise, chartFacts } = buildDayReviewPresentation(data);
@@ -1429,6 +1434,7 @@ function JournalReviewModuleForDay({
         dayCoachSlot={coachSlots?.day}
         weekCoachSlot={coachSlots?.week}
         monthCoachSlot={coachSlots?.month}
+        weekOverview={weekOverview}
         summary={{
           trades: day.trades,
           accuracy: day.accuracy,
@@ -1491,6 +1497,7 @@ function DayReviewSection({
   compactDayHeader = false,
   coachSlots,
   dayCoach,
+  weekOverview,
 }: {
   data: ReviewData;
   returnTo: string;
@@ -1501,6 +1508,7 @@ function DayReviewSection({
   compactDayHeader?: boolean;
   coachSlots?: ModuleCoachSlots;
   dayCoach?: DayCoachPanelData;
+  weekOverview?: ReactNode;
 }) {
   const { day, tickerRows, pnlPoints, coachRead, chartRead, marketContext } = data;
   const { verdictText } = buildDayReviewPresentation(data);
@@ -1609,6 +1617,7 @@ function DayReviewSection({
                 returnTo={returnTo}
                 comparisonData={comparisonData}
                 coachSlots={resolvedCoachSlots}
+                weekOverview={weekOverview}
               />
             </div>
           ) : null}
@@ -1719,6 +1728,7 @@ function ReviewDayRangeSection({
   compactDayHeader = false,
   coachSlots,
   dayCoach,
+  weekOverview,
 }: {
   data: ReviewData;
   returnTo: string;
@@ -1729,6 +1739,7 @@ function ReviewDayRangeSection({
   compactDayHeader?: boolean;
   coachSlots?: ModuleCoachSlots;
   dayCoach?: DayCoachPanelData;
+  weekOverview?: ReactNode;
 }) {
   return (
     <DayReviewSection
@@ -1741,6 +1752,7 @@ function ReviewDayRangeSection({
       compactDayHeader={compactDayHeader}
       coachSlots={coachSlots}
       dayCoach={dayCoach}
+      weekOverview={weekOverview}
     />
   );
 }
@@ -2752,13 +2764,11 @@ export default async function TradeJournalReview({
           ) : null}
 
           {usesReviewModule && preset === "today" && comparisonData ? (
-            <JournalWeekStrip
+            <JournalWeekNavigation
               weekStart={comparisonData.week.key}
-              days={weekStripDays}
               previousWeekHref={journalReviewModuleHref(basePath, isoAddDays(archiveAnchor, -7))}
               nextWeekHref={journalReviewModuleHref(basePath, isoAddDays(archiveAnchor, 7))}
               calendarHref={`/calendar?m=${archiveAnchor.slice(0, 7)}`}
-              basePath={basePath}
             />
           ) : null}
 
@@ -2784,6 +2794,7 @@ export default async function TradeJournalReview({
               showContextDetails
               showLegacyPnl={false}
               compactDayHeader
+              weekOverview={<JournalWeekStrip days={weekStripDays} basePath={basePath} />}
               coachSlots={moduleCoachScopes && comparisonRanges ? {
                 week: (
                   <RangeCoachReview

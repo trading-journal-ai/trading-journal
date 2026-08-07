@@ -166,6 +166,7 @@ export default function JournalReviewModule({
   weekCoachSlot,
   monthCoachSlot,
   dayCoachSlot,
+  weekOverview,
 }: {
   pnlContent: ReactNode;
   tradeRows: JournalDayTradeRow[];
@@ -185,6 +186,7 @@ export default function JournalReviewModule({
   weekCoachSlot?: ReactNode;
   monthCoachSlot?: ReactNode;
   dayCoachSlot?: ReactNode;
+  weekOverview?: ReactNode;
 }) {
   const [scope, setScope] = useState<JournalDataScope>("day");
   const [view, setView] = useState<JournalDataView>("pnl");
@@ -225,7 +227,7 @@ export default function JournalReviewModule({
             returnTo={returnTo}
           />
         ) : null}
-        {scope === "week" ? <WeekViews view={view} data={comparisons.week} coachSlot={weekCoachSlot} selectedDate={date} /> : null}
+        {scope === "week" ? <WeekViews view={view} data={comparisons.week} coachSlot={weekCoachSlot} selectedDate={date} overview={weekOverview} /> : null}
         {scope === "month" ? <MonthViews view={view} data={comparisons.month} coachSlot={monthCoachSlot} /> : null}
       </div>
     </section>
@@ -299,15 +301,18 @@ function WeekViews({
   data,
   coachSlot,
   selectedDate,
+  overview,
 }: {
   view: JournalDataView;
   data: JournalComparisonData["week"];
   coachSlot?: ReactNode;
   selectedDate: string;
+  overview?: ReactNode;
 }) {
   if (view === "pnl") {
     return (
       <div role="tabpanel">
+        {overview ? <div className="mb-9">{overview}</div> : null}
         <WeekTrajectoryHeader data={data} />
         <WeekPnlTrajectory
           asOfDate={data.asOfDate}

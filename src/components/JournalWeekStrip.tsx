@@ -16,12 +16,15 @@ export type JournalWeekStripDay = {
 };
 
 type JournalWeekStripProps = {
-  weekStart: string;
   days: JournalWeekStripDay[];
+  basePath: string;
+};
+
+type JournalWeekNavigationProps = {
+  weekStart: string;
   previousWeekHref: string;
   nextWeekHref: string;
   calendarHref: string;
-  basePath: string;
 };
 
 const weekdayFmt = new Intl.DateTimeFormat("en-US", {
@@ -108,21 +111,14 @@ function MetricPill({
   );
 }
 
-export default function JournalWeekStrip({
+export function JournalWeekNavigation({
   weekStart,
-  days,
   previousWeekHref,
   nextWeekHref,
   calendarHref,
-  basePath,
-}: JournalWeekStripProps) {
-  const { pendingDate, selectedDate, setPendingDate } = useJournalDateNavigation();
-
+}: JournalWeekNavigationProps) {
   return (
-    <nav
-      aria-label="Journal week"
-      className={pendingDate ? "journal-week-strip--navigating" : undefined}
-    >
+    <nav aria-label="Journal week">
       <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-3 py-2 sm:px-4">
         <p className="font-sans text-[11px] font-normal uppercase tracking-[0.16em] text-[var(--muted)]">
           {rangeLabel(weekStart)}
@@ -145,7 +141,21 @@ export default function JournalWeekStrip({
           </IconLink>
         </div>
       </div>
+    </nav>
+  );
+}
 
+export default function JournalWeekStrip({
+  days,
+  basePath,
+}: JournalWeekStripProps) {
+  const { pendingDate, selectedDate, setPendingDate } = useJournalDateNavigation();
+
+  return (
+    <nav
+      aria-label="Week at a glance"
+      className={pendingDate ? "journal-week-strip--navigating" : undefined}
+    >
       <div className="overflow-x-auto rounded-[4px] border border-[var(--hairline)] [scrollbar-width:thin]">
         <div className="grid min-w-[900px] grid-cols-5">
           {days.map((day) => {

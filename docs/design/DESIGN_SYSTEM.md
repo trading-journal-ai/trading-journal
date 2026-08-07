@@ -301,7 +301,9 @@ Build once, reuse everywhere.
   remains stable while the new journal date loads; it never fades out while
   waiting for navigation. The page background remains flat with no added border,
   radius, elevation, or bottom edge. The five-day strip uses a complete hairline
-  outline with a 4px radius; it begins open above its date-navigation header.
+  outline with a 4px radius. It leads Week → P&L as the at-a-glance summary and
+  does not remain above the Day / Week / Month review tabs. The week range and
+  previous/next/Calendar controls remain in the page-level navigation header.
 - **Journal** — prose-first. Headers use Display/Page title; recap text uses Body
   large; metrics sit under the header as quiet mono metadata; ticker rail compact
   and sorted best-to-worst; pills secondary; reading mode hides edit controls
