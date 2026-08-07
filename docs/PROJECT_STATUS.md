@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-07-27 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-08-07 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -31,6 +31,27 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-08-07** — Impeccable project initialization
+  (branch `codex/impeccable-init`).
+  - Installed the project-local Impeccable skill and Codex design hook under
+    `.agents/` and `.codex/`.
+  - Added root `PRODUCT.md` from owner-confirmed product truth: an active
+    day/momentum trader audience, local-first journal positioning, grounded
+    post-trade coaching, and trader-controlled playbook knowledge.
+  - Added root `DESIGN.md` and `.impeccable/design.json`, distilled from the
+    existing canonical design-system contract so Impeccable and other
+    DESIGN.md-aware tools inherit the shipped visual language without replacing
+    `docs/design/DESIGN_SYSTEM.md` or the runtime tokens in `globals.css`.
+  - Added Impeccable's ephemeral runtime paths to `.gitignore`; shared future
+    design artifacts remain trackable.
+  - Preserved Impeccable's Apache 2.0 attribution and license alongside the
+    vendored project-local skill.
+  - Verification: Impeccable context resolved `PRODUCT.md` and `DESIGN.md`; hook
+    and sidecar JSON parsed; all vendored `.mjs` files passed Node syntax
+    checking; the production build passed. Repository lint remains blocked only
+    by the two known `react-hooks/set-state-in-effect` errors in the preview
+    components, unrelated to this branch.
 
 - **2026-07-27** — Free-plan market-data sync + Analytics architecture home
   (branch `feat/free-plan-market-data-sync`).

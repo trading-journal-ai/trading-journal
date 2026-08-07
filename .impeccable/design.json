@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-07T14:24:26Z",
+  "title": "Design System: Trading Journal AI",
+  "extensions": {
+    "colorMeta": {
+      "background": {
+        "role": "neutral",
+        "displayName": "Ledger Night",
+        "canonical": "#080c12"
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Review Surface",
+        "canonical": "#111821"
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Primary Ink",
+        "canonical": "#e6edf3"
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Interactive Accent",
+        "canonical": "#58a6ff"
+      },
+      "coach": {
+        "role": "secondary",
+        "displayName": "Coach Voice",
+        "canonical": "#3fb950"
+      },
+      "positive": {
+        "role": "tertiary",
+        "displayName": "Positive P&L",
+        "canonical": "#1db26b"
+      },
+      "negative": {
+        "role": "tertiary",
+        "displayName": "Negative P&L",
+        "canonical": "#f05143"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Journal Display",
+        "purpose": "Month, week, and focused-day orientation."
+      },
+      "body": {
+        "displayName": "Review Prose",
+        "purpose": "Interface copy and journal narrative."
+      },
+      "figure": {
+        "displayName": "Tabular Figure",
+        "purpose": "Money, prices, counts, percentages, and compact metadata."
+      }
+    },
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Action Button",
+      "kind": "button",
+      "refersTo": "button-action",
+      "description": "Strong Save or Done action with compact product density.",
+      "html": "<button class=\"ds-action-button\">Save changes</button>",
+      "css": ".ds-action-button { height: 40px; padding: 0 16px; border: 0; border-radius: 6px; background: var(--action, #242a35); color: var(--action-foreground, #f1f4f8); font: 600 14px/1 var(--font-sans, sans-serif); cursor: pointer; transition: background-color 160ms ease, color 160ms ease; } .ds-action-button:hover { background: var(--surface-2, #151e2a); } .ds-action-button:focus-visible { outline: 2px solid var(--accent, #58a6ff); outline-offset: 2px; }"
+    },
+    {
+      "name": "Filled Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Quiet filled field that avoids heavy border framing.",
+      "html": "<label class=\"ds-field\"><span>Review note</span><input placeholder=\"What mattered?\"></label>",
+      "css": ".ds-field { display: grid; gap: 8px; color: var(--body, #c3ccd8); font: 500 13px/1.4 var(--font-sans, sans-serif); } .ds-field input { height: 40px; padding: 0 12px; border: 1px solid transparent; border-radius: 6px; background: var(--surface, #111821); color: var(--foreground, #e6edf3); font: 400 14px/1.4 var(--font-sans, sans-serif); } .ds-field input:focus-visible { outline: 2px solid var(--accent, #58a6ff); outline-offset: 1px; }"
+    },
+    {
+      "name": "Period Tabs",
+      "kind": "nav",
+      "description": "Underline peer navigation for Today, Week, and Month views.",
+      "html": "<nav class=\"ds-period-tabs\"><button class=\"ds-active\">Today</button><button>Week</button><button>Month</button></nav>",
+      "css": ".ds-period-tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--hairline, rgba(255,255,255,.07)); } .ds-period-tabs button { padding: 0 0 10px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted, #7a8492); font: 500 13px/1.4 var(--font-sans, sans-serif); cursor: pointer; } .ds-period-tabs button:hover { color: var(--foreground, #e6edf3); } .ds-period-tabs button:focus-visible { outline: 2px solid var(--accent, #58a6ff); outline-offset: 3px; } .ds-period-tabs .ds-active { border-bottom-color: var(--foreground, #e6edf3); color: var(--foreground, #e6edf3); }"
+    },
+    {
+      "name": "Trade Tag",
+      "kind": "chip",
+      "description": "Compact verdict chip with redundant icon and color channels.",
+      "html": "<span class=\"ds-trade-tag\" aria-label=\"Clean execution\"><span aria-hidden=\"true\">✓</span>Clean</span>",
+      "css": ".ds-trade-tag { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 4px 9px; border-radius: 7px; background: var(--tag-positive-bg, rgba(29,178,107,.14)); color: var(--tag-positive-fg, #1db26b); font: 500 11px/1.3 var(--font-mono, monospace); }"
+    },
+    {
+      "name": "Coach Voice",
+      "kind": "custom",
+      "refersTo": "coach-voice",
+      "description": "AI-authored interpretation distinguished from trader annotations.",
+      "html": "<section class=\"ds-coach-voice\"><p class=\"ds-coach-label\">Coach read</p><p>Your best trades came after patient confirmation.</p></section>",
+      "css": ".ds-coach-voice { padding-left: 16px; border-left: 2px solid var(--coach, #3fb950); color: var(--body, #c3ccd8); font: 400 16px/1.6 var(--font-sans, sans-serif); } .ds-coach-label { margin: 0 0 8px; color: var(--coach, #3fb950); font: 600 12px/1.3 var(--font-sans, sans-serif); letter-spacing: .02em; } .ds-coach-voice p:last-child { margin: 0; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Reflective Ledger",
+    "overview": "Trading Journal AI combines the clarity of a trading ledger with the breathing room of an editorial notebook. Type, spacing, tabular figures, and thin rules establish hierarchy while controls remain compact and content areas avoid unnecessary framing.",
+    "keyCharacteristics": [
+      "Type-first hierarchy with open surfaces and hairline structure.",
+      "Ledger-like metrics beside generous journal prose.",
+      "Four semantic-token themes: dark, light, daylight, and evening.",
+      "Distinct visual authorship for trader annotations and AI coaching.",
+      "Restrained motion and decoration in service of review speed."
+    ],
+    "rules": [
+      {
+        "name": "The Semantic Token Rule",
+        "body": "Components consume semantic CSS variables; raw color values belong in the theme definitions, not component markup.",
+        "section": "colors"
+      },
+      {
+        "name": "The Trading Color Rule",
+        "body": "Red and green indicate P&L, outcome, execution, or clearly labeled process signals and never stand alone.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Voices Rule",
+        "body": "Coach-authored content uses coach green; trader annotations use the theme accent.",
+        "section": "colors"
+      },
+      {
+        "name": "The Mono-With-Purpose Rule",
+        "body": "Use mono for data and compact metadata, not ordinary prose or every heading.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-by-Default Rule",
+        "body": "A surface earns elevation only when its interaction model requires separation from document flow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do read the canonical design-system document before changing UI.",
+      "Do use semantic tokens from globals.css and verify every theme affected.",
+      "Do let typography, spacing, and one hairline establish hierarchy.",
+      "Do keep numeric columns tabular and P&L signs explicit."
+    ],
+    "donts": [
+      "Don't nest cards or wrap every section in a rounded box.",
+      "Don't introduce raw hex colors in components.",
+      "Don't use red or green as generic decoration.",
+      "Don't add decorative motion that slows scanning or writing."
+    ]
+  }
+}
