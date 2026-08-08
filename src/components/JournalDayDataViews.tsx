@@ -331,7 +331,6 @@ function WeekViews({
           weekStart={data.key}
           rows={data.sessions}
         />
-        <EvidenceBoundary>The timeline uses imported sessions only. An unplotted weekday is upcoming or has no imported session; it does not infer an intentional no-trade day.</EvidenceBoundary>
       </div>
     );
   }

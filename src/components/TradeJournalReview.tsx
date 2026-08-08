@@ -1255,7 +1255,7 @@ function RunningPnlChart({
   heightClassName?: string;
 }) {
   return (
-    <section className={`flex ${heightClassName} flex-col rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-4`}>
+    <section className={`flex ${heightClassName} flex-col rounded-lg border border-[var(--border)] bg-[var(--background)] px-4 py-4`}>
       <div className="mb-2 flex items-center justify-between gap-4">
         <h2 className="text-[15px] font-semibold text-[var(--foreground)]">Daily P&L</h2>
         {showTotal ? (

@@ -50,7 +50,9 @@ function readChartColors(): ChartColors {
   const token = (name: string, fallback: string) => styles.getPropertyValue(name).trim() || fallback;
 
   return {
-    background: token("--surface", "#ffffff"),
+    // Matches the card it sits in. --surface is the *recessed* tone since the
+    // theme swap, so reading it here painted a grey plot area inside a white card.
+    background: token("--background", "#ffffff"),
     grid: token("--hairline", "rgba(0,0,0,0.08)"),
     negative: token("--red-chart", "#c4553f"),
     positive: token("--green-chart", "#2c9a63"),
