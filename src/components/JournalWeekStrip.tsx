@@ -47,6 +47,11 @@ function addIsoDays(date: string, days: number): string {
   return next.toISOString().slice(0, 10);
 }
 
+/**
+ * Two non-breaking spaces sit between the day and the year: HTML collapses a
+ * literal double space to one, and the nbsp also keeps the year from wrapping
+ * onto its own line.
+ */
 function rangeLabel(weekStart: string): string {
   const start = utcDate(weekStart);
   const end = utcDate(addIsoDays(weekStart, 4));
@@ -54,11 +59,11 @@ function rangeLabel(weekStart: string): string {
   const sameYear = start.getUTCFullYear() === end.getUTCFullYear();
 
   if (sameMonth && sameYear) {
-    return `${monthFmt.format(start)} ${start.getUTCDate()}-${end.getUTCDate()} ${end.getUTCFullYear()}`;
+    return `${monthFmt.format(start)} ${start.getUTCDate()}-${end.getUTCDate()}\u00a0\u00a0${end.getUTCFullYear()}`;
   }
 
   if (sameYear) {
-    return `${monthFmt.format(start)} ${start.getUTCDate()} - ${monthFmt.format(end)} ${end.getUTCDate()} ${end.getUTCFullYear()}`;
+    return `${monthFmt.format(start)} ${start.getUTCDate()} - ${monthFmt.format(end)} ${end.getUTCDate()}\u00a0\u00a0${end.getUTCFullYear()}`;
   }
 
   return `${monthFmt.format(start)} ${start.getUTCDate()}, ${start.getUTCFullYear()} - ${monthFmt.format(end)} ${end.getUTCDate()}, ${end.getUTCFullYear()}`;
