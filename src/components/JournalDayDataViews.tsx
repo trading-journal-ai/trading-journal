@@ -768,23 +768,27 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
                       ? `${longDateLabel(day.date)}: ${money(session.pnl)}, ${session.trades} trades`
                       : `${longDateLabel(day.date)}: no imported session`;
 
-                    const cellClass = `flex min-h-[116px] flex-1 flex-col items-start gap-6 px-4 py-3.5 text-left ${
+                    const cellClass = `relative flex min-h-[116px] flex-1 flex-col items-start gap-6 px-4 py-3.5 text-left ${
                       dayIndex > 0 ? "border-l border-[var(--hairline)]" : ""
                     }`;
                     // Grid reads white; only adjacent months take a subtle grey.
-                    const tone = !day.inMonth
-                      ? "bg-[var(--surface)]"
-                      : isToday
-                        ? "bg-[color-mix(in_oklch,var(--accent)_7%,var(--background))]"
-                        : "bg-[var(--background)]";
+                    const tone = day.inMonth ? "bg-[var(--background)]" : "bg-[var(--surface)]";
 
                     const dayNumber = (
-                      <span className="flex items-baseline gap-2">
+                      <>
                         <span className={`text-[15px] font-semibold tabular-nums ${day.inMonth ? "text-[var(--foreground)]" : "text-[var(--faint)]"}`}>
                           {day.day}
                         </span>
-                        {isToday ? <span className="text-[11.5px] text-[var(--muted)]">Today</span> : null}
-                      </span>
+                        {isToday ? (
+                          <>
+                            {/* State marker, not a valence dot — DESIGN_SYSTEM
+                                bars those from the calendar. The sr-only label
+                                keeps it from being colour-alone. */}
+                            <span aria-hidden="true" className="absolute right-3 top-3 h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+                            <span className="sr-only">Today</span>
+                          </>
+                        ) : null}
+                      </>
                     );
 
                     if (!session) {
@@ -838,11 +842,16 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
                         <span aria-hidden="true" className="text-[15px] font-semibold">
                           &nbsp;
                         </span>
-                        <span className="flex flex-col items-center gap-0.5">
-                          <span className={`whitespace-nowrap text-[18px] font-medium tabular-nums ${pnlClass(wk.pnl)}`}>
+                        {/* The lockup is centred in the column by the parent,
+                            but its own contents stay left-aligned so the figure
+                            and strip share an edge. */}
+                        <span className="flex flex-col items-start gap-1.5">
+                          <span className={`inline-flex whitespace-nowrap rounded-[var(--radius-full)] bg-[var(--surface-2)] px-2.5 py-1 text-[18px] font-medium tabular-nums ${pnlClass(wk.pnl)}`}>
                             {cellMoney(wk.pnl)}
                           </span>
-                          <span className="inline-flex items-center gap-x-2.5 text-[11.5px] font-medium tabular-nums text-[var(--muted)]">
+                          {/* Matches the pill's horizontal padding so the strip
+                              and the figure inside the pill share a text edge. */}
+                          <span className="inline-flex items-center gap-x-2.5 px-2.5 text-[11.5px] font-medium tabular-nums text-[var(--muted)]">
                             {wk.accuracy == null ? null : <span className="whitespace-nowrap">{wk.accuracy}% Win</span>}
                             {wk.profitFactor == null ? null : <span className="whitespace-nowrap">{ratio(wk.profitFactor)} PF</span>}
                           </span>
@@ -948,7 +957,7 @@ function RangeHeader({ summary, question }: { summary: JournalRangeSummary; ques
       <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
         {/* One solid pill holding the stat text; the P&L figure sits opposite it
             on the same line, unlabelled — the figure reads as P&L on its own. */}
-        <span className="inline-flex flex-wrap items-center gap-x-7 gap-y-1 rounded-[var(--radius-full)] bg-[var(--surface-2)] px-5 py-2.5 text-[15px] tabular-nums">
+        <span className="inline-flex flex-wrap items-center gap-x-7 gap-y-1 rounded-[var(--radius-full)] bg-[var(--surface-2)] px-5 py-2.5 text-[length:var(--text-label-size)] tabular-nums">
           <StatText label="Trades" value={String(summary.trades)} />
           <StatText label="Accuracy" value={percent(summary.accuracy)} />
           <StatText label="Profit factor" value={ratio(summary.profitFactor)} />
