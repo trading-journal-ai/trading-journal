@@ -54,7 +54,7 @@ function rangeLabel(weekStart: string): string {
   const sameYear = start.getUTCFullYear() === end.getUTCFullYear();
 
   if (sameMonth && sameYear) {
-    return `${monthFmt.format(start)} ${start.getUTCDate()} - ${end.getUTCDate()} ${end.getUTCFullYear()}`;
+    return `${monthFmt.format(start)} ${start.getUTCDate()}-${end.getUTCDate()} ${end.getUTCFullYear()}`;
   }
 
   if (sameYear) {
