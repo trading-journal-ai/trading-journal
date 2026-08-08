@@ -830,18 +830,11 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
                   })}
 
                   {/* Same lockup as a day cell: figure, then its strip. */}
-                  <div className="flex w-[190px] shrink-0 flex-col items-center gap-6 border-l border-[var(--hairline)] px-4 py-3.5">
+                  <div className="flex w-[190px] shrink-0 flex-col items-center justify-center border-l border-[var(--hairline)] px-4 py-3.5">
                     {weekSessions.length === 0 ? null : (
                       // Trade count is deliberately absent: it's a per-day
                       // measure, and the week only needs quality, not volume.
                       <>
-                        {/* Reserves the day-number line so the week figure
-                            baselines with the day figures. Matching the day
-                            number's type rather than a fixed offset keeps them
-                            aligned if that size is retuned. */}
-                        <span aria-hidden="true" className="text-[15px] font-semibold">
-                          &nbsp;
-                        </span>
                         {/* The lockup is centred in the column by the parent,
                             but its own contents stay left-aligned so the figure
                             and strip share an edge. */}
