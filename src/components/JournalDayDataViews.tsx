@@ -830,7 +830,7 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
                   })}
 
                   {/* Same lockup as a day cell: figure, then its strip. */}
-                  <div className="flex w-[190px] shrink-0 flex-col items-center gap-6 px-4 py-3.5">
+                  <div className="flex w-[190px] shrink-0 flex-col items-center gap-6 border-l border-[var(--hairline)] px-4 py-3.5">
                     {weekSessions.length === 0 ? null : (
                       // Trade count is deliberately absent: it's a per-day
                       // measure, and the week only needs quality, not volume.
@@ -846,12 +846,12 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
                             but its own contents stay left-aligned so the figure
                             and strip share an edge. */}
                         <span className="flex flex-col items-start gap-1.5">
-                          <span className={`inline-flex whitespace-nowrap rounded-[var(--radius-full)] bg-[var(--surface-2)] px-2.5 py-1 text-[18px] font-medium tabular-nums ${pnlClass(wk.pnl)}`}>
+                          <span className={`whitespace-nowrap px-2.5 text-[18px] font-medium tabular-nums ${pnlClass(wk.pnl)}`}>
                             {cellMoney(wk.pnl)}
                           </span>
-                          {/* Matches the pill's horizontal padding so the strip
-                              and the figure inside the pill share a text edge. */}
-                          <span className="inline-flex items-center gap-x-2.5 px-2.5 text-[11.5px] font-medium tabular-nums text-[var(--muted)]">
+                          {/* The figure carries matching padding, so its text
+                              shares a left edge with the text inside this pill. */}
+                          <span className="inline-flex items-center gap-x-2.5 rounded-[var(--radius-full)] bg-[var(--surface-2)] px-2.5 py-1 text-[11.5px] font-medium tabular-nums text-[var(--muted)]">
                             {wk.accuracy == null ? null : <span className="whitespace-nowrap">{wk.accuracy}% Win</span>}
                             {wk.profitFactor == null ? null : <span className="whitespace-nowrap">{ratio(wk.profitFactor)} PF</span>}
                           </span>
