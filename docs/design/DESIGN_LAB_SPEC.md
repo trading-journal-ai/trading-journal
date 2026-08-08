@@ -1,6 +1,6 @@
 # Next.js Design Lab — Functional Specification
 
-> Status: Proposed · Last updated: 2026-08-08 · Implementation: not started
+> Status: Active · Last updated: 2026-08-08 · Implementation: Phase 1 complete
 
 ## Decision summary
 
@@ -12,6 +12,24 @@ The Design Lab will audition semantic tokens, component treatments, and realisti
 component states against production React components. Paper remains the editable
 layout and composition surface described in
 [`PAPER_WORKFLOW.md`](PAPER_WORKFLOW.md).
+
+## Implementation progress
+
+Phase 1 is implemented on `feat/design-lab`:
+
+- `/design-system?lab=1` activates the editor while `/design-system` remains the
+  read-only living reference;
+- the Lab can switch its base theme without writing the persisted theme;
+- validated semantic-color overrides are scoped to the preview root;
+- the panel exposes the full production token inventory, individual revert, and
+  reset-all controls;
+- the existing token, typography, primitive, and feature-module specimens remain
+  the live preview surface;
+- focused unit coverage protects token validation, filtering, merging, and color
+  input normalization.
+
+Component registration, preview-state controls, local snapshots, and exports
+remain Phase 2 work.
 
 ## Problem
 

@@ -19,6 +19,7 @@ export const TOKEN_GROUPS: TokenGroup[] = [
       { name: "--panel", use: "Grouped module / rail backgrounds" },
       { name: "--border", use: "Control borders and stronger dividers" },
       { name: "--hairline", use: "Internal rules, table rows, chart dividers" },
+      { name: "--review-helper-bg", use: "Inline review helper background" },
     ],
   },
   {
@@ -52,6 +53,21 @@ export const TOKEN_GROUPS: TokenGroup[] = [
       { name: "--red-tint", use: "Subtle negative cell/background fills" },
       { name: "--execution-buy", use: "Buy execution markers on charts" },
       { name: "--execution-sell", use: "Sell execution markers on charts" },
+    ],
+  },
+  {
+    label: "Trade-review tags",
+    tokens: [
+      { name: "--tag-reinforcing-bg", use: "Reinforcing tag background" },
+      { name: "--tag-reinforcing-fg", use: "Reinforcing tag text and icon" },
+      { name: "--tag-review-bg", use: "Review tag background" },
+      { name: "--tag-review-fg", use: "Review tag text and icon" },
+      { name: "--tag-neutral-bg", use: "Pattern and context tag background" },
+      { name: "--tag-neutral-fg", use: "Pattern and context tag text and icon" },
+      { name: "--tag-settled-bg", use: "Settled emotion tag background" },
+      { name: "--tag-settled-fg", use: "Settled emotion tag text and icon" },
+      { name: "--tag-activated-bg", use: "Activated emotion tag background" },
+      { name: "--tag-activated-fg", use: "Activated emotion tag text and icon" },
     ],
   },
 ];

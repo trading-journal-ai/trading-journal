@@ -32,6 +32,23 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-08** — Design Lab Phase 1 implementation
+  (branch `feat/design-lab`).
+  - Added the dev-only `/design-system?lab=1` editor with base-theme switching,
+    validated semantic-color inputs, individual revert, reset-all, and scoped
+    live overrides over the production design-system specimens.
+  - Kept the persisted app theme and production CSS unchanged; leaving Lab mode
+    discards the draft. The read-only `/design-system` route remains intact.
+  - Expanded the living token inventory to include the existing review-helper
+    and trade-review tag tokens so the Lab reflects the complete shipped system.
+  - Verified focused Design Lab unit tests, scoped ESLint, TypeScript, and the
+    full interaction loop in the in-app browser at desktop and mobile widths.
+    Mobile QA moved the control panel before the preview and collapsed token
+    groups by default. Repository-wide lint remains blocked by three unrelated
+    pre-existing errors in `scripts/design/to-paper.js` and two preview modules.
+  - Phase 2 remains component registration, preview-state controls, local
+    snapshots, and CSS/JSON export.
+
 - **2026-08-08** — Next.js Design Lab functional specification
   (branch `docs/design-lab-spec`).
   - Scoped a dev-only `/design-system?lab=1` workflow for live semantic-token

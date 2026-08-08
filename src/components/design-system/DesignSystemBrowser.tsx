@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import DesignLab from "@/components/design-lab/DesignLab";
 import Button from "@/components/ui/Button";
 import CoachVoice from "@/components/ui/CoachVoice";
 import Dot from "@/components/ui/Dot";
@@ -72,8 +73,7 @@ function TokenSwatch({ name, use, value, hydrated }: { name: string; use: string
   );
 }
 
-function Swatches() {
-  const { values, hydrated } = useLiveTokenValues();
+function Swatches({ values, hydrated }: { values: Record<string, string>; hydrated: boolean }) {
   return (
     <div className="grid gap-8">
       {TOKEN_GROUPS.map((group) => (
@@ -285,18 +285,49 @@ function FeatureModules() {
   );
 }
 
-export default function DesignSystemBrowser() {
+function DesignSystemContent({
+  labMode,
+  values,
+  hydrated,
+}: {
+  labMode: boolean;
+  values: Record<string, string>;
+  hydrated: boolean;
+}) {
   return (
     <div>
       <div className="sticky top-0 z-10 -mx-1 mb-2 flex flex-wrap items-center justify-between gap-4 border-b border-[var(--hairline)] bg-[color-mix(in_srgb,var(--background)_90%,transparent)] px-1 py-3 backdrop-blur">
         <p className="font-mono text-[11px] text-[var(--muted)]">
-          Live from <span className="text-[var(--body)]">globals.css</span> — values reflect the active theme.
+          {labMode ? (
+            <>Temporary overrides are scoped to this preview.</>
+          ) : (
+            <>
+              Live from <span className="text-[var(--body)]">globals.css</span> — values reflect the active theme.
+            </>
+          )}
         </p>
-        <ThemeSettings />
+        {labMode ? (
+          <a
+            href="/design-system"
+            className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--accent)] hover:text-[var(--foreground)]"
+          >
+            Exit Lab
+          </a>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3">
+            <a
+              href="/design-system?lab=1"
+              className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--accent)] hover:text-[var(--foreground)]"
+            >
+              Open Lab
+            </a>
+            <ThemeSettings />
+          </div>
+        )}
       </div>
 
       <Section eyebrow="Foundations" title="Color tokens" description="Semantic tokens read live from the running app. Code owns the values; this page just reflects them. Switch themes above to see each remap.">
-        <Swatches />
+        <Swatches values={values} hydrated={hydrated} />
       </Section>
 
       <Section eyebrow="Foundations" title="Type scale" description="Named type roles rendered as live specimens in Geist Sans / Mono. Use roles, not one-off sizes.">
@@ -311,5 +342,22 @@ export default function DesignSystemBrowser() {
         <FeatureModules />
       </Section>
     </div>
+  );
+}
+
+function ReadOnlyDesignSystemBrowser() {
+  const { values, hydrated } = useLiveTokenValues();
+  return <DesignSystemContent labMode={false} values={values} hydrated={hydrated} />;
+}
+
+export default function DesignSystemBrowser({ labMode = false }: { labMode?: boolean }) {
+  if (!labMode) return <ReadOnlyDesignSystemBrowser />;
+
+  return (
+    <DesignLab>
+      {({ tokenValues, hydrated }) => (
+        <DesignSystemContent labMode values={tokenValues} hydrated={hydrated} />
+      )}
+    </DesignLab>
   );
 }
