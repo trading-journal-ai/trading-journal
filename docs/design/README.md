@@ -25,6 +25,11 @@ One index for the product's design material. If a doc isn't listed here as
 | [`TICKER_REVIEW_DESIGN_HANDOFF.md`](TICKER_REVIEW_DESIGN_HANDOFF.md) | Ticker-review V1 engineering handoff. |
 | [`../coach/TAG_VISUAL_SYSTEM.md`](../coach/TAG_VISUAL_SYSTEM.md) | Coach trade-review tag chips (icon/color/fill). |
 
+## Workflow
+
+- [`PAPER_WORKFLOW.md`](PAPER_WORKFLOW.md) — Paper file organization,
+  source-of-truth boundaries, status labels, and Paper ↔ code handoff rules.
+
 ## Reference (explorations, not specs)
 
 - [`themes/daylight-theme-v1.html`](themes/daylight-theme-v1.html) ·

@@ -147,6 +147,25 @@ Before pushing to `main` or deploying:
 - Give journal prose and review sections room to breathe.
 - Avoid decorative UI that reduces speed or clarity.
 
+## Paper Design Workflow
+
+Before reading from or writing to Paper, follow
+`docs/design/PAPER_WORKFLOW.md`.
+
+- Code owns shipped behavior, component contracts, and token values; Paper owns
+  active visual exploration and approved unimplemented intent.
+- Check the artboard status (`Explore`, `Candidate`, `Approved`, or
+  `Implemented`) before treating it as a source.
+- Use canonical product language and real component definitions. Never invent
+  labels in a Candidate or Approved design unless they are explicitly marked as
+  placeholder copy.
+- For Paper-to-code work, read exported structure and computed styles, then
+  translate them into existing components and semantic tokens. Screenshots are
+  for visual verification, not implementation values.
+- The current white, neutral light-theme work in Paper intentionally diverges
+  from the shipped Daylight theme. Do not resync it back to Daylight; the theme
+  contract changes only when that direction is approved and implemented.
+
 ## Browser Tweaks Workflow
 
 Visual edits are made in the browser against the dev server using the

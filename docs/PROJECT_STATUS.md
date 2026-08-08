@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-07-27 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-08-08 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -31,6 +31,21 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-08-08** — Paper design workflow contract
+  (branch `docs/paper-design-workflow`).
+  - Defined Paper as the component/page exploration and visual-handoff surface,
+    while code remains authoritative for shipped behavior, contracts, and token
+    values.
+  - Documented the two-file Design Lab / Pages model, route-state naming,
+    Explore → Candidate → Approved → Implemented statuses, and both handoff
+    directions.
+  - Recorded the active white, neutral, enterprise-leaning light direction as
+    intentional exploration away from the shipped warm Daylight default; the
+    production theme contract remains unchanged until the direction is approved
+    and implemented.
+  - Stopped at documentation only. No Paper artboards, theme tokens, or product
+    code were changed.
 
 - **2026-07-27** — Free-plan market-data sync + Analytics architecture home
   (branch `feat/free-plan-market-data-sync`).
