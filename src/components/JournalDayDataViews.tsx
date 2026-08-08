@@ -828,16 +828,23 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
                   {/* Same lockup as a day cell: figure, then its strip. */}
                   <div className="flex w-[190px] shrink-0 flex-col items-start gap-6 px-4 py-3.5">
                     {weekSessions.length === 0 ? null : (
+                      // Trade count is deliberately absent: it's a per-day
+                      // measure, and the week only needs quality, not volume.
                       <>
-                        <span className="text-[12.5px] font-medium text-[var(--muted)]">Week</span>
+                        {/* Reserves the day-number line so the week figure
+                            baselines with the day figures. Matching the day
+                            number's type rather than a fixed offset keeps them
+                            aligned if that size is retuned. */}
+                        <span aria-hidden="true" className="text-[15px] font-semibold">
+                          &nbsp;
+                        </span>
                         <span className="flex flex-col items-start gap-0.5">
-                          <span className={`whitespace-nowrap text-[18px] font-medium tabular-nums ${pnlClass(wk.pnl)}`}>
-                            {cellMoney(wk.pnl)}
-                          </span>
-                          <span className="inline-flex items-center gap-x-2.5 text-[11.5px] font-medium tabular-nums text-[var(--muted)]">
-                            <span className="whitespace-nowrap">{wk.trades} Trades</span>
-                            {wk.accuracy == null ? null : <span className="whitespace-nowrap">{wk.accuracy}% Win</span>}
-                            {wk.profitFactor == null ? null : <span className="whitespace-nowrap">{ratio(wk.profitFactor)} PF</span>}
+                        <span className={`whitespace-nowrap text-[18px] font-medium tabular-nums ${pnlClass(wk.pnl)}`}>
+                          {cellMoney(wk.pnl)}
+                        </span>
+                        <span className="inline-flex items-center gap-x-2.5 text-[11.5px] font-medium tabular-nums text-[var(--muted)]">
+                          {wk.accuracy == null ? null : <span className="whitespace-nowrap">{wk.accuracy}% Win</span>}
+                          {wk.profitFactor == null ? null : <span className="whitespace-nowrap">{ratio(wk.profitFactor)} PF</span>}
                           </span>
                         </span>
                       </>
