@@ -377,9 +377,8 @@ function MonthViews({ view, data, coachSlot }: { view: JournalDataView; data: Jo
   if (view === "pnl") {
     return (
       <div role="tabpanel">
-        <RangeHeader summary={data.summary} question="How were outcomes distributed across the month?" />
+        <RangeHeader summary={data.summary} />
         <MonthPnlCalendar monthKey={data.key} rows={data.sessions} />
-        <EvidenceBoundary>This is a read-only map of imported trading sessions. Blank dates remain unconfirmed; no-trade-day management stays in Calendar.</EvidenceBoundary>
       </div>
     );
   }
@@ -861,10 +860,6 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
         </div>
       </div>
 
-      <p className="mt-3 text-[12.5px] text-[var(--faint)]">
-        Click a traded day to open it in place. Click again to collapse.
-      </p>
-
       <ul className="sr-only">
         {rows.map((session) => (
           <li key={session.date}>{longDateLabel(session.date)}: {money(session.pnl)}, {session.trades} trades</li>
@@ -942,12 +937,10 @@ function longDateLabel(date: string): string {
  * content rather than styling, and the design mock simply had no equivalent
  * because it was a standalone page.
  */
-function RangeHeader({ summary, question }: { summary: JournalRangeSummary; question: string }) {
+function RangeHeader({ summary }: { summary: JournalRangeSummary }) {
   return (
     <div>
-      <SectionLabel>{summary.label}</SectionLabel>
-      <p className="mt-2 text-[14px] leading-6 text-[var(--body)]">{question}</p>
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         {/* One solid pill holding the stat text; the P&L figure sits opposite it
             on the same line, unlabelled — the figure reads as P&L on its own. */}
         <span className="inline-flex flex-wrap items-center gap-x-7 gap-y-1 rounded-[var(--radius-full)] bg-[var(--surface-2)] px-5 py-2.5 text-[length:var(--text-label-size)] tabular-nums">
