@@ -480,41 +480,26 @@ function weekInsight(rows: JournalSessionRow[], totalPnl: number): string {
   return "The week is effectively flat; activity has not produced a durable result yet.";
 }
 
+/**
+ * Status and the week's read only. The P&L figure and the sessions/trades/win/PF
+ * strip are deliberately absent for now — they crowded the timeline below, and
+ * where those figures belong is still open.
+ */
 function WeekTrajectoryHeader({ data }: { data: JournalComparisonData["week"] }) {
   const status = weekState(data.key, data.asOfDate);
-  const summary = data.summary;
-  const metrics = [
-    `${summary.sessions} ${summary.sessions === 1 ? "session" : "sessions"}`,
-    `${summary.trades.toLocaleString()} ${summary.trades === 1 ? "trade" : "trades"}`,
-    `${percent(summary.accuracy)} win`,
-    `PF ${ratio(summary.profitFactor)}`,
-  ];
 
   return (
     <header>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2.5 text-[11px]">
-            <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-1 font-semibold text-[var(--foreground)]">
-              {status.label}
-            </span>
-            {status.detail ? <span className="text-[var(--muted)]">{status.detail}</span> : null}
-          </div>
-          <p className="mt-4 max-w-[70ch] text-[18px] font-medium leading-7 tracking-[-0.01em] text-[var(--foreground)]">
-            {weekInsight(data.sessions, summary.pnl)}
-          </p>
-          <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-[var(--muted)]">
-            {metrics.map((metric, index) => (
-              <Fragment key={metric}>
-                {index > 0 ? <span aria-hidden="true" className="text-[var(--faint)]">·</span> : null}
-                <span>{metric}</span>
-              </Fragment>
-            ))}
-          </p>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2.5 text-[11px]">
+          <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-1 font-semibold text-[var(--foreground)]">
+            {status.label}
+          </span>
+          {status.detail ? <span className="text-[var(--muted)]">{status.detail}</span> : null}
         </div>
-        <div className={`font-mono text-[20px] font-semibold tabular-nums ${pnlClass(summary.pnl)}`}>
-          {money(summary.pnl)}
-        </div>
+        <p className="mt-4 max-w-[70ch] text-[18px] font-medium leading-7 tracking-[-0.01em] text-[var(--foreground)]">
+          {weekInsight(data.sessions, data.summary.pnl)}
+        </p>
       </div>
     </header>
   );
