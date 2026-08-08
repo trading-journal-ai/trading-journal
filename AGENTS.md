@@ -166,6 +166,19 @@ Before reading from or writing to Paper, follow
   from the shipped Daylight theme. Do not resync it back to Daylight; the theme
   contract changes only when that direction is approved and implemented.
 
+## Next.js Design Lab
+
+Before implementing internal design controls, read
+`docs/design/DESIGN_LAB_SPEC.md`.
+
+- Keep the Lab dev-only and preserve the existing production 404 for
+  `/design-system`.
+- Scope experimental CSS variables to the Lab preview; do not mutate the saved
+  application theme or write source files automatically.
+- Separate global semantic tokens, component treatments, and preview-only state.
+- New components register typed controls and use existing tokens first. Treat a
+  new token as an explicit proposal with a semantic name and rationale.
+
 ## Browser Tweaks Workflow
 
 Visual edits are made in the browser against the dev server using the

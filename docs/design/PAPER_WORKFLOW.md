@@ -115,6 +115,11 @@ Lab specimen before using that specimen in new page exploration. Refresh page
 artboards only when they are active, Candidate, or Approved; historical Explore
 artboards may remain snapshots of the direction they tested.
 
+Interactive theme and component-state experiments belong in the dev-only
+Next.js Design Lab defined in [`DESIGN_LAB_SPEC.md`](DESIGN_LAB_SPEC.md). Export
+a reviewed snapshot from that Lab, then apply its approved tokens or component
+treatment to Paper; do not recreate the JavaScript control system on the canvas.
+
 ## Conflict rule
 
 When Paper and code disagree:

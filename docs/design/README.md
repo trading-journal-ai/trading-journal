@@ -27,6 +27,8 @@ One index for the product's design material. If a doc isn't listed here as
 
 ## Workflow
 
+- [`DESIGN_LAB_SPEC.md`](DESIGN_LAB_SPEC.md) — requirements for the dev-only
+  Next.js token, component-state, snapshot, and export lab.
 - [`PAPER_WORKFLOW.md`](PAPER_WORKFLOW.md) — Paper file organization,
   source-of-truth boundaries, status labels, and Paper ↔ code handoff rules.
 

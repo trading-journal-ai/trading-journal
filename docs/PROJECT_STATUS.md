@@ -32,6 +32,18 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-08** — Next.js Design Lab functional specification
+  (branch `docs/design-lab-spec`).
+  - Scoped a dev-only `/design-system?lab=1` workflow for live semantic-token
+    experiments, modular component controls, preview states, local snapshots,
+    and reviewed CSS/JSON exports.
+  - Defined the Calendar week strip, Metric strip, and Tags as the MVP specimens
+    for auditioning the white, neutral light direction against real components.
+  - Kept production code, Paper, and Browser Tweaks responsibilities separate;
+    the Lab proposes reproducible changes but never writes source automatically.
+  - Stopped at the specification. Implementation and theme decisions remain
+    open; no application code or Paper artboards were changed.
+
 - **2026-08-08** — Paper design workflow contract
   (branch `docs/paper-design-workflow`).
   - Defined Paper as the component/page exploration and visual-handoff surface,
