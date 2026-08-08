@@ -54,14 +54,14 @@ function rangeLabel(weekStart: string): string {
   const sameYear = start.getUTCFullYear() === end.getUTCFullYear();
 
   if (sameMonth && sameYear) {
-    return `${monthFmt.format(start)} ${start.getUTCDate()}–${end.getUTCDate()} · ${end.getUTCFullYear()}`;
+    return `${monthFmt.format(start)} ${start.getUTCDate()} - ${end.getUTCDate()} ${end.getUTCFullYear()}`;
   }
 
   if (sameYear) {
-    return `${monthFmt.format(start)} ${start.getUTCDate()}–${monthFmt.format(end)} ${end.getUTCDate()} · ${end.getUTCFullYear()}`;
+    return `${monthFmt.format(start)} ${start.getUTCDate()} - ${monthFmt.format(end)} ${end.getUTCDate()} ${end.getUTCFullYear()}`;
   }
 
-  return `${monthFmt.format(start)} ${start.getUTCDate()}, ${start.getUTCFullYear()}–${monthFmt.format(end)} ${end.getUTCDate()}, ${end.getUTCFullYear()}`;
+  return `${monthFmt.format(start)} ${start.getUTCDate()}, ${start.getUTCFullYear()} - ${monthFmt.format(end)} ${end.getUTCDate()}, ${end.getUTCFullYear()}`;
 }
 
 function dayHref(basePath: string, date: string): string {
