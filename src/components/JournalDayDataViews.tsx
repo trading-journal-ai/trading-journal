@@ -75,6 +75,11 @@ export type JournalSessionRow = {
   accuracy: number | null;
   profitFactor: number | null;
   pnl: number;
+  /** Raw counts, so ranges can be re-aggregated exactly. See weekTotals(). */
+  wins?: number;
+  losses?: number;
+  grossWins?: number;
+  grossLosses?: number;
   activityRead?: string;
   marketContextLabel?: string;
 };
@@ -671,6 +676,33 @@ function WeekPnlTrajectory({
  * Calendar-cell money: no "+" on gains, per the cell mock. Losses keep their
  * minus, so sign is never carried by colour alone.
  */
+/**
+ * Aggregate a week exactly the way the server aggregates a range: accuracy is
+ * wins/(wins+losses) — which excludes scratches, so it can't be weighted by
+ * trade count — and profit factor is grossWins/grossLosses, which can't be
+ * averaged from per-day ratios at all. Returns nulls when the raw counts aren't
+ * present rather than guessing.
+ */
+function weekTotals(sessions: JournalSessionRow[]) {
+  const pnl = sessions.reduce((total, s) => total + s.pnl, 0);
+  const trades = sessions.reduce((total, s) => total + s.trades, 0);
+  const hasRaw = sessions.every((s) => s.wins != null && s.losses != null);
+
+  let accuracy: number | null = null;
+  let profitFactor: number | null = null;
+  if (hasRaw) {
+    const wins = sessions.reduce((total, s) => total + (s.wins ?? 0), 0);
+    const losses = sessions.reduce((total, s) => total + (s.losses ?? 0), 0);
+    const counted = wins + losses;
+    accuracy = counted === 0 ? null : Math.round((wins / counted) * 100);
+
+    const grossWins = sessions.reduce((total, s) => total + (s.grossWins ?? 0), 0);
+    const grossLosses = sessions.reduce((total, s) => total + (s.grossLosses ?? 0), 0);
+    profitFactor = grossLosses === 0 ? null : grossWins / grossLosses;
+  }
+  return { pnl, trades, accuracy, profitFactor };
+}
+
 function cellMoney(value: number) {
   return `${value < 0 ? "−" : ""}$${Math.abs(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -720,8 +752,7 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
             const weekSessions = week
               .map((day) => sessionsByDate.get(day.date))
               .filter((session): session is JournalSessionRow => Boolean(session));
-            const weekPnl = weekSessions.reduce((total, session) => total + session.pnl, 0);
-            const weekTrades = weekSessions.reduce((total, session) => total + session.trades, 0);
+            const wk = weekTotals(weekSessions);
 
             return (
               <Fragment key={week[0].date}>
@@ -737,7 +768,7 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
                       ? `${longDateLabel(day.date)}: ${money(session.pnl)}, ${session.trades} trades`
                       : `${longDateLabel(day.date)}: no imported session`;
 
-                    const cellClass = `flex min-h-[116px] flex-1 flex-col items-start gap-2 px-4 py-3.5 text-left ${
+                    const cellClass = `flex min-h-[116px] flex-1 flex-col items-start gap-6 px-4 py-3.5 text-left ${
                       dayIndex > 0 ? "border-l border-[var(--hairline)]" : ""
                     }`;
                     // Grid reads white; only adjacent months take a subtle grey.
@@ -776,27 +807,38 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
                         aria-label={label}
                       >
                         {dayNumber}
-                        <span className={`whitespace-nowrap text-[20px] font-semibold tabular-nums ${pnlClass(session.pnl)}`}>
-                          {cellMoney(session.pnl)}
-                        </span>
-                        {/* Meta sits in its own pill, echoing the header stat pill. */}
-                        <span className="inline-flex items-center gap-x-2 rounded-[var(--radius-full)] bg-[var(--surface-2)] px-2 py-1 text-[11px] tabular-nums text-[var(--muted)]">
-                          <span className="whitespace-nowrap">{session.trades} Trades</span>
-                          {session.accuracy == null ? null : <span className="whitespace-nowrap">{session.accuracy}% Win</span>}
-                          {session.profitFactor == null ? null : <span className="whitespace-nowrap">{ratio(session.profitFactor)} PF</span>}
+                        {/* Value and meta are one group, so the cell has two
+                            spacings to tune rather than one uniform gap: the
+                            outer gap opens up above the figure, the inner gap
+                            keeps the strip tucked under it. */}
+                        <span className="flex flex-col items-start gap-0.5">
+                          <span className={`whitespace-nowrap text-[18px] font-medium tabular-nums ${pnlClass(session.pnl)}`}>
+                            {cellMoney(session.pnl)}
+                          </span>
+                          <span className="inline-flex items-center gap-x-2.5 text-[11.5px] font-medium tabular-nums text-[var(--muted)]">
+                            <span className="whitespace-nowrap">{session.trades} Trades</span>
+                            {session.accuracy == null ? null : <span className="whitespace-nowrap">{session.accuracy}% Win</span>}
+                            {session.profitFactor == null ? null : <span className="whitespace-nowrap">{ratio(session.profitFactor)} PF</span>}
+                          </span>
                         </span>
                       </button>
                     );
                   })}
 
-                  <div className="flex w-[190px] shrink-0 items-baseline justify-center gap-2.5 px-3.5 py-3.5">
+                  {/* Same lockup as a day cell: figure, then its strip. */}
+                  <div className="flex w-[190px] shrink-0 flex-col items-start gap-6 px-4 py-3.5">
                     {weekSessions.length === 0 ? null : (
                       <>
-                        <span className={`whitespace-nowrap text-[17px] font-semibold tabular-nums ${pnlClass(weekPnl)}`}>
-                          {cellMoney(weekPnl)}
-                        </span>
-                        <span className="whitespace-nowrap text-[11.5px] text-[var(--faint)]">
-                          {weekTrades} {weekTrades === 1 ? "trade" : "trades"}
+                        <span className="text-[12.5px] font-medium text-[var(--muted)]">Week</span>
+                        <span className="flex flex-col items-start gap-0.5">
+                          <span className={`whitespace-nowrap text-[18px] font-medium tabular-nums ${pnlClass(wk.pnl)}`}>
+                            {cellMoney(wk.pnl)}
+                          </span>
+                          <span className="inline-flex items-center gap-x-2.5 text-[11.5px] font-medium tabular-nums text-[var(--muted)]">
+                            <span className="whitespace-nowrap">{wk.trades} Trades</span>
+                            {wk.accuracy == null ? null : <span className="whitespace-nowrap">{wk.accuracy}% Win</span>}
+                            {wk.profitFactor == null ? null : <span className="whitespace-nowrap">{ratio(wk.profitFactor)} PF</span>}
+                          </span>
                         </span>
                       </>
                     )}

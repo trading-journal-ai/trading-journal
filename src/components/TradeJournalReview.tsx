@@ -936,6 +936,13 @@ function sessionRows(range: ReviewRange) {
     accuracy: day.day.accuracy,
     profitFactor: day.day.profitFactor,
     pnl: day.day.pnl,
+    // Raw counts so a consumer can re-aggregate correctly. Accuracy is
+    // wins/(wins+losses) and profit factor is a ratio, so neither can be
+    // recovered from the per-day percentages once they've been rounded.
+    wins: day.day.wins,
+    losses: day.day.losses,
+    grossWins: day.day.grossWins,
+    grossLosses: day.day.grossLosses,
     marketContextLabel: day.marketContext.shortLabel,
     activityRead:
       day.day.trades === 0
