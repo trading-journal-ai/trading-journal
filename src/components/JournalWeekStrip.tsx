@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
-import { useJournalDateNavigation } from "@/components/JournalDateNavigation";
+import { scopeDateLabel, useJournalDateNavigation } from "@/components/JournalDateNavigation";
 import Money from "@/components/ui/Money";
 
 export type JournalWeekStripDay = {
@@ -117,11 +117,12 @@ export function JournalWeekNavigation({
   nextWeekHref,
   calendarHref,
 }: JournalWeekNavigationProps) {
+  const { scope, visualDate } = useJournalDateNavigation();
   return (
     <nav aria-label="Journal week">
       <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-3 py-2 sm:px-4">
-        <p className="font-sans text-[11px] font-normal uppercase tracking-[0.16em] text-[var(--muted)]">
-          {rangeLabel(weekStart)}
+        <p className="font-sans text-[20px] font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]">
+          {scopeDateLabel(scope, visualDate, rangeLabel(weekStart))}
         </p>
         <div className="flex items-center gap-2">
           <IconLink href={previousWeekHref} label="Previous week">

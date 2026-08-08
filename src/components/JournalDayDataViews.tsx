@@ -7,6 +7,7 @@ import JournalReviewTabs, {
   type JournalDataScope,
   type JournalDataView,
 } from "@/components/JournalReviewTabs";
+import { useOptionalJournalDateNavigation } from "@/components/JournalDateNavigation";
 import { tradingCalendarWeeks, tradingWeekDates } from "@/lib/journalPnlViews";
 
 export type { JournalDataScope, JournalDataView } from "@/components/JournalReviewTabs";
@@ -193,7 +194,12 @@ export default function JournalReviewModule({
   dayCoachSlot?: ReactNode;
   weekOverview?: ReactNode;
 }) {
-  const [scope, setScope] = useState<JournalDataScope>("day");
+  // Scope is shared with the header lockup when a provider is present; mock and
+  // preview pages render this module bare, so it keeps a local fallback.
+  const nav = useOptionalJournalDateNavigation();
+  const [localScope, setLocalScope] = useState<JournalDataScope>("day");
+  const scope = nav?.scope ?? localScope;
+  const setScope = nav?.setScope ?? setLocalScope;
   const [view, setView] = useState<JournalDataView>("pnl");
 
   function selectScope(nextScope: JournalDataScope) {

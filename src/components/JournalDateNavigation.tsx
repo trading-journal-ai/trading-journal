@@ -10,11 +10,20 @@ import {
   type ReactNode,
 } from "react";
 
+export type JournalScope = "day" | "week" | "month";
+
 type JournalDateNavigationValue = {
   pendingDate: string | null;
   selectedDate: string;
   setPendingDate: (date: string) => void;
   visualDate: string;
+  /**
+   * Which period the review module is showing. It lives here rather than in the
+   * module because the header lockup renders above the module and has to label
+   * itself for the active scope.
+   */
+  scope: JournalScope;
+  setScope: (scope: JournalScope) => void;
 };
 
 const JournalDateNavigationContext = createContext<JournalDateNavigationValue | null>(null);
@@ -28,6 +37,12 @@ const monthDayFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
   month: "long",
   day: "numeric",
+});
+
+const monthYearFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  month: "long",
+  year: "numeric",
 });
 
 function utcDate(date: string): Date {
@@ -50,12 +65,15 @@ export function JournalDateNavigationProvider({
     setPendingSelection({ date, from: selectedDate });
   }, [selectedDate]);
   const visualDate = pendingDate ?? selectedDate;
+  const [scope, setScope] = useState<JournalScope>("day");
   const value = useMemo(() => ({
     pendingDate,
     selectedDate,
     setPendingDate,
     visualDate,
-  }), [pendingDate, selectedDate, setPendingDate, visualDate]);
+    scope,
+    setScope,
+  }), [pendingDate, selectedDate, setPendingDate, visualDate, scope]);
 
   return (
     <JournalDateNavigationContext.Provider value={value}>
@@ -68,6 +86,23 @@ export function useJournalDateNavigation(): JournalDateNavigationValue {
   const context = useContext(JournalDateNavigationContext);
   if (!context) throw new Error("Journal date navigation must be used inside its provider.");
   return context;
+}
+
+/**
+ * Null outside a provider. The review module is also rendered on mock and
+ * preview pages that have no navigation around it, so it falls back to its own
+ * scope state rather than throwing.
+ */
+export function useOptionalJournalDateNavigation(): JournalDateNavigationValue | null {
+  return useContext(JournalDateNavigationContext);
+}
+
+/** Scope-aware label for the header lockup. */
+export function scopeDateLabel(scope: JournalScope, date: string, weekRange: string): string {
+  const d = utcDate(date);
+  if (scope === "week") return weekRange;
+  if (scope === "month") return monthYearFmt.format(d);
+  return `${weekdayFmt.format(d)}, ${monthDayFmt.format(d)}`;
 }
 
 export function JournalDateHeading({

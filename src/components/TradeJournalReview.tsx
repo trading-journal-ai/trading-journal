@@ -1526,14 +1526,10 @@ function DayReviewSection({
   return (
     <section>
       <div className="min-w-0">
-          {compactDayHeader ? (
-            <div className="mb-5 pt-2">
-              <JournalDateHeading
-                level={1}
-                className="text-[20px] font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]"
-              />
-            </div>
-          ) : (
+          {/* The compact header moved into the navigation lockup, which labels
+              itself for the active scope. The day-review page keeps its own
+              heading below. */}
+          {compactDayHeader ? null : (
             <div className="mb-7">
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
                 <JournalDateHeading
