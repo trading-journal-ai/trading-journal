@@ -1,6 +1,6 @@
 # Next.js Design Lab — Functional Specification
 
-> Status: Active · Last updated: 2026-08-08 · Implementation: Phase 1 complete
+> Status: Active · Last updated: 2026-08-08 · Implementation: Phase 2 in progress
 
 ## Decision summary
 
@@ -30,6 +30,52 @@ Phase 1 is implemented on `feat/design-lab`:
 
 Component registration, preview-state controls, local snapshots, and exports
 remain Phase 2 work.
+
+Phase 2 begins with actual-page instrumentation on `/calendar?lab=1`. This
+corrects the initial assumption that the isolated design-system canvas would be
+the primary workspace. The reference canvas remains useful for inventory and
+cross-component review; the route overlay is where page composition and
+component treatments are explored in context.
+
+## Actual-page Lab model
+
+The reference screenshots establish three connected control surfaces:
+
+1. **Quick bar** — compact, high-frequency controls that remain visible while
+   evaluating the complete page.
+2. **Tweaks drawer** — organized global, component, and preview-state controls.
+3. **Palette Lab** — scratch swatches that can be assigned to semantic candidate
+   roles before any production token is proposed.
+
+Values are visibly classified by maturity:
+
+- **System** values come from the production token contract.
+- **Candidate** values extend or reinterpret the design language for the active
+  component without silently joining the global system.
+- **Scratch** values are unconstrained palette experiments; assigning one to a
+  named role promotes it to Candidate, not directly to System.
+
+The Calendar route is the first implementation. Its candidate roles are Card,
+Hover, Selected, Chip fill, and Chip text. Its component controls cover density,
+the week-summary rail, selection treatment, tint strength, and chip tint. Its
+preview-only controls cover selected date, traded/not-yet-traded state, and
+account authorization. These controls do not alter calendar records, account
+state, or server actions.
+
+Implemented in the first Phase 2 slice:
+
+- `/calendar?lab=1` activates the route overlay outside production;
+- calendar navigation preserves `lab=1`, while Exit removes it;
+- base-theme and system-token changes stay scoped to the calendar content;
+- candidate roles update actual calendar cells, selected treatment, and chips;
+- density and week-summary-rail controls manipulate the real month grid;
+- Palette Lab parses pasted hex values and assigns scratch swatches to candidate
+  roles;
+- selected-day, traded/not-yet-traded, and authorization controls are clearly
+  presented as preview-only state and never write calendar data.
+
+The reusable registration contract, additional components, snapshots, and
+export remain open Phase 2 work.
 
 ## Problem
 
@@ -373,8 +419,10 @@ and the existing design-system specimens.
 
 ### Phase 2 — Component registry and snapshots
 
-Register the Calendar week strip, Metric strip, and Tags; add component/state
-controls, local snapshots, and CSS/JSON export.
+Instrument the real Calendar route first with the quick bar, Tweaks drawer,
+Palette Lab, candidate roles, and preview states. After that interaction model
+is accepted, extract the reusable route/component registration contract, add the
+Metric strip and Tags, then add local snapshots and CSS/JSON export.
 
 ### Phase 3 — Workflow expansion
 

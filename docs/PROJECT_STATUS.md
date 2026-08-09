@@ -32,6 +32,25 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-08** — Design Lab Phase 2: actual Calendar instrumentation
+  (branch `feat/design-lab`).
+  - Added `/calendar?lab=1` around the real server-rendered calendar instead of
+    copying it into an isolated specimen. The normal route and its data/actions
+    remain authoritative and unchanged when Lab mode is absent.
+  - Added the reference-inspired quick bar, Tweaks drawer, and Palette Lab with
+    explicit System, Candidate, and Scratch maturity. Candidate roles cover
+    Card, Hover, Selected, Chip fill, and Chip text.
+  - Added calendar treatment controls for density, week-summary rail, selection
+    treatment, and tint strength, plus preview-only selected-day, traded state,
+    and authorization controls. Reset and Exit discard the experiment.
+  - Browser QA verified scoped Light-theme values, selected-cell colors,
+    compact density, rail hiding, scratch-to-candidate palette assignment,
+    mobile drawer behavior, and an untouched `/calendar` route with no console
+    errors. Focused tests, scoped ESLint, and TypeScript pass.
+  - Remaining Phase 2: accept/refine this interaction, extract the reusable
+    component registration contract, add Metric strip and Tags, then snapshots
+    and CSS/JSON export.
+
 - **2026-08-08** — Design Lab Phase 1 implementation
   (branch `feat/design-lab`).
   - Added the dev-only `/design-system?lab=1` editor with base-theme switching,

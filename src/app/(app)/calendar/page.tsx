@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { eq } from "drizzle-orm";
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import { db, schema } from "@/lib/db";
 import { getActiveAccount } from "@/lib/accountScope";
 import { netPnl } from "@/lib/pnl";
@@ -9,6 +9,7 @@ import { fmtMoney } from "@/lib/format";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { journalDayState } from "@/lib/journalDayStatus";
 import CalendarRangeFilter from "@/components/CalendarRangeFilter";
+import CalendarRouteDesignLab from "@/components/design-lab/CalendarRouteDesignLab";
 import PendingSubmitButton from "@/components/PendingSubmitButton";
 import PeriodTabs from "@/components/ui/PeriodTabs";
 import { setNoTradeDayAction } from "@/app/journal/actions";
@@ -28,6 +29,7 @@ type CalendarSearch = {
   range?: string;
   from?: string;
   to?: string;
+  lab?: string;
 };
 
 const monthFmt = new Intl.DateTimeFormat("en-US", {
@@ -86,6 +88,7 @@ function calendarHref(params: CalendarSearch): string {
   if (params.range) search.set("range", params.range);
   if (params.from) search.set("from", params.from);
   if (params.to) search.set("to", params.to);
+  if (params.lab) search.set("lab", params.lab);
   const query = search.toString();
   return query ? `/calendar?${query}` : "/calendar";
 }
@@ -315,15 +318,25 @@ function MonthView({
       </div>
 
       <div>
-        <div className="grid grid-cols-6 px-1 pb-1">
+        <div
+          className="grid px-1 pb-1"
+          style={{ gridTemplateColumns: "repeat(var(--lab-calendar-columns, 6), minmax(0, 1fr))" }}
+        >
           {[...WORKDAYS, ""].map((d, index) => (
-            <div key={`${d}-${index}`} className="px-4 text-left text-sm font-semibold text-[var(--muted)]">
+            <div
+              key={`${d}-${index}`}
+              data-calendar-week-heading={index === WORKDAYS.length ? "true" : undefined}
+              className="px-4 text-left text-sm font-semibold text-[var(--muted)]"
+            >
               {d}
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-6 overflow-hidden rounded-[6px] bg-[var(--border)] gap-[2px]">
+        <div
+          className="grid overflow-hidden rounded-[6px] bg-[var(--border)] gap-[2px]"
+          style={{ gridTemplateColumns: "repeat(var(--lab-calendar-columns, 6), minmax(0, 1fr))" }}
+        >
           {weeks.map((week, weekIndex) => (
             <Fragment key={weekIndex}>
               {week.days.map((day) => {
@@ -336,6 +349,7 @@ function MonthView({
                 const content = (
                   <div
                     data-calendar-date={day.date}
+                    data-calendar-cell
                     className={`flex h-full min-h-36 flex-col bg-[var(--surface)] p-4 ${
                       day.inMonth ? "" : "opacity-30"
                     }`}
@@ -351,13 +365,13 @@ function MonthView({
                         >
                           {fmtMoney(day.agg!.pnl)}
                         </span>
-                        <span className="block text-sm font-normal text-[var(--muted)]">
+                        <span data-calendar-chip className="block text-sm font-normal text-[var(--muted)]">
                           {day.agg!.trades} {day.agg!.trades === 1 ? "trade" : "trades"}
                         </span>
                       </span>
                     ) : state === "no_trade" && day.inMonth ? (
                       <span className="mt-auto space-y-1.5">
-                        <span className="block font-mono text-[12px] font-medium text-[var(--muted)]">
+                        <span data-calendar-chip className="block font-mono text-[12px] font-medium text-[var(--muted)]">
                           No-trade day
                         </span>
                         {!readOnly ? (
@@ -398,7 +412,7 @@ function MonthView({
                 );
               })}
 
-              <div className="flex min-h-36 flex-col bg-[var(--surface)] p-4">
+              <div data-calendar-week-summary data-calendar-cell className="flex min-h-36 flex-col bg-[var(--surface)] p-4">
                 <span className="text-sm font-semibold leading-none text-[var(--foreground)]">
                   Week {weekIndex + 1}
                 </span>
@@ -476,6 +490,7 @@ function MiniMonth({
           return (
             <div
               key={i}
+              data-calendar-date={date}
               className="aspect-square rounded-md flex items-center justify-center text-base font-semibold text-[var(--muted)]"
               style={{
                 backgroundColor: agg
@@ -551,6 +566,7 @@ export default async function CalendarPage({
 }) {
   const rawParams = await searchParams;
   const { m, y, view, range } = rawParams;
+  const labMode = process.env.NODE_ENV !== "production" && rawParams.lab === "1";
   const from = validDate(rawParams.from);
   const to = validDate(rawParams.to);
   const activeAccount = await getActiveAccount();
@@ -562,19 +578,35 @@ export default async function CalendarPage({
     range,
     from,
     to,
+    lab: labMode ? "1" : undefined,
   };
   const filteredByDate = filterByRange(byDate, from, to);
   const filteredNoTradeDates = filterDatesByRange(noTradeDates, from, to);
   const readOnly = isDemoReadOnly();
 
   const latest = [...periods].sort().at(-1);
-  if (!latest) return emptyState();
+  const wrapLab = (content: ReactNode, dates: string[]) => (
+    labMode ? <CalendarRouteDesignLab candidateDates={dates}>{content}</CalendarRouteDesignLab> : content
+  );
+  if (!latest) return wrapLab(emptyState(), [today]);
 
   if (view === "year") {
     const year = /^\d{4}$/.test(y ?? "") ? Number(y) : Number(latest.slice(0, 4));
-    return <YearView year={year} byDate={filteredByDate} noTradeDates={filteredNoTradeDates} latest={latest} params={{ ...params, view: "year", y: String(year), m: undefined }} />;
+    const dates = [...new Set([today, ...filteredByDate.keys(), ...filteredNoTradeDates])]
+      .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date) && date.startsWith(`${year}-`))
+      .sort();
+    return wrapLab(
+      <YearView year={year} byDate={filteredByDate} noTradeDates={filteredNoTradeDates} latest={latest} params={{ ...params, view: "year", y: String(year), m: undefined }} />,
+      dates,
+    );
   }
 
   const ym = /^\d{4}-\d{2}$/.test(m ?? "") ? (m as string) : latest;
-  return <MonthView ym={ym} byDate={filteredByDate} noTradeDates={filteredNoTradeDates} readOnly={readOnly} today={today} params={{ ...params, m: ym, view: undefined, y: undefined }} />;
+  const dates = [...new Set([today, ...filteredByDate.keys(), ...filteredNoTradeDates])]
+    .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date) && date.startsWith(`${ym}-`))
+    .sort();
+  return wrapLab(
+    <MonthView ym={ym} byDate={filteredByDate} noTradeDates={filteredNoTradeDates} readOnly={readOnly} today={today} params={{ ...params, m: ym, view: undefined, y: undefined }} />,
+    dates,
+  );
 }
