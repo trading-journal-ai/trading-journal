@@ -47,6 +47,10 @@ The reference screenshots establish three connected control surfaces:
 3. **Palette Lab** — scratch swatches that can be assigned to semantic candidate
    roles before any production token is proposed.
 
+The control surfaces use stable white, neutral tooling chrome. They do not
+inherit Daylight or the base theme being evaluated; only the instrumented page
+or component preview responds to theme experiments.
+
 Values are visibly classified by maturity:
 
 - **System** values come from the production token contract.

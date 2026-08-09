@@ -40,6 +40,9 @@ stopped. This is the "when did we last work on it" trail.
   - Added the reference-inspired quick bar, Tweaks drawer, and Palette Lab with
     explicit System, Candidate, and Scratch maturity. Candidate roles cover
     Card, Hover, Selected, Chip fill, and Chip text.
+  - Separated the tooling chrome from preview themes: quick controls, drawers,
+    Palette Lab, and the reference editor now use a stable white neutral theme
+    while the page under review remains independently adjustable.
   - Added calendar treatment controls for density, week-summary rail, selection
     treatment, and tint strength, plus preview-only selected-day, traded state,
     and authorization controls. Reset and Exit discard the experiment.

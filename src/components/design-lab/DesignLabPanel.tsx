@@ -1,6 +1,7 @@
 import { colorInputValue, type LabTokenDrafts } from "@/lib/designLab";
 import { TOKEN_GROUPS } from "@/lib/designSystem";
 import { THEMES, type Theme } from "@/lib/theme";
+import { DESIGN_LAB_TOOL_STYLE } from "@/components/design-lab/toolingTheme";
 
 type DesignLabPanelProps = {
   baseTheme: Theme;
@@ -96,7 +97,11 @@ export default function DesignLabPanel({
   const editedCount = Object.keys(drafts).length;
 
   return (
-    <aside className="xl:sticky xl:top-5 xl:col-start-2 xl:row-start-1 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto">
+    <aside
+      data-design-lab-tooling="reference-panel"
+      style={DESIGN_LAB_TOOL_STYLE}
+      className="xl:sticky xl:top-5 xl:col-start-2 xl:row-start-1 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto"
+    >
       <div className="rounded-[8px] border border-[var(--border)] bg-[var(--panel)] p-4 shadow-sm">
         <div className="flex items-start justify-between gap-4 border-b border-[var(--hairline)] pb-4">
           <div>

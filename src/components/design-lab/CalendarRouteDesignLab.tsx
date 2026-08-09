@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 
+import { DESIGN_LAB_TOOL_STYLE } from "@/components/design-lab/toolingTheme";
 import useDesignLabTheme from "@/components/design-lab/useDesignLabTheme";
 import {
   CALENDAR_CANDIDATE_ROLES,
@@ -155,7 +156,11 @@ function PaletteLab({
   }
 
   return (
-    <section className="fixed bottom-4 left-4 right-4 z-[60] max-h-[calc(100vh-2rem)] overflow-y-auto rounded-[10px] border border-[var(--border)] bg-[var(--panel)] p-4 shadow-2xl sm:left-auto sm:w-[340px] lg:right-[388px]">
+    <section
+      data-design-lab-tooling="palette"
+      style={DESIGN_LAB_TOOL_STYLE}
+      className="fixed bottom-4 left-4 right-4 z-[60] max-h-[calc(100vh-2rem)] overflow-y-auto rounded-[10px] border border-[var(--border)] bg-[var(--panel)] p-4 shadow-2xl sm:left-auto sm:w-[340px] lg:right-[388px]"
+    >
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-[14px] font-semibold text-[var(--foreground)]">Palette Lab</h2>
@@ -341,7 +346,11 @@ export default function CalendarRouteDesignLab({
         [data-calendar-lab][data-calendar-rail="off"] [data-calendar-week-summary] { display: none; }
       `}</style>
 
-      <div className="sticky top-[65px] z-30 -mx-5 mb-6 overflow-x-auto border-y border-[var(--border)] bg-[var(--background)] px-4 py-2 shadow-sm">
+      <div
+        data-design-lab-tooling="quick-bar"
+        style={DESIGN_LAB_TOOL_STYLE}
+        className="sticky top-[65px] z-30 -mx-5 mb-6 overflow-x-auto border-y border-[var(--border)] bg-[var(--background)] px-4 py-2 shadow-sm"
+      >
         <div className="flex min-w-max items-center gap-3">
           <QuickControl label="theme">
             <select value={baseTheme} onChange={(event) => changeBaseTheme(event.target.value as Theme)} className="h-8 rounded-[5px] border border-[var(--border)] bg-[var(--surface)] px-2 text-[11px] text-[var(--foreground)]">
@@ -415,7 +424,11 @@ export default function CalendarRouteDesignLab({
       </div>
 
       {panelOpen ? (
-        <aside className="fixed bottom-4 right-4 top-[74px] z-50 w-[360px] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-[10px] border border-[var(--border)] bg-[var(--panel)] p-4 shadow-2xl">
+        <aside
+          data-design-lab-tooling="drawer"
+          style={DESIGN_LAB_TOOL_STYLE}
+          className="fixed bottom-4 right-4 top-[74px] z-50 w-[360px] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-[10px] border border-[var(--border)] bg-[var(--panel)] p-4 shadow-2xl"
+        >
           <div className="flex items-start justify-between gap-3 border-b border-[var(--hairline)] pb-4">
             <div>
               <h2 className="text-[15px] font-semibold text-[var(--foreground)]">Calendar Tweaks</h2>
