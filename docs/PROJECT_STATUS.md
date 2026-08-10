@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-08-07 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-08-10 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -31,6 +31,20 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-08-10** — Journal formatting merge preparation
+  (branch `design/journal-formatting`).
+  - Confirmed the branch is current with `origin/main` and reviewed its final
+    22-file journal, design-contract, and product-documentation scope.
+  - Browser-tested `/journal` at desktop and 390px widths: Day and Week render,
+    Week reveals the relocated five-session strip and P&L timeline, previous-week
+    navigation updates the date and heading, and the console remains clean.
+  - Targeted ESLint passed for every changed TypeScript/React file. The Node 22
+    production build, TypeScript pass, static generation, and bundled demo-schema
+    verification passed.
+  - Full-repository lint remains blocked only by the two known, unchanged
+    `react-hooks/set-state-in-effect` errors under `src/components/preview/`.
+  - **Stopped at:** merge candidate validated and ready for its completion PR.
 
 - **2026-08-07** — Week-at-a-glance placement pass
   (branch `design/journal-formatting`).
