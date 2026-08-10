@@ -2739,7 +2739,7 @@ export default async function TradeJournalReview({
     : { label: "Journal", href: basePath };
 
   return (
-    <div className={`mx-auto w-full pb-24 ${usesReviewModule ? "max-w-none sm:px-5" : showArchiveSidebar ? "max-w-[1240px]" : "max-w-[800px]"}`}>
+    <div className={`mx-auto w-full pb-24 ${usesReviewModule ? "max-w-6xl" : showArchiveSidebar ? "max-w-[1240px]" : "max-w-[800px]"}`}>
       {backHref ? (
         <Breadcrumbs
           back={breadcrumbBack}

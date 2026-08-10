@@ -46,11 +46,15 @@ stopped. This is the "when did we last work on it" trail.
   - Recovered the updated white Light theme as the app default. Its token set
     had already landed, but the `DEFAULT_THEME = "light"` commit was stranded on
     `design/calendar-preview`; Daylight remains available as an explicit choice.
+  - Restored Journal to the shared `max-w-6xl` (72rem / 1152px) workspace used by
+    Calendar, Trades, and Analytics. The uncapped screenshot-matching pass had
+    overridden that established cross-product alignment.
   - Browser-compared the 1440 × 838 implementation with the normalized source;
-    Next/Previous navigation, the Week strip, and the Light/Daylight selector
-    passed, with no console warnings or errors. The in-app browser did not honor
-    its requested 390px override, so that breakpoint was not claimed as
-    browser-verified in this pass.
+    Next/Previous navigation, the Week strip, the Light/Daylight selector, and
+    the 1152px width across all four primary workspaces passed, with no console
+    warnings or errors. The in-app browser did not honor its requested 390px
+    override, so that breakpoint was not claimed as browser-verified in this
+    pass.
   - Targeted ESLint, TypeScript, and `git diff --check` passed. Repository-wide
     `verify:quick` remains blocked only by the two known, unchanged
     `react-hooks/set-state-in-effect` errors under `src/components/preview/`.

@@ -1,6 +1,6 @@
 # Trading Journal Design System
 
-> Status: Canonical · Last updated: 2026-07-22 · Themes: dark · light · daylight · evening
+> Status: Canonical · Last updated: 2026-08-10 · Themes: dark · light · daylight · evening
 
 This is the single source of truth for the product's visual language:
 principles, typography, color roles, spacing, primitives, and component rules.
@@ -49,6 +49,15 @@ scanning during review, then gets out of the way when the user is writing.
   accents.
 - Controls stay clearly clickable, but content areas avoid unnecessary borders
   and containers.
+
+## Workspace layout
+
+The primary Journal, Calendar, Trades, and Analytics workspaces share a centered
+`max-w-6xl` content measure: **72rem / 1152px** before the App Shell's responsive
+page padding. This stable width keeps their navigation, filters, evidence, and
+tables aligned as traders move between review surfaces. Individual prose or
+detail modules may use a narrower internal measure, but primary workspace routes
+must not remove or independently widen this cap.
 
 ## Themes
 
