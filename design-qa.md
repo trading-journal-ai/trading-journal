@@ -1,67 +1,61 @@
-# Design QA — Journal Week at a Glance
+# Design QA — Journal Day micro calendar
 
-- Source visual truth: `/Users/justin/Desktop/screenshots/Screenshot 2026-08-07 at 9.18.58 AM.png`
-- Implementation screenshot: `/tmp/journal-week-strip-in-week-tab-final.png`
-- Route/state: `/journal?date=2026-08-06`, Week → P&L selected
+- Source visual truth: `/Users/justin/Desktop/screenshots/Screenshot 2026-08-10 at 10.51.05 AM.png`
+- Claude Design reference: `/private/tmp/trading-journal-design-review.n5CAlr/designs/Journal Day v2 richer.dc.html`
+- Implementation screenshot: `/private/tmp/journal-micro-calendar-desktop-final.png`
+- Side-by-side comparison: `/private/tmp/journal-micro-calendar-comparison-final.png`
+- Route/state: `/journal?date=2026-08-05`, Day → P&L selected
 - Browser: Codex in-app Browser
-- CSS viewport: 1423 × 1047
-- Source pixels: 2846 × 2094 at 2×; normalized to 1423 × 1047
-- Implementation pixels: 1423 × 1047 at 1×
+- Comparison viewport: 1440 × 838 CSS pixels
+- Source pixels: 2496 × 1452, normalized to 1440 × 838
 
-## Full-view comparison evidence
+## Comparison result
 
-The normalized source and implementation preserve the same information order:
-page-level week navigation, selected-day heading, Day / Week / Month scope,
-Week lenses, five-session at-a-glance strip, week summary, and progress timeline.
-The implementation includes the persistent app header that the rough reference
-crop omits; the Journal content underneath aligns to the same 1240px desktop
-measure.
+The focused Journal day now follows the reference hierarchy: a sparse five-day
+micro rail, full date heading with textual date controls, two underline tab
+groups on one hairline, then the day evidence. Desktop content insets and the
+rail-to-heading, heading-to-tabs, and tabs-to-evidence rhythm visually align with
+the normalized source.
 
-## Focused-region comparison evidence
-
-Focused crops at 1240 × 725 compared the review tabs through the evidence
-boundary. Typography, day-cell spacing, metric pills, summary hierarchy, total
-P&L placement, timeline structure, colors, and copy match the supplied direction.
-The reference omitted the strip's outer border, while the implementation keeps
-all four edges because the owner explicitly requested the complete bordered
-treatment.
+The implementation intentionally retains the persistent production app header
+and renders live journal data. The source crop omits that header and uses static
+prototype chart/ticker data; these are state/content differences rather than
+fidelity defects in the requested navigation and header surfaces.
 
 ## Required fidelity surfaces
 
-- Fonts and typography: passed; existing Geist hierarchy and weights are reused.
-- Spacing and layout rhythm: passed; the strip leads Week → P&L and the progress
-  content follows without an intervening duplicate section.
-- Colors and visual tokens: passed; existing surface, hairline, P&L, selection,
-  and muted tokens are unchanged.
-- Image quality and assets: passed; the target contains no new raster assets and
-  all existing control icons are reused.
-- Copy and content: passed; the live week data and evidence boundary match the
-  reference state.
+- Typography: passed; existing Geist styles reproduce the compact day labels,
+  emphasized selected date, page title, controls, and tab hierarchy.
+- Spacing and layout: passed; the review module uses the wide reference canvas
+  and keeps the micro rail borderless and compact.
+- Color and tokens: passed; outcome colors and the semantic accent underline use
+  existing production tokens.
+- Copy and content: passed; Today, Previous, Next, Calendar, Day, Week, Month,
+  P&L, Trades, Chart read, and Coach match the reference.
+- Assets: passed; the target adds no new image or icon asset.
 
-## Interaction and responsive checks
+## Interaction checks
 
-- Day scope renders without the week strip.
-- Week scope renders the strip first and retains the existing P&L progress view.
-- Selecting Monday from the strip navigates to `/journal?date=2026-08-03` and
-  restores Day scope.
-- 1024 × 768 has no page-level horizontal overflow.
+- Next navigates from `2026-08-05` to `2026-08-06` and updates the heading to
+  `Thursday, August 6`.
+- Previous returns to `2026-08-05` and restores `Wednesday, August 5`.
+- Week → P&L still exposes the richer `Week at a glance` strip; it was not
+  repurposed as the compact header rail.
 - No framework overlay or browser console warnings/errors were present.
 
 ## Findings
 
-No actionable P0, P1, or P2 differences remain. The complete outer strip border
-is an intentional owner-requested deviation from the rough screenshot.
+No actionable P0, P1, or P2 differences remain on the requested desktop header
+and navigation surfaces. The in-app browser did not honor the requested 390px
+viewport override during this pass, so the narrow breakpoint was not claimed as
+browser-verified here; overflow and wrapping behavior remain explicit in the
+component structure.
 
 ## Comparison history
 
-- Pass 1: content order and dimensions matched; the browser capture retained a
-  focus highlight on the selected Week tab from the interaction test.
-- Pass 2: verified that the highlight was automation interaction state rather
-  than design drift; no implementation change was required.
-
-## Follow-up polish
-
-- P3: revisit the week-progress visualization once its evidence model and
-  supporting insight are defined.
+- Pass 1: the micro rail and controls matched, but the 1152px module cap made
+  the header substantially narrower than the source.
+- Pass 2: removed that cap and restored the source's roughly 40px desktop
+  insets; the final side-by-side comparison passed.
 
 final result: passed

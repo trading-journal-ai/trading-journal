@@ -32,6 +32,27 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-10** — Journal Day micro-calendar reference match
+  (branch `design/journal-micro-calendar`).
+  - Compared the production Journal against the supplied screenshot and Claude
+    Design HTML handoff, and confirmed no existing branch contained the missing
+    focused-Day micro rail/header treatment.
+  - Added a separate borderless five-day rail above the Day heading, restored
+    textual Today / Previous / Next / Calendar controls, changed Previous/Next
+    to trading-day steps, aligned both tab groups to the accent underline, and
+    widened the review canvas to the reference desktop insets.
+  - Preserved the richer bordered five-session strip in Week → P&L rather than
+    reusing it as the compact header rail.
+  - Browser-compared the 1440 × 838 implementation with the normalized source;
+    Next/Previous navigation and the Week strip passed, with no console warnings
+    or errors. The in-app browser did not honor its requested 390px override, so
+    that breakpoint was not claimed as browser-verified in this pass.
+  - Targeted ESLint, TypeScript, and `git diff --check` passed. Repository-wide
+    `verify:quick` remains blocked only by the two known, unchanged
+    `react-hooks/set-state-in-effect` errors under `src/components/preview/`.
+  - **Stopped at:** implementation and design QA complete; branch ready for
+    owner review and PR handoff.
+
 - **2026-08-10** — Journal formatting merge preparation
   (branch `design/journal-formatting`).
   - Confirmed the branch is current with `origin/main` and reviewed its final

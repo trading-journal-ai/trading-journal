@@ -165,6 +165,10 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
+.journal-review-tabs [role="tab"][aria-selected="true"] {
+  border-color: var(--accent);
+}
+
 .journal-week-day,
 .journal-week-day--selected {
   background: var(--background);

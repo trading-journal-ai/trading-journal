@@ -24,7 +24,7 @@ import {
   JournalDateNavigationProvider,
 } from "@/components/JournalDateNavigation";
 import JournalWeekStrip, {
-  JournalWeekNavigation,
+  JournalDayNavigation,
   type JournalWeekStripDay,
 } from "@/components/JournalWeekStrip";
 import JournalReviewModule, {
@@ -282,6 +282,20 @@ function isoAddDays(date: string, days: number): string {
 
 function isoWeekday(date: string): number {
   return utcDate(date).getUTCDay();
+}
+
+function isoAddTradingDays(date: string, days: number): string {
+  const direction = days < 0 ? -1 : 1;
+  let remaining = Math.abs(days);
+  let next = date;
+
+  while (remaining > 0) {
+    next = isoAddDays(next, direction);
+    const weekday = isoWeekday(next);
+    if (weekday >= 1 && weekday <= 5) remaining -= 1;
+  }
+
+  return next;
 }
 
 function weekStartFor(date: string): string {
@@ -1494,7 +1508,7 @@ function DayReviewSection({
   showReviewModule = false,
   showContextDetails = false,
   showLegacyPnl = true,
-  compactDayHeader = false,
+  hideDayHeader = false,
   coachSlots,
   dayCoach,
   weekOverview,
@@ -1505,7 +1519,7 @@ function DayReviewSection({
   showReviewModule?: boolean;
   showContextDetails?: boolean;
   showLegacyPnl?: boolean;
-  compactDayHeader?: boolean;
+  hideDayHeader?: boolean;
   coachSlots?: ModuleCoachSlots;
   dayCoach?: DayCoachPanelData;
   weekOverview?: ReactNode;
@@ -1519,14 +1533,7 @@ function DayReviewSection({
   return (
     <section>
       <div className="min-w-0">
-          {compactDayHeader ? (
-            <div className="mb-5 pt-2">
-              <JournalDateHeading
-                level={1}
-                className="text-[20px] font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]"
-              />
-            </div>
-          ) : (
+          {hideDayHeader ? null : (
             <div className="mb-7">
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
                 <JournalDateHeading
@@ -1725,7 +1732,7 @@ function ReviewDayRangeSection({
   showReviewModule = false,
   showContextDetails = false,
   showLegacyPnl = true,
-  compactDayHeader = false,
+  hideDayHeader = false,
   coachSlots,
   dayCoach,
   weekOverview,
@@ -1736,7 +1743,7 @@ function ReviewDayRangeSection({
   showReviewModule?: boolean;
   showContextDetails?: boolean;
   showLegacyPnl?: boolean;
-  compactDayHeader?: boolean;
+  hideDayHeader?: boolean;
   coachSlots?: ModuleCoachSlots;
   dayCoach?: DayCoachPanelData;
   weekOverview?: ReactNode;
@@ -1749,7 +1756,7 @@ function ReviewDayRangeSection({
       showReviewModule={showReviewModule}
       showContextDetails={showContextDetails}
       showLegacyPnl={showLegacyPnl}
-      compactDayHeader={compactDayHeader}
+      hideDayHeader={hideDayHeader}
       coachSlots={coachSlots}
       dayCoach={dayCoach}
       weekOverview={weekOverview}
@@ -2732,7 +2739,7 @@ export default async function TradeJournalReview({
     : { label: "Journal", href: basePath };
 
   return (
-    <div className={`mx-auto w-full pb-24 ${showArchiveSidebar || usesReviewModule ? "max-w-[1240px]" : "max-w-[800px]"}`}>
+    <div className={`mx-auto w-full pb-24 ${usesReviewModule ? "max-w-none sm:px-5" : showArchiveSidebar ? "max-w-[1240px]" : "max-w-[800px]"}`}>
       {backHref ? (
         <Breadcrumbs
           back={breadcrumbBack}
@@ -2764,10 +2771,12 @@ export default async function TradeJournalReview({
           ) : null}
 
           {usesReviewModule && preset === "today" && comparisonData ? (
-            <JournalWeekNavigation
-              weekStart={comparisonData.week.key}
-              previousWeekHref={journalReviewModuleHref(basePath, isoAddDays(archiveAnchor, -7))}
-              nextWeekHref={journalReviewModuleHref(basePath, isoAddDays(archiveAnchor, 7))}
+            <JournalDayNavigation
+              days={weekStripDays}
+              basePath={basePath}
+              todayDate={today}
+              previousDate={isoAddTradingDays(archiveAnchor, -1)}
+              nextDate={isoAddTradingDays(archiveAnchor, 1)}
               calendarHref={`/calendar?m=${archiveAnchor.slice(0, 7)}`}
             />
           ) : null}
@@ -2793,7 +2802,7 @@ export default async function TradeJournalReview({
               showReviewModule
               showContextDetails
               showLegacyPnl={false}
-              compactDayHeader
+              hideDayHeader
               weekOverview={<JournalWeekStrip days={weekStripDays} basePath={basePath} />}
               coachSlots={moduleCoachScopes && comparisonRanges ? {
                 week: (

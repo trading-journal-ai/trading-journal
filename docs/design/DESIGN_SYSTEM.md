@@ -302,8 +302,13 @@ Build once, reuse everywhere.
   waiting for navigation. The page background remains flat with no added border,
   radius, elevation, or bottom edge. The five-day strip uses a complete hairline
   outline with a 4px radius. It leads Week → P&L as the at-a-glance summary and
-  does not remain above the Day / Week / Month review tabs. The week range and
-  previous/next/Calendar controls remain in the page-level navigation header.
+  does not remain above the Day / Week / Month review tabs. Focused Day uses a
+  separate borderless five-day micro rail above its date heading: abbreviated
+  weekday/date over outcome-colored P&L, with the selected date promoted by
+  foreground weight. Empty and future days keep their position but show no
+  invented value. Today / Previous / Next / Calendar remain textual controls in
+  the same page-level header; Previous and Next step across trading weekdays.
+  Both Journal tab groups use the semantic accent underline in this surface.
 - **Journal** — prose-first. Headers use Display/Page title; recap text uses Body
   large; metrics sit under the header as quiet mono metadata; ticker rail compact
   and sorted best-to-worst; pills secondary; reading mode hides edit controls
