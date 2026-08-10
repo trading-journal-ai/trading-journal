@@ -53,15 +53,16 @@ scanning during review, then gets out of the way when the user is writing.
 ## Themes
 
 The app ships **four themes**, applied via the `data-theme` attribute on
-`<html>` and persisted in `localStorage`. The default is **`daylight`** (a warm
-light theme). Theme plumbing lives in [`src/lib/theme.ts`](../../src/lib/theme.ts)
+`<html>` and persisted in `localStorage`. The default is **`light`** (the white,
+cool-neutral product direction). Theme plumbing lives in
+[`src/lib/theme.ts`](../../src/lib/theme.ts)
 (`THEMES`, `DEFAULT_THEME`, `applyTheme`) and boots in
 [`src/components/ThemeBoot.tsx`](../../src/components/ThemeBoot.tsx).
 
 | Theme | `data-theme` | Character | `color-scheme` |
 | --- | --- | --- | --- |
-| Daylight | `daylight` (default) | Warm paper light; amber accent | light |
-| Light | `light` | White canvas, cool light-gray surfaces; blue accent | light |
+| Light | `light` (default) | White canvas, cool light-gray surfaces; blue accent | light |
+| Daylight | `daylight` | Warm paper light; amber accent | light |
 | Evening | `evening` | Warm charcoal dark; amber accent | dark |
 | Dark | `dark` (`:root`) | Cool blue-black dark; blue accent | dark |
 

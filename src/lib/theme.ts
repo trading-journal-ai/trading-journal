@@ -2,7 +2,11 @@ export const THEMES = ["dark", "light", "daylight", "evening"] as const;
 
 export type Theme = (typeof THEMES)[number];
 
-export const DEFAULT_THEME: Theme = "daylight";
+/**
+ * The white Light theme is the current product direction. Daylight remains
+ * available as an opt-in warm-paper alternative.
+ */
+export const DEFAULT_THEME: Theme = "light";
 
 export function isTheme(value: unknown): value is Theme {
   return typeof value === "string" && (THEMES as readonly string[]).includes(value);

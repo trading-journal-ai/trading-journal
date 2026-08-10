@@ -2,8 +2,8 @@
 
 - Source visual truth: `/Users/justin/Desktop/screenshots/Screenshot 2026-08-10 at 10.51.05 AM.png`
 - Claude Design reference: `/private/tmp/trading-journal-design-review.n5CAlr/designs/Journal Day v2 richer.dc.html`
-- Implementation screenshot: `/private/tmp/journal-micro-calendar-desktop-final.png`
-- Side-by-side comparison: `/private/tmp/journal-micro-calendar-comparison-final.png`
+- Implementation screenshot: `/private/tmp/journal-micro-calendar-light-final.png`
+- Side-by-side comparison: `/private/tmp/journal-micro-calendar-light-comparison.png`
 - Route/state: `/journal?date=2026-08-05`, Day → P&L selected
 - Browser: Codex in-app Browser
 - Comparison viewport: 1440 × 838 CSS pixels
@@ -15,7 +15,9 @@ The focused Journal day now follows the reference hierarchy: a sparse five-day
 micro rail, full date heading with textual date controls, two underline tab
 groups on one hairline, then the day evidence. Desktop content insets and the
 rail-to-heading, heading-to-tabs, and tabs-to-evidence rhythm visually align with
-the normalized source.
+the normalized source. The restored default Light theme also matches the
+reference's white canvas, cool-gray evidence surface, and blue interaction
+accent; the earlier warm Daylight default was a visible mismatch.
 
 The implementation intentionally retains the persistent production app header
 and renders live journal data. The source crop omits that header and uses static
@@ -28,8 +30,9 @@ fidelity defects in the requested navigation and header surfaces.
   emphasized selected date, page title, controls, and tab hierarchy.
 - Spacing and layout: passed; the review module uses the wide reference canvas
   and keeps the micro rail borderless and compact.
-- Color and tokens: passed; outcome colors and the semantic accent underline use
-  existing production tokens.
+- Color and tokens: passed; the updated Light tokens remain intact and now boot
+  by default (`#fff` canvas, `#f6f8fa` surface, `#0969da` accent). Outcome colors
+  and the semantic accent underline use existing production roles.
 - Copy and content: passed; Today, Previous, Next, Calendar, Day, Week, Month,
   P&L, Trades, Chart read, and Coach match the reference.
 - Assets: passed; the target adds no new image or icon asset.
@@ -41,6 +44,8 @@ fidelity defects in the requested navigation and header surfaces.
 - Previous returns to `2026-08-05` and restores `Wednesday, August 5`.
 - Week → P&L still exposes the richer `Week at a glance` strip; it was not
   repurposed as the compact header rail.
+- Settings switches Daylight → Light without a reload; returning to Journal
+  preserves the explicit Light selection.
 - No framework overlay or browser console warnings/errors were present.
 
 ## Findings
@@ -56,6 +61,8 @@ component structure.
 - Pass 1: the micro rail and controls matched, but the 1152px module cap made
   the header substantially narrower than the source.
 - Pass 2: removed that cap and restored the source's roughly 40px desktop
-  insets; the final side-by-side comparison passed.
+  insets.
+- Pass 3: recovered the `DEFAULT_THEME = "light"` change that had remained only
+  on `design/calendar-preview`; the cool-white source comparison passed.
 
 final result: passed

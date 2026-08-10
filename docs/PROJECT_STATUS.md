@@ -43,10 +43,14 @@ stopped. This is the "when did we last work on it" trail.
     widened the review canvas to the reference desktop insets.
   - Preserved the richer bordered five-session strip in Week → P&L rather than
     reusing it as the compact header rail.
+  - Recovered the updated white Light theme as the app default. Its token set
+    had already landed, but the `DEFAULT_THEME = "light"` commit was stranded on
+    `design/calendar-preview`; Daylight remains available as an explicit choice.
   - Browser-compared the 1440 × 838 implementation with the normalized source;
-    Next/Previous navigation and the Week strip passed, with no console warnings
-    or errors. The in-app browser did not honor its requested 390px override, so
-    that breakpoint was not claimed as browser-verified in this pass.
+    Next/Previous navigation, the Week strip, and the Light/Daylight selector
+    passed, with no console warnings or errors. The in-app browser did not honor
+    its requested 390px override, so that breakpoint was not claimed as
+    browser-verified in this pass.
   - Targeted ESLint, TypeScript, and `git diff --check` passed. Repository-wide
     `verify:quick` remains blocked only by the two known, unchanged
     `react-hooks/set-state-in-effect` errors under `src/components/preview/`.
