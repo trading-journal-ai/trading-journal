@@ -75,7 +75,7 @@ export default function JournalReviewTabs({
             role="tab"
             aria-selected={view === item.key}
             onClick={() => onViewChange(item.key)}
-            className={`min-h-8 cursor-pointer whitespace-nowrap rounded-full px-3.5 text-[12.5px] font-semibold transition-colors ${
+            className={`min-h-8 cursor-pointer whitespace-nowrap rounded-full px-3.5 text-[12.5px] font-semibold transition-colors duration-150 ease-out ${
               view === item.key
                 ? "bg-[var(--foreground)] text-[var(--background)]"
                 : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]"

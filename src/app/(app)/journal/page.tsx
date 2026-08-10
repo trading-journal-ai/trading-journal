@@ -91,6 +91,7 @@ export default async function JournalPage({
       returnTo={returnTo}
       backHref={params.returnTo}
       accountId={activeAccount.id}
+      showArchiveSidebar={false}
       archiveLinkMode="review-module"
     />
   );

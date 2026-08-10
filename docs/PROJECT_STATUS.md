@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-08-07 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-08-10 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -31,6 +31,145 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-08-10** — Journal formatting merge preparation
+  (branch `design/journal-formatting`).
+  - Confirmed the branch is current with `origin/main` and reviewed its final
+    22-file journal, design-contract, and product-documentation scope.
+  - Browser-tested `/journal` at desktop and 390px widths: Day and Week render,
+    Week reveals the relocated five-session strip and P&L timeline, previous-week
+    navigation updates the date and heading, and the console remains clean.
+  - Targeted ESLint passed for every changed TypeScript/React file. The Node 22
+    production build, TypeScript pass, static generation, and bundled demo-schema
+    verification passed.
+  - Full-repository lint remains blocked only by the two known, unchanged
+    `react-hooks/set-state-in-effect` errors under `src/components/preview/`.
+  - Opened completion [PR #64](https://github.com/trading-journal-ai/trading-journal/pull/64).
+  - **Stopped at:** merge candidate validated, documented, and ready to merge.
+
+- **2026-08-07** — Week-at-a-glance placement pass
+  (branch `design/journal-formatting`).
+  - Split the week range/navigation header from the reusable five-session strip.
+  - Removed the strip from the persistent focused-Day header and placed it first
+    inside Week → P&L, directly above the existing week-state summary and daily
+    progress timeline.
+  - Preserved the strip's complete hairline border, selected-day treatment,
+    direct day links, optimistic navigation, and no-trade/future/empty states.
+  - Verified Day has no duplicate strip; Week leads with the at-a-glance strip;
+    selecting a weekday returns to that Day view; 1423×1047 and 1024×768 have no
+    page overflow; and the browser console remains clean.
+  - Targeted ESLint, TypeScript, the bundled demo-schema check, and a Webpack
+    production build passed. Full-repository lint remains blocked only by the
+    two known `react-hooks/set-state-in-effect` errors under
+    `src/components/preview/`.
+  - **Stopped at:** placement and hierarchy are implemented for owner review.
+    The week-progress visualization and its evidence model are intentionally
+    unchanged and remain the next design iteration.
+
+- **2026-08-07** — Journal learning-loop and unified navigation exploration
+  (branch `design/journal-formatting`).
+  - Audited the production Journal -> Calendar -> day -> trade flow after
+    hands-on use exposed slow retrieval in the continuous-scroll model.
+  - Reopened the 2026-07-21 Journal navigation decision while preserving its
+    useful canonical-day principle.
+  - Captured the missing stepping-stone contract: reflection -> Coach
+    distillation -> trader-adopted focus -> next-session resurfacing -> evidence
+    -> explicit resolution.
+  - Captured a shared period navigator for Journal, Calendar, Trades, and
+    Analytics plus one reusable inline trade-inspection interaction for Journal
+    and Trades.
+  - Clarified the minimum Journal contract: roughly thirty-second, unstructured
+    day-note capture must work even when the trader never opens Coach or mines
+    the archive manually.
+  - Defined a cited pattern ledger with recurrence states, trader correction,
+    positive-habit reinforcement, and an evidence-based overtrading diagnosis
+    rather than a raw trade-count threshold.
+  - Captured a weekly/monthly Personal Edge Profile for time window, price band,
+    trade sequence, setup, relative volume, opportunity quality, and
+    price-action cohorts, with sample and coverage guardrails.
+  - Separated the work into two tracks: dictation-first human reflection with
+    Dashboard carry-forward, and Analytics/Coach evidence-based pattern
+    detection. The tracks may reinforce each other without being forced to
+    merge on every day.
+  - Confirmed Calendar as Journal's browse/index mode rather than a separate
+    destination, with one canonical focused-day view behind date selection.
+  - Added the emotional execution spiral as the representative quick-capture
+    use case: preserve the trader's narrative, reflect a tentative behavior
+    chain, locate an intervention, and carry it forward only with trader
+    acceptance.
+  - Initialized the Impeccable `PRODUCT.md` with the confirmed product truth:
+    Journal is the calendar-based record, Dashboard owns live carry-forward,
+    Analytics owns investigation, and Coach connects narrative with evidence.
+  - Implemented the first production Journal structure directly on `/journal`:
+    a reusable five-day week strip with previous/next week controls, an existing
+    Calendar shortcut, direct day selection, compact daily P&L, and explicit
+    no-trade/future/empty states.
+  - Removed the archive sidebar from the focused-day route and made the existing
+    Day/Week/Month review module the content core. Session verdict, market
+    context, and chart-read prose no longer render above the module; Coach owns
+    that interpretation through its tab.
+  - Refined the focused Journal for its desktop-first window: widened the week
+    strip and review module to 1240px, spelled out month and weekday labels, and
+    removed the account banner plus the oversized duplicate selected-day
+    heading. A compact day heading now separates the selected week cell from the
+    review without repeating its metrics.
+  - Reworked each active week-strip cell around the selected structural lockup:
+    weekday/date first, P&L second, then trades, win rate, and profit factor as
+    one grouped metric pill. Empty-day labels remain quiet and use the same cell
+    rhythm without manufacturing metrics.
+  - Locked the week-cell typography to the annotated Figma spec: Geist Sans
+    semibold 16px for weekday/date, semibold 14px for P&L, and regular 11px for
+    the grouped trades/win-rate/profit-factor pill.
+  - Removed the redundant trailing Week summary cell. The review module already
+    owns the Week scope, while the five daily cells now share the entire strip
+    width and give the selected lockup more horizontal room.
+  - Rebalanced the cool Light theme around a white app canvas with light-gray
+    review surfaces. P&L/chart modules and selected content now sit one neutral
+    step above the page while compact metric pills retain the stronger gray.
+  - Refined the week-strip selected state with matching left/right borders and a
+    4px radius while retaining the bottom accent. Removed the outer top rule
+    above the date-range/navigation header so the strip stays open to the page.
+  - Reduced the selected day's P&L from three visible repetitions to two: the
+    primary value remains in the selected week cell and the review rail's metric
+    summary, while the redundant heading strip and chart-card total are hidden.
+  - Replaced the focused day's hand-built P&L SVG with the app's existing
+    TradingView Lightweight Charts runtime. A zero-based Baseline series keeps
+    the positive/negative split, adds an exact crosshair, follows theme tokens,
+    and resizes with the review module; scroll and zoom handling stay disabled
+    so the chart does not interfere with Journal navigation. Its narrower value
+    scale is on the right, with a small left plot inset balancing the chart
+    gutters beneath the Daily P&L heading. The Journal card omits TradingView
+    branding; the existing trade-chart surface retains the app-level linked
+    attribution.
+  - Kept the selected date, review tabs, and Coach available on zero-trade days
+    instead of replacing the Journal with the generic imported-trades empty
+    screen.
+  - Reframed Week -> P&L so it no longer repeats the five-cell navigation strip:
+    a compact week-state flag and evidence-based concentration read now lead a
+    horizontal session timeline. Daily P&L bars rise or fall from the shared
+    baseline with redundant green/red encoding, and hover or keyboard focus
+    reveals that day's trades, win rate, and profit factor.
+  - Added explicit in-progress, completed, upcoming, no-import, and future-day
+    states to the weekly visualization while keeping the underlying evidence
+    boundary visible.
+  - Owner clarified that the Electron app is desktop-first. Future design and
+    routine visual QA should prioritize laptop/desktop windows; phone-specific
+    layouts are not a supported product target and only need basic resilience.
+  - Stabilized the optimistic date-navigation handoff so pointer activation is
+    recorded once, resolved navigation clears the plotting state, and selecting
+    the active date cannot strand the chart loader.
+  - Verified the completed slice with targeted ESLint across every changed app
+    file, TypeScript, the bundled demo schema, a Webpack production build, and
+    Browser interaction checks at 1440×1000 and 1024×768. Date selection, chart
+    handoff, Day/Week scope switching, the weekly P&L timeline, and page-level
+    overflow all passed. Full repository lint remains blocked only by the two
+    known `react-hooks/set-state-in-effect` errors under `src/components/preview/`.
+  - **Completed at:** the Journal formatting, five-day navigation, daily P&L,
+    and Week -> P&L timeline are stabilized and updated onto current `main`.
+    The full month Calendar intentionally remains on `/calendar`; embedding it
+    should wait until its route-local grid/cells are extracted rather than
+    duplicated. Quick dictation capture and Dashboard carry-forward remain a
+    separate next interaction slice.
 
 - **2026-08-07** — Impeccable project initialization
   (branch `codex/impeccable-init`).

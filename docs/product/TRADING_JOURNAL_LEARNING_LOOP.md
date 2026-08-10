@@ -19,6 +19,24 @@ timing, sizing, charts, and statistical patterns make the coach more grounded,
 but they are not a separate emotional or product destination. They support the
 conversation between Journal, Coach, and Dashboard.
 
+This system contains two related tracks:
+
+- **Reflection track:** Journal captures the trader's free-form account;
+  Dashboard carries one accepted lesson into the next live session.
+- **Evidence track:** Analytics detects longitudinal cohorts and recurrence;
+  Coach translates the relevant evidence without replacing the trader's voice.
+
+They meet when a narrated behavior is supported, contradicted, or clarified by
+trade evidence. They do not need to meet on every day.
+
+> **Hands-on finding, 2026-08-06:** The conceptual loop exists, but the product
+> does not yet make its state transitions operational. A reflection can produce
+> a carry-forward sentence, but the next day does not consistently begin by
+> resurfacing and resolving it. The missing contract is **capture -> distill ->
+> adopt -> resurface -> test -> resolve**. Navigation and interaction implications
+> are captured in
+> [Unified Review Navigation and Learning Loop](../design/UNIFIED_REVIEW_NAVIGATION.md).
+
 For the product flow of importing trades, opening the daily recap editor,
 attaching coach review, and promoting carry-forward cues, see
 `docs/product/DAILY_RECAP_FLOW.md`.
@@ -53,6 +71,42 @@ Durable learning branch
   -> Trader accepts, edits, or dismisses it
   -> Playbook updates the standards used by future reviews
 ```
+
+## The stepping-stone contract
+
+The loop only closes when a lesson changes state across sessions. Each adopted
+carry-forward focus needs:
+
+- a source recap and source voice (trader, Coach proposal, or joint edit);
+- one observable behavior or experiment;
+- a review horizon or expiry;
+- a next-session cue;
+- evidence gathered while it is active; and
+- an explicit resolution: upheld, missed, mixed, untested, revised, completed,
+  or retired.
+
+The next Journal day should surface the prior focus before asking the trader to
+create a new one. The recap should end by continuing, refining, completing, or
+replacing that focus. Otherwise each day starts from scratch and the Journal is
+an archive rather than a learning system.
+
+This contract is an enhancement to quick journaling, not a prerequisite for it.
+The product should not force every note through Coach or require every day to
+produce a new focus. Notes may remain useful day context; most Coach findings
+should remain session-only. Promotion is reserved for observations that recur,
+matter, and can be tested.
+
+### Three learning cadences
+
+| Cadence | Default product behavior |
+| --- | --- |
+| Daily | Capture human context quickly, review the day, and optionally check or adopt one focus. Avoid making durable pattern claims from one session. |
+| Weekly | Surface a short set of emerging or repeated behaviors with cited days and trades. Ask the trader to confirm, correct, dismiss, or test one. |
+| Monthly | Summarize where edge and friction appear across time, price, setup, market condition, and price-action cohorts. Promote only stable, sufficiently covered findings. |
+
+This gives the system permission to remember without making the trader maintain
+the archive manually. It also prevents daily Coach copy from turning every
+emotion or outlier into a permanent rule.
 
 The dashboard is not the source of truth. It is the active surface that asks the
 right question at the right moment and brings the active lesson back into view.
@@ -98,6 +152,12 @@ loop wherever it helps the user and coach understand the day.
 | Timing, sizing, and hold behavior | Coach pattern detection and current experiment selection. |
 | Charts and screenshots | Journal narrative and trade-specific review. |
 | Statistical patterns and contradictions | Coach synthesis and future focus selection. |
+
+Analytics should also maintain a longitudinal **Personal Edge Profile**: a
+small, confidence-aware summary of where the trader tends to perform well and
+where behavior tends to deteriorate. The profile is described in
+`docs/analytics/ANALYTICS_RESEARCH_PLAN.md`; Coach surfaces its most relevant
+finding, while Analytics owns the evidence and drilldown.
 
 ## The Coach Finding Lifecycle
 
@@ -194,6 +254,25 @@ Every check-in can become the next session's focus.
 4. Dashboard cue: "Missing the first move is not a reason to lower standards."
 5. Dashboard prompt: "Are you lowering standards because you missed the first
    move?" The answer attaches back to the daily recap.
+
+### Dictation-first spiral example
+
+1. Journal dictation preserves the sequence: urgency to participate, a rushed
+   entry, a loss, pursuit when the stock moves without the trader, another loss,
+   size escalation, and a worse outcome.
+2. Coach reflects the chain back without prematurely assigning a permanent
+   label: `trigger -> rushed entry -> loss -> pursuit -> size escalation`.
+3. Trade evidence checks entry latency, re-entry timing, same-symbol churn,
+   sequence quality, and sizing changes.
+4. The trader corrects the interpretation and may adopt one intervention, such
+   as requiring a deliberate reset after the first stopped attempt.
+5. Dashboard shows that accepted intervention during the next session.
+6. The next Journal entry records whether the situation occurred and whether
+   the intervention was followed, missed, mixed, or untested.
+
+The system's job is not to sanitize the emotional story into a metric. It is to
+preserve the story, identify the decision point, and make an accepted response
+available when the pattern begins again.
 
 ## Coach Chat Preview
 

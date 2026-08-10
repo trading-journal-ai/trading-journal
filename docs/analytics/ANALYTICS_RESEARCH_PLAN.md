@@ -182,6 +182,76 @@ to narrate the evidence and choose the one highest-leverage next experiment.
 Charts that do not directly support one of these questions should be optional
 widgets, not default page furniture.
 
+## Personal Edge Profile
+
+The analytics system should maintain a general, longitudinal module that answers
+**where does this trader's edge show up, and where does behavior break down?**
+This is the evidence layer behind weekly and monthly Coach insights; it should
+not become another pile of unrelated cards.
+
+Candidate dimensions include:
+
+- time of day and session window;
+- entry-price band;
+- hold duration;
+- setup or tag;
+- trade sequence within the day;
+- symbol and repeated-symbol churn;
+- relative volume and opportunity quality when coverage exists;
+- price-action quality: chop, tight grind, whippy expansion, or clean
+  expansion; and
+- strategy-specific movement labels, such as surge or grind-for-a-curl, once
+  those setups have explicit definitions.
+
+The same module should expose positive and negative findings. Examples include
+"cleanest results occur in the opening window when price action expands" and
+"later re-entries after an early loss are degrading the day." These are
+templates, not claims to show without evidence.
+
+### Product placement and cadence
+
+| Surface | Role |
+| --- | --- |
+| Analytics | Own the profile, cohort controls, sample coverage, source trades, and supporting or contradicting periods. |
+| Coach | Surface at most one relevant profile finding with plain-language meaning and a link to evidence. |
+| Journal | Capture context that can explain or challenge the quantitative pattern. |
+| Dashboard | Show only an adopted cue or current experiment, not a rotating feed of statistical trivia. |
+
+Daily recap may show descriptive facts, but it should not infer a stable edge
+from one session. Weekly review can introduce emerging candidates. Monthly
+review can summarize repeated or established findings and whether they are
+strengthening, weakening, or unresolved.
+
+Every surfaced finding should include:
+
+- the selected period and comparison cohort;
+- sample size and data coverage;
+- magnitude and direction of the difference;
+- sensitivity to outliers;
+- whether the pattern appeared across multiple sessions;
+- supporting and contradicting examples; and
+- an action: inspect, confirm, dismiss, save as a question, or test as an
+  experiment.
+
+Avoid causal language and false precision. "This cohort has performed better in
+the available sample" is supportable; "this price range is why you win" usually
+is not. Small or concentrated samples should be labeled exploratory.
+
+### Data readiness
+
+| Dimension | Readiness | Notes |
+| --- | --- | --- |
+| Time of day, price band, duration, trade sequence, symbol | Derivable now | Existing trade and execution fields support initial cohorts. |
+| Post-loss latency, same-ticker churn, size/frequency escalation | Derivable now | Combine sequence evidence; do not reduce overtrading to count alone. |
+| Price-action quality | Partially available | Existing price-action read supports chop/grind/expansion categories; validate coverage and confidence before profile use. |
+| Setup and curl/surge labels | Partially available | Existing tags help, but durable comparison needs the settled setup taxonomy. |
+| Relative volume, float, catalyst, opportunity-set quality | Needs coverage/enrichment | Use only on sessions with trustworthy market-context coverage and display that coverage. |
+
+The first slice should package time window, price band, trade sequence, and
+price-action quality into a single profile with direct trade drilldowns. It
+should reuse the deterministic review engine rather than introduce a separate
+Coach-only calculation path.
+
 ## Statistical Review Framework Alignment
 
 The statistical review framework should live in the analytics system, but it

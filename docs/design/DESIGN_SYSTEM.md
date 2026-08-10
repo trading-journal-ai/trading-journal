@@ -61,7 +61,7 @@ light theme). Theme plumbing lives in [`src/lib/theme.ts`](../../src/lib/theme.t
 | Theme | `data-theme` | Character | `color-scheme` |
 | --- | --- | --- | --- |
 | Daylight | `daylight` (default) | Warm paper light; amber accent | light |
-| Light | `light` | Cool neutral light (GitHub-like); blue accent | light |
+| Light | `light` | White canvas, cool light-gray surfaces; blue accent | light |
 | Evening | `evening` | Warm charcoal dark; amber accent | dark |
 | Dark | `dark` (`:root`) | Cool blue-black dark; blue accent | dark |
 
@@ -231,8 +231,9 @@ Build once, reuse everywhere.
   earlier mono-UPPERCASE "terminal" eyebrow was retired — it read too technical
   for the warm editorial themes, so the sans title-case treatment is now the
   single eyebrow across all four themes.
-- **Money** (`src/components/ui/Money.tsx`) — mono tabular figure, P&L-colored,
-  signed (`+$…` / `-$…`), no wrap.
+- **Money** (`src/components/ui/Money.tsx`) — tabular figure, P&L-colored,
+  signed (`+$…` / `-$…`), no wrap. Mono is the default; the Journal week strip
+  opts into Geist Sans to keep its selected regular-weight lockup consistent.
 - **Dot** (`src/components/ui/Dot.tsx`) — small valence circle
   (`tone="positive|negative|neutral"`). Use sparingly. Not on the calendar.
 - **PeriodTabs** (`src/components/ui/PeriodTabs.tsx`) — the peer-view selector
@@ -289,17 +290,47 @@ Build once, reuse everywhere.
 - **Calendar** — month view earns its grid; cells use `--hairline` rules, modest
   radius, no dots; quiet compact day headers; clear day-number/P&L/count
   hierarchy; today uses the accent day number or a subtle marker; weekly total
-  column flat, not filled; year mini-months may use subtle green/red heatmap fills.
+  column flat, not filled; year mini-months may use subtle green/red heatmap
+  fills. The Journal week strip uses a fixed Geist Sans lockup: weekday/date is
+  semibold 16px, P&L is semibold 14px, and the grouped
+  trades/win-rate/profit-factor pill is regular 11px. Hover and keyboard focus
+  ease in a small semantic-accent corner dot and change the pill text to the
+  semantic accent while its quiet surface remains unchanged. Selection keeps
+  the dot and switches the pill fill immediately to the semantic accent with
+  action-foreground text. Selection is optimistic, so it moves on press and
+  remains stable while the new journal date loads; it never fades out while
+  waiting for navigation. The page background remains flat with no added border,
+  radius, elevation, or bottom edge. The five-day strip uses a complete hairline
+  outline with a 4px radius. It leads Week → P&L as the at-a-glance summary and
+  does not remain above the Day / Week / Month review tabs. The week range and
+  previous/next/Calendar controls remain in the page-level navigation header.
 - **Journal** — prose-first. Headers use Display/Page title; recap text uses Body
   large; metrics sit under the header as quiet mono metadata; ticker rail compact
   and sorted best-to-worst; pills secondary; reading mode hides edit controls
-  until interaction.
+  until interaction. When the selected day changes, only the daily P&L chart
+  surface fades in briefly; its card, heading, and surrounding review structure
+  remain fixed so the transition reads as updated data rather than a page reload.
+  During slower date navigation, fade the outgoing chart completely, then reveal
+  a compact “Plotting P&L” loader after a 140ms grace period. Its miniature plot
+  line draws toward a terminal point in the semantic accent; the incoming chart
+  fades in after the new series arrives. Do not preload adjacent sessions until
+  evidence shows that navigation latency requires data-layer work.
 - **Coach voice** — content authored or interpreted by the Coach reads as a
   distinct voice: a green (`--coach`) mono eyebrow, and where it's a called-out
   block, a green left rule. In the recap wireframes this marks the session
   verdict, the what-worked/what-cost read, and the "one thing to try." The amber
   `--accent` is the trader's own annotation (constraints, "✎ you"); keep the two
   voices on their own colors so authorship is legible at a glance.
+
+## Motion
+
+Journal motion preserves continuity rather than decorating the page. Day
+selection is immediate, while its known date heading uses an 80ms outgoing fade
+followed by a 180ms incoming fade. Only data-dependent fragments—the chart and
+ticker rail—enter the loading handoff. Incoming data panels use a 150ms
+opacity-only ease-out. There is no positional motion or stagger; tabs, cards,
+borders, and page geometry stay fixed. All motion is disabled when
+`prefers-reduced-motion` is enabled.
 
 ## States
 
@@ -312,6 +343,9 @@ Disabled, Empty, and (where applicable) Loading, Error/success.
 
 ## Accessibility
 
+- Design and QA for the Electron desktop app first, covering common laptop and
+  desktop window sizes. Phone-specific composition is not a product requirement;
+  narrow windows should remain legible and recoverable without driving the layout.
 - Readable body/controls at common desktop and laptop sizes; no type below 10px.
 - Do not encode meaning with color alone.
 - Icon-only controls need accessible labels; form controls need visible or

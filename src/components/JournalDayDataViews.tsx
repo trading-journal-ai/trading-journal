@@ -99,6 +99,7 @@ export type JournalHorizonRow = {
 export type JournalComparisonData = {
   week: {
     key: string;
+    asOfDate: string;
     summary: JournalRangeSummary;
     sessions: JournalSessionRow[];
     edgeRows: JournalEdgeRow[];
@@ -165,6 +166,7 @@ export default function JournalReviewModule({
   weekCoachSlot,
   monthCoachSlot,
   dayCoachSlot,
+  weekOverview,
 }: {
   pnlContent: ReactNode;
   tradeRows: JournalDayTradeRow[];
@@ -184,6 +186,7 @@ export default function JournalReviewModule({
   weekCoachSlot?: ReactNode;
   monthCoachSlot?: ReactNode;
   dayCoachSlot?: ReactNode;
+  weekOverview?: ReactNode;
 }) {
   const [scope, setScope] = useState<JournalDataScope>("day");
   const [view, setView] = useState<JournalDataView>("pnl");
@@ -207,7 +210,10 @@ export default function JournalReviewModule({
         onViewChange={setView}
       />
 
-      <div className="mt-7">
+      <div
+        key={`${scope}-${view}`}
+        className={`mt-7 ${scope === "day" && view === "pnl" ? "" : "journal-review-panel-enter"}`}
+      >
         {scope === "day" ? (
           <DayViews
             view={view}
@@ -221,7 +227,7 @@ export default function JournalReviewModule({
             returnTo={returnTo}
           />
         ) : null}
-        {scope === "week" ? <WeekViews view={view} data={comparisons.week} coachSlot={weekCoachSlot} /> : null}
+        {scope === "week" ? <WeekViews view={view} data={comparisons.week} coachSlot={weekCoachSlot} selectedDate={date} overview={weekOverview} /> : null}
         {scope === "month" ? <MonthViews view={view} data={comparisons.month} coachSlot={monthCoachSlot} /> : null}
       </div>
     </section>
@@ -290,13 +296,31 @@ function DayViews({
   return coachSlot ? <div role="tabpanel">{coachSlot}</div> : <CoachRead coach={coach} label="Deterministic diagnosis" />;
 }
 
-function WeekViews({ view, data, coachSlot }: { view: JournalDataView; data: JournalComparisonData["week"]; coachSlot?: ReactNode }) {
+function WeekViews({
+  view,
+  data,
+  coachSlot,
+  selectedDate,
+  overview,
+}: {
+  view: JournalDataView;
+  data: JournalComparisonData["week"];
+  coachSlot?: ReactNode;
+  selectedDate: string;
+  overview?: ReactNode;
+}) {
   if (view === "pnl") {
     return (
       <div role="tabpanel">
-        <RangeHeader summary={data.summary} question="Was the week carried by one session or built consistently?" />
-        <WeekPnlBars weekStart={data.key} rows={data.sessions} />
-        <EvidenceBoundary>Every weekday shares the same zero line. A blank column means no imported session; it does not infer an intentional no-trade day.</EvidenceBoundary>
+        {overview ? <div className="mb-9">{overview}</div> : null}
+        <WeekTrajectoryHeader data={data} />
+        <WeekPnlTrajectory
+          asOfDate={data.asOfDate}
+          selectedDate={selectedDate}
+          weekStart={data.key}
+          rows={data.sessions}
+        />
+        <EvidenceBoundary>The timeline uses imported sessions only. An unplotted weekday is upcoming or has no imported session; it does not infer an intentional no-trade day.</EvidenceBoundary>
       </div>
     );
   }
@@ -392,65 +416,253 @@ function MonthViews({ view, data, coachSlot }: { view: JournalDataView; data: Jo
   return <div role="tabpanel">{coachSlot ?? <CoachRead coach={data.coach} label="Monthly read" />}</div>;
 }
 
-function WeekPnlBars({ weekStart, rows }: { weekStart: string; rows: JournalSessionRow[] }) {
-  const sessionsByDate = new Map(rows.map((row) => [row.date, row]));
-  const slots = tradingWeekDates(weekStart).map((date) => ({ date, session: sessionsByDate.get(date) }));
-  const maxAbs = Math.max(1, ...rows.map((row) => Math.abs(row.pnl)));
+type WeekState = "in_progress" | "completed" | "upcoming";
+
+function weekState(weekStart: string, asOfDate: string): { state: WeekState; label: string; detail: string | null } {
+  const weekDates = tradingWeekDates(weekStart);
+  const weekEnd = weekDates.at(-1) ?? weekStart;
+
+  if (asOfDate < weekStart) return { state: "upcoming", label: "Upcoming week", detail: null };
+  if (asOfDate > weekEnd) return { state: "completed", label: "Completed week", detail: null };
+
+  return {
+    state: "in_progress",
+    label: "Week in progress",
+    detail: `Through ${longDateLabel(asOfDate).split(",")[0]}`,
+  };
+}
+
+function weekInsight(rows: JournalSessionRow[], totalPnl: number): string {
+  if (rows.length === 0) return "No imported sessions yet. The week remains open for planning and reflection.";
+
+  const greenSessions = rows.filter((row) => row.pnl > 0).length;
+  const best = rows.reduce((current, row) => row.pnl > current.pnl ? row : current, rows[0]);
+  const worst = rows.reduce((current, row) => row.pnl < current.pnl ? row : current, rows[0]);
+  const bestDay = longDateLabel(best.date).split(",")[0];
+  const worstDay = longDateLabel(worst.date).split(",")[0];
+  const withoutBest = totalPnl - best.pnl;
+
+  if (totalPnl > 0) {
+    if (best.pnl > 0 && withoutBest <= 0) {
+      return `${bestDay} is carrying the week; without it, the other sessions total ${money(withoutBest)}.`;
+    }
+
+    const bestShare = best.pnl > 0 ? Math.round((best.pnl / totalPnl) * 100) : 0;
+    if (bestShare >= 60) {
+      return `${bestDay} produced ${bestShare}% of net P&L, but the other sessions remain ${money(withoutBest)}.`;
+    }
+
+    if (greenSessions > 1) {
+      return `The result is building across ${greenSessions} green sessions; no single day accounts for most of the week.`;
+    }
+
+    return `${bestDay} supplied the strongest session while the week remains positive at ${money(totalPnl)}.`;
+  }
+
+  if (totalPnl < 0) {
+    const withoutWorst = totalPnl - worst.pnl;
+    if (withoutWorst > 0) {
+      return `${worstDay} caused the weekly loss; the other sessions total ${money(withoutWorst)}.`;
+    }
+    return `${worstDay} was the largest drag in a week that remains ${money(totalPnl)}.`;
+  }
+
+  return "The week is effectively flat; activity has not produced a durable result yet.";
+}
+
+function WeekTrajectoryHeader({ data }: { data: JournalComparisonData["week"] }) {
+  const status = weekState(data.key, data.asOfDate);
+  const summary = data.summary;
+  const metrics = [
+    `${summary.sessions} ${summary.sessions === 1 ? "session" : "sessions"}`,
+    `${summary.trades.toLocaleString()} ${summary.trades === 1 ? "trade" : "trades"}`,
+    `${percent(summary.accuracy)} win`,
+    `PF ${ratio(summary.profitFactor)}`,
+  ];
 
   return (
-    <figure className="mt-6 overflow-x-auto" aria-labelledby="week-pnl-bars-title">
-      <figcaption id="week-pnl-bars-title" className="sr-only">
-        Daily P&amp;L for each weekday, with gains above zero and losses below zero.
-      </figcaption>
-      <div className="grid min-w-[560px] grid-cols-5 border-y border-[var(--hairline)]">
-        {slots.map(({ date, session }, index) => {
-          const value = session?.pnl ?? 0;
-          const barHeight = session ? Math.max(5, (Math.abs(value) / maxAbs) * 46) : 0;
-          const positive = value >= 0;
-          return (
-            <div
-              key={date}
-              className={`min-w-0 px-3 py-4 ${index > 0 ? "border-l border-[var(--hairline)]" : ""}`}
-              aria-label={session
-                ? `${weekdayLabel(date)} ${shortDateLabel(date)}: ${money(value)}, ${session.trades} trades`
-                : `${weekdayLabel(date)} ${shortDateLabel(date)}: no imported session`}
-            >
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[12px] font-semibold text-[var(--foreground)]">{weekdayLabel(date)}</span>
-                <span className="font-mono text-[11px] tabular-nums text-[var(--muted)]">{shortDateLabel(date)}</span>
-              </div>
-              <div className="relative mt-3 h-32" aria-hidden="true">
-                <div className="absolute inset-x-0 top-1/2 h-px bg-[var(--border)]" />
-                {session ? (
-                  <div
-                    className={`absolute left-1/2 w-8 -translate-x-1/2 ${positive ? "bg-[var(--green)]" : "bg-[var(--red)]"}`}
-                    style={positive
-                      ? { height: `${barHeight}%`, bottom: "50%" }
-                      : { height: `${barHeight}%`, top: "50%" }}
-                  />
-                ) : (
-                  <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-[12px] text-[var(--faint)]">—</span>
-                )}
-              </div>
-              <div className="mt-2 text-center">
-                <div className={`whitespace-nowrap font-mono text-[12px] font-semibold tabular-nums ${session ? pnlClass(value) : "text-[var(--faint)]"}`}>
-                  {session ? money(value) : "No session"}
-                </div>
-                <div className="mt-1 text-[11px] text-[var(--muted)]">
-                  {session ? `${session.trades} ${session.trades === 1 ? "trade" : "trades"}` : "Not imported"}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+    <header>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2.5 text-[11px]">
+            <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-1 font-semibold text-[var(--foreground)]">
+              {status.label}
+            </span>
+            {status.detail ? <span className="text-[var(--muted)]">{status.detail}</span> : null}
+          </div>
+          <p className="mt-4 max-w-[70ch] text-[18px] font-medium leading-7 tracking-[-0.01em] text-[var(--foreground)]">
+            {weekInsight(data.sessions, summary.pnl)}
+          </p>
+          <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-[var(--muted)]">
+            {metrics.map((metric, index) => (
+              <Fragment key={metric}>
+                {index > 0 ? <span aria-hidden="true" className="text-[var(--faint)]">·</span> : null}
+                <span>{metric}</span>
+              </Fragment>
+            ))}
+          </p>
+        </div>
+        <div className={`font-mono text-[20px] font-semibold tabular-nums ${pnlClass(summary.pnl)}`}>
+          {money(summary.pnl)}
+        </div>
       </div>
-      <ul className="sr-only">
-        {slots.map(({ date, session }) => (
-          <li key={date}>
-            {weekdayLabel(date)} {shortDateLabel(date)}: {session ? `${money(session.pnl)}, ${session.trades} trades` : "no imported session"}
-          </li>
-        ))}
-      </ul>
+    </header>
+  );
+}
+
+function WeekPnlTrajectory({
+  asOfDate,
+  selectedDate,
+  weekStart,
+  rows,
+}: {
+  asOfDate: string;
+  selectedDate: string;
+  weekStart: string;
+  rows: JournalSessionRow[];
+}) {
+  const sessionsByDate = new Map(rows.map((row) => [row.date, row]));
+  const slots = tradingWeekDates(weekStart).map((date, index) => {
+    const session = sessionsByDate.get(date);
+    return {
+      date,
+      session,
+      x: 10 + index * 20,
+    };
+  });
+  const maxAbsPnl = Math.max(1, ...rows.map((row) => Math.abs(row.pnl)));
+  const elapsedIndex = slots.reduce((lastIndex, slot, index) => slot.date <= asOfDate ? index : lastIndex, -1);
+  const elapsedEndX = elapsedIndex >= 0 ? slots[elapsedIndex].x : slots[0].x;
+
+  return (
+    <figure className="mt-7 overflow-x-auto border-y border-[var(--hairline)] py-5" aria-labelledby="week-pnl-trajectory-title">
+      <div className="min-w-[720px]">
+        <figcaption id="week-pnl-trajectory-title" className="flex items-center justify-between gap-4 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">
+          <span>Daily P&amp;L by session</span>
+          <span className="font-normal normal-case tracking-normal">Hover or focus a day for details</span>
+        </figcaption>
+        <div className="relative mt-4 h-[160px]">
+          <svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
+            <line
+              x1="10"
+              x2="90"
+              y1="50"
+              y2="50"
+              stroke="var(--hairline)"
+              strokeWidth="1"
+              vectorEffect="non-scaling-stroke"
+            />
+            <line
+              x1="10"
+              x2={elapsedEndX}
+              y1="50"
+              y2="50"
+              stroke="var(--muted)"
+              strokeOpacity="0.7"
+              strokeWidth="1.5"
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
+
+          {slots.map((slot, index) => {
+            const session = slot.session;
+            const selected = slot.date === selectedDate;
+            const upcoming = slot.date > asOfDate;
+
+            if (!session) {
+              return (
+                <span
+                  aria-hidden="true"
+                  key={slot.date}
+                  className={`absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border ${upcoming ? "border-[var(--faint)] bg-[var(--background)]" : "border-[var(--muted)] bg-[var(--surface)]"}`}
+                  style={{ left: `${slot.x}%` }}
+                />
+              );
+            }
+
+            const positive = session.pnl > 0;
+            const negative = session.pnl < 0;
+            const barHeight = session.pnl === 0 ? 0 : Math.max(7, (Math.abs(session.pnl) / maxAbsPnl) * 36);
+            const markColor = positive
+              ? "var(--green-chart)"
+              : negative
+                ? "var(--red-chart)"
+                : "var(--muted)";
+            const tooltipAlignment = index === 0
+              ? "left-0"
+              : index === slots.length - 1
+                ? "right-0"
+                : "left-1/2 -translate-x-1/2";
+
+            return (
+              <div
+                key={slot.date}
+                role="group"
+                tabIndex={0}
+                aria-label={`${longDateLabel(slot.date)}: ${money(session.pnl)}, ${session.trades} trades, ${percent(session.accuracy)} win rate, ${ratio(session.profitFactor)} profit factor`}
+                className="group absolute inset-y-0 w-14 -translate-x-1/2 cursor-default focus-visible:outline-none"
+                style={{ left: `${slot.x}%` }}
+              >
+                {session.pnl !== 0 ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-1/2 w-2 -translate-x-1/2 rounded-[2px] transition-[width,opacity] duration-150 ease-out group-hover:w-2.5 group-focus-visible:w-2.5"
+                    style={positive
+                      ? { backgroundColor: markColor, bottom: "50%", height: `${barHeight}%` }
+                      : { backgroundColor: markColor, top: "50%", height: `${barHeight}%` }}
+                  />
+                ) : null}
+                <span
+                  aria-hidden="true"
+                  className={`absolute left-1/2 top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-[var(--surface)] outline-offset-2 transition-transform duration-150 ease-out group-hover:scale-125 group-focus-visible:scale-125 group-focus-visible:outline group-focus-visible:outline-2 group-focus-visible:outline-[var(--accent)] ${selected ? "outline outline-2 outline-[var(--accent)]" : ""}`}
+                  style={{ borderColor: markColor }}
+                />
+                <span
+                  role="tooltip"
+                  className={`pointer-events-none absolute top-1 z-20 w-52 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-left text-[12px] leading-5 text-[var(--body)] opacity-0 shadow-lg transition-opacity duration-150 ease-out group-hover:opacity-100 group-focus-visible:opacity-100 ${tooltipAlignment}`}
+                >
+                  <span className="mb-1.5 flex items-baseline justify-between gap-3">
+                    <span className="font-semibold text-[var(--foreground)]">{weekdayLabel(slot.date)}</span>
+                    <span className={`font-mono font-semibold tabular-nums ${pnlClass(session.pnl)}`}>{money(session.pnl)}</span>
+                  </span>
+                  <span className="flex items-baseline justify-between gap-4"><span className="text-[var(--muted)]">Trades</span><span className="font-mono tabular-nums text-[var(--foreground)]">{session.trades}</span></span>
+                  <span className="flex items-baseline justify-between gap-4"><span className="text-[var(--muted)]">Win rate</span><span className="font-mono tabular-nums text-[var(--foreground)]">{percent(session.accuracy)}</span></span>
+                  <span className="flex items-baseline justify-between gap-4"><span className="text-[var(--muted)]">Profit factor</span><span className="font-mono tabular-nums text-[var(--foreground)]">{ratio(session.profitFactor)}</span></span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-5">
+          {slots.map((slot) => {
+            const upcoming = slot.date > asOfDate;
+            return (
+              <div key={slot.date} className="text-center">
+                <div className={`text-[12px] font-semibold ${slot.session ? "text-[var(--foreground)]" : "text-[var(--muted)]"}`}>
+                  {weekdayLabel(slot.date)}
+                </div>
+                <div className="mt-1 font-mono text-[10px] tabular-nums text-[var(--muted)]">
+                  {shortDateLabel(slot.date)}
+                </div>
+                {!slot.session ? (
+                  <div className="mt-1 text-[10px] text-[var(--faint)]">{upcoming ? "Upcoming" : "No import"}</div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+
+        <ul className="sr-only">
+          {slots.map((slot) => (
+            <li key={slot.date}>
+              {longDateLabel(slot.date)}: {slot.session
+                ? `${money(slot.session.pnl)}, ${slot.session.trades} trades, ${percent(slot.session.accuracy)} win rate, ${ratio(slot.session.profitFactor)} profit factor`
+                : slot.date > asOfDate ? "upcoming" : "no imported session"}
+            </li>
+          ))}
+        </ul>
+      </div>
     </figure>
   );
 }

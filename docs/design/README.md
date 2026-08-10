@@ -22,6 +22,7 @@ One index for the product's design material. If a doc isn't listed here as
 | --- | --- |
 | [`JOURNAL_DESIGN.md`](JOURNAL_DESIGN.md) | Journal layout, note structure, reading mode. |
 | [`JOURNAL_NAVIGATION_DECISION.md`](JOURNAL_NAVIGATION_DECISION.md) | Journal navigation decision record. |
+| [`JOURNAL_LOADING_PERFORMANCE_PLAN.md`](JOURNAL_LOADING_PERFORMANCE_PLAN.md) | Journal/Calendar data boundaries, cache policy, loading states, and local-app performance budgets. |
 | [`TICKER_REVIEW_DESIGN_HANDOFF.md`](TICKER_REVIEW_DESIGN_HANDOFF.md) | Ticker-review V1 engineering handoff. |
 | [`../coach/TAG_VISUAL_SYSTEM.md`](../coach/TAG_VISUAL_SYSTEM.md) | Coach trade-review tag chips (icon/color/fill). |
 

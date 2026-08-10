@@ -12,11 +12,21 @@ import { buildSessionFactPack, type SessionFactPack } from "@/lib/coach/reviewEn
 import type { TradeOpportunityContext } from "@/lib/coach/opportunityContext";
 import { opportunityContextsForTrades } from "@/lib/coach/opportunityContextService";
 import { isDemoReadOnly } from "@/lib/demoMode";
+import { tradingWeekDates } from "@/lib/journalPnlViews";
 import { netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
 import ArchiveSidebar, { type ArchiveSidebarMonth } from "@/components/ArchiveSidebar";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
 import InlineImportPrompt from "@/components/InlineImportPrompt";
+import JournalPnlChart, { type JournalPnlPoint } from "@/components/JournalPnlChart";
+import {
+  JournalDateHeading,
+  JournalDateNavigationProvider,
+} from "@/components/JournalDateNavigation";
+import JournalWeekStrip, {
+  JournalWeekNavigation,
+  type JournalWeekStripDay,
+} from "@/components/JournalWeekStrip";
 import JournalReviewModule, {
   type JournalComparisonData,
   type JournalChartReadSummary,
@@ -25,6 +35,8 @@ import JournalReviewModule, {
 } from "@/components/JournalDayDataViews";
 import RecapNote from "@/components/RecapNote";
 import TickerReviewRail from "@/components/TickerReviewRail";
+import Money from "@/components/ui/Money";
+import MetricStrip from "@/components/ui/MetricStrip";
 
 export type JournalReviewPreset = "today" | "week" | "month";
 export type JournalReviewSearchParams = {
@@ -63,10 +75,7 @@ type ReviewDay = ReviewSummary & {
   displayDate: string;
 };
 
-type PnlPoint = {
-  time: string;
-  value: number;
-};
+type PnlPoint = JournalPnlPoint;
 
 type JournalMarketContext = {
   available: boolean;
@@ -603,6 +612,20 @@ async function loadMarketContextRows(from: string, to: string): Promise<MarketCo
   }
 }
 
+async function loadNoTradeDates(accountId: number, from: string, to: string): Promise<Set<string>> {
+  const rows = await db
+    .select({ date: schema.journalDayStatuses.date })
+    .from(schema.journalDayStatuses)
+    .where(
+      and(
+        eq(schema.journalDayStatuses.accountId, accountId),
+        gte(schema.journalDayStatuses.date, from),
+        lte(schema.journalDayStatuses.date, to),
+      ),
+    );
+  return new Set(rows.map((row) => row.date));
+}
+
 function buildDayData(
   date: string,
   trades: TradeRow[],
@@ -638,17 +661,32 @@ function buildDayData(
 
   const { start } = etDayRange(date);
   let cumulative = 0;
-  const pnlPoints: PnlPoint[] = [{ time: formatTime(trades[0]?.entryAt ?? start), value: 0 }];
+  const firstTimestamp = trades[0]?.entryAt ?? start;
+  const pnlPoints: PnlPoint[] = [{
+    time: formatTime(firstTimestamp),
+    timestamp: firstTimestamp,
+    value: 0,
+  }];
   trades
     .filter((trade) => trade.exitAt != null)
     .sort((a, b) => (a.exitAt ?? 0) - (b.exitAt ?? 0))
     .forEach((trade) => {
       cumulative += netPnl(trade) ?? 0;
-      pnlPoints.push({ time: formatTime(trade.exitAt ?? trade.entryAt ?? start), value: cumulative });
+      const timestamp = trade.exitAt ?? trade.entryAt ?? start;
+      pnlPoints.push({
+        time: formatTime(timestamp),
+        timestamp,
+        value: cumulative,
+      });
     });
 
   if (pnlPoints.length === 1) {
-    pnlPoints.push({ time: formatTime(trades.at(-1)?.entryAt ?? start), value: summary.pnl });
+    const timestamp = trades.at(-1)?.entryAt ?? start;
+    pnlPoints.push({
+      time: formatTime(timestamp),
+      timestamp,
+      value: summary.pnl,
+    });
   }
 
   const chartRead = summarizeChartContexts(
@@ -801,7 +839,7 @@ async function loadReviewRange({
 
   const days = reviewDatesForRange(preset, range).flatMap((entryDate) => {
     const dayTrades = tradesByDate.get(entryDate) ?? [];
-    if (dayTrades.length === 0) return [];
+    if (dayTrades.length === 0 && preset !== "today") return [];
     return [
       buildDayData(
         entryDate,
@@ -955,6 +993,7 @@ function buildJournalComparisonData(week: ReviewRange, month: ReviewRange): Jour
   return {
     week: {
       key: weekStartFor(week.anchor),
+      asOfDate: currentEtDate(),
       summary: {
         label: week.displayDate,
         sessions: week.days.filter((day) => day.day.trades > 0).length,
@@ -1197,122 +1236,28 @@ async function loadReviewArchive(
   return { months, years };
 }
 
-function RunningPnlChart({ day, pnlPoints }: { day: ReviewDay; pnlPoints: PnlPoint[] }) {
-  const width = 940;
-  const height = 440;
-  const pad = { top: 24, right: 26, bottom: 58, left: 128 };
-  const plotW = width - pad.left - pad.right;
-  const plotH = height - pad.top - pad.bottom;
-  const values = pnlPoints.map((point) => point.value);
-  const minValue = Math.min(0, ...values);
-  const maxValue = Math.max(0, ...values);
-  const range = Math.max(1, maxValue - minValue);
-  const min = minValue - range * 0.18;
-  const max = maxValue + range * 0.18;
-  const y = (value: number) => pad.top + ((max - value) / (max - min)) * plotH;
-  const x = (index: number) => pad.left + (index / Math.max(1, pnlPoints.length - 1)) * plotW;
-  const line = pnlPoints.map((point, index) => `${x(index)},${y(point.value)}`).join(" ");
-  const area = `${pad.left},${y(0)} ${line} ${x(pnlPoints.length - 1)},${y(0)}`;
-  const ticks = [minValue, minValue + range / 2, maxValue];
-  const labelIndexes = Array.from(
-    new Set([
-      0,
-      Math.floor((pnlPoints.length - 1) * 0.33),
-      Math.floor((pnlPoints.length - 1) * 0.66),
-      pnlPoints.length - 1,
-    ]),
-  );
-  const zeroY = y(0);
-  const positiveFillId = `pnlPositiveFill-${day.date}`;
-  const negativeFillId = `pnlNegativeFill-${day.date}`;
-  const positiveClipId = `pnlPositiveClip-${day.date}`;
-  const negativeClipId = `pnlNegativeClip-${day.date}`;
-
+function RunningPnlChart({
+  day,
+  pnlPoints,
+  showTotal = true,
+  heightClassName = "h-[380px]",
+}: {
+  day: ReviewDay;
+  pnlPoints: PnlPoint[];
+  showTotal?: boolean;
+  heightClassName?: string;
+}) {
   return (
-    <section className="flex h-[380px] flex-col rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-4">
-      <div className="mb-1 flex items-center justify-between gap-4">
+    <section className={`flex ${heightClassName} flex-col rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-4`}>
+      <div className="mb-2 flex items-center justify-between gap-4">
         <h2 className="text-[15px] font-semibold text-[var(--foreground)]">Daily P&L</h2>
-        <span className={`font-mono text-sm font-semibold tabular-nums ${pnlClass(day.pnl)}`}>
-          {formatMoney(day.pnl)}
-        </span>
+        {showTotal ? (
+          <span className={`font-mono text-sm font-semibold tabular-nums ${pnlClass(day.pnl)}`}>
+            {formatMoney(day.pnl)}
+          </span>
+        ) : null}
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="min-h-0 flex-1" role="img" aria-label="Daily P&L by time of day">
-        <defs>
-          <linearGradient id={positiveFillId} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="var(--green-chart)" stopOpacity="0.36" />
-            <stop offset="100%" stopColor="var(--green-chart)" stopOpacity="0.08" />
-          </linearGradient>
-          <linearGradient id={negativeFillId} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="var(--red-chart)" stopOpacity="0.08" />
-            <stop offset="100%" stopColor="var(--red-chart)" stopOpacity="0.36" />
-          </linearGradient>
-          <clipPath id={positiveClipId}>
-            <rect x={pad.left} y={pad.top} width={plotW} height={Math.max(0, zeroY - pad.top)} />
-          </clipPath>
-          <clipPath id={negativeClipId}>
-            <rect x={pad.left} y={zeroY} width={plotW} height={Math.max(0, height - pad.bottom - zeroY)} />
-          </clipPath>
-        </defs>
-        {ticks.map((tick, index) => (
-          <g key={`${tick}-${index}`}>
-            <line x1={pad.left} x2={width - pad.right} y1={y(tick)} y2={y(tick)} stroke="var(--hairline)" />
-            <text
-              x={pad.left - 10}
-              y={y(tick) + 5}
-              fill="var(--muted)"
-              fontFamily="var(--font-mono)"
-              fontSize="19"
-              fontWeight="500"
-              textAnchor="end"
-            >
-              {formatMoney(tick).replace("+", "")}
-            </text>
-          </g>
-        ))}
-        <line
-          x1={pad.left}
-          x2={width - pad.right}
-          y1={y(0)}
-          y2={y(0)}
-          stroke="var(--muted)"
-          strokeDasharray="5 7"
-          strokeOpacity="0.7"
-        />
-        <polygon points={area} fill={`url(#${positiveFillId})`} clipPath={`url(#${positiveClipId})`} />
-        <polygon points={area} fill={`url(#${negativeFillId})`} clipPath={`url(#${negativeClipId})`} />
-        <polyline
-          points={line}
-          fill="none"
-          stroke="var(--green-chart)"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-          clipPath={`url(#${positiveClipId})`}
-        />
-        <polyline
-          points={line}
-          fill="none"
-          stroke="var(--red-chart)"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-          clipPath={`url(#${negativeClipId})`}
-        />
-        {labelIndexes.map((index) => (
-          <text
-            key={`${index}-${pnlPoints[index].time}`}
-            x={x(index)}
-            y={height - 16}
-            fill="var(--muted)"
-            fontFamily="var(--font-sans)"
-            fontSize="19"
-            fontWeight="500"
-            textAnchor="middle"
-          >
-            {pnlPoints[index].time}
-          </text>
-        ))}
-      </svg>
+      <JournalPnlChart points={pnlPoints} />
     </section>
   );
 }
@@ -1468,17 +1413,19 @@ function JournalReviewModuleForDay({
   returnTo,
   comparisonData,
   coachSlots,
+  weekOverview,
 }: {
   data: ReviewData;
   returnTo: string;
   comparisonData: JournalComparisonData;
   coachSlots?: ModuleCoachSlots;
+  weekOverview?: ReactNode;
 }) {
   const { day, tickerRows, tradeRows, taggedTrades, pnlPoints, coachRead } = data;
   const { topSurprise, chartFacts } = buildDayReviewPresentation(data);
 
   return (
-    <div className="max-w-[800px]">
+    <div className="w-full">
       <JournalReviewModule
         key={day.date}
         comparisons={comparisonData}
@@ -1487,6 +1434,7 @@ function JournalReviewModuleForDay({
         dayCoachSlot={coachSlots?.day}
         weekCoachSlot={coachSlots?.week}
         monthCoachSlot={coachSlots?.month}
+        weekOverview={weekOverview}
         summary={{
           trades: day.trades,
           accuracy: day.accuracy,
@@ -1505,9 +1453,15 @@ function JournalReviewModuleForDay({
           confidence: coachRead.confidence.label,
         }}
         pnlContent={day.trades > 0 ? (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
-            <RunningPnlChart day={day} pnlPoints={pnlPoints} />
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+            <RunningPnlChart
+              day={day}
+              pnlPoints={pnlPoints}
+              showTotal={false}
+              heightClassName="h-[420px]"
+            />
             <TickerReviewRail
+              className="journal-day-rail-enter"
               rows={tickerRows.map((row) => ({
                 symbol: row.symbol,
                 pnl: row.pnl,
@@ -1517,10 +1471,16 @@ function JournalReviewModuleForDay({
               accuracy={day.accuracy}
               profitFactor={day.profitFactor}
               pnl={day.pnl}
+              heightClassName="h-[420px]"
             />
           </div>
         ) : (
-          <p className="py-8 text-sm text-[var(--muted)]">No trades imported</p>
+          <div className="border-y border-[var(--hairline)] py-10">
+            <p className="text-[15px] font-semibold text-[var(--foreground)]">No trades this day</p>
+            <p className="mt-2 max-w-[52ch] text-sm leading-6 text-[var(--muted)]">
+              The day is still available for reflection. Open Coach to add context or review the week and month around it.
+            </p>
+          </div>
         )}
       />
     </div>
@@ -1534,8 +1494,10 @@ function DayReviewSection({
   showReviewModule = false,
   showContextDetails = false,
   showLegacyPnl = true,
+  compactDayHeader = false,
   coachSlots,
   dayCoach,
+  weekOverview,
 }: {
   data: ReviewData;
   returnTo: string;
@@ -1543,8 +1505,10 @@ function DayReviewSection({
   showReviewModule?: boolean;
   showContextDetails?: boolean;
   showLegacyPnl?: boolean;
+  compactDayHeader?: boolean;
   coachSlots?: ModuleCoachSlots;
   dayCoach?: DayCoachPanelData;
+  weekOverview?: ReactNode;
 }) {
   const { day, tickerRows, pnlPoints, coachRead, chartRead, marketContext } = data;
   const { verdictText } = buildDayReviewPresentation(data);
@@ -1555,50 +1519,42 @@ function DayReviewSection({
   return (
     <section>
       <div className="min-w-0">
-          <div className="mb-6">
-            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-              <h2 className="text-[32px] font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
-                {day.label}, {monthDayFmt.format(utcDate(day.date))}
-              </h2>
-              <span
-                className={`font-mono text-[15px] font-semibold tabular-nums ${pnlClass(day.pnl)}`}
-              >
-                {formatMoney(day.pnl)}
-                {day.pnl !== 0 ? (
-                  <span className="ml-1 text-[10px]">{day.pnl > 0 ? "▲" : "▼"}</span>
-                ) : null}
-              </span>
-              {!showContextDetails ? (
-                <a
-                  href={journalReviewModuleHref("/journal", day.date)}
-                  className="text-[13px] font-semibold text-[var(--accent)] transition-colors hover:text-[var(--accent-strong)]"
-                >
-                  Open day review · coach &amp; annotations →
-                </a>
-              ) : null}
+          {compactDayHeader ? (
+            <div className="mb-5 pt-2">
+              <JournalDateHeading
+                level={1}
+                className="text-[20px] font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]"
+              />
             </div>
-            <div className="mt-4 flex">
-              <span className="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-full bg-[var(--surface-2)] px-4 py-1.5 text-[13px] text-[var(--muted)] tabular-nums">
-                {day.trades} trades
-                <span aria-hidden="true" className="text-[var(--faint)]">·</span>
-                {day.fills} fills
-                {day.accuracy != null ? (
-                  <>
-                    <span aria-hidden="true" className="text-[var(--faint)]">·</span>
-                    {day.accuracy}% win
-                  </>
+          ) : (
+            <div className="mb-7">
+              <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+                <JournalDateHeading
+                  level={2}
+                  className="text-[32px] font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]"
+                />
+                {!showContextDetails ? (
+                  <a
+                    href={journalReviewModuleHref("/journal", day.date)}
+                    className="text-[13px] font-semibold text-[var(--accent)] transition-colors hover:text-[var(--accent-strong)]"
+                  >
+                    Open day review · coach &amp; annotations →
+                  </a>
                 ) : null}
-                {day.profitFactor != null ? (
-                  <>
-                    <span aria-hidden="true" className="text-[var(--faint)]">·</span>
-                    PF {day.profitFactor.toFixed(2)}
-                  </>
-                ) : null}
-              </span>
+              </div>
+              <MetricStrip
+                className="mt-4"
+                items={[
+                  <Money key="pnl" value={day.pnl} className="font-semibold" />,
+                  `${day.trades} ${day.trades === 1 ? "trade" : "trades"}`,
+                  ...(day.accuracy == null ? [] : [`${day.accuracy}% win`]),
+                  ...(day.profitFactor == null ? [] : [`PF ${day.profitFactor.toFixed(2)}`]),
+                ]}
+              />
             </div>
-          </div>
+          )}
 
-          <div className="mb-8 max-w-[800px]">
+          {!showReviewModule ? <div className="mb-8 max-w-[800px]">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="text-[13px] font-semibold text-[var(--coach)]">✳ Session verdict</span>
               <span className="text-[12px] text-[var(--muted)]">
@@ -1652,7 +1608,7 @@ function DayReviewSection({
                 <p className="mt-3 text-[14px] leading-6 text-[var(--body)]">{chartRead.headline}</p>
               </div>
             ) : null}
-          </div>
+          </div> : null}
 
           {showReviewModule && comparisonData ? (
             <div className="mb-12">
@@ -1661,6 +1617,7 @@ function DayReviewSection({
                 returnTo={returnTo}
                 comparisonData={comparisonData}
                 coachSlots={resolvedCoachSlots}
+                weekOverview={weekOverview}
               />
             </div>
           ) : null}
@@ -1768,8 +1725,10 @@ function ReviewDayRangeSection({
   showReviewModule = false,
   showContextDetails = false,
   showLegacyPnl = true,
+  compactDayHeader = false,
   coachSlots,
   dayCoach,
+  weekOverview,
 }: {
   data: ReviewData;
   returnTo: string;
@@ -1777,8 +1736,10 @@ function ReviewDayRangeSection({
   showReviewModule?: boolean;
   showContextDetails?: boolean;
   showLegacyPnl?: boolean;
+  compactDayHeader?: boolean;
   coachSlots?: ModuleCoachSlots;
   dayCoach?: DayCoachPanelData;
+  weekOverview?: ReactNode;
 }) {
   return (
     <DayReviewSection
@@ -1788,8 +1749,10 @@ function ReviewDayRangeSection({
       showReviewModule={showReviewModule}
       showContextDetails={showContextDetails}
       showLegacyPnl={showLegacyPnl}
+      compactDayHeader={compactDayHeader}
       coachSlots={coachSlots}
       dayCoach={dayCoach}
+      weekOverview={weekOverview}
     />
   );
 }
@@ -2619,7 +2582,8 @@ export default async function TradeJournalReview({
   const accounts = await listAccounts();
   const activeAccount = accounts.find((account) => account.id === accountId) ?? null;
   const showAccountIdentity = accounts.length > 1 && activeAccount != null;
-  const [range, archive, brokerDataAvailable, comparisonRanges] = await Promise.all([
+  const selectedWeekStart = weekStartFor(archiveAnchor);
+  const [range, archive, brokerDataAvailable, comparisonRanges, noTradeDates] = await Promise.all([
     loadReviewRange({ preset, date, from, month, accountId }),
     showArchiveSidebar
       ? loadReviewArchive(archiveAnchor, accountId, basePath, month, archiveLinkMode)
@@ -2631,6 +2595,9 @@ export default async function TradeJournalReview({
           loadReviewRange({ preset: "month", from: archiveAnchor, accountId }),
         ])
       : Promise.resolve(null),
+    usesReviewModule && preset === "today"
+      ? loadNoTradeDates(accountId, selectedWeekStart, isoAddDays(selectedWeekStart, 4))
+      : Promise.resolve(new Set<string>()),
   ]);
   const comparisonData = comparisonRanges
     ? buildJournalComparisonData(comparisonRanges[0], comparisonRanges[1])
@@ -2677,7 +2644,7 @@ export default async function TradeJournalReview({
     usesReviewModule
       ? await Promise.all(
           range.days
-            .filter((dayData) => dayData.day.trades > 0)
+            .filter((dayData) => preset === "today" || dayData.day.trades > 0)
             .map(async (dayData) => {
               const scope: ReviewScope = { scope: "day", scopeKey: dayData.day.date };
               const [experiment, review, note] = await Promise.all([
@@ -2737,12 +2704,35 @@ export default async function TradeJournalReview({
     );
   }
   const currentHref = returnTo ?? journalReviewHref(basePath, { preset, date, from, month });
+  const today = currentEtDate();
+  const weekSessionsByDate = new Map(
+    comparisonData?.week.sessions.map((session) => [session.date, session]) ?? [],
+  );
+  const weekStripDays: JournalWeekStripDay[] = comparisonData
+    ? tradingWeekDates(comparisonData.week.key).map((weekDate) => {
+        const session = weekSessionsByDate.get(weekDate);
+        return {
+          date: weekDate,
+          trades: session?.trades ?? 0,
+          accuracy: session?.accuracy ?? null,
+          profitFactor: session?.profitFactor ?? null,
+          pnl: session?.pnl ?? 0,
+          state: session
+            ? "trades"
+            : noTradeDates.has(weekDate)
+              ? "no_trade"
+              : weekDate > today
+                ? "future"
+                : "empty",
+        };
+      })
+    : [];
   const breadcrumbBack = backHref
     ? originCrumbFromHref(backHref, basePath)
     : { label: "Journal", href: basePath };
 
   return (
-    <div className={`mx-auto w-full pb-24 ${showArchiveSidebar ? "max-w-[1040px]" : "max-w-[800px]"}`}>
+    <div className={`mx-auto w-full pb-24 ${showArchiveSidebar || usesReviewModule ? "max-w-[1240px]" : "max-w-[800px]"}`}>
       {backHref ? (
         <Breadcrumbs
           back={breadcrumbBack}
@@ -2758,8 +2748,11 @@ export default async function TradeJournalReview({
             enableWeekScrollSpy={preset === "month"}
           />
         ) : null}
-        <div className="mt-8 min-w-0 space-y-8">
-          {showAccountIdentity ? (
+        <JournalDateNavigationProvider
+          selectedDate={archiveAnchor}
+          className="journal-review-flow mt-8 min-w-0 space-y-8"
+        >
+          {showAccountIdentity && !usesReviewModule ? (
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-[12px] font-semibold text-[var(--foreground)]">
                 {activeAccount!.name}
@@ -2770,36 +2763,29 @@ export default async function TradeJournalReview({
             </div>
           ) : null}
 
+          {usesReviewModule && preset === "today" && comparisonData ? (
+            <JournalWeekNavigation
+              weekStart={comparisonData.week.key}
+              previousWeekHref={journalReviewModuleHref(basePath, isoAddDays(archiveAnchor, -7))}
+              nextWeekHref={journalReviewModuleHref(basePath, isoAddDays(archiveAnchor, 7))}
+              calendarHref={`/calendar?m=${archiveAnchor.slice(0, 7)}`}
+            />
+          ) : null}
+
           {preset === "week" ? (
             <ScopeHeader>
               <WeekHeader label={range.title} displayDate={range.displayDate} />
             </ScopeHeader>
           ) : null}
 
-          {!brokerDataAvailable || range.trades === 0 ? (
+          {!brokerDataAvailable ? (
             <EmptyReviewState
               brokerDataAvailable={brokerDataAvailable}
               reviewScope={reviewScope}
               readOnly={readOnly}
               accountName={showAccountIdentity ? activeAccount!.name : null}
             />
-          ) : usesReviewModule && preset === "month" ? (
-            <div className="space-y-14">
-              {range.weeks.map((week) => (
-                <WeekSection
-                  key={week.key}
-                  week={week}
-                  returnTo={currentHref}
-                  comparisonData={weekComparisons.get(week.key)}
-                  showReviewModule
-                  showContextDetails
-                  showLegacyPnl={false}
-                  coachSlots={monthModuleSlots.get(week.key)}
-                  dayCoachData={dayCoachData}
-                />
-              ))}
-            </div>
-          ) : usesReviewModule && preset === "today" && comparisonData ? (
+          ) : usesReviewModule && preset === "today" && comparisonData && range.days[0] ? (
             <ReviewDayRangeSection
               data={range.days[0]}
               returnTo={currentHref}
@@ -2807,6 +2793,8 @@ export default async function TradeJournalReview({
               showReviewModule
               showContextDetails
               showLegacyPnl={false}
+              compactDayHeader
+              weekOverview={<JournalWeekStrip days={weekStripDays} basePath={basePath} />}
               coachSlots={moduleCoachScopes && comparisonRanges ? {
                 week: (
                   <RangeCoachReview
@@ -2831,6 +2819,29 @@ export default async function TradeJournalReview({
               } : undefined}
               dayCoach={dayCoachData.get(range.days[0].day.date)}
             />
+          ) : range.trades === 0 ? (
+            <EmptyReviewState
+              brokerDataAvailable={brokerDataAvailable}
+              reviewScope={reviewScope}
+              readOnly={readOnly}
+              accountName={showAccountIdentity ? activeAccount!.name : null}
+            />
+          ) : usesReviewModule && preset === "month" ? (
+            <div className="space-y-14">
+              {range.weeks.map((week) => (
+                <WeekSection
+                  key={week.key}
+                  week={week}
+                  returnTo={currentHref}
+                  comparisonData={weekComparisons.get(week.key)}
+                  showReviewModule
+                  showContextDetails
+                  showLegacyPnl={false}
+                  coachSlots={monthModuleSlots.get(week.key)}
+                  dayCoachData={dayCoachData}
+                />
+              ))}
+            </div>
           ) : preset === "month" ? (
             <div className="space-y-14">
               {range.weeks.map((week) => (
@@ -2860,7 +2871,7 @@ export default async function TradeJournalReview({
               showReviewActions
             />
           ) : null}
-        </div>
+        </JournalDateNavigationProvider>
       </div>
     </div>
   );

@@ -1,6 +1,12 @@
-# Journal Navigation — one surface, one vocabulary
+# Journal Navigation — one calendar-based surface, one vocabulary
 
-> Status: decision captured 2026-07-21 · implementation is its own later pass
+> **Status: replaced 2026-08-06 after hands-on use.** The canonical-day principle
+> still holds, but continuous month-length scrolling did not provide fast enough
+> retrieval. Calendar is now the Journal's browse/index mode rather than a peer
+> destination. The active direction is
+> [UNIFIED_REVIEW_NAVIGATION.md](UNIFIED_REVIEW_NAVIGATION.md).
+>
+> Original decision captured 2026-07-21 · retained below as decision history
 >
 > Companion to [JOURNAL_DESIGN.md](JOURNAL_DESIGN.md) and DATA_MODEL §9 step 3
 > (one canonical template). This locks the navigation model so nothing further
@@ -25,10 +31,32 @@ been *removed* ("ghost in the system") when the route had merely switched to
 the archive shape (and once when the account cookie switched). A navigation
 model that can masquerade as data loss is wrong.
 
-## The decision
+## The original decision
 
 **The journal is one continuously scrolling surface of full-fidelity day
 entries. Navigation moves you along it; it never changes the page's shape.**
+
+> **2026-08-06 revision:** Keep one canonical day template, but do not treat
+> continuous scroll as the primary navigation model. The current hypothesis is
+> a focused day with direct day/week/month navigation, a Calendar-backed picker,
+> and shared period controls across Journal, Trades, and Analytics. Do not begin
+> the migration below until the replacement interaction is prototyped.
+
+## Current decision
+
+The Journal is calendar-based, but it is not a month of full day entries laid
+end to end. It has two views of one record:
+
+1. A calendar/index for fast period scanning and direct date selection.
+2. A canonical focused day for dictation, reflection, Coach synthesis, evidence,
+   and carry-forward resolution.
+
+The separate Calendar destination should be folded into Journal. The existing
+route may remain as a temporary redirect or alias during migration. Dashboard,
+not Journal navigation, owns carrying an adopted cue into the live trading day.
+
+The numbered material below is retained as decision history and should not be
+implemented as the current direction.
 
 1. **One canonical day template.** Every day entry renders the same
    structure: header + stat strip, session verdict, process read, module,
