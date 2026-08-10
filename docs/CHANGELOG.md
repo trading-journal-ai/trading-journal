@@ -13,6 +13,14 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
 
 ---
 
+## 2026-08-10
+
+### Changed
+- Journal review now uses focused Day, Week, and Month modes with shared period
+  navigation, a five-session week strip, TradingView-backed P&L views, and
+  refined loading and responsive behavior
+  ([PR #64](https://github.com/trading-journal-ai/trading-journal/pull/64)).
+
 ## 2026-08-07
 
 ### Added

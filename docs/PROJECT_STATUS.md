@@ -44,7 +44,8 @@ stopped. This is the "when did we last work on it" trail.
     verification passed.
   - Full-repository lint remains blocked only by the two known, unchanged
     `react-hooks/set-state-in-effect` errors under `src/components/preview/`.
-  - **Stopped at:** merge candidate validated and ready for its completion PR.
+  - Opened completion [PR #64](https://github.com/trading-journal-ai/trading-journal/pull/64).
+  - **Stopped at:** merge candidate validated, documented, and ready to merge.
 
 - **2026-08-07** — Week-at-a-glance placement pass
   (branch `design/journal-formatting`).
