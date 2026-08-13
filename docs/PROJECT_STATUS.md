@@ -39,7 +39,8 @@ stopped. This is the "when did we last work on it" trail.
   - Replaced mount-effect hydration flags with `useSyncExternalStore`, keeping
     server markup deterministic while preserving local triage decisions.
   - `npm run verify:types` and `git diff --check` passed.
-  - **Stopped at:** focused fix validated and ready for remote backup.
+  - Opened draft [PR #67](https://github.com/trading-journal-ai/trading-journal/pull/67).
+  - **Stopped at:** focused fix validated and remotely backed up.
 
 - **2026-08-10** — Journal formatting merge preparation
   (branch `design/journal-formatting`).
