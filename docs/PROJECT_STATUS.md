@@ -44,6 +44,8 @@ stopped. This is the "when did we last work on it" trail.
     development.
   - Updated the architecture contract so app pushes mean GitHub backup and
     local verification until a hosted demo release is deliberately restored.
+  - Backed up the repository policy in draft
+    [PR #69](https://github.com/trading-journal-ai/trading-journal/pull/69).
   - **Stopped at:** automatic app deployments are disabled operationally and
     in repository configuration; the public marketing site remains live.
 
