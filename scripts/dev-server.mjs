@@ -14,6 +14,45 @@ const portSearchLimit = 20;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+function openBrowser(url) {
+  const command =
+    process.platform === "darwin"
+      ? ["open", [url]]
+      : process.platform === "win32"
+        ? ["cmd", ["/c", "start", "", url]]
+        : ["xdg-open", [url]];
+
+  const opener = spawn(command[0], command[1], {
+    detached: true,
+    stdio: "ignore",
+    windowsHide: true,
+  });
+
+  opener.once("error", () => {
+    console.log(`Could not open the browser automatically. Open ${url}`);
+  });
+  opener.unref();
+}
+
+async function openBrowserWhenReady(url, child) {
+  const deadline = Date.now() + 30_000;
+
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null || child.signalCode !== null) return;
+
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(1_000) });
+      await response.body?.cancel();
+      openBrowser(url);
+      return;
+    } catch {
+      await sleep(250);
+    }
+  }
+
+  console.log(`The server is still starting. Open ${url} when it is ready.`);
+}
+
 function isAlive(pid) {
   try {
     process.kill(pid, 0);
@@ -56,13 +95,23 @@ function cwdFor(pid) {
   }
 }
 
-function lockPid() {
+function isRepoNextProcess(pid) {
+  return (
+    cwdFor(pid) === repoRoot && /\b(next dev|next-server)\b/.test(commandFor(pid))
+  );
+}
+
+function lockState() {
   try {
     const lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
-    return Number.isInteger(lock.pid) ? lock.pid : null;
+    return Number.isInteger(lock.pid) ? lock : null;
   } catch {
     return null;
   }
+}
+
+function lockPid() {
+  return lockState()?.pid ?? null;
 }
 
 function nextPids() {
@@ -83,7 +132,7 @@ function collectTargets() {
   const targets = new Map();
   const lockedPid = lockPid();
 
-  if (lockedPid && lockedPid !== process.pid) {
+  if (lockedPid && lockedPid !== process.pid && isAlive(lockedPid) && isRepoNextProcess(lockedPid)) {
     targets.set(lockedPid, "Next dev lock");
   }
 
@@ -124,6 +173,17 @@ function listeningPortsFor(pid) {
 
 function activePorts(targets) {
   const ports = new Set();
+  const lock = lockState();
+
+  if (
+    lock &&
+    targets.has(lock.pid) &&
+    Number.isInteger(lock.port) &&
+    lock.port >= 1 &&
+    lock.port <= 65535
+  ) {
+    ports.add(String(lock.port));
+  }
 
   for (const [pid, command] of targets) {
     const commandPort = command.match(/(?:--port(?:=|\s+)|-p\s+)(\d+)/)?.[1];
@@ -227,7 +287,7 @@ async function waitForExit(pids, timeoutMs) {
 
 function removeStaleLock() {
   const pid = lockPid();
-  if (!pid || isAlive(pid)) return;
+  if (!pid || (isAlive(pid) && isRepoNextProcess(pid))) return;
 
   try {
     fs.unlinkSync(lockPath);
@@ -244,9 +304,11 @@ async function startDevServer({ restart = false } = {}) {
     const targets = collectTargets();
     if (targets.size > 0) {
       console.log("Trading Journal is already running from this project folder.");
-      for (const port of activePorts(targets)) {
+      const ports = activePorts(targets);
+      for (const port of ports) {
         console.log(`Open http://localhost:${port}`);
       }
+      if (ports[0]) openBrowser(`http://localhost:${ports[0]}`);
       console.log("Run `npm run dev:restart` if you want a fresh server.");
       return;
     }
@@ -254,10 +316,11 @@ async function startDevServer({ restart = false } = {}) {
 
   const firstPort = preferredPort();
   const port = await availablePort();
+  const url = `http://localhost:${port}`;
   if (port !== firstPort) {
     console.log(`Port ${firstPort} is busy; using ${port} instead.`);
   }
-  console.log(`Starting Trading Journal at http://localhost:${port}`);
+  console.log(`Starting Trading Journal at ${url}`);
 
   const child = spawn(
     "npm",
@@ -272,6 +335,8 @@ async function startDevServer({ restart = false } = {}) {
     if (signal) process.kill(process.pid, signal);
     process.exit(code ?? 0);
   });
+
+  void openBrowserWhenReady(url, child);
 }
 
 if (mode === "start") {

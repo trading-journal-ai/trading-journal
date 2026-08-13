@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-08-10 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-08-13 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -31,6 +31,24 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-08-13** — Low-friction local journal launcher
+  (branch `chore/journal-open-browser`).
+  - Confirmed the existing `journal`, `journal-stop`, and `journal-restart`
+    aliases are installed in the local shell config.
+  - Updated the launcher so `journal` opens the exact localhost URL once Next.js
+    is ready, including a fallback port when 4317 is occupied.
+  - Running `journal` while the app is already active now opens that existing
+    instance instead of only printing its URL.
+  - Fixed stale Next.js lock handling so a dead recorded PID no longer produces
+    a false "already running" result, and uses the live lock's recorded port
+    when process inspection cannot resolve it.
+  - Node syntax validation, targeted ESLint, and `git diff --check` passed.
+    Full-repository quick verification remains blocked only by the two known,
+    unchanged `react-hooks/set-state-in-effect` errors under
+    `src/components/preview/`.
+  - **Stopped at:** launcher improvement committed for review; no user data or
+    database behavior changed.
 
 - **2026-08-10** — Journal formatting merge preparation
   (branch `design/journal-formatting`).
