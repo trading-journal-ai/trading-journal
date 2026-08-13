@@ -48,8 +48,9 @@ stopped. This is the "when did we last work on it" trail.
     narrow-window QA, and `npm run verify:full` passed. The live Schwab mutation
     was intentionally not run during browser QA because it can append real
     executions to the local DB. The existing broad NFT trace warning remains.
-  - **Stopped at:** focused importer slice implemented and fully verified;
-    GitHub handoff pending.
+  - Opened draft [PR #70](https://github.com/trading-journal-ai/trading-journal/pull/70).
+  - **Stopped at:** focused importer slice implemented, fully verified, and
+    ready for owner review in PR #70.
 
 - **2026-08-13** — Vercel local-only development mode
   (branch `chore/disable-vercel-deployments`).
