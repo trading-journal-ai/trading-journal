@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import type { DesignArtifactGroup, DesignArtifactWithDate } from "@/lib/preview/designArtifacts";
 
@@ -19,6 +19,18 @@ function loadState(): ReviewState {
   } catch {
     return {};
   }
+}
+
+const emptySubscribe = () => () => {};
+const EMPTY_STATE: ReviewState = {};
+
+// False on the server and during hydration, then true once the client takes over.
+function useHydrated(): boolean {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
 }
 
 function ageLabel(lastCommit: string | null): string {
@@ -130,14 +142,12 @@ export default function DesignArtifactReview({
   groups: DesignArtifactGroup[];
   artifacts: DesignArtifactWithDate[];
 }) {
-  const [state, setState] = useState<ReviewState>({});
-  const [hydrated, setHydrated] = useState(false);
+  const [savedState, setState] = useState<ReviewState>(loadState);
+  const hydrated = useHydrated();
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    setState(loadState());
-    setHydrated(true);
-  }, []);
+  // Keep server and hydration markup deterministic without discarding saved decisions.
+  const state = hydrated ? savedState : EMPTY_STATE;
 
   useEffect(() => {
     if (!hydrated) return;

@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-08-10 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-08-13 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -32,6 +32,37 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-13** — Low-friction local journal launcher
+  (branch `chore/journal-open-browser`).
+  - Confirmed the existing `journal`, `journal-stop`, and `journal-restart`
+    aliases are installed in the local shell config.
+  - Updated the launcher so `journal` opens the exact localhost URL once Next.js
+    is ready, including a fallback port when 4317 is occupied.
+  - Running `journal` while the app is already active now opens that existing
+    instance instead of only printing its URL.
+  - Fixed stale Next.js lock handling so a dead recorded PID no longer produces
+    a false "already running" result, and uses the live lock's recorded port
+    when process inspection cannot resolve it.
+  - Node syntax validation, targeted ESLint, and `git diff --check` passed.
+    Full-repository quick verification remains blocked only by the two known,
+    unchanged `react-hooks/set-state-in-effect` errors under
+    `src/components/preview/`.
+  - Combined with the preview hydration fix, `npm run verify:full` passed under
+    Node 22.13.0 before merge; the existing broad NFT trace warning remained.
+  - Merged [PR #65](https://github.com/trading-journal-ai/trading-journal/pull/65).
+  - **Stopped at:** launcher improvement landed on `main`; no user data or
+    database behavior changed.
+
+- **2026-08-13** — Preview hydration lint fix
+  (branch `fix/preview-hydration-lint`).
+  - Recovered two uncommitted preview fixes from a pre-history worktree onto a
+    fresh branch based on current `main`; the old branch remains unpublishable.
+  - Replaced mount-effect hydration flags with `useSyncExternalStore`, keeping
+    server markup deterministic while preserving local triage decisions.
+  - `npm run verify:types` and `git diff --check` passed.
+  - Merged [PR #67](https://github.com/trading-journal-ai/trading-journal/pull/67).
+  - **Stopped at:** focused fix landed on `main`.
+
 - **2026-08-10** — Journal Day micro-calendar reference match
   (branch `design/journal-micro-calendar`).
   - Compared the production Journal against the supplied screenshot and Claude
@@ -58,6 +89,8 @@ stopped. This is the "when did we last work on it" trail.
   - Targeted ESLint, TypeScript, and `git diff --check` passed. Repository-wide
     `verify:quick` remains blocked only by the two known, unchanged
     `react-hooks/set-state-in-effect` errors under `src/components/preview/`.
+  - Synced merged PRs #65 and #67 into the branch; repository-wide
+    `npm run verify:types` now passes.
   - Opened draft [PR #66](https://github.com/trading-journal-ai/trading-journal/pull/66).
   - **Stopped at:** implementation and design QA complete; branch is remotely
     backed up and ready for owner review.
