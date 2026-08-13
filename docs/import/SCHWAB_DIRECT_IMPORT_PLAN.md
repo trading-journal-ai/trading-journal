@@ -252,6 +252,24 @@ failure.
 
 ## Authorization UX
 
+### Journal today empty state
+
+When the focused Journal date is today and no trades are present, the Journal
+offers one contextual **Import today's trades** action instead of sending the
+trader through the full range-import modal.
+
+- With one authorized Schwab account, the click confirms an append-only import
+  for today's ET date immediately.
+- With multiple authorized accounts, the Journal reveals only the masked
+  account choice before importing.
+- Expired authorization, missing setup, unavailable Schwab service, duplicate
+  fills, empty broker history, and fills held for review each remain distinct,
+  recoverable states.
+- Authorization recovery uses the existing local
+  `npm run schwab:authorize` helper until the in-app OAuth follow-up ships.
+- Historical ranges, previews, and broker-file fallback remain available in
+  the full importer.
+
 ### First implementation
 
 - Reuse the proven local authorization helper.

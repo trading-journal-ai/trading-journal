@@ -42,11 +42,13 @@ export default function JournalReviewTabs({
   view,
   onScopeChange,
   onViewChange,
+  showViews = true,
 }: {
   scope: JournalDataScope;
   view: JournalDataView;
   onScopeChange: (scope: JournalDataScope) => void;
   onViewChange: (view: JournalDataView) => void;
+  showViews?: boolean;
 }) {
   const views = JOURNAL_SCOPE_VIEWS[scope];
 
@@ -63,14 +65,16 @@ export default function JournalReviewTabs({
         onChange={(nextScope) => onScopeChange(nextScope as JournalDataScope)}
       />
 
-      <div className="ml-auto max-w-full overflow-x-auto">
-        <PeriodTabs
-          ariaLabel={`${scope} data view`}
-          items={views.map((item) => ({ value: item.key, label: item.label }))}
-          value={view}
-          onChange={(nextView) => onViewChange(nextView as JournalDataView)}
-        />
-      </div>
+      {showViews ? (
+        <div className="ml-auto max-w-full overflow-x-auto">
+          <PeriodTabs
+            ariaLabel={`${scope} data view`}
+            items={views.map((item) => ({ value: item.key, label: item.label }))}
+            value={view}
+            onChange={(nextView) => onViewChange(nextView as JournalDataView)}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

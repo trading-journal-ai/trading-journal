@@ -18,6 +18,7 @@ import { etDateString, etDayRange } from "@/lib/time";
 import ArchiveSidebar, { type ArchiveSidebarMonth } from "@/components/ArchiveSidebar";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
 import InlineImportPrompt from "@/components/InlineImportPrompt";
+import JournalTodayImport from "@/components/JournalTodayImport";
 import JournalPnlChart, { type JournalPnlPoint } from "@/components/JournalPnlChart";
 import {
   JournalDateHeading,
@@ -1489,12 +1490,19 @@ function JournalReviewModuleForDay({
             />
           </div>
         ) : (
-          <div className="border-y border-[var(--hairline)] py-10">
-            <p className="text-[15px] font-semibold text-[var(--foreground)]">No trades this day</p>
-            <p className="mt-2 max-w-[52ch] text-sm leading-6 text-[var(--muted)]">
-              The day is still available for reflection. Open Coach to add context or review the week and month around it.
-            </p>
-          </div>
+          day.date === currentEtDate() ?
+            <JournalTodayImport date={day.date} readOnly={isDemoReadOnly()} />
+            : (
+              <div className="border-y border-[var(--hairline)] py-10">
+                <p className="text-[15px] font-semibold text-[var(--foreground)]">
+                  No trades this day
+                </p>
+                <p className="mt-2 max-w-[52ch] text-sm leading-6 text-[var(--muted)]">
+                  The day is still available for reflection. Open Coach to add context
+                  or review the week and month around it.
+                </p>
+              </div>
+            )
         )}
       />
     </div>
@@ -1795,6 +1803,9 @@ function EmptyReviewState({
 }) {
   const accountSuffix = accountName ? ` on ${accountName}` : "";
   if (!brokerDataAvailable) {
+    if (reviewScope.scope === "day" && reviewScope.scopeKey === currentEtDate()) {
+      return <JournalTodayImport date={reviewScope.scopeKey} readOnly={readOnly} />;
+    }
     return (
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-[var(--foreground)]">No broker import found{accountSuffix}</h2>

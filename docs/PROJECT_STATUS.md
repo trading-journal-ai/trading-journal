@@ -32,6 +32,25 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-13** — Journal today-import fast path
+  (branch `design/importer-update`).
+  - Recovered the Claude Design handoff and matched its focused empty-Day
+    treatment: Day/Week/Month remain available, while irrelevant Day data tabs
+    disappear until trades exist.
+  - Added a one-click **Import today's trades** action for a single authorized
+    Schwab account; multiple accounts reveal only the required masked-account
+    choice.
+  - Added specific recovery states for expired authorization, missing setup,
+    unavailable Schwab service, no fills, duplicates, and fills held for review.
+  - Preserved the full importer for historical ranges, detailed previews, and
+    file uploads.
+  - Five focused outcome tests, targeted ESLint, TypeScript, rendered desktop /
+    narrow-window QA, and `npm run verify:full` passed. The live Schwab mutation
+    was intentionally not run during browser QA because it can append real
+    executions to the local DB. The existing broad NFT trace warning remains.
+  - **Stopped at:** focused importer slice implemented and fully verified;
+    GitHub handoff pending.
+
 - **2026-08-13** — Vercel local-only development mode
   (branch `chore/disable-vercel-deployments`).
   - Confirmed the marketing site and journal app are separate Vercel projects:
