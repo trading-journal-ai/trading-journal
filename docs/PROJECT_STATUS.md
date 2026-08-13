@@ -63,6 +63,42 @@ stopped. This is the "when did we last work on it" trail.
   - Merged [PR #67](https://github.com/trading-journal-ai/trading-journal/pull/67).
   - **Stopped at:** focused fix landed on `main`.
 
+- **2026-08-10** — Journal Day micro-calendar reference match
+  (branch `design/journal-micro-calendar`).
+  - Compared the production Journal against the supplied screenshot and Claude
+    Design HTML handoff, and confirmed no existing branch contained the missing
+    focused-Day micro rail/header treatment.
+  - Added a separate borderless five-day rail above the Day heading, restored
+    textual Today / Previous / Next / Calendar controls, changed Previous/Next
+    to trading-day steps, aligned both tab groups to the accent underline, and
+    widened the review canvas to the reference desktop insets.
+  - Preserved the richer bordered five-session strip in Week → P&L rather than
+    reusing it as the compact header rail.
+  - Recovered the updated white Light theme as the app default. Its token set
+    had already landed, but the `DEFAULT_THEME = "light"` commit was stranded on
+    `design/calendar-preview`; Daylight remains available as an explicit choice.
+  - Restored Journal to the shared `max-w-6xl` (72rem / 1152px) workspace used by
+    Calendar, Trades, and Analytics. The uncapped screenshot-matching pass had
+    overridden that established cross-product alignment.
+  - Browser-compared the 1440 × 838 implementation with the normalized source;
+    Next/Previous navigation, the Week strip, the Light/Daylight selector, and
+    the 1152px width across all four primary workspaces passed, with no console
+    warnings or errors. The in-app browser did not honor its requested 390px
+    override, so that breakpoint was not claimed as browser-verified in this
+    pass.
+  - Targeted ESLint, TypeScript, and `git diff --check` passed. Repository-wide
+    `verify:quick` remains blocked only by the two known, unchanged
+    `react-hooks/set-state-in-effect` errors under `src/components/preview/`.
+  - Synced merged PRs #65 and #67 into the branch; repository-wide
+    `npm run verify:types` now passes.
+  - Final completion check: lint and bundled schema validation passed; the
+    Turbopack build was blocked by unrelated IBM Plex Sans 404s in the
+    `day-recap-redesign` prototype, while the Webpack production build,
+    TypeScript, and all 22 static pages passed under Node 22.13.0.
+  - Opened [PR #66](https://github.com/trading-journal-ai/trading-journal/pull/66).
+  - **Stopped at:** implementation and design QA complete; owner accepted the
+    direction and the branch is ready to merge.
+
 - **2026-08-10** — Journal formatting merge preparation
   (branch `design/journal-formatting`).
   - Confirmed the branch is current with `origin/main` and reviewed its final

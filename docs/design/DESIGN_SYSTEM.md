@@ -1,6 +1,6 @@
 # Trading Journal Design System
 
-> Status: Canonical · Last updated: 2026-07-22 · Themes: dark · light · daylight · evening
+> Status: Canonical · Last updated: 2026-08-10 · Themes: dark · light · daylight · evening
 
 This is the single source of truth for the product's visual language:
 principles, typography, color roles, spacing, primitives, and component rules.
@@ -50,18 +50,28 @@ scanning during review, then gets out of the way when the user is writing.
 - Controls stay clearly clickable, but content areas avoid unnecessary borders
   and containers.
 
+## Workspace layout
+
+The primary Journal, Calendar, Trades, and Analytics workspaces share a centered
+`max-w-6xl` content measure: **72rem / 1152px** before the App Shell's responsive
+page padding. This stable width keeps their navigation, filters, evidence, and
+tables aligned as traders move between review surfaces. Individual prose or
+detail modules may use a narrower internal measure, but primary workspace routes
+must not remove or independently widen this cap.
+
 ## Themes
 
 The app ships **four themes**, applied via the `data-theme` attribute on
-`<html>` and persisted in `localStorage`. The default is **`daylight`** (a warm
-light theme). Theme plumbing lives in [`src/lib/theme.ts`](../../src/lib/theme.ts)
+`<html>` and persisted in `localStorage`. The default is **`light`** (the white,
+cool-neutral product direction). Theme plumbing lives in
+[`src/lib/theme.ts`](../../src/lib/theme.ts)
 (`THEMES`, `DEFAULT_THEME`, `applyTheme`) and boots in
 [`src/components/ThemeBoot.tsx`](../../src/components/ThemeBoot.tsx).
 
 | Theme | `data-theme` | Character | `color-scheme` |
 | --- | --- | --- | --- |
-| Daylight | `daylight` (default) | Warm paper light; amber accent | light |
-| Light | `light` | White canvas, cool light-gray surfaces; blue accent | light |
+| Light | `light` (default) | White canvas, cool light-gray surfaces; blue accent | light |
+| Daylight | `daylight` | Warm paper light; amber accent | light |
 | Evening | `evening` | Warm charcoal dark; amber accent | dark |
 | Dark | `dark` (`:root`) | Cool blue-black dark; blue accent | dark |
 
@@ -302,8 +312,13 @@ Build once, reuse everywhere.
   waiting for navigation. The page background remains flat with no added border,
   radius, elevation, or bottom edge. The five-day strip uses a complete hairline
   outline with a 4px radius. It leads Week → P&L as the at-a-glance summary and
-  does not remain above the Day / Week / Month review tabs. The week range and
-  previous/next/Calendar controls remain in the page-level navigation header.
+  does not remain above the Day / Week / Month review tabs. Focused Day uses a
+  separate borderless five-day micro rail above its date heading: abbreviated
+  weekday/date over outcome-colored P&L, with the selected date promoted by
+  foreground weight. Empty and future days keep their position but show no
+  invented value. Today / Previous / Next / Calendar remain textual controls in
+  the same page-level header; Previous and Next step across trading weekdays.
+  Both Journal tab groups use the semantic accent underline in this surface.
 - **Journal** — prose-first. Headers use Display/Page title; recap text uses Body
   large; metrics sit under the header as quiet mono metadata; ticker rail compact
   and sorted best-to-worst; pills secondary; reading mode hides edit controls

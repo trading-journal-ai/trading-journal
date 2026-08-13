@@ -51,7 +51,7 @@ export default function JournalReviewTabs({
   const views = JOURNAL_SCOPE_VIEWS[scope];
 
   return (
-    <div className="flex flex-wrap items-end justify-between gap-2 border-b border-[var(--hairline)]">
+    <div className="journal-review-tabs flex flex-wrap items-end justify-between gap-2 border-b border-[var(--hairline)]">
       <PeriodTabs
         ariaLabel="Journal time range"
         items={[
@@ -63,27 +63,13 @@ export default function JournalReviewTabs({
         onChange={(nextScope) => onScopeChange(nextScope as JournalDataScope)}
       />
 
-      <div
-        role="tablist"
-        aria-label={`${scope} data view`}
-        className="flex min-w-0 gap-1 overflow-x-auto pb-2.5"
-      >
-        {views.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            role="tab"
-            aria-selected={view === item.key}
-            onClick={() => onViewChange(item.key)}
-            className={`min-h-8 cursor-pointer whitespace-nowrap rounded-full px-3.5 text-[12.5px] font-semibold transition-colors duration-150 ease-out ${
-              view === item.key
-                ? "bg-[var(--foreground)] text-[var(--background)]"
-                : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
+      <div className="ml-auto max-w-full overflow-x-auto">
+        <PeriodTabs
+          ariaLabel={`${scope} data view`}
+          items={views.map((item) => ({ value: item.key, label: item.label }))}
+          value={view}
+          onChange={(nextView) => onViewChange(nextView as JournalDataView)}
+        />
       </div>
     </div>
   );

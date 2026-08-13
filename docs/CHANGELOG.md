@@ -15,6 +15,11 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
 
 ## 2026-08-13
 
+### Changed
+- Focused Journal days now use a compact five-session rail, textual trading-day
+  navigation, consistent underline tabs, and the shared 1152px workspace
+  ([PR #66](https://github.com/trading-journal-ai/trading-journal/pull/66)).
+
 ### Fixed
 - Local `journal` launcher now removes stale Next.js locks, reuses live lock
   metadata, and opens the exact active localhost URL automatically

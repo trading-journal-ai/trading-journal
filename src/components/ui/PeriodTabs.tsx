@@ -9,7 +9,7 @@ export type PeriodTabItem = {
 };
 
 function tabClass(active: boolean) {
-  return `-mb-px flex min-h-11 cursor-pointer items-center justify-center border-b-2 px-4 py-3 text-[14px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--blue)] ${
+  return `-mb-px flex min-h-11 cursor-pointer items-center justify-center border-b-2 px-4 py-3 text-[14px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
     active
       ? "border-[var(--foreground)] text-[var(--foreground)]"
       : "border-transparent text-[var(--muted)] hover:border-[var(--muted)] hover:text-[var(--foreground)]"
