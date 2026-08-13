@@ -58,8 +58,9 @@ stopped. This is the "when did we last work on it" trail.
   - Targeted ESLint, TypeScript, and `git diff --check` passed. Repository-wide
     `verify:quick` remains blocked only by the two known, unchanged
     `react-hooks/set-state-in-effect` errors under `src/components/preview/`.
-  - **Stopped at:** implementation and design QA complete; branch ready for
-    owner review and PR handoff.
+  - Opened draft [PR #66](https://github.com/trading-journal-ai/trading-journal/pull/66).
+  - **Stopped at:** implementation and design QA complete; branch is remotely
+    backed up and ready for owner review.
 
 - **2026-08-10** — Journal formatting merge preparation
   (branch `design/journal-formatting`).
