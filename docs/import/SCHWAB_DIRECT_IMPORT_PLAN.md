@@ -252,16 +252,36 @@ failure.
 
 ## Authorization UX
 
-### First implementation
+### Journal today empty state
+
+When the focused Journal date is today and no trades are present, the Journal
+offers one contextual **Import today's trades** action instead of sending the
+trader through the full range-import modal.
+
+- With one authorized Schwab account, the click confirms an append-only import
+  for today's ET date immediately.
+- With multiple authorized accounts, the Journal reveals only the masked
+  account choice before importing.
+- Expired authorization, missing setup, unavailable Schwab service, duplicate
+  fills, empty broker history, and fills held for review each remain distinct,
+  recoverable states.
+- Authorization recovery is an in-app **Authorize Schwab** action. It reuses
+  the local OAuth helper, opens Schwab consent, reloads the refreshed credential
+  into the running Journal, and rechecks masked accounts without a restart.
+- Historical ranges, previews, and broker-file fallback remain available in
+  the full importer.
+
+### First implementation (landed)
 
 - Reuse the proven local authorization helper.
 - Add `npm run schwab:authorize`.
-- The disconnected UI explains the recovery command.
+- The disconnected UI exposes authorization as a product action rather than a
+  terminal command.
 - After authorization, re-run connection preflight and populate accounts.
 
-### Follow-up
+### In-app authorization follow-up (landed)
 
-Replace the terminal recovery step with an in-app `Connect Schwab` flow:
+The terminal recovery step is replaced with an in-app **Authorize Schwab** flow:
 
 1. Start the short-lived local HTTPS callback listener.
 2. Open the Schwab authorization URL.
@@ -269,7 +289,9 @@ Replace the terminal recovery step with an in-app `Connect Schwab` flow:
 4. Update the Journal-owned credential store.
 5. Refresh connection state and account options.
 
-Do not block direct import on the polished in-app OAuth flow.
+The action is restricted to loopback Journal hosts. The browser receives only
+connection state; OAuth callback codes, app secrets, and tokens remain in the
+local helper/server process. Concurrent clicks share one authorization attempt.
 
 ## Read-Only History Probe
 

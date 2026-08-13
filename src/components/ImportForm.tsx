@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { importCsvAction, type ImportState } from "@/app/import/actions";
 import {
+  authorizeSchwabAction,
   getSchwabConnectionAction,
   importSchwabExecutionsAction,
   previewSchwabImportAction,
@@ -218,6 +219,7 @@ export default function ImportForm() {
                     <SchwabImportReadyState
                       connection={schwabConnection}
                       checking={checkingSchwab}
+                      onConnectionChange={setSchwabConnection}
                       onRetry={refreshSchwabConnection}
                       onUseFile={() => changeMethod("file")}
                     />
@@ -237,11 +239,13 @@ export default function ImportForm() {
 function SchwabImportReadyState({
   connection,
   checking,
+  onConnectionChange,
   onRetry,
   onUseFile,
 }: {
   connection: SchwabConnectionUiState;
   checking: boolean;
+  onConnectionChange: (connection: SchwabConnectionState) => void;
   onRetry: () => void;
   onUseFile: () => void;
 }) {
@@ -253,6 +257,7 @@ function SchwabImportReadyState({
     useState<SchwabImportActionResult | null>(null);
   const [previewing, startPreview] = useTransition();
   const [importing, startImport] = useTransition();
+  const [authorizing, startAuthorization] = useTransition();
   const limits = schwabDateLimits();
   const dateError = schwabDateRangeError(dateRange.from, dateRange.to, limits);
   const connected = connection.status === "connected";
@@ -321,11 +326,28 @@ function SchwabImportReadyState({
     });
   }
 
+  function authorizeSchwab() {
+    startAuthorization(async () => {
+      setPreviewResult(null);
+      setImportResult(null);
+      try {
+        onConnectionChange(await authorizeSchwabAction());
+      } catch {
+        onConnectionChange({
+          status: "unavailable",
+          error: "Schwab authorization did not finish. Try again and complete the Schwab window that opens in your browser.",
+        });
+      }
+    });
+  }
+
   return (
     <div className="space-y-6 pt-6">
       <SchwabConnectionSummary
         connection={connection}
         checking={checking}
+        authorizing={authorizing}
+        onAuthorize={authorizeSchwab}
         onRetry={onRetry}
       />
 
@@ -338,7 +360,7 @@ function SchwabImportReadyState({
                 ? connection.accounts.map((account) => account.value).join(":")
                 : connection.status
             }
-            disabled={!connected || checking}
+            disabled={!connected || checking || authorizing}
             value={selectedAccountValue}
             onChange={(event) => {
               setSelectedAccount(event.target.value);
@@ -420,11 +442,19 @@ function SchwabImportReadyState({
       </div>
 
       {connected && previewResult ? (
-        <SchwabPreviewResult result={previewResult} />
+        <SchwabPreviewResult
+          result={previewResult}
+          authorizing={authorizing}
+          onAuthorize={authorizeSchwab}
+        />
       ) : null}
 
       {connected && importResult ? (
-        <SchwabImportResult result={importResult} />
+        <SchwabImportResult
+          result={importResult}
+          authorizing={authorizing}
+          onAuthorize={authorizeSchwab}
+        />
       ) : null}
 
       <div className="flex flex-col-reverse gap-3 border-t border-[var(--hairline)] pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -443,6 +473,7 @@ function SchwabImportReadyState({
               disabled={
                 !connected
                 || checking
+                || authorizing
                 || previewing
                 || importing
                 || Boolean(dateError)
@@ -486,7 +517,15 @@ function SchwabImportReadyState({
   );
 }
 
-function SchwabPreviewResult({ result }: { result: SchwabPreviewActionResult }) {
+function SchwabPreviewResult({
+  result,
+  authorizing,
+  onAuthorize,
+}: {
+  result: SchwabPreviewActionResult;
+  authorizing: boolean;
+  onAuthorize: () => void;
+}) {
   if (!result.ok) {
     return (
       <div
@@ -496,9 +535,14 @@ function SchwabPreviewResult({ result }: { result: SchwabPreviewActionResult }) 
         <div className="font-semibold text-[var(--red)]">Preview unavailable</div>
         <p className="mt-1 text-sm leading-6 text-[var(--body)]">{result.error}</p>
         {result.kind === "reauth_required" ? (
-          <code className="mt-2 block font-mono text-xs text-[var(--foreground)]">
-            npm run schwab:authorize
-          </code>
+          <button
+            type="button"
+            onClick={onAuthorize}
+            disabled={authorizing}
+            className="mt-3 h-9 cursor-pointer rounded-md bg-[var(--action)] px-3 text-xs font-semibold text-[var(--action-foreground)] transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-50"
+          >
+            {authorizing ? "Waiting for Schwab…" : "Authorize Schwab"}
+          </button>
         ) : null}
       </div>
     );
@@ -711,7 +755,15 @@ function SchwabPreviewSummary({ preview }: { preview: SchwabImportPreview }) {
   );
 }
 
-function SchwabImportResult({ result }: { result: SchwabImportActionResult }) {
+function SchwabImportResult({
+  result,
+  authorizing,
+  onAuthorize,
+}: {
+  result: SchwabImportActionResult;
+  authorizing: boolean;
+  onAuthorize: () => void;
+}) {
   if (!result.ok) {
     return (
       <div
@@ -723,6 +775,16 @@ function SchwabImportResult({ result }: { result: SchwabImportActionResult }) {
         <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
           The database transaction was rolled back; no partial Schwab import was saved.
         </p>
+        {result.kind === "reauth_required" ? (
+          <button
+            type="button"
+            onClick={onAuthorize}
+            disabled={authorizing}
+            className="mt-3 h-9 cursor-pointer rounded-md bg-[var(--action)] px-3 text-xs font-semibold text-[var(--action-foreground)] transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-50"
+          >
+            {authorizing ? "Waiting for Schwab…" : "Authorize Schwab"}
+          </button>
+        ) : null}
         <div className="mt-3 border-t border-[var(--red)]/20 pt-3">
           <Link
             href="/journal"
@@ -827,12 +889,29 @@ function SchwabImportResult({ result }: { result: SchwabImportActionResult }) {
 function SchwabConnectionSummary({
   connection,
   checking,
+  authorizing,
+  onAuthorize,
   onRetry,
 }: {
   connection: SchwabConnectionUiState;
   checking: boolean;
+  authorizing: boolean;
+  onAuthorize: () => void;
   onRetry: () => void;
 }) {
+  if (authorizing) {
+    return (
+      <div className="border-l-2 border-[var(--accent)] pl-4" aria-live="polite">
+        <h3 className="text-base font-semibold text-[var(--foreground)]">
+          Finish authorization in Schwab
+        </h3>
+        <p className="mt-2 max-w-[560px] text-sm leading-6 text-[var(--body)]">
+          A secure Schwab window is open in your browser. This page will update when you finish.
+        </p>
+      </div>
+    );
+  }
+
   if (checking || connection.status === "idle") {
     return (
       <div className="border-l-2 border-[var(--accent)] pl-4" aria-live="polite">
@@ -876,6 +955,11 @@ function SchwabConnectionSummary({
     connection.status === "unavailable"
       ? connection.error
       : connection.recovery;
+  const canAuthorize = connection.status === "reauth_required"
+    || (
+      connection.status === "missing_credentials"
+      && !connection.missing.some((key) => key !== "SCHWAB_REFRESH_TOKEN")
+    );
 
   return (
     <div className="space-y-3 border-l-2 border-[var(--accent)] pl-4" aria-live="polite">
@@ -885,23 +969,34 @@ function SchwabConnectionSummary({
           {detail}
         </p>
       </div>
-      {connection.status !== "unavailable" ? (
-        <div className="rounded-md border border-[var(--hairline)] bg-[var(--background)] px-3 py-2">
-          <code className="font-mono text-xs text-[var(--foreground)]">
-            npm run schwab:authorize
-          </code>
-          <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
-            Full open-source setup: docs/setup/SCHWAB_SETUP.md
-          </p>
-        </div>
-      ) : null}
-      <button
-        type="button"
-        onClick={onRetry}
-        className="h-9 cursor-pointer rounded-md border border-[var(--border)] px-3 text-xs font-semibold text-[var(--body)] hover:border-[var(--accent)] hover:text-[var(--foreground)]"
-      >
-        Check connection again
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        {canAuthorize ? (
+          <button
+            type="button"
+            onClick={onAuthorize}
+            className="h-10 cursor-pointer rounded-md bg-[var(--action)] px-4 text-sm font-semibold text-[var(--action-foreground)] transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+          >
+            Authorize Schwab
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={onRetry}
+          className="h-9 cursor-pointer rounded-md border border-[var(--border)] px-3 text-xs font-semibold text-[var(--body)] hover:border-[var(--accent)] hover:text-[var(--foreground)]"
+        >
+          Check connection again
+        </button>
+        {needsSetup && !canAuthorize ? (
+          <a
+            href="https://github.com/trading-journal-ai/trading-journal/blob/main/docs/setup/SCHWAB_SETUP.md"
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-semibold text-[var(--muted)] hover:text-[var(--foreground)]"
+          >
+            Open one-time setup guide
+          </a>
+        ) : null}
+      </div>
     </div>
   );
 }

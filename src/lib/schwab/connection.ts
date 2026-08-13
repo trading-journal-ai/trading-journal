@@ -14,16 +14,21 @@ export async function getSchwabConnectionState(): Promise<SchwabConnectionState>
     return { status: "connected", accounts };
   } catch (error) {
     if (error instanceof SchwabConfigurationError) {
+      const needsDeveloperSetup = error.missing.some(
+        (key) => key !== "SCHWAB_REFRESH_TOKEN",
+      );
       return {
         status: "missing_credentials",
         missing: error.missing,
-        recovery: "Follow docs/setup/SCHWAB_SETUP.md, then run npm run schwab:authorize.",
+        recovery: needsDeveloperSetup
+          ? "Add this Journal’s Schwab developer credentials once, then authorize Schwab."
+          : "Authorize Schwab to finish connecting this Journal.",
       };
     }
     if (schwabRequiresReauthorization(error)) {
       return {
         status: "reauth_required",
-        recovery: "Run npm run schwab:authorize, restart the Journal, and retry.",
+        recovery: "Authorize Schwab again to continue.",
       };
     }
     return {

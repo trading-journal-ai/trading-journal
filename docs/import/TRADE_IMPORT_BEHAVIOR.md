@@ -137,6 +137,14 @@ The implementation is split across:
 - [`reconcile.ts`](../../src/lib/schwab/reconcile.ts): trade planning and safety
 - [`persist.ts`](../../src/lib/schwab/persist.ts): atomic confirmed writes
 
+The focused Journal also exposes a fast path for the current ET date. When
+today has no trades, **Import today's trades** performs the same server-verified,
+append-only import for that single date. The click is the confirmation; it does
+not add a separate preview step. Multiple Schwab accounts still require an
+explicit masked-account choice, and ambiguous fills remain excluded for review.
+The full importer continues to own historical ranges, detailed previews, and
+file uploads.
+
 ### 1. Fetch
 
 - The user selects a masked Schwab account and ET date range.

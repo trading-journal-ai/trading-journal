@@ -193,6 +193,10 @@ export default function JournalReviewModule({
 
   function selectScope(nextScope: JournalDataScope) {
     setScope(nextScope);
+    if (nextScope === "day" && summary.trades === 0) {
+      setView("pnl");
+      return;
+    }
     // Keep the current view when the next scope offers it (e.g. Coach exists
     // in all three scopes) — resetting to P&L made content "disappear".
     const nextViews = JOURNAL_SCOPE_VIEWS[nextScope];
@@ -208,6 +212,7 @@ export default function JournalReviewModule({
         view={view}
         onScopeChange={selectScope}
         onViewChange={setView}
+        showViews={scope !== "day" || summary.trades > 0}
       />
 
       <div

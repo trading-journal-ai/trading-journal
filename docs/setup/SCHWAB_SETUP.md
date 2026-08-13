@@ -46,21 +46,24 @@ logs, screenshots, or support messages.
 
 ## 3. Authorize
 
-Run:
+Open the Journal locally, choose **Import today's trades** or **Sync from
+Schwab**, then select **Authorize Schwab**. The Journal opens Schwab consent in
+the browser and updates the connection automatically when consent finishes.
+
+The authorization flow starts a short-lived local HTTPS callback listener.
+Because the certificate is local and self-signed, the browser may require you
+to approve the localhost certificate before completing the callback.
+
+After consent, the Journal updates only `SCHWAB_REFRESH_TOKEN` in this
+repository's `.env`. Tokens, callback codes, and raw account identifiers are
+never returned to the Journal UI. No Journal restart is required when
+authorization starts from the in-app button.
+
+For troubleshooting only, the equivalent terminal fallback remains:
 
 ```bash
 npm run schwab:authorize
 ```
-
-The command opens Schwab consent in a browser and starts a short-lived local
-HTTPS callback listener. Because the certificate is local and self-signed, the
-browser may require you to approve the localhost certificate before completing
-the callback.
-
-After consent, the command updates only `SCHWAB_REFRESH_TOKEN` in this
-repository's `.env`. It filters the OAuth callback code from terminal output.
-
-Restart `npm run dev` after authorization if the Journal was already running.
 
 ## 4. Verify
 
@@ -97,11 +100,12 @@ repair workflow may offer that behavior only as a separate, explicit action.
 
 If the Import modal reports that reauthorization is required:
 
-```bash
-npm run schwab:authorize
-```
+1. Select **Authorize Schwab**.
+2. Finish consent in the Schwab browser window.
+3. Return to the Journal; it reloads the authorized account list automatically.
 
-Then restart the Journal and retry the connection.
+The terminal command in the troubleshooting section remains available if the
+button cannot open the Schwab window.
 
 ## Troubleshooting
 
