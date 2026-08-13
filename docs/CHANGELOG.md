@@ -13,6 +13,16 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
 
 ---
 
+## 2026-08-13
+
+### Fixed
+- Local `journal` launcher now removes stale Next.js locks, reuses live lock
+  metadata, and opens the exact active localhost URL automatically
+  ([PR #65](https://github.com/trading-journal-ai/trading-journal/pull/65)).
+- Preview triage hydration no longer relies on synchronous mount-effect state
+  updates, restoring clean repository-wide lint and TypeScript validation
+  ([PR #67](https://github.com/trading-journal-ai/trading-journal/pull/67)).
+
 ## 2026-08-10
 
 ### Changed
