@@ -15,6 +15,12 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
 
 ## 2026-08-13
 
+### Added
+- Empty Journal days can now import today’s Schwab trades directly, with
+  one-click authorization recovery, masked multi-account selection, and the
+  full importer preserved for historical ranges and file uploads
+  ([PR #70](https://github.com/trading-journal-ai/trading-journal/pull/70)).
+
 ### Changed
 - Focused Journal days now use a compact five-session rail, textual trading-day
   navigation, consistent underline tabs, and the shared 1152px workspace
