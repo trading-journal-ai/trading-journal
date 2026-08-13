@@ -50,8 +50,9 @@ stopped. This is the "when did we last work on it" trail.
     surface treatment, and recorded the passing evidence in `design-qa.md`.
   - Focused metric tests and `npm run verify:full` passed under Node 22.13.0;
     the existing broad NFT trace warning remains.
+  - Opened [PR #71](https://github.com/trading-journal-ai/trading-journal/pull/71).
   - **Stopped at:** implementation, design QA, and repository verification
-    complete; branch is ready for PR review.
+    complete; PR #71 is ready for owner review.
 
 - **2026-08-13** — Journal today-import fast path
   (branch `design/importer-update`).
