@@ -366,6 +366,7 @@ To start it again later:
 npm run dev:start
 ```
 
+The command opens the journal in your default browser as soon as it is ready.
 Leave the terminal open while using the journal. To stop the app, click the
 terminal and press **Ctrl + C**. On Mac, that is the Control key, not Command.
 
@@ -382,6 +383,10 @@ alias journal='npm --prefix "/absolute/path/to/trading-journal" run --silent dev
 alias journal-stop='npm --prefix "/absolute/path/to/trading-journal" run --silent dev:stop'
 alias journal-restart='npm --prefix "/absolute/path/to/trading-journal" run --silent dev:restart'
 ```
+
+Once installed, `journal` is the only command you need to remember: it starts
+the app and opens whichever localhost URL is active. Running it again while the
+journal is already running simply opens that existing instance.
 
 Stopping and restarting the app does not delete your data. Your journal lives in
 a SQLite database file on disk.
