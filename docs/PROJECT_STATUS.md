@@ -47,9 +47,21 @@ stopped. This is the "when did we last work on it" trail.
     Full-repository quick verification remains blocked only by the two known,
     unchanged `react-hooks/set-state-in-effect` errors under
     `src/components/preview/`.
+  - Combined with the preview hydration fix, `npm run verify:full` passed under
+    Node 22.13.0 before merge; the existing broad NFT trace warning remained.
   - Opened draft [PR #65](https://github.com/trading-journal-ai/trading-journal/pull/65).
   - **Stopped at:** launcher improvement committed and remotely backed up; no
     user data or database behavior changed.
+
+- **2026-08-13** — Preview hydration lint fix
+  (branch `fix/preview-hydration-lint`).
+  - Recovered two uncommitted preview fixes from a pre-history worktree onto a
+    fresh branch based on current `main`; the old branch remains unpublishable.
+  - Replaced mount-effect hydration flags with `useSyncExternalStore`, keeping
+    server markup deterministic while preserving local triage decisions.
+  - `npm run verify:types` and `git diff --check` passed.
+  - Opened draft [PR #67](https://github.com/trading-journal-ai/trading-journal/pull/67).
+  - **Stopped at:** focused fix validated and remotely backed up.
 
 - **2026-08-10** — Journal formatting merge preparation
   (branch `design/journal-formatting`).

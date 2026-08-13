@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import type { PrototypeEntryWithDate, PrototypeGroup } from "@/lib/preview/prototypeCatalog";
 
@@ -21,6 +21,18 @@ function loadState(): TriageState {
   } catch {
     return {};
   }
+}
+
+const emptySubscribe = () => () => {};
+const EMPTY_STATE: TriageState = {};
+
+// False on the server and during hydration, then true once the client takes over.
+function useHydrated(): boolean {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
 }
 
 function ArrowIcon() {
@@ -148,14 +160,12 @@ export default function PrototypeTriage({
   groups: PrototypeGroup[];
   entries: PrototypeEntryWithDate[];
 }) {
-  const [state, setState] = useState<TriageState>({});
-  const [hydrated, setHydrated] = useState(false);
+  const [savedState, setState] = useState<TriageState>(loadState);
+  const hydrated = useHydrated();
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    setState(loadState());
-    setHydrated(true);
-  }, []);
+  // Keep server and hydration markup deterministic without discarding saved decisions.
+  const state = hydrated ? savedState : EMPTY_STATE;
 
   useEffect(() => {
     if (!hydrated) return;
