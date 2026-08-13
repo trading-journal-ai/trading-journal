@@ -47,8 +47,9 @@ stopped. This is the "when did we last work on it" trail.
     Full-repository quick verification remains blocked only by the two known,
     unchanged `react-hooks/set-state-in-effect` errors under
     `src/components/preview/`.
-  - **Stopped at:** launcher improvement committed for review; no user data or
-    database behavior changed.
+  - Opened draft [PR #65](https://github.com/trading-journal-ai/trading-journal/pull/65).
+  - **Stopped at:** launcher improvement committed and remotely backed up; no
+    user data or database behavior changed.
 
 - **2026-08-10** — Journal formatting merge preparation
   (branch `design/journal-formatting`).
