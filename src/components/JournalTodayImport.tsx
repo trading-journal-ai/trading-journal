@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
+  authorizeSchwabAction,
   getSchwabConnectionAction,
   importSchwabExecutionsAction,
 } from "@/app/import/schwab-actions";
@@ -16,6 +17,7 @@ import type {
 type TodayImportUiState =
   | { phase: "idle" }
   | { phase: "checking" }
+  | { phase: "authorizing" }
   | { phase: "choosing_account"; accounts: SchwabAccountOption[]; selected: string }
   | { phase: "importing" }
   | {
@@ -31,6 +33,7 @@ type TodayImportUiState =
         | "unavailable";
       title: string;
       detail: string;
+      canAuthorize?: boolean;
     };
 
 function connectionMessage(connection: Exclude<SchwabConnectionState, { status: "connected" }>): TodayImportUiState {
@@ -40,6 +43,7 @@ function connectionMessage(connection: Exclude<SchwabConnectionState, { status: 
       kind: "reauth_required",
       title: "Schwab authorization expired",
       detail: connection.recovery,
+      canAuthorize: true,
     };
   }
 
@@ -49,6 +53,9 @@ function connectionMessage(connection: Exclude<SchwabConnectionState, { status: 
       kind: "setup_required",
       title: "Schwab isn’t set up for this Journal",
       detail: connection.recovery,
+      canAuthorize: !connection.missing.some(
+        (key) => key !== "SCHWAB_REFRESH_TOKEN",
+      ),
     };
   }
 
@@ -70,6 +77,31 @@ export default function JournalTodayImport({
   const router = useRouter();
   const [state, setState] = useState<TodayImportUiState>({ phase: "idle" });
 
+  async function continueFromConnection(connection: SchwabConnectionState) {
+    if (connection.status !== "connected") {
+      setState(connectionMessage(connection));
+      return;
+    }
+    if (connection.accounts.length === 0) {
+      setState({
+        phase: "message",
+        kind: "unavailable",
+        title: "No Schwab accounts were found",
+        detail: "Authorize the account you traded in, then check the connection again.",
+      });
+      return;
+    }
+    if (connection.accounts.length > 1) {
+      setState({
+        phase: "choosing_account",
+        accounts: connection.accounts,
+        selected: connection.accounts[0].value,
+      });
+      return;
+    }
+    await importAccount(connection.accounts[0].value);
+  }
+
   async function importAccount(accountSelection: string) {
     setState({ phase: "importing" });
     try {
@@ -84,6 +116,7 @@ export default function JournalTodayImport({
         kind: presentation.kind,
         title: presentation.title,
         detail: presentation.detail,
+        canAuthorize: presentation.kind === "reauth_required",
       });
       if (presentation.refreshJournal) router.refresh();
     } catch {
@@ -100,34 +133,27 @@ export default function JournalTodayImport({
     setState({ phase: "checking" });
     try {
       const connection = await getSchwabConnectionAction();
-      if (connection.status !== "connected") {
-        setState(connectionMessage(connection));
-        return;
-      }
-      if (connection.accounts.length === 0) {
-        setState({
-          phase: "message",
-          kind: "unavailable",
-          title: "No Schwab accounts were found",
-          detail: "Authorize the account you traded in, then check the connection again.",
-        });
-        return;
-      }
-      if (connection.accounts.length > 1) {
-        setState({
-          phase: "choosing_account",
-          accounts: connection.accounts,
-          selected: connection.accounts[0].value,
-        });
-        return;
-      }
-      await importAccount(connection.accounts[0].value);
+      await continueFromConnection(connection);
     } catch {
       setState({
         phase: "message",
         kind: "unavailable",
         title: "Schwab couldn’t be reached",
         detail: "Check your connection and try again, or use the full importer.",
+      });
+    }
+  }
+
+  async function authorizeSchwab() {
+    setState({ phase: "authorizing" });
+    try {
+      await continueFromConnection(await authorizeSchwabAction());
+    } catch {
+      setState({
+        phase: "message",
+        kind: "unavailable",
+        title: "Schwab authorization didn’t finish",
+        detail: "Try again and complete the Schwab window that opens in your browser.",
       });
     }
   }
@@ -158,7 +184,11 @@ export default function JournalTodayImport({
     );
   }
 
-  if (state.phase === "checking" || state.phase === "importing") {
+  if (
+    state.phase === "checking"
+    || state.phase === "authorizing"
+    || state.phase === "importing"
+  ) {
     return (
       <div
         className="flex min-h-24 flex-wrap items-center gap-4 py-8"
@@ -171,7 +201,9 @@ export default function JournalTodayImport({
         <p className="text-[13px] text-[var(--muted)]">
           {state.phase === "checking"
             ? "Checking Schwab authorization…"
-            : "Importing today’s trades from Schwab…"}
+            : state.phase === "authorizing"
+              ? "Finish authorization in the Schwab window…"
+              : "Importing today’s trades from Schwab…"}
         </p>
       </div>
     );
@@ -214,8 +246,6 @@ export default function JournalTodayImport({
     || state.kind === "setup_required"
     || state.kind === "validation"
     || state.kind === "unavailable";
-  const showRecoveryCommand = state.kind === "reauth_required"
-    || state.kind === "setup_required";
   return (
     <div
       className="py-8"
@@ -224,13 +254,16 @@ export default function JournalTodayImport({
     >
       <h3 className="text-[15px] font-semibold text-[var(--foreground)]">{state.title}</h3>
       <p className="mt-2 max-w-[62ch] text-sm leading-6 text-[var(--muted)]">{state.detail}</p>
-      {showRecoveryCommand ? (
-        <code className="mt-3 inline-flex rounded-md bg-[var(--surface-2)] px-3 py-2 font-mono text-xs text-[var(--foreground)]">
-          npm run schwab:authorize
-        </code>
-      ) : null}
       <div className="mt-4 flex flex-wrap items-center gap-4 text-sm font-semibold">
-        {isError ? (
+        {state.canAuthorize ? (
+          <button
+            type="button"
+            onClick={authorizeSchwab}
+            className="h-10 cursor-pointer rounded-md bg-[var(--action)] px-4 text-sm font-semibold text-[var(--action-foreground)] transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+          >
+            Authorize Schwab
+          </button>
+        ) : isError ? (
           <button
             type="button"
             onClick={startImport}

@@ -71,10 +71,11 @@ describe("schwabTodayImportPresentation", () => {
     const presentation = schwabTodayImportPresentation({
       ok: false,
       kind: "reauth_required",
-      error: "Schwab authorization expired. Run npm run schwab:authorize, restart the Journal, and try again.",
+      error: "Schwab authorization expired. Authorize Schwab again, then retry the import.",
     });
 
     expect(presentation.kind).toBe("reauth_required");
-    expect(presentation.detail).toContain("npm run schwab:authorize");
+    expect(presentation.detail).toContain("Authorize Schwab again");
+    expect(presentation.detail).not.toContain("npm run");
   });
 });

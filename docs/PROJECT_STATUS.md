@@ -42,12 +42,18 @@ stopped. This is the "when did we last work on it" trail.
     choice.
   - Added specific recovery states for expired authorization, missing setup,
     unavailable Schwab service, no fills, duplicates, and fills held for review.
+  - Replaced the expired-authorization terminal instruction with an in-app
+    **Authorize Schwab** button in both the Journal fast path and full importer.
+    The local-only action opens Schwab consent, keeps OAuth secrets server-side,
+    refreshes the running Journal without a restart, and automatically resumes
+    the one-account today import after consent.
   - Preserved the full importer for historical ranges, detailed previews, and
     file uploads.
-  - Five focused outcome tests, targeted ESLint, TypeScript, rendered desktop /
-    narrow-window QA, and `npm run verify:full` passed. The live Schwab mutation
-    was intentionally not run during browser QA because it can append real
-    executions to the local DB. The existing broad NFT trace warning remains.
+  - Focused outcome/auth tests, targeted ESLint, TypeScript, rendered desktop /
+    narrow-window QA, and `npm run verify:full` passed. Live Schwab consent and
+    the live import mutation were intentionally not run during browser QA
+    because they can update the local credential and append real executions to
+    the local DB. The existing broad NFT trace warning remains.
   - Opened draft [PR #70](https://github.com/trading-journal-ai/trading-journal/pull/70).
   - **Stopped at:** focused importer slice implemented, fully verified, and
     ready for owner review in PR #70.
