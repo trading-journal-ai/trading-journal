@@ -91,9 +91,13 @@ stopped. This is the "when did we last work on it" trail.
     `react-hooks/set-state-in-effect` errors under `src/components/preview/`.
   - Synced merged PRs #65 and #67 into the branch; repository-wide
     `npm run verify:types` now passes.
-  - Opened draft [PR #66](https://github.com/trading-journal-ai/trading-journal/pull/66).
-  - **Stopped at:** implementation and design QA complete; branch is remotely
-    backed up and ready for owner review.
+  - Final completion check: lint and bundled schema validation passed; the
+    Turbopack build was blocked by unrelated IBM Plex Sans 404s in the
+    `day-recap-redesign` prototype, while the Webpack production build,
+    TypeScript, and all 22 static pages passed under Node 22.13.0.
+  - Opened [PR #66](https://github.com/trading-journal-ai/trading-journal/pull/66).
+  - **Stopped at:** implementation and design QA complete; owner accepted the
+    direction and the branch is ready to merge.
 
 - **2026-08-10** — Journal formatting merge preparation
   (branch `design/journal-formatting`).
