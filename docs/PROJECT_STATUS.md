@@ -32,6 +32,23 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-13** — Vercel local-only development mode
+  (branch `chore/disable-vercel-deployments`).
+  - Confirmed the marketing site and journal app are separate Vercel projects:
+    `trading-journal-site` continues serving `trading-journal.ai`, while the
+    paused `trading-journal-app` project owns `demo.trading-journal.ai`.
+  - Disabled Git-created deployments on `trading-journal-app`; the separate
+    marketing-site project remains enabled and unchanged.
+  - Added a source-controlled `vercel.json` policy that disables automatic
+    Preview and Production deployments from this repository during local-only
+    development.
+  - Updated the architecture contract so app pushes mean GitHub backup and
+    local verification until a hosted demo release is deliberately restored.
+  - Backed up the repository policy in draft
+    [PR #69](https://github.com/trading-journal-ai/trading-journal/pull/69).
+  - **Stopped at:** automatic app deployments are disabled operationally and
+    in repository configuration; the public marketing site remains live.
+
 - **2026-08-13** — Low-friction local journal launcher
   (branch `chore/journal-open-browser`).
   - Confirmed the existing `journal`, `journal-stop`, and `journal-restart`

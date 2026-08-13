@@ -106,6 +106,12 @@ API calls**; it renders from the bundled DB and cached/fallback data.
 
 ## Deployment topology
 
+> **Local-only development mode (2026-08-13):** the
+> `trading-journal-app` Vercel project is paused and this repository disables
+> Git-created deployments in `vercel.json`. The marketing site remains live
+> from its separate `trading-journal-site` repository. The topology below is
+> the intended hosted-demo shape when the app is deliberately resumed.
+
 ```text
 Visitor → trading-journal.ai (marketing, static CDN, instant)
             │  clicks CTA
@@ -294,14 +300,22 @@ not expose a public path that triggers paid or nondeterministic generation.
 ## Deployment flows
 
 ```text
-App code update:   push main → Vercel rebuilds → demo gets latest UI + a freshly built demo DB
-Demo content:      update samples/demo fixtures → verify local demo → rebuild → deploy
+App code update:   push main → GitHub backup; run and verify the journal locally
+Hosted demo release: re-enable Git deployments → resume app project → build and deploy deliberately
+Demo content:      update samples/demo fixtures → verify locally → include in a deliberate hosted release
 Marketing update:  push site repo → Vercel rebuilds trading-journal.ai → CTA → hosted demo
 ```
 
-App code deploys automatically via Vercel. Because the demo DB is a build
-artifact (not a mutated hosted DB), a demo-content change is just a fixture edit
-+ redeploy — no separate hosted-refresh operation.
+App code does not deploy automatically while the journal is in local-only
+development. `vercel.json` disables Git-created Preview and Production
+deployments for this repository, while the separate marketing-site repository
+continues to deploy normally. When the hosted demo is intentionally restored,
+remove or change that policy, resume `trading-journal-app`, and run the full
+pre-deployment verification first.
+
+Because the demo DB is a build artifact (not a mutated hosted DB), a future
+demo-content release remains a fixture edit + deliberate redeploy — no separate
+hosted-refresh operation.
 
 ## Near-term checklist
 
