@@ -148,7 +148,9 @@ file uploads.
 ### 1. Fetch
 
 - The user selects a masked Schwab account and ET date range.
-- The range is limited to the most recent 60 days.
+- The range is limited to the most recent 365 days. The live Schwab API probe
+  accepts orders and trade transactions at the one-year boundary; older
+  history still requires a statement file.
 - Requests are split into seven-day chunks.
 - Orders receive an additional seven-day entered-order lookback so an order
   entered shortly before the selected range can still contribute fills inside
