@@ -27,6 +27,9 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
   ([PR #66](https://github.com/trading-journal-ai/trading-journal/pull/66)).
 
 ### Fixed
+- Journal period headings and Today / Previous / Next navigation now stay in
+  sync across Day, Week, and Month, with the active scope preserved in the URL
+  ([PR #72](https://github.com/trading-journal-ai/trading-journal/pull/72)).
 - Local `journal` launcher now removes stale Next.js locks, reuses live lock
   metadata, and opens the exact active localhost URL automatically
   ([PR #65](https://github.com/trading-journal-ai/trading-journal/pull/65)).
