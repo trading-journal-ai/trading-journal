@@ -30,6 +30,10 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
   ([PR #66](https://github.com/trading-journal-ai/trading-journal/pull/66)).
 
 ### Fixed
+- Trade chart markers now remain anchored to broker execution times, refresh
+  partial candle caches around missing execution minutes, and show unresolved
+  market-data gaps explicitly instead of relocating fills by price
+  ([PR #74](https://github.com/trading-journal-ai/trading-journal/pull/74)).
 - Journal period headings and Today / Previous / Next navigation now stay in
   sync across Day, Week, and Month, with the active scope preserved in the URL
   ([PR #72](https://github.com/trading-journal-ai/trading-journal/pull/72)).
