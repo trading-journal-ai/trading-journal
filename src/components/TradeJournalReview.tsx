@@ -13,6 +13,8 @@ import type { TradeOpportunityContext } from "@/lib/coach/opportunityContext";
 import { opportunityContextsForTrades } from "@/lib/coach/opportunityContextService";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { tradingWeekDates } from "@/lib/journalPnlViews";
+import { buildJournalPeriodNavigation } from "@/lib/journalPeriodNavigation";
+import type { JournalPeriodScope } from "@/lib/journalPeriodLabel";
 import { netPnl } from "@/lib/pnl";
 import {
   heldCalendarDays,
@@ -288,20 +290,6 @@ function isoAddDays(date: string, days: number): string {
 
 function isoWeekday(date: string): number {
   return utcDate(date).getUTCDay();
-}
-
-function isoAddTradingDays(date: string, days: number): string {
-  const direction = days < 0 ? -1 : 1;
-  let remaining = Math.abs(days);
-  let next = date;
-
-  while (remaining > 0) {
-    next = isoAddDays(next, direction);
-    const weekday = isoWeekday(next);
-    if (weekday >= 1 && weekday <= 5) remaining -= 1;
-  }
-
-  return next;
 }
 
 function weekStartFor(date: string): string {
@@ -2678,6 +2666,7 @@ export default async function TradeJournalReview({
   returnTo,
   backHref,
   accountId,
+  initialScope = "day",
   showArchiveSidebar = true,
   archiveLinkMode = "legacy",
 }: {
@@ -2689,6 +2678,7 @@ export default async function TradeJournalReview({
   returnTo?: string;
   backHref?: string;
   accountId: number;
+  initialScope?: JournalPeriodScope;
   showArchiveSidebar?: boolean;
   archiveLinkMode?: ArchiveLinkMode;
 }) {
@@ -2823,6 +2813,7 @@ export default async function TradeJournalReview({
   }
   const currentHref = returnTo ?? journalReviewHref(basePath, { preset, date, from, month });
   const today = currentEtDate();
+  const periodNavigation = buildJournalPeriodNavigation(basePath, archiveAnchor, today);
   const weekSessionsByDate = new Map(
     comparisonData?.week.sessions.map((session) => [session.date, session]) ?? [],
   );
@@ -2867,7 +2858,10 @@ export default async function TradeJournalReview({
           />
         ) : null}
         <JournalDateNavigationProvider
+          key={initialScope}
+          initialScope={initialScope}
           selectedDate={archiveAnchor}
+          syncScopeToUrl={usesReviewModule}
           className="journal-review-flow mt-8 min-w-0 space-y-8"
         >
           {showAccountIdentity && !usesReviewModule ? (
@@ -2885,9 +2879,7 @@ export default async function TradeJournalReview({
             <JournalDayNavigation
               days={weekStripDays}
               basePath={basePath}
-              todayDate={today}
-              previousDate={isoAddTradingDays(archiveAnchor, -1)}
-              nextDate={isoAddTradingDays(archiveAnchor, 1)}
+              periodNavigation={periodNavigation}
               calendarHref={`/calendar?m=${archiveAnchor.slice(0, 7)}`}
             />
           ) : null}
