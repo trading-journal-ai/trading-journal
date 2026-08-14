@@ -46,8 +46,9 @@ stopped. This is the "when did we last work on it" trail.
     overflow, and the final preview console was clean.
   - Focused tests and `npm run verify:full` passed under Node 22.13.0; the
     existing broad NFT trace warning remains.
-  - **Stopped at:** regression fixed and fully verified; branch is ready for PR
-    packaging.
+  - Opened [PR #72](https://github.com/trading-journal-ai/trading-journal/pull/72).
+  - **Stopped at:** regression fixed and fully verified; PR #72 is ready for
+    owner review.
 
 - **2026-08-13** — Journal today-import fast path
   (branch `design/importer-update`).
