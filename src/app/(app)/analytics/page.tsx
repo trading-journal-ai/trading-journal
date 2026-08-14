@@ -1,10 +1,11 @@
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getActiveAccount } from "@/lib/accountScope";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { fmtMoney } from "@/lib/format";
 import { grossPnl, netPnl } from "@/lib/pnl";
-import { etDateString, etDayRange, MARKET_TZ, timeZoneParts } from "@/lib/time";
+import { etDateString, MARKET_TZ, timeZoneParts } from "@/lib/time";
+import { tradeDayActivities, type TradeDayActivity } from "@/lib/tradeActivity";
 import ReportRangeFilter from "@/components/ReportRangeFilter";
 import PeriodTabs from "@/components/ui/PeriodTabs";
 import Eyebrow from "@/components/ui/Eyebrow";
@@ -27,6 +28,8 @@ type ReportFilters = {
 type ReportTrade = typeof schema.trades.$inferSelect & {
   pnl: number | null;
   gross: number | null;
+  activities: TradeDayActivity[];
+  activityAt: number | null;
 };
 
 type Bucket = {
@@ -212,13 +215,13 @@ async function loadTagOptions() {
 async function loadLatestTradeDate(accountId: number): Promise<string | null> {
   const row = (
     await db
-      .select({ latestEntryAt: sql<number | null>`max(${schema.trades.entryAt})` })
-      .from(schema.trades)
-      .where(eq(schema.trades.accountId, accountId))
+      .select({ latestExecutionAt: sql<number | null>`max(${schema.executions.executedAt})` })
+      .from(schema.executions)
+      .where(eq(schema.executions.accountId, accountId))
       .limit(1)
   )[0];
 
-  return row?.latestEntryAt == null ? null : etDateString(row.latestEntryAt);
+  return row?.latestExecutionAt == null ? null : etDateString(row.latestExecutionAt);
 }
 
 async function defaultLandingFilters(filters: ReportFilters, accountId: number): Promise<ReportFilters> {
@@ -249,15 +252,32 @@ async function loadTrades(filters: ReportFilters, accountId: number): Promise<Re
     .where(eq(schema.trades.accountId, accountId))
     .limit(5000);
   const range = dateRangeFor(filters);
+  const tradeIds = rows.map((row) => row.id);
+  const executions = tradeIds.length > 0
+    ? await db
+        .select()
+        .from(schema.executions)
+        .where(inArray(schema.executions.tradeId, tradeIds))
+    : [];
+  const executionsByTradeId = new Map<number, typeof executions>();
+  for (const execution of executions) {
+    if (execution.tradeId == null) continue;
+    executionsByTradeId.set(
+      execution.tradeId,
+      [...(executionsByTradeId.get(execution.tradeId) ?? []), execution],
+    );
+  }
+  const activitiesByTradeId = new Map(rows.map((trade) => [
+    trade.id,
+    tradeDayActivities(trade, executionsByTradeId.get(trade.id) ?? []),
+  ]));
 
   if (range) {
-    const { start } = etDayRange(range.from);
-    const { end } = etDayRange(range.to);
-    rows = rows.filter((t) => {
-      if (t.entryAt == null || t.entryAt < start || t.entryAt > end) return false;
-      const entryDate = etDateString(t.entryAt);
-      return entryDate >= range.from && entryDate <= range.to;
-    });
+    rows = rows.filter((trade) =>
+      (activitiesByTradeId.get(trade.id) ?? []).some(
+        (activity) => activity.date >= range.from && activity.date <= range.to,
+      )
+    );
   }
   if (filters.symbol) rows = rows.filter((t) => t.symbol.toUpperCase().includes(filters.symbol!));
   if (filters.side) rows = rows.filter((t) => t.side === filters.side);
@@ -272,8 +292,31 @@ async function loadTrades(filters: ReportFilters, accountId: number): Promise<Re
   }
 
   return rows
-    .map((t) => ({ ...t, pnl: netPnl(t), gross: grossPnl(t) }))
-    .sort((a, b) => (a.entryAt ?? 0) - (b.entryAt ?? 0));
+    .map((trade) => {
+      const activities = (activitiesByTradeId.get(trade.id) ?? []).filter(
+        (activity) =>
+          !range || (activity.date >= range.from && activity.date <= range.to),
+      );
+      const hasExitActivity = activities.some(
+        (activity) =>
+          activity.kind === "closed"
+          || activity.kind === "opened_closed"
+          || activity.realizedPnl !== 0,
+      );
+      const pnl = range
+        ? hasExitActivity
+          ? activities.reduce((sum, activity) => sum + activity.realizedPnl, 0)
+          : null
+        : netPnl(trade);
+      return {
+        ...trade,
+        activities,
+        activityAt: activities[0]?.firstExecutionAt ?? trade.entryAt,
+        pnl,
+        gross: grossPnl(trade),
+      };
+    })
+    .sort((a, b) => (a.activityAt ?? 0) - (b.activityAt ?? 0));
 }
 
 function average(values: number[]): number | null {
@@ -354,9 +397,12 @@ function buildStats(trades: ReportTrade[]) {
     .filter((t) => t.pnl < 0)
     .map((t) => t.value);
   const dailyPnl = [...closed.reduce((map, trade) => {
-    if (trade.entryAt == null) return map;
-    const date = etDateString(trade.entryAt);
-    map.set(date, (map.get(date) ?? 0) + (trade.pnl ?? 0));
+    for (const activity of trade.activities) {
+      map.set(
+        activity.date,
+        (map.get(activity.date) ?? 0) + activity.realizedPnl,
+      );
+    }
     return map;
   }, new Map<string, number>()).values()];
   const holdMinutesFor = (predicate: (pnl: number) => boolean) => closed
@@ -430,10 +476,11 @@ function addToBucket(bucket: Bucket, trade: ReportTrade) {
 function buildDayBuckets(trades: ReportTrade[]): Bucket[] {
   const buckets = emptyBuckets(dayLabels);
   for (const trade of trades) {
-    if (trade.entryAt == null) continue;
-    const parts = timeZoneParts(trade.entryAt * 1000, MARKET_TZ);
-    const weekday = new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay();
-    addToBucket(buckets[weekday], trade);
+    for (const activity of trade.activities) {
+      const parts = timeZoneParts(activity.firstExecutionAt * 1000, MARKET_TZ);
+      const weekday = new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay();
+      addToBucket(buckets[weekday], { ...trade, pnl: activity.realizedPnl });
+    }
   }
   return buckets;
 }
@@ -447,10 +494,11 @@ function buildHourBuckets(trades: ReportTrade[]): Bucket[] {
     pnl: 0,
   }));
   for (const trade of trades) {
-    if (trade.entryAt == null) continue;
-    const parts = timeZoneParts(trade.entryAt * 1000, MARKET_TZ);
-    if (parts.hour < firstHour || parts.hour > lastHour) continue;
-    addToBucket(buckets[parts.hour - firstHour], trade);
+    for (const activity of trade.activities) {
+      const parts = timeZoneParts(activity.firstExecutionAt * 1000, MARKET_TZ);
+      if (parts.hour < firstHour || parts.hour > lastHour) continue;
+      addToBucket(buckets[parts.hour - firstHour], { ...trade, pnl: activity.realizedPnl });
+    }
   }
   return buckets;
 }
@@ -458,9 +506,10 @@ function buildHourBuckets(trades: ReportTrade[]): Bucket[] {
 function buildMonthBuckets(trades: ReportTrade[]): Bucket[] {
   const buckets = emptyBuckets(monthLabels);
   for (const trade of trades) {
-    if (trade.entryAt == null) continue;
-    const parts = timeZoneParts(trade.entryAt * 1000, MARKET_TZ);
-    addToBucket(buckets[parts.month - 1], trade);
+    for (const activity of trade.activities) {
+      const parts = timeZoneParts(activity.firstExecutionAt * 1000, MARKET_TZ);
+      addToBucket(buckets[parts.month - 1], { ...trade, pnl: activity.realizedPnl });
+    }
   }
   return buckets;
 }
@@ -485,9 +534,12 @@ function buildDurationBuckets(trades: ReportTrade[]): Bucket[] {
 function buildDailyPnl(trades: ReportTrade[]) {
   const byDate = new Map<string, number>();
   for (const trade of trades) {
-    if (trade.entryAt == null) continue;
-    const date = etDateString(trade.entryAt);
-    byDate.set(date, (byDate.get(date) ?? 0) + (trade.pnl ?? 0));
+    for (const activity of trade.activities) {
+      byDate.set(
+        activity.date,
+        (byDate.get(activity.date) ?? 0) + activity.realizedPnl,
+      );
+    }
   }
 
   let cumulative = 0;

@@ -16,16 +16,16 @@ The production import path is:
 - `src/lib/import/tos.ts`
 - `src/lib/import/match.ts`
 
-The app prefers an unfiltered `Account Trade History` section. Those rows are
-treated as high-confidence fill-level executions, then `matchTrades`
-reconstructs trades from buys and sells.
+The app parses both `Account Trade History` and `Cash Balance`. Exact fill
+matches use the detailed Trade History representation, while Cash Balance-only
+rows extend coverage. The adapter therefore does not assume that an unfiltered
+section title means the detailed section covers the statement's full date
+range.
 
-When trade history is absent or its title says `filtered by ...`, the adapter
-falls back to the full `Cash Balance` ledger. `BOT` and `SOLD` rows provide
-timestamp, side, quantity, symbol, price, fees, and an opaque hashed broker
-reference. Position effect is inferred from the running position, and the
-result is labeled medium confidence. A filtered trade-history table is never
-silently treated as the complete account history.
+`BOT` and `SOLD` Cash Balance rows provide timestamp, side, quantity, symbol,
+price, fees, and an opaque hashed broker reference. Position effect is inferred
+from the running position and known share splits. A reconciled statement is
+labeled medium confidence when any fills depend on that inference.
 
 The adapter currently does not import `Account Order History`. That section is
 useful, but it is order-history data, not guaranteed fill-level execution data.
@@ -55,8 +55,8 @@ the next blank line or next section title.
 
 ### Account Trade History
 
-This is the preferred import source because it is closest to execution/fill
-data.
+This is the preferred representation for matching fills because it is closest
+to execution/fill data. It is not assumed to be the complete date range.
 
 Expected header:
 
@@ -85,8 +85,7 @@ Current import result:
 
 ### Cash Balance
 
-Used for fee lookup when complete trade history is present, and as the
-execution source when trade history is absent or filtered.
+Used as the statement-wide coverage ledger and for fee/order-reference lookup.
 
 The adapter looks for descriptions like:
 
@@ -96,10 +95,11 @@ SOLD -100 AIFF @1.7534
 ```
 
 When date, time, symbol, absolute quantity, and price match a trade-history
-execution, fees are attached to that execution. Identical fills split the
-summed fee so the fee is not double-counted. In fallback mode, each `BOT` or
-`SOLD` row becomes an execution and `REF #` groups broker fills without storing
-the raw reference.
+execution, the detailed row replaces the Cash Balance representation and keeps
+its matched fees/reference. Identical fills are reconciled by occurrence so
+they are neither collapsed nor double-counted. Unmatched `BOT` or `SOLD` rows
+remain executions and `REF #` groups broker fills without storing the raw
+reference.
 
 ### Account Order History
 
@@ -196,8 +196,8 @@ building an adapter from it.
 
 Use these rules when extending import support:
 
-1. Prefer unfiltered `Account Trade History` when it has usable rows.
-2. Use full `Cash Balance` trade rows when trade history is absent or filtered.
+1. Parse both `Account Trade History` and `Cash Balance` when present.
+2. Reconcile exact fills by occurrence and retain all Cash Balance-only rows.
 3. Use `Account Order History` only as a separate lower-confidence adapter.
 4. Keep canceled orders out of reconstructed trades.
 5. Preserve missing price as missing; do not infer a fill price from `~`.
@@ -217,6 +217,14 @@ The first registered alias is `40423R204 → HCWB` for HCW Biologics after its
 2025 reverse split. Unresolved CUSIPs remain importable but produce an explicit
 import warning and are not sent to the candle provider as if they were tickers.
 Execution-derived fallback charts are labeled as estimates in the review UI.
+
+Share splits are quantity adjustments, not buys or sells. The matcher applies
+source-backed split ratios between executions, restating open/closed share
+quantities and per-share basis while leaving invested capital, proceeds, and
+P&L unchanged. Known split metadata currently lives in
+`src/lib/import/corporateActions.ts`; an unregistered corporate action remains
+a review case until a broker or market-data corporate-action feed replaces the
+local registry.
 
 ## Open Work
 

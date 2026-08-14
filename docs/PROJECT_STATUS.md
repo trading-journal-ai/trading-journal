@@ -32,6 +32,26 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-13** — Import parity, statement coverage, splits, and swing dates
+  (branch `fix/import-parity-and-swings`).
+  - Unified ThinkorSwim statement persistence with the Schwab append-only
+    execution ledger, including cross-source dedupe and stable open-trade
+    updates.
+  - Reconciled detailed Trade History rows with the full Cash Balance ledger
+    instead of treating an unlabeled one-day detailed section as complete.
+  - Added source-backed share-split quantity/basis adjustment and verified a
+    multi-day ETF lifecycle closes without inventing an opposite position.
+  - Projected trades onto every ET execution date in Journal, Calendar, Trades,
+    Analytics, and ticker review; partial/final realized P&L now belongs to exit
+    dates.
+  - Focused tests, type verification, and a gitignored private-statement import
+    into a temporary database passed; the real Journal database was not
+    mutated.
+  - Focused importer/activity tests and `npm run verify:full` passed under Node
+    22.13.0; the existing broad NFT trace warning remains.
+  - **Stopped at:** implementation complete and committed on the isolated
+    branch; the real Journal database was not mutated or backfilled.
+
 - **2026-08-13** — Schwab ETF import coverage
   (branch `fix/schwab-etf-import`).
   - Reconciled Schwab transaction history against Journal executions and traced

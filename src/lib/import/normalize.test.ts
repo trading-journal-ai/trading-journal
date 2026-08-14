@@ -33,7 +33,7 @@ describe("normalizeBrokerCsv", () => {
     expect(result.trades[0].netPnl).toBeCloseTo(3.98, 2);
   });
 
-  it("normalizes the full Cash Balance ledger when detailed history is filtered", () => {
+  it("reconciles the full Cash Balance ledger when detailed history is filtered", () => {
     const csv = [
       "Cash Balance",
       "DATE,TIME,TYPE,REF #,DESCRIPTION,Misc Fees,Commissions & Fees,AMOUNT,BALANCE",
@@ -58,7 +58,7 @@ describe("normalizeBrokerCsv", () => {
     expect(result.executions).toHaveLength(4);
     expect(result.trades).toHaveLength(2);
     expect(result.warnings).toContain(
-      "Imported the full Cash Balance ledger because Account Trade History is filtered by SKDD.",
+      "Imported 4 Cash Balance fills and enriched 2 exact matches with Account Trade History details.",
     );
   });
 });

@@ -29,14 +29,14 @@ function validMonth(value: string | undefined): string | undefined {
 }
 
 async function latestJournalDate(accountId: number): Promise<string | undefined> {
-  const [latestTrade] = await db
-    .select({ entryAt: schema.trades.entryAt })
-    .from(schema.trades)
-    .where(eq(schema.trades.accountId, accountId))
-    .orderBy(desc(schema.trades.entryAt))
+  const [latestExecution] = await db
+    .select({ executedAt: schema.executions.executedAt })
+    .from(schema.executions)
+    .where(eq(schema.executions.accountId, accountId))
+    .orderBy(desc(schema.executions.executedAt))
     .limit(1);
 
-  if (latestTrade?.entryAt != null) return etDateString(latestTrade.entryAt);
+  if (latestExecution?.executedAt != null) return etDateString(latestExecution.executedAt);
 
   const [latestDayNote] = await db
     .select({ scopeKey: schema.journalEntries.scopeKey })

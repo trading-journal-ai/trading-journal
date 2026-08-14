@@ -5,6 +5,7 @@
  */
 import { and, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { persistExecutionLedger } from "@/lib/schwab/persist";
 import { etDateString } from "@/lib/time";
 import {
   normalizeBrokerCsv,
@@ -15,7 +16,7 @@ import {
 import type { ParsedExecution } from "./tos";
 
 export type ImportSummary = {
-  batchId: number;
+  batchId: number | null;
   source: "tos_csv" | "das_csv";
   sourceConfidence: SourceConfidence;
   parsed: number;
@@ -204,7 +205,7 @@ export async function importTosCsv(csv: string, fileName: string, accountId: num
   if (normalized.source !== "tos_csv") {
     throw new Error("Expected a ThinkorSwim account statement CSV.");
   }
-  return importNormalized(normalized, fileName, accountId);
+  return importTosNormalized(normalized, fileName, accountId);
 }
 
 export async function importDasCsv(csv: string, fileName: string, accountId: number): Promise<ImportSummary> {
@@ -216,5 +217,67 @@ export async function importDasCsv(csv: string, fileName: string, accountId: num
 }
 
 export async function importBrokerCsv(csv: string, fileName: string, accountId: number): Promise<ImportSummary> {
-  return importNormalized(normalizeBrokerCsv(csv), fileName, accountId);
+  const normalized = normalizeBrokerCsv(csv);
+  return normalized.source === "tos_csv"
+    ? importTosNormalized(normalized, fileName, accountId)
+    : importNormalized(normalized, fileName, accountId);
+}
+
+async function importTosNormalized(
+  normalized: NormalizedImport,
+  fileName: string,
+  accountId: number,
+): Promise<ImportSummary> {
+  if (normalized.source !== "tos_csv") {
+    throw new Error("Expected a ThinkorSwim account statement CSV.");
+  }
+  if (normalized.executions.length === 0) {
+    throw new Error("No importable executions found in the CSV.");
+  }
+
+  const parsedRange = dateRange(normalized.executions);
+  const persisted = await persistExecutionLedger({
+    accountId,
+    from: parsedRange.from ?? "unknown",
+    to: parsedRange.to ?? "unknown",
+    executions: normalized.executions,
+    source: "tos_csv",
+    fileName,
+    symbolAliases: [
+      ...new Map(
+        normalized.executions.flatMap((execution) =>
+          execution.brokerSymbol && execution.brokerSymbol !== execution.symbol
+            ? [[execution.brokerSymbol, execution.symbol] as const]
+            : [],
+        ),
+      ),
+    ].map(([brokerSymbol, canonicalSymbol]) => ({
+      brokerSymbol,
+      canonicalSymbol,
+    })),
+  });
+
+  return {
+    batchId: persisted.batchId,
+    source: "tos_csv",
+    sourceConfidence: normalized.sourceConfidence,
+    parsed: persisted.parsed,
+    inserted: persisted.inserted,
+    duplicates: persisted.duplicates,
+    trades: persisted.tradesCreated + persisted.tradesUpdated,
+    normalizedTrades: normalized.trades.length,
+    openTrades: normalized.trades.filter((trade) => trade.status === "open").length,
+    parsedFrom: parsedRange.from,
+    parsedTo: parsedRange.to,
+    insertedFrom: persisted.insertedFrom,
+    insertedTo: persisted.insertedTo,
+    warnings: [
+      ...normalized.warnings,
+      ...(persisted.reviewExecutions > 0
+        ? [
+            `${persisted.reviewExecutions} fills for ${persisted.reviewSymbols.join(", ")} were held for review because their opening history could not be reconciled safely.`,
+          ]
+        : []),
+    ],
+  };
 }
