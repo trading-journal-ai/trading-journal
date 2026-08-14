@@ -7,13 +7,13 @@
   - Interaction details: `/Users/justin/Downloads/Trading Journal design review (1).zip`
 - **Rendered implementation:** `http://127.0.0.1:4321`
 - **Implementation screenshots:**
-  - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/journal-day-pnl-card.png`
+  - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/journal-day-pnl-white.png`
   - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/journal-week-selected.png`
   - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/journal-week-hover.png`
   - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/calendar-month-selected.png`
   - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/calendar-month-hover.png`
 - **Comparison boards:**
-  - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/qa-day-reference-vs-build.png`
+  - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/qa-day-reference-vs-white-build.png`
   - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/qa-week-reference-vs-build.png`
   - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/qa-month-reference-vs-build.png`
 - **States:** Light theme; populated day; week selected and hover; month selected/current day and populated-day hover.
@@ -45,6 +45,7 @@ No actionable P0, P1, or P2 findings remain.
 - **Fonts and typography:** Existing Geist Sans and Geist Mono roles are unchanged. The implementation deliberately preserves current product typography and data content; only the requested surface/state styling changed.
 - **Spacing and layout rhythm:** Existing calendar and journal spacing remains intact. The new 8px card radius, subtle 1px edge, internal hairlines, and two-layer shadow match the HTML handoff. The day chart and existing ticker rail now occupy one shared card.
 - **Colors and visual tokens:** Selected cells use a 6% semantic accent tint; hover uses a neutral `--background` / `--surface` mix. Borders and dividers are derived from `--foreground`, so all four product themes retain the same hierarchy.
+- **Day chart surface:** The P&L chart canvas now uses the shared card background token. It renders white in the active light theme and retains the appropriate page background in the other themes.
 - **Image quality and assets:** These surfaces contain no reference image assets. The existing chart rendering is unchanged; no placeholder art, custom icons, or replacement graphics were added.
 - **Copy and content:** All app content, metrics, chart data, labels, and navigation remain unchanged as requested. Reference-only example content was not copied.
 
@@ -61,6 +62,7 @@ No actionable P0, P1, or P2 findings remain.
 1. **Pass 1:** Side-by-side comparison found two P2 details: extra week-hover accent signals and an uneven day-card column height.
 2. **Fix:** Restricted week accent signals to selection and normalized the unified card's column height.
 3. **Pass 2:** Same-viewport selected, hover, day-card, month-card, and mobile captures showed no remaining P0/P1/P2 mismatch. Content and spacing differences from the references are intentional and explicitly required by the brief.
+4. **Follow-up pass:** Changed the Day P&L chart canvas from `--surface` to the white light-theme card background, then repeated the 1440px comparison and console check. No new P0/P1/P2 issue appeared.
 
 ## Follow-up polish
 

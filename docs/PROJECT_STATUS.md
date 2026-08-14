@@ -42,6 +42,9 @@ stopped. This is the "when did we last work on it" trail.
   - Combined the existing Daily P&L chart and ticker rail into one shared card
     with a continuous hairline divider; no reference-only sidebar content was
     copied.
+  - Follow-up: moved the chart canvas from the quiet `--surface` fill to the
+    shared card background, making it white in the light theme without
+    hard-coding a theme-specific color.
   - Browser-verified the day card, week selected/hover states, month
     selected/hover states, and the 390px day layout with a clean console.
     Side-by-side design QA passed after correcting two P2 details.
