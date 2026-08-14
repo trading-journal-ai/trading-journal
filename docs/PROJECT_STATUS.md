@@ -32,6 +32,21 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-13** — Schwab ETF import coverage
+  (branch `fix/schwab-etf-import`).
+  - Reconciled the current Schwab transaction history against Journal
+    executions and traced complete missing instruments to Schwab's
+    `COLLECTIVE_INVESTMENT` classification for exchange-traded funds.
+  - Updated the Schwab normalizer to accept only the
+    `EXCHANGE_TRADED_FUND` subtype while continuing to exclude mutual funds,
+    options, and other unsupported assets.
+  - Added focused regression coverage for accepted ETFs, rejected collective
+    investments, and symbol-safe diagnostics; updated the import contract.
+  - Focused normalizer tests and `npm run verify:full` passed under Node
+    22.13.0. The existing broad NFT trace warning remains.
+  - **Stopped at:** implementation complete and committed on the isolated
+    branch; existing local Journal data was not mutated or backfilled.
+
 - **2026-08-13** — Journal today-import fast path
   (branch `design/importer-update`).
   - Recovered the Claude Design handoff and matched its focused empty-Day

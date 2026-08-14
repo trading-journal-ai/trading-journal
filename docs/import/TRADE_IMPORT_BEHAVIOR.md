@@ -166,7 +166,10 @@ chunk cannot leave a partial database import.
 - Each `FILL` execution leg becomes its own execution.
 - Quantity, price, timestamp, symbol, instruction, and position effect are
   validated.
-- Non-equity legs and malformed fills are excluded with warnings.
+- Stock legs reported by Schwab as `EQUITY` are accepted. ETF legs reported as
+  `COLLECTIVE_INVESTMENT` are also accepted when Schwab identifies the
+  instrument subtype as `EXCHANGE_TRADED_FUND`; other collective investments,
+  non-equity legs, and malformed fills remain excluded with warnings.
 - Fee records are attached to the closest execution from the same order.
 - Raw Schwab account and order identifiers are not persisted. HMAC identities
   are stored instead.

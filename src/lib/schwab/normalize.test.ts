@@ -96,6 +96,71 @@ describe("normalizeSchwabHistory", () => {
     expect(result.warnings.join(" ")).not.toContain("PRIVATE");
   });
 
+  it("imports Schwab ETFs without admitting other collective investments", () => {
+    const result = normalizeSchwabHistory(
+      [
+        {
+          orderId: 10,
+          orderLegCollection: [{
+            legId: 1,
+            instruction: "BUY",
+            positionEffect: "OPENING",
+            instrument: {
+              assetType: "COLLECTIVE_INVESTMENT",
+              type: "EXCHANGE_TRADED_FUND",
+              symbol: "SYNTHETF",
+            },
+          }],
+          orderActivityCollection: [{
+            activityId: 11,
+            executionType: "FILL",
+            executionLegs: [{
+              legId: 1,
+              quantity: 10,
+              price: 25,
+              time: "2026-01-15T15:00:00Z",
+            }],
+          }],
+        },
+        {
+          orderId: 12,
+          orderLegCollection: [{
+            legId: 1,
+            instruction: "BUY",
+            positionEffect: "OPENING",
+            instrument: {
+              assetType: "COLLECTIVE_INVESTMENT",
+              type: "MUTUAL_FUND",
+              symbol: "PRIVATE_FUND",
+            },
+          }],
+          orderActivityCollection: [{
+            activityId: 13,
+            executionType: "FILL",
+            executionLegs: [{
+              legId: 1,
+              quantity: 1,
+              price: 100,
+              time: "2026-01-15T15:01:00Z",
+            }],
+          }],
+        },
+      ],
+      [],
+      JAN_15_2026,
+    );
+
+    expect(result.executions).toHaveLength(1);
+    expect(result.executions[0]).toMatchObject({
+      symbol: "SYNTHETF",
+      side: "buy",
+      posEffect: "TO OPEN",
+    });
+    expect(result.excludedAssets).toBe(1);
+    expect(result.warnings.join(" ")).toContain("unsupported-asset");
+    expect(result.warnings.join(" ")).not.toContain("PRIVATE_FUND");
+  });
+
   it("ignores canceled activity legs instead of reporting them as malformed fills", () => {
     const result = normalizeSchwabHistory(
       [{
