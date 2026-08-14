@@ -210,8 +210,8 @@ export default function JournalWeekStrip({
       aria-label="Week at a glance"
       className={pendingDate ? "journal-week-strip--navigating" : undefined}
     >
-      <div className="overflow-x-auto rounded-[4px] border border-[var(--hairline)] [scrollbar-width:thin]">
-        <div className="grid min-w-[900px] grid-cols-5">
+      <div className="overflow-x-auto rounded-lg border border-[var(--review-card-border)] bg-[var(--review-card-divider)] shadow-[var(--review-card-shadow)] [scrollbar-width:thin]">
+        <div className="grid min-w-[900px] grid-cols-5 gap-px">
           {days.map((day) => {
             const selected = day.date === selectedDate;
             const visuallySelected = pendingDate ? day.date === pendingDate : selected;
@@ -230,7 +230,7 @@ export default function JournalWeekStrip({
                   // without replaying the pending state after navigation resolves.
                   if (event.detail === 0) setPendingDate(day.date);
                 }}
-                className={`journal-week-day relative flex flex-col border-r border-[var(--hairline)] px-3.5 py-4 font-sans last:border-r-0 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] ${
+                className={`journal-week-day relative flex flex-col px-3.5 py-4 font-sans focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] ${
                   visuallySelected ? "journal-week-day--selected z-[1]" : ""
                 }`}
               >

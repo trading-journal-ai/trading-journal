@@ -423,7 +423,7 @@ function MonthView({
               ))}
             </div>
 
-            <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_205px] gap-px overflow-hidden rounded-lg bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)]">
+            <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_205px] gap-px overflow-hidden rounded-lg border border-[var(--review-card-border)] bg-[var(--review-card-divider)] shadow-[var(--review-card-shadow)]">
               {weeks.map((week, weekIndex) => (
                 <Fragment key={weekIndex}>
                   {week.days.map((day) => {
@@ -440,12 +440,15 @@ function MonthView({
                     const content = (
                       <div
                         data-calendar-date={day.date}
-                        className={`grid min-h-24 content-start gap-1 px-3.5 py-3 transition-colors ${
+                        data-calendar-state={isToday ? "selected" : state}
+                        className={`calendar-day-cell grid min-h-24 content-start gap-1 px-3.5 py-3 ${
                           day.inMonth
                             ? state === "unconfirmed_empty" && !isToday
-                              ? "bg-[color-mix(in_srgb,var(--background)_55%,var(--surface))]"
-                              : "bg-[var(--background)]"
-                            : "bg-[color-mix(in_srgb,var(--background)_55%,var(--surface))] opacity-35"
+                              ? "calendar-day-cell--muted"
+                              : isToday
+                                ? "calendar-day-cell--selected"
+                                : ""
+                            : "calendar-day-cell--muted opacity-35"
                         }`}
                       >
                         <span className="flex min-h-7 items-baseline gap-1.5 pb-1 text-[12.5px] font-medium leading-[1.3] tabular-nums">
@@ -503,7 +506,8 @@ function MonthView({
                         key={day.date}
                         href={`/journal?date=${day.date}&returnTo=${encodeURIComponent(currentCalendarHref)}`}
                         aria-label={`${day.date}: ${fmtMoney(day.agg!.pnl)}, ${day.agg!.trades} ${day.agg!.trades === 1 ? "trade" : "trades"}, ${formatCalendarAccuracy(day.agg!.wins, day.agg!.losses)} accuracy`}
-                        className="block bg-[var(--background)] transition-colors hover:bg-[var(--surface)] focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]"
+                        aria-current={isToday ? "date" : undefined}
+                        className="calendar-day-link group block focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]"
                       >
                         {content}
                       </Link>
@@ -512,7 +516,7 @@ function MonthView({
                     );
                   })}
 
-                  <div className="grid min-h-24 content-start gap-1 bg-[var(--background)] px-3.5 py-3">
+                  <div className="calendar-day-cell grid min-h-24 content-start gap-1 px-3.5 py-3">
                     {week.trades > 0 ? (
                       <>
                         <span aria-hidden="true" className="min-h-7 pb-1" />

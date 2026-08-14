@@ -1344,14 +1344,22 @@ function RunningPnlChart({
   pnlPoints,
   showTotal = true,
   heightClassName = "h-[380px]",
+  framed = true,
+  className = "",
 }: {
   day: ReviewDay;
   pnlPoints: PnlPoint[];
   showTotal?: boolean;
   heightClassName?: string;
+  framed?: boolean;
+  className?: string;
 }) {
   return (
-    <section className={`flex ${heightClassName} flex-col rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-4`}>
+    <section
+      className={`flex ${heightClassName} flex-col bg-[var(--review-card-bg)] px-4 py-4 ${
+        framed ? "rounded-lg border border-[var(--border)]" : ""
+      } ${className}`}
+    >
       <div className="mb-2 flex items-center justify-between gap-4">
         <h2 className="text-[15px] font-semibold text-[var(--foreground)]">Daily P&L</h2>
         {showTotal ? (
@@ -1556,15 +1564,17 @@ function JournalReviewModuleForDay({
           confidence: coachRead.confidence.label,
         }}
         pnlContent={day.trades > 0 ? (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+          <div className="grid overflow-hidden rounded-lg border border-[var(--review-card-border)] bg-[var(--review-card-bg)] shadow-[var(--review-card-shadow)] lg:grid-cols-[minmax(0,1fr)_280px]">
             <RunningPnlChart
               day={day}
               pnlPoints={pnlPoints}
               showTotal={false}
               heightClassName="h-[420px]"
+              framed={false}
+              className="border-b border-[var(--hairline)] lg:border-b-0 lg:border-r"
             />
             <TickerReviewRail
-              className="journal-day-rail-enter"
+              className="journal-day-rail-enter h-[420px] bg-[var(--review-card-bg)] px-4 py-3"
               rows={tickerRows.map((row) => ({
                 symbol: row.symbol,
                 pnl: row.pnl,
@@ -1574,7 +1584,7 @@ function JournalReviewModuleForDay({
               accuracy={day.accuracy}
               profitFactor={day.profitFactor}
               pnl={day.pnl}
-              heightClassName="h-[420px]"
+              heightClassName="h-full"
             />
           </div>
         ) : (

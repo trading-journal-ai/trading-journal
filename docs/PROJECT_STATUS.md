@@ -32,6 +32,25 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-14** — Calendar and journal card-state styling
+  (branch `codex/review-card-states`).
+  - Matched the design-review handoff's soft 1px edge, two-layer shadow, 8px
+    radius, neutral hover lift, and 6% accent-selected surface across the month
+    calendar and Week at a glance.
+  - Kept the accepted month stats strip, calendar spacing, and all existing
+    content unchanged.
+  - Combined the existing Daily P&L chart and ticker rail into one shared card
+    with a continuous hairline divider; no reference-only sidebar content was
+    copied.
+  - Browser-verified the day card, week selected/hover states, month
+    selected/hover states, and the 390px day layout with a clean console.
+    Side-by-side design QA passed after correcting two P2 details.
+  - Impeccable's detector reported no new findings from this slice; its output
+    was limited to existing typography/radius advisories in the touched files.
+  - `npm run verify:quick` passed under Node 22.13.0.
+  - **Stopped at:** implementation, design QA, and project verification
+    complete on the task branch.
+
 - **2026-08-14** — Calendar summary and weekly-total alignment
   (branch `codex/calendar-stats-layout`).
   - Reworked the month summary into one shared label band with five centered

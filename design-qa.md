@@ -1,59 +1,69 @@
-# Calendar month-at-a-glance design QA
+# Calendar and journal card-state design QA
 
-- **Source visual truth:** `/Users/justin/Working/trading-journal/.claude/worktrees/calendar-preview/docs/design/prototypes/calendar-journal/calendar-month--collapsed.html`
-- **Reference screenshot:** `/private/tmp/calendar-month-reference.jpg`
-- **Rendered implementation:** `http://127.0.0.1:4317/calendar?m=2026-08`
-- **Implementation screenshot:** `/private/tmp/calendar-month-implementation.jpg`
-- **Full-view comparison:** `/private/tmp/calendar-month-comparison-pass1.png`
-- **Focused post-fix comparison:** `/private/tmp/calendar-month-focused-comparison.png`
-- **State:** Light theme, August 2026, populated month, collapsed calendar cells
+- **Source visual truth:**
+  - Day P&L: `/Users/justin/Desktop/screenshots/Screenshot 2026-08-14 at 8.47.17 AM.png`
+  - Month calendar: `/Users/justin/Desktop/screenshots/Screenshot 2026-08-14 at 8.47.08 AM.png`
+  - Week at a glance: `/Users/justin/Desktop/screenshots/Screenshot 2026-08-14 at 8.47.04 AM.png`
+  - Interaction details: `/Users/justin/Downloads/Trading Journal design review (1).zip`
+- **Rendered implementation:** `http://127.0.0.1:4321`
+- **Implementation screenshots:**
+  - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/journal-day-pnl-card.png`
+  - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/journal-week-selected.png`
+  - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/journal-week-hover.png`
+  - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/calendar-month-selected.png`
+  - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/calendar-month-hover.png`
+- **Comparison boards:**
+  - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/qa-day-reference-vs-build.png`
+  - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/qa-week-reference-vs-build.png`
+  - `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/qa-month-reference-vs-build.png`
+- **States:** Light theme; populated day; week selected and hover; month selected/current day and populated-day hover.
 
 ## Capture normalization
 
-- Desktop CSS viewport: `1280 x 720`; source and implementation full-page captures are `1280 x 912` and `1280 x 865` respectively.
-- The first full-view comparison used equal 1280px-wide captures at 1:1 output size.
-- After the responsive breakpoint check, the in-app browser returned the post-fix implementation at 2x CSS sampling inside a 1280px-wide crop. The focused comparison therefore uses the matching visible `640 x 132` CSS grid region: the source crop is upsampled 2x to the implementation's `1280 x 264` pixel sampling before comparison. No density-derived typography or spacing findings were filed.
-- Mobile CSS viewport: `390 x 844`; screenshot captured at `390 x 844`. The document remained 390px wide, while the dense calendar grid correctly used its own horizontal scroller.
+- Desktop CSS viewport and implementation captures: `1440 x 960`, device scale factor 1.
+- Source pixels: day `2512 x 1182`, week `2706 x 644`, month `2396 x 1674`.
+- Comparison boards resize both sides into equal-width white-backed panels. The day and week implementation panels use focused crops around the user-requested surface; the month uses the full view because the calendar grid is the dominant screen.
+- Mobile CSS viewport and implementation capture: `390 x 844`, device scale factor 1, at `/Users/justin/.codex/visualizations/2026/08/14/019fffe4-f45c-7893-ac87-79734a0e1639/journal-day-pnl-mobile.png`.
 
 ## Findings
 
-- **[P2, fixed] Empty calendar cells lacked the prototype's quiet surface distinction.**
-  - Location: month grid cells in `src/app/(app)/calendar/page.tsx`.
-  - Evidence: the first implementation used the page background for both traded and empty in-month days, while the reference gives empty days a slightly quieter surface.
-  - Impact: the traded-session rows did not separate as clearly from the unused remainder of the month.
-  - Fix: unconfirmed empty days now use a subtle `--background` / `--surface` mix; traded, today, no-trade, and weekly-summary cells retain the open page surface.
-  - Post-fix evidence: `/private/tmp/calendar-month-focused-comparison.png`.
+- **[P2, fixed] Week hover carried extra accent signals absent from the HTML reference.**
+  - Location: `src/app/globals.css`, `.journal-week-day` states.
+  - Evidence: the first implementation showed a blue dot and accent-colored metric text on hover; the source HTML changes only the neutral cell surface for hover.
+  - Fix: limited the dot and accent-tinted metric pill to the selected day. Hover now changes only the cell background.
+  - Post-fix evidence: `journal-week-hover.png`.
+- **[P2, fixed] Unified day card divider stopped above the outer card edge.**
+  - Location: `src/components/TradeJournalReview.tsx`.
+  - Evidence: the first pass gave the padded ticker rail its own 420px child height, making it taller than the chart and interrupting the shared divider.
+  - Fix: moved the fixed height to the rail wrapper and made its inner section fill the wrapper, so both card columns share one 420px frame.
+  - Post-fix evidence: `journal-day-pnl-card.png`.
 
 No actionable P0, P1, or P2 findings remain.
 
 ## Required fidelity surfaces
 
-- **Fonts and typography:** Uses the app's Geist Sans stack and matches the reference hierarchy: 28px month title, 20px summary values, 17px daily/weekly P&L, and compact 11.5–13px metadata. The app intentionally omits a leading plus sign on positive currency to preserve its established money format and the accepted Journal micro-calendar convention.
-- **Spacing and layout rhythm:** The title, underline tabs, summary strip, 96px cells, five weekday tracks, and 205px weekly rail match the reference. The implementation retains the shared 1152px Calendar/Journal/Trades/Analytics workspace rather than the prototype's additional 20px inner inset.
-- **Colors and tokens:** Semantic green/red P&L, accent today label, hairline grid, white active cells, and quiet empty-cell surface all map to existing theme tokens and adapt across themes.
-- **Image quality and assets:** The screen contains no visual image assets. The existing calendar icon in the range filter is reused; no substitute imagery, handcrafted SVG, or placeholder art was added.
-- **Copy and content:** Month, summary labels, weekday labels, today state, trade counts, accuracy, and P&L are real app data. The footer says traded days open their Journal review, reflecting the established product behavior rather than the prototype's unimplemented inline-expansion copy.
+- **Fonts and typography:** Existing Geist Sans and Geist Mono roles are unchanged. The implementation deliberately preserves current product typography and data content; only the requested surface/state styling changed.
+- **Spacing and layout rhythm:** Existing calendar and journal spacing remains intact. The new 8px card radius, subtle 1px edge, internal hairlines, and two-layer shadow match the HTML handoff. The day chart and existing ticker rail now occupy one shared card.
+- **Colors and visual tokens:** Selected cells use a 6% semantic accent tint; hover uses a neutral `--background` / `--surface` mix. Borders and dividers are derived from `--foreground`, so all four product themes retain the same hierarchy.
+- **Image quality and assets:** These surfaces contain no reference image assets. The existing chart rendering is unchanged; no placeholder art, custom icons, or replacement graphics were added.
+- **Copy and content:** All app content, metrics, chart data, labels, and navigation remain unchanged as requested. Reference-only example content was not copied.
 
 ## Interaction and responsive checks
 
-- Previous moved from August to July; Next returned to August.
-- Year opened `/calendar?view=year&y=2026`.
-- Selecting August 3 opened `/journal?date=2026-08-03` with the Calendar return target intact.
-- The 390px viewport had no document-level horizontal overflow; only the dense calendar grid scrolls horizontally.
-- Browser console contained only React DevTools / Fast Refresh development logs; no warnings or errors.
-- After reconciliation with the execution-date activity model, the same desktop
-  and 390px flows passed again with a clean console; the document remained
-  viewport-bound and the updated month/week metrics rendered in the approved
-  layout.
+- Month: populated-day hover and current-day selected tint were visually confirmed; the calendar kept its existing dimensions and locally scrollable dense grid.
+- Week: selecting the Week tab changed the URL to `scope=week`; the focused date rendered the selected tint, accent dot, and softly tinted metric pill. Hovering another session produced only the neutral lift.
+- Day: the P&L chart and existing ticker rail rendered inside one shared card with a continuous divider and shadow.
+- At `390 x 844`, the unified card remained viewport-bound and stacked its existing content without document-level horizontal overflow.
+- Page identity, non-blank content, framework-overlay check, and DOM snapshots passed. The final browser console had no warnings or errors.
 
 ## Comparison history
 
-1. **Pass 1:** Full-view side-by-side comparison found one P2 surface mismatch: empty and traded cells shared the same white treatment.
-2. **Fix:** Added the quiet empty-cell token mix while keeping data-bearing and today cells white.
-3. **Pass 2:** Focused, density-normalized grid comparison confirmed the reference's active/empty surface distinction. No new P0/P1/P2 issue appeared.
+1. **Pass 1:** Side-by-side comparison found two P2 details: extra week-hover accent signals and an uneven day-card column height.
+2. **Fix:** Restricted week accent signals to selection and normalized the unified card's column height.
+3. **Pass 2:** Same-viewport selected, hover, day-card, month-card, and mobile captures showed no remaining P0/P1/P2 mismatch. Content and spacing differences from the references are intentional and explicitly required by the brief.
 
 ## Follow-up polish
 
-- None required for this slice. The recovered prototype's optional inline day expansion remains intentionally out of scope because Calendar is the browse/index mode and traded days already open the full Journal review.
+- None required for this styling slice.
 
 **final result: passed**
