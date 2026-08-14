@@ -17,9 +17,11 @@ import {
   type MouseEventParams,
   type Time,
   type UTCTimestamp,
+  type WhitespaceData,
 } from "lightweight-charts";
 import type { ChartCandle, ChartMarker } from "@/components/TradeChart";
 import TradeBreathingChart from "@/components/TradeBreathingChart";
+import { executionMinute } from "@/lib/candleIntegrity";
 import { CHART_FOCUS_EVENT, type ChartFocusDetail } from "@/lib/chartFocusEvent";
 import type { AnalyzedTradeExecution, TradeExecutionAnalysis, TradeSide } from "@/lib/executionAnalysis";
 import { marketIndicatorSeries } from "@/lib/marketIndicators";
@@ -392,49 +394,6 @@ function candlePriceFormat(candles: ChartCandle[]) {
   };
 }
 
-function priceDistanceFromCandle(candle: ChartCandle, price: number): number {
-  if (price >= candle.l && price <= candle.h) return 0;
-  return Math.min(Math.abs(price - candle.l), Math.abs(price - candle.h));
-}
-
-function candleTimeForExecution(
-  candles: ChartCandle[],
-  marker: Pick<ChartMarker, "t" | "price">,
-): UTCTimestamp {
-  if (candles.length === 0) return timeValue(Math.floor(marker.t / 60) * 60);
-
-  const minuteStart = Math.floor(marker.t / 60) * 60;
-  const exactMinute = candles.find((candle) => candle.t === minuteStart);
-  if (exactMinute && (!Number.isFinite(marker.price) || priceDistanceFromCandle(exactMinute, marker.price) === 0)) {
-    return timeValue(exactMinute.t);
-  }
-
-  if (Number.isFinite(marker.price)) {
-    const nearbyContainingCandle = candles
-      .filter((candle) => Math.abs(candle.t - marker.t) <= 3 * 60 && priceDistanceFromCandle(candle, marker.price) === 0)
-      .reduce<ChartCandle | null>((nearest, candle) => {
-        if (!nearest) return candle;
-        return Math.abs(candle.t - marker.t) < Math.abs(nearest.t - marker.t) ? candle : nearest;
-      }, null);
-
-    if (nearbyContainingCandle) return timeValue(nearbyContainingCandle.t);
-  }
-
-  let nearest = candles[0]?.t ?? minuteStart;
-  let nearestScore = Infinity;
-  for (const candle of candles) {
-    const timeDistance = Math.abs(candle.t - marker.t);
-    const priceDistance = Number.isFinite(marker.price) ? priceDistanceFromCandle(candle, marker.price) : 0;
-    const score = priceDistance * 100000 + timeDistance;
-    if (score < nearestScore) {
-      nearest = candle.t;
-      nearestScore = score;
-    }
-  }
-
-  return timeValue(nearest);
-}
-
 function InteractiveLightweightTradeChart({
   candles,
   focusMinutesAfter = 70,
@@ -625,6 +584,36 @@ function InteractiveLightweightTradeChart({
     candleSeries.setData(candleData);
     volumeSeries.setData(volumeData);
 
+    // Preserve broker time even when the market-data cache has a gap. These
+    // whitespace points extend the time scale without inventing OHLC data, so
+    // an execution can render at its real minute beside a visibly blank chart
+    // section instead of being relocated to a price-matching candle.
+    const executionTimeSeries = chart.addSeries(LineSeries, {
+      color: "transparent",
+      crosshairMarkerVisible: false,
+      lastValueVisible: false,
+      priceLineVisible: false,
+      visible: false,
+    });
+    const executionMinutes = [...new Set(
+      markers
+        .filter((marker) => Number.isFinite(marker.t))
+        .map((marker) => executionMinute(marker.t)),
+    )]
+      .sort((left, right) => left - right);
+    const executionTimePoints: WhitespaceData[] = executionMinutes
+      .map((time) => ({ time: timeValue(time) }));
+    executionTimeSeries.setData(executionTimePoints);
+
+    const firstChartTime = Math.min(
+      candles[0]?.t ?? Number.POSITIVE_INFINITY,
+      executionMinutes[0] ?? Number.POSITIVE_INFINITY,
+    );
+    const lastChartTime = Math.max(
+      candles.at(-1)?.t ?? Number.NEGATIVE_INFINITY,
+      executionMinutes.at(-1) ?? Number.NEGATIVE_INFINITY,
+    );
+
     const handleCandleHover = (param: MouseEventParams<Time>) => {
       if (param.point == null || typeof param.time !== "number") {
         setMaeTradeNumber(null);
@@ -678,7 +667,7 @@ function InteractiveLightweightTradeChart({
       setChartSize({ width: plotWidth, height: rect.height });
 
       const nextMarkers = markers.flatMap((marker, index) => {
-        const candleTime = candleTimeForExecution(candles, marker);
+        const candleTime = timeValue(executionMinute(marker.t));
         const x = chart.timeScale().timeToCoordinate(candleTime);
         const y = candleSeries.priceToCoordinate(marker.price);
         if (x == null || y == null || x < 0 || x > plotWidth) return [];
@@ -712,14 +701,12 @@ function InteractiveLightweightTradeChart({
     window.addEventListener("resize", scheduleMarkerUpdate);
 
     if (initialFocusTime != null) {
-      const firstCandleTime = candles[0]?.t;
-      const lastCandleTime = candles.at(-1)?.t;
-      const focusedFrom = firstCandleTime == null
+      const focusedFrom = !Number.isFinite(firstChartTime)
         ? initialFocusTime - focusMinutesBefore * 60
-        : Math.max(firstCandleTime, initialFocusTime - focusMinutesBefore * 60);
-      const focusedTo = lastCandleTime == null
+        : Math.max(firstChartTime, initialFocusTime - focusMinutesBefore * 60);
+      const focusedTo = !Number.isFinite(lastChartTime)
         ? initialFocusTime + focusMinutesAfter * 60
-        : Math.min(lastCandleTime, initialFocusTime + focusMinutesAfter * 60);
+        : Math.min(lastChartTime, initialFocusTime + focusMinutesAfter * 60);
 
       if (focusedFrom < focusedTo) {
         chart.timeScale().setVisibleRange({
@@ -744,14 +731,12 @@ function InteractiveLightweightTradeChart({
         setHoveredTradeNumber(null);
         setSelectedTradeNumber(detail.tradeNumber);
       }
-      const firstTime = candles[0]?.t;
-      const lastTime = candles.at(-1)?.t;
-      const from = firstTime == null
+      const from = !Number.isFinite(firstChartTime)
         ? time - focusMinutesBefore * 60
-        : Math.max(firstTime, time - focusMinutesBefore * 60);
-      const to = lastTime == null
+        : Math.max(firstChartTime, time - focusMinutesBefore * 60);
+      const to = !Number.isFinite(lastChartTime)
         ? time + focusMinutesAfter * 60
-        : Math.min(lastTime, time + focusMinutesAfter * 60);
+        : Math.min(lastChartTime, time + focusMinutesAfter * 60);
       if (from < to) {
         chart.timeScale().setVisibleRange({ from: timeValue(from), to: timeValue(to) });
         scheduleMarkerUpdate();

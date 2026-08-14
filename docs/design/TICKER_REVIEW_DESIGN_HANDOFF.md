@@ -183,6 +183,13 @@ to explore:
 - Hovering either surface connects the two without navigating away.
 - Zooming or panning never loses the broader ticker/session context.
 
+Broker execution timestamps are authoritative chart anchors. On the one-minute
+chart, each marker belongs to the minute containing its execution; a matching
+price at another time must never relocate it. If an execution minute is absent
+from cached market data, refresh that day once. If coverage remains incomplete,
+keep the marker at broker time, leave the missing candle interval blank, and
+show an explicit incomplete-data notice rather than fabricating alignment.
+
 Chart-marker selection is not currently a locked requirement. A clear trade
 list is the baseline interaction.
 
