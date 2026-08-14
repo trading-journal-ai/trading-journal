@@ -8,6 +8,7 @@ import JournalReviewTabs, {
   type JournalDataView,
 } from "@/components/JournalReviewTabs";
 import { useOptionalJournalDateNavigation } from "@/components/JournalDateNavigation";
+import PillStatsBar, { type PillStatMetric } from "@/components/ui/PillStatsBar";
 import { tradingCalendarWeeks, tradingWeekDates } from "@/lib/journalPnlViews";
 
 export type { JournalDataScope, JournalDataView } from "@/components/JournalReviewTabs";
@@ -695,14 +696,10 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
         <div className="grid grid-cols-5 gap-px bg-[var(--hairline)]">
           {weeks.flatMap((week) => week).map((day) => {
             const session = day.inMonth ? sessionsByDate.get(day.date) : undefined;
-            const positive = (session?.pnl ?? 0) >= 0;
             return (
               <div
                 key={day.date}
                 className={`flex min-h-24 flex-col bg-[var(--surface)] px-3 py-3 ${day.inMonth ? "" : "opacity-30"}`}
-                style={session
-                  ? { backgroundColor: positive ? "color-mix(in oklch, var(--green) 8%, var(--surface))" : "color-mix(in oklch, var(--red) 8%, var(--surface))" }
-                  : undefined}
                 aria-label={session
                   ? `${longDateLabel(day.date)}: ${money(session.pnl)}, ${session.trades} trades`
                   : `${longDateLabel(day.date)}: no imported session`}
@@ -754,18 +751,20 @@ function longDateLabel(date: string): string {
 }
 
 function RangeHeader({ summary, question }: { summary: JournalRangeSummary; question: string }) {
+  const metrics: PillStatMetric[] = [
+    { label: "Sessions", value: String(summary.sessions), width: 74 },
+    { label: "Trades", value: String(summary.trades), width: 61 },
+    { label: "Accuracy", value: percent(summary.accuracy), width: 76 },
+    { label: "Profit factor", value: ratio(summary.profitFactor), width: 93 },
+  ];
+
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div><SectionLabel>{summary.label}</SectionLabel><p className="mt-2 text-[14px] leading-6 text-[var(--body)]">{question}</p></div>
         <div className={`font-mono text-[18px] font-semibold tabular-nums ${pnlClass(summary.pnl)}`}>{money(summary.pnl)}</div>
       </div>
-      <MetricGrid className="mt-5">
-        <Metric label="Sessions" value={String(summary.sessions)} />
-        <Metric label="Trades" value={String(summary.trades)} />
-        <Metric label="Accuracy" value={percent(summary.accuracy)} />
-        <Metric label="Profit factor" value={ratio(summary.profitFactor)} />
-      </MetricGrid>
+      <PillStatsBar ariaLabel={`${summary.label} summary metrics`} className="mt-5" metrics={metrics} />
     </div>
   );
 }

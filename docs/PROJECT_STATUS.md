@@ -45,12 +45,21 @@ stopped. This is the "when did we last work on it" trail.
   - Follow-up: moved the chart canvas from the quiet `--surface` fill to the
     shared card background, making it white in the light theme without
     hard-coding a theme-specific color.
+  - Extracted the centered capsule summary into a reusable `PillStatsBar` and
+    replaced Journal Month's four boxed summary metrics with it. Month calendar
+    cells now stay neutral while signed P&L figures carry the outcome color.
   - Browser-verified the day card, week selected/hover states, month
     selected/hover states, and the 390px day layout with a clean console.
     Side-by-side design QA passed after correcting two P2 details.
-  - Impeccable's detector reported no new findings from this slice; its output
-    was limited to existing typography/radius advisories in the touched files.
-  - `npm run verify:quick` passed under Node 22.13.0.
+  - Rechecked the shared stats bar on Calendar Month at 1440px and Journal
+    Month at 1440px/390px; the capsule alignment, local overflow, and neutral
+    month cells render as intended.
+  - Impeccable's detector reported no new actionable findings; its output was
+    limited to the existing typography/radius advisories in the touched files,
+    including the preserved 22px value size moved into `PillStatsBar`.
+  - `npm run verify:types` and a production Webpack build passed under Node
+    22.13.0. The default Turbopack build cannot resolve this worktree's shared
+    `node_modules` symlink, so the equivalent build was run with `--webpack`.
   - **Stopped at:** implementation, design QA, and project verification
     complete on the task branch.
 

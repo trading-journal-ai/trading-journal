@@ -15,6 +15,7 @@ import {
 import CalendarRangeFilter from "@/components/CalendarRangeFilter";
 import PendingSubmitButton from "@/components/PendingSubmitButton";
 import PeriodTabs from "@/components/ui/PeriodTabs";
+import PillStatsBar, { type PillStatMetric } from "@/components/ui/PillStatsBar";
 import { setNoTradeDayAction } from "@/app/journal/actions";
 
 export const dynamic = "force-dynamic";
@@ -338,15 +339,16 @@ function MonthView({
     }
   }
   const monthLabel = monthFmt.format(new Date(Date.UTC(year, month - 1, 1)));
-  const summaryMetrics: Array<{ label: string; value: string; color?: string }> = [
-    { label: "Sessions", value: monthSessions.toLocaleString("en-US") },
-    { label: "Trades", value: monthTrades.toLocaleString("en-US") },
-    { label: "Accuracy", value: formatCalendarAccuracy(monthWins, monthLosses) },
-    { label: "Profit factor", value: formatCalendarProfitFactor(monthGrossProfit, monthGrossLoss) },
+  const summaryMetrics: PillStatMetric[] = [
+    { label: "Sessions", value: monthSessions.toLocaleString("en-US"), width: 74 },
+    { label: "Trades", value: monthTrades.toLocaleString("en-US"), width: 61 },
+    { label: "Accuracy", value: formatCalendarAccuracy(monthWins, monthLosses), width: 76 },
+    { label: "Profit factor", value: formatCalendarProfitFactor(monthGrossProfit, monthGrossLoss), width: 93 },
     {
       label: "P&L",
       value: fmtMoney(monthPnl),
-      color: monthPnl >= 0 ? "var(--green)" : "var(--red)",
+      width: 85,
+      tone: monthPnl > 0 ? "positive" : monthPnl < 0 ? "negative" : "muted",
     },
   ];
 
@@ -391,26 +393,7 @@ function MonthView({
         />
       </section>
 
-      <section
-        aria-label={`${monthLabel} summary`}
-        className="overflow-x-auto pb-1"
-      >
-        <dl className="relative grid w-max grid-cols-[74px_61px_76px_93px_85px] gap-x-10 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-[22px] before:rounded-full before:bg-[var(--surface-2)] before:content-['']">
-          {summaryMetrics.map((metric) => (
-            <div key={metric.label} className="relative z-10 grid grid-rows-[22px_27px] gap-0.5 text-center">
-              <dt className="flex items-center justify-center whitespace-nowrap text-[12.5px] font-medium leading-4 text-[var(--muted)]">
-                {metric.label}
-              </dt>
-              <dd
-                className="text-[22px] font-semibold leading-[1.2] tabular-nums text-[var(--foreground)]"
-                style={metric.color ? { color: metric.color } : undefined}
-              >
-                {metric.value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+      <PillStatsBar ariaLabel={`${monthLabel} summary`} metrics={summaryMetrics} />
 
       <section aria-label={`${monthLabel} trading calendar`} className="space-y-2.5">
         <div className="overflow-x-auto pb-2">
