@@ -32,6 +32,19 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-13** — Journal Today navigation correction
+  (branch `codex/fix-journal-today-navigation`).
+  - Changed Today from scope-relative navigation to an absolute return to the
+    current ET day, so it clears Week or Month and opens Day.
+  - Updated the Journal navigation contract and regression coverage for Day,
+    Week, and Month Today destinations.
+  - Browser-verified Week → Today from August 6 to August 13: the URL dropped
+    `scope=week`, Day became selected, August 13 became the current date, and
+    the console remained clean.
+  - Five focused navigation tests and `npm run verify:full` passed under Node
+    22.13.0; the existing broad NFT trace warning remains.
+  - **Stopped at:** fix complete and ready for review.
+
 - **2026-08-13** — Trade-chart execution-time integrity
   (branch `codex/chart-time-integrity`).
   - Made broker timestamps authoritative for chart markers; price matches can
