@@ -6,6 +6,7 @@ import {
   JournalDateHeading,
   useJournalDateNavigation,
 } from "@/components/JournalDateNavigation";
+import type { JournalPeriodNavigation } from "@/lib/journalPeriodNavigation";
 import Money from "@/components/ui/Money";
 
 export type JournalWeekStripDay = {
@@ -25,9 +26,7 @@ type JournalWeekStripProps = {
 type JournalDayNavigationProps = {
   days: JournalWeekStripDay[];
   basePath: string;
-  todayDate: string;
-  previousDate: string;
-  nextDate: string;
+  periodNavigation: JournalPeriodNavigation;
   calendarHref: string;
 };
 
@@ -93,12 +92,11 @@ function NavigationLink({
 export function JournalDayNavigation({
   days,
   basePath,
-  todayDate,
-  previousDate,
-  nextDate,
+  periodNavigation,
   calendarHref,
 }: JournalDayNavigationProps) {
-  const { pendingDate, selectedDate, setPendingDate } = useJournalDateNavigation();
+  const { pendingDate, scope, selectedDate, setPendingDate } = useJournalDateNavigation();
+  const navigation = periodNavigation[scope];
 
   return (
     <section
@@ -155,13 +153,13 @@ export function JournalDayNavigation({
           className="text-3xl font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]"
         />
         <nav aria-label="Journal date controls" className="flex max-w-full items-center gap-2 overflow-x-auto">
-          <NavigationLink href={dayHref(basePath, todayDate)} targetDate={todayDate} quiet>
+          <NavigationLink href={navigation.today.href} targetDate={navigation.today.date} quiet>
             Today
           </NavigationLink>
-          <NavigationLink href={dayHref(basePath, previousDate)} targetDate={previousDate}>
+          <NavigationLink href={navigation.previous.href} targetDate={navigation.previous.date}>
             Previous
           </NavigationLink>
-          <NavigationLink href={dayHref(basePath, nextDate)} targetDate={nextDate}>
+          <NavigationLink href={navigation.next.href} targetDate={navigation.next.date}>
             Next
           </NavigationLink>
           <NavigationLink href={calendarHref}>Calendar</NavigationLink>

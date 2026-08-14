@@ -41,14 +41,23 @@ stopped. This is the "when did we last work on it" trail.
     header while preserving a local fallback for standalone preview surfaces.
   - Added focused coverage for day, same-month week, cross-month week,
     cross-year week, and month labels.
+  - Wired Today / Previous / Next to the selected scope: Day moves across
+    trading weekdays, Week moves by seven days, and Month moves by one calendar
+    month. The active scope is URL-backed and survives navigation, refresh, and
+    return links.
+  - Added boundary coverage for weekend skipping, week stepping, shorter-month
+    clamping, scope URLs, and all three navigation destination sets.
   - Browser-verified all three period transitions at desktop and Week at 390px;
     the heading matched the selected scope, the narrow page had no horizontal
-    overflow, and the final preview console was clean.
-  - Focused tests and `npm run verify:full` passed under Node 22.13.0; the
-    existing broad NFT trace warning remains.
+    overflow, and the final preview console was clean. A second interaction pass
+    verified Day's Friday-to-Monday step, Previous Week, Previous/Next Month,
+    scope-preserving Today, direct scoped URLs, and scope persistence after data
+    navigation.
+  - Eight focused period-label/navigation tests and `npm run verify:full` passed
+    under Node 22.13.0; the existing broad NFT trace warning remains.
   - Opened [PR #72](https://github.com/trading-journal-ai/trading-journal/pull/72).
-  - **Stopped at:** regression fixed and fully verified; PR #72 is ready for
-    owner review.
+  - **Stopped at:** heading and period navigation regressions fixed and fully
+    verified; PR #72 is ready for owner review.
 
 - **2026-08-13** — Journal today-import fast path
   (branch `design/importer-update`).

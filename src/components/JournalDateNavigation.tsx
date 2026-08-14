@@ -30,11 +30,15 @@ const JournalDateNavigationContext = createContext<JournalDateNavigationValue | 
 export function JournalDateNavigationProvider({
   children,
   className,
+  initialScope = "day",
   selectedDate,
+  syncScopeToUrl = false,
 }: {
   children: ReactNode;
   className?: string;
+  initialScope?: JournalScope;
   selectedDate: string;
+  syncScopeToUrl?: boolean;
 }) {
   const [pendingSelection, setPendingSelection] = useState<{ date: string; from: string } | null>(null);
   const pendingDate = pendingSelection?.from === selectedDate ? pendingSelection.date : null;
@@ -43,7 +47,16 @@ export function JournalDateNavigationProvider({
     setPendingSelection({ date, from: selectedDate });
   }, [selectedDate]);
   const visualDate = pendingDate ?? selectedDate;
-  const [scope, setScope] = useState<JournalScope>("day");
+  const [scope, setScopeState] = useState<JournalScope>(initialScope);
+  const setScope = useCallback((nextScope: JournalScope) => {
+    setScopeState(nextScope);
+    if (!syncScopeToUrl) return;
+
+    const url = new URL(window.location.href);
+    if (nextScope === "day") url.searchParams.delete("scope");
+    else url.searchParams.set("scope", nextScope);
+    window.history.replaceState(window.history.state, "", url);
+  }, [syncScopeToUrl]);
   const value = useMemo(() => ({
     pendingDate,
     selectedDate,
@@ -51,7 +64,7 @@ export function JournalDateNavigationProvider({
     visualDate,
     scope,
     setScope,
-  }), [pendingDate, selectedDate, setPendingDate, visualDate, scope]);
+  }), [pendingDate, selectedDate, setPendingDate, visualDate, scope, setScope]);
 
   return (
     <JournalDateNavigationContext.Provider value={value}>

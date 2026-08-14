@@ -319,7 +319,9 @@ Build once, reuse everywhere.
   full weekday and date for Day, the Monday–Friday range for Week, and month plus
   year for Month. Empty and future days keep their position but show no
   invented value. Today / Previous / Next / Calendar remain textual controls in
-  the same page-level header; Previous and Next step across trading weekdays.
+  the same page-level header. Today preserves the active scope; Previous and
+  Next step across trading weekdays in Day, seven calendar days in Week, and one
+  calendar month in Month (clamping the selected day for shorter months).
   Both Journal tab groups use the semantic accent underline in this surface.
 - **Journal** — prose-first. Headers use Display/Page title; recap text uses Body
   large; metrics sit under the header as quiet mono metadata; ticker rail compact
