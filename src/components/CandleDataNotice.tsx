@@ -9,9 +9,11 @@ export default function CandleDataNotice({
   hasFallback: boolean;
   status: Exclude<CandleDataStatus, "market">;
 }) {
-  const title = status === "missing"
-    ? "Market data missing · ticker review needed"
-    : "Market data unavailable · provider check needed";
+  const title = status === "incomplete"
+    ? "Market data incomplete · execution times preserved"
+    : status === "missing"
+      ? "Market data missing · ticker review needed"
+      : "Market data unavailable · provider check needed";
 
   return (
     <div role="status" className="mb-4 border-l-2 border-[var(--red)] pl-3">
@@ -19,9 +21,11 @@ export default function CandleDataNotice({
         {title}
       </p>
       <p className="mt-1 max-w-[760px] text-[13px] leading-5 text-[var(--body)]">
-        {hasFallback
-          ? "We’re showing an estimate based on your executions. EMA, VWAP, volume, and market-structure coaching are paused until real candles are available."
-          : "EMA, VWAP, volume, and market-structure coaching are paused until real candles are available."}
+        {status === "incomplete"
+          ? "Some candles are missing around broker executions. Markers remain anchored to broker times, and blank chart sections show missing coverage. EMA, VWAP, and market-structure coaching are paused until the gap is repaired."
+          : hasFallback
+            ? "We’re showing an estimate based on your executions. EMA, VWAP, volume, and market-structure coaching are paused until real candles are available."
+            : "EMA, VWAP, volume, and market-structure coaching are paused until real candles are available."}
       </p>
       {detail ? (
         <details className="mt-1.5 text-[12px] text-[var(--muted)]">

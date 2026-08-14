@@ -15,7 +15,7 @@ function isInlineTradeReviewData(value: unknown): value is InlineTradeReviewData
   return Array.isArray(payload.availableTags)
     && Array.isArray(payload.candles)
     && (payload.candleSource === "market" || payload.candleSource === "execution_fallback")
-    && (payload.candleStatus === "market" || payload.candleStatus === "missing" || payload.candleStatus === "provider_error")
+    && (payload.candleStatus === "market" || payload.candleStatus === "incomplete" || payload.candleStatus === "missing" || payload.candleStatus === "provider_error")
     && typeof payload.initialTradeId === "number"
     && Array.isArray(payload.markers)
     && typeof payload.readOnly === "boolean"
@@ -128,7 +128,7 @@ export default function InlineTradeReviewPanel({
         {data.candleStatus !== "market" ? (
           <CandleDataNotice
             detail={data.candleError}
-            hasFallback={data.candles.length > 0}
+            hasFallback={data.candleSource === "execution_fallback"}
             status={data.candleStatus}
           />
         ) : null}

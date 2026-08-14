@@ -70,8 +70,9 @@ Business logic is pure, isolated, and tested.
 - Transactional, chunked inserts; good composite indexes including a dedicated
   `drizzle/0003_performance_indexes.sql` migration.
 - Account scoping applied on every query.
-- Candle layer is fetch-once-then-cache, with errors degraded to an empty "no data" chart
-  instead of a crash (`src/lib/candles/index.ts:92-115`).
+- Candle layer caches market data and validates required broker execution
+  minutes. Partial days refresh on demand; unresolved gaps remain explicit and
+  markers stay anchored to broker time instead of being relocated by price.
 - API key read server-side only (`src/lib/candles/massive.ts`).
 - Small open-redirect guard (`safeInternalHref`) in `src/app/journal/page.tsx:9`.
 - Strict TypeScript, no `any`, no `TODO`/`FIXME`, tests on exactly the riskiest code

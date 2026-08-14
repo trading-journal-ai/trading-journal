@@ -247,7 +247,9 @@ export async function loadInlineTradeReview({
   });
 
   const { start: candleFrom, end: candleTo } = reviewSessionRange(date);
-  const candleResult = await getCandles(symbol, candleFrom, candleTo);
+  const candleResult = await getCandles(symbol, candleFrom, candleTo, {
+    requiredExecutionTimes: executions.map((execution) => execution.executedAt),
+  });
   const candles = candleResult.candles.length > 0
     ? candleResult.candles
     : fallbackCandlesFromExecutions(executions, candleFrom, candleTo);

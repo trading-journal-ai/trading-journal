@@ -32,6 +32,22 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-13** — Trade-chart execution-time integrity
+  (branch `codex/chart-time-integrity`).
+  - Made broker timestamps authoritative for chart markers; price matches can
+    no longer relocate an execution to another candle.
+  - Added execution-minute coverage checks to the candle cache. Partial days
+    refresh on demand, while unresolved gaps render at the true time with a
+    blank interval and an explicit incomplete-market-data notice.
+  - Added regression coverage for late executions beyond a partial cache,
+    multiple fills in one minute, and the former wrong-time price-match case.
+  - Browser-verified the reported late-day trade after the cache repaired from
+    partial to full extended-hours coverage; trade focus, prices, size, P&L,
+    and hold duration remained intact with a clean console.
+  - Focused regression tests and `npm run verify:full` passed under Node
+    22.13.0; the existing broad NFT trace warning remains.
+  - **Stopped at:** implementation complete and committed on the task branch.
+
 - **2026-08-13** — Calendar month-at-a-glance redesign
   (branch `design/calendar-month-at-a-glance`).
   - Recovered the approved collapsed-month prototype from the clean

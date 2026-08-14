@@ -1,12 +1,14 @@
 /**
- * Candle cache: fetch-once on demand, then serve from SQLite.
+ * Candle cache: fetch on demand, validate execution-minute coverage, then
+ * serve from SQLite.
  *
- * `getCandles` ensures the trade's market day(s) are cached (fetching from
- * Massive if not), then returns the bars within the requested window.
+ * `getCandles` ensures the trade's market day(s) are cached and refreshes a
+ * partial day when a required broker execution minute is absent.
  */
-import { and, eq, gte, lte } from "drizzle-orm";
+import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { canFetchRemoteCandles } from "@/lib/demoMode";
+import { executionMinute, missingExecutionMinutes } from "@/lib/candleIntegrity";
 import { MARKET_TZ, zonedDateTimeToUtcMs } from "@/lib/time";
 import { isCusip } from "@/lib/import/securityIdentifiers";
 import type { Candle } from "./massive";
@@ -15,7 +17,7 @@ import { marketDataSymbolForDate } from "./symbolHistory";
 
 const TIMEFRAME = "1m";
 
-export type CandleDataStatus = "market" | "missing" | "provider_error";
+export type CandleDataStatus = "market" | "incomplete" | "missing" | "provider_error";
 export type { CandleResolutionMethod } from "./resolveDay";
 
 export type CandleDataResult = {
@@ -33,6 +35,10 @@ type DayCacheResult = {
   marketDataSymbol?: string;
   resolutionMethod?: CandleResolutionMethod | "cache";
   status: "cache" | "fetched" | "missing";
+};
+
+type CandleRequestOptions = {
+  requiredExecutionTimes?: number[];
 };
 
 const etDateFmt = new Intl.DateTimeFormat("en-CA", {
@@ -79,7 +85,11 @@ async function storeCandles(symbol: string, bars: Candle[]): Promise<void> {
     .onConflictDoNothing();
 }
 
-async function ensureDayCached(symbol: string, date: string): Promise<DayCacheResult> {
+async function ensureDayCached(
+  symbol: string,
+  date: string,
+  requiredExecutionTimes: number[],
+): Promise<DayCacheResult> {
   const { start, end } = dayBounds(date);
   const existing = await db
     .select({ t: schema.candles.t })
@@ -93,7 +103,21 @@ async function ensureDayCached(symbol: string, date: string): Promise<DayCacheRe
       ),
     )
     .limit(1);
-  if (existing.length > 0) {
+  const requiredMinutes = [...new Set(requiredExecutionTimes.map(executionMinute))];
+  const cachedRequiredMinutes = requiredMinutes.length === 0
+    ? []
+    : await db
+        .select({ t: schema.candles.t })
+        .from(schema.candles)
+        .where(
+          and(
+            eq(schema.candles.symbol, symbol),
+            eq(schema.candles.timeframe, TIMEFRAME),
+            inArray(schema.candles.t, requiredMinutes),
+          ),
+        );
+  const missingRequiredMinutes = missingExecutionMinutes(cachedRequiredMinutes, requiredExecutionTimes);
+  if (existing.length > 0 && missingRequiredMinutes.length === 0) {
     return {
       attemptedSymbols: [],
       marketDataSymbol: marketDataSymbolForDate(symbol, date),
@@ -146,9 +170,12 @@ export async function getCandles(
   symbol: string,
   from: number,
   to: number,
+  options: CandleRequestOptions = {},
 ): Promise<CandleDataResult> {
   const requestedSymbol = symbol.trim().toUpperCase();
   const dates = etDatesBetween(from, to);
+  const requiredExecutionTimes = (options.requiredExecutionTimes ?? [])
+    .filter((timestamp) => Number.isFinite(timestamp) && timestamp >= from && timestamp <= to);
   if (isCusip(requestedSymbol)) {
     return {
       attemptedSymbols: [requestedSymbol],
@@ -159,20 +186,29 @@ export async function getCandles(
   }
   if (!canFetchRemoteCandles()) {
     const candles = await readCachedCandles(requestedSymbol, from, to);
+    const missingMinutes = missingExecutionMinutes(candles, requiredExecutionTimes);
     return {
       attemptedSymbols: [marketDataSymbolForDate(requestedSymbol, dates[0])],
       candles,
-      error: candles.length === 0 ? `No cached market candles were found for ${requestedSymbol}.` : undefined,
+      error: candles.length === 0
+        ? `No cached market candles were found for ${requestedSymbol}.`
+        : missingMinutes.length > 0
+          ? `Cached market data is missing ${missingMinutes.length} execution ${missingMinutes.length === 1 ? "minute" : "minutes"}. Broker timestamps remain authoritative.`
+          : undefined,
       marketDataSymbol: marketDataSymbolForDate(requestedSymbol, dates[0]),
       resolutionMethod: candles.length > 0 ? "cache" : undefined,
-      status: candles.length > 0 ? "market" : "missing",
+      status: candles.length === 0 ? "missing" : missingMinutes.length > 0 ? "incomplete" : "market",
     };
   }
 
   const dayResults: DayCacheResult[] = [];
   try {
     for (const date of dates) {
-      dayResults.push(await ensureDayCached(requestedSymbol, date));
+      dayResults.push(await ensureDayCached(
+        requestedSymbol,
+        date,
+        requiredExecutionTimes.filter((timestamp) => etDate(timestamp) === date),
+      ));
     }
   } catch (e) {
     return {
@@ -184,6 +220,7 @@ export async function getCandles(
   }
 
   const candles = await readCachedCandles(requestedSymbol, from, to);
+  const missingMinutes = missingExecutionMinutes(candles, requiredExecutionTimes);
   const attemptedSymbols = [...new Set(dayResults.flatMap((result) => result.attemptedSymbols))];
   const resolvedDay = dayResults.find((result) => result.status === "fetched")
     ?? dayResults.find((result) => result.status === "cache");
@@ -193,7 +230,10 @@ export async function getCandles(
       candles,
       marketDataSymbol: resolvedDay?.marketDataSymbol,
       resolutionMethod: resolvedDay?.resolutionMethod,
-      status: "market",
+      error: missingMinutes.length > 0
+        ? `Market data is missing ${missingMinutes.length} execution ${missingMinutes.length === 1 ? "minute" : "minutes"} after a cache refresh. Broker timestamps remain authoritative.`
+        : undefined,
+      status: missingMinutes.length > 0 ? "incomplete" : "market",
     };
   }
 

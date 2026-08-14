@@ -196,7 +196,9 @@ export default async function TickerDayReviewPage({
   ]);
 
   const { start: candleFrom, end: candleTo } = reviewSessionRange(date);
-  const candleResult = await getCandles(symbol, candleFrom, candleTo);
+  const candleResult = await getCandles(symbol, candleFrom, candleTo, {
+    requiredExecutionTimes: execs.map((execution) => execution.executedAt),
+  });
   const { candles } = candleResult;
   const chartCandles = candles.length > 0 ? candles : fallbackCandlesFromExecutions(execs, candleFrom, candleTo);
 
@@ -339,7 +341,7 @@ export default async function TickerDayReviewPage({
             {candleResult.status !== "market" ? (
               <CandleDataNotice
                 detail={candleResult.error}
-                hasFallback={chartCandles.length > 0}
+                hasFallback={candles.length === 0 && chartCandles.length > 0}
                 status={candleResult.status}
               />
             ) : null}
