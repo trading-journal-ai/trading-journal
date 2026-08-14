@@ -27,6 +27,11 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
   ([PR #66](https://github.com/trading-journal-ai/trading-journal/pull/66)).
 
 ### Fixed
+- Thinkorswim statement uploads and Schwab automatic imports now share an
+  idempotent execution ledger, preserve full statement coverage, support ETFs,
+  account for known share splits, and place swing activity and realized P&L on
+  the dates executions occurred
+  ([PR #73](https://github.com/trading-journal-ai/trading-journal/pull/73)).
 - Local `journal` launcher now removes stale Next.js locks, reuses live lock
   metadata, and opens the exact active localhost URL automatically
   ([PR #65](https://github.com/trading-journal-ai/trading-journal/pull/65)).
