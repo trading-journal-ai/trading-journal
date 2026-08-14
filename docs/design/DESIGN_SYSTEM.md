@@ -342,7 +342,12 @@ Build once, reuse everywhere.
   and sorted best-to-worst; pills secondary; reading mode hides edit controls
   until interaction. The Month P&L calendar keeps cell surfaces neutral and
   communicates outcomes through signed red/green P&L figures only. When the
-  selected day changes, only the daily P&L chart
+  Day Trades view is active, reuse `PillStatsBar` for trades, accuracy, profit
+  factor, and P&L; pair it with a compact win/loss distribution. The trade ledger
+  shows shares, execution count, entry, exit, per-share result, hold time, context,
+  and P&L. Saved tags/setups appear as compact context pills; missing annotations
+  remain explicit as “Needs context.” Rows retain the inline review disclosure.
+  When the selected day changes, only the daily P&L chart
   surface fades in briefly; its card, heading, and surrounding review structure
   remain fixed so the transition reads as updated data rather than a page reload.
   During slower date navigation, fade the outgoing chart completely, then reveal

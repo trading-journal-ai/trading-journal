@@ -48,6 +48,10 @@ stopped. This is the "when did we last work on it" trail.
   - Extracted the centered capsule summary into a reusable `PillStatsBar` and
     replaced Journal Month's four boxed summary metrics with it. Month calendar
     cells now stay neutral while signed P&L figures carry the outcome color.
+  - Rebuilt Day → Trades from the richer design handoff: the shared stats bar,
+    win/loss distribution, expanded execution/price ledger columns, real tag or
+    setup context pills, functional show-all behavior, and the existing inline
+    trade-review disclosure now share one soft card surface.
   - Browser-verified the day card, week selected/hover states, month
     selected/hover states, and the 390px day layout with a clean console.
     Side-by-side design QA passed after correcting two P2 details.
