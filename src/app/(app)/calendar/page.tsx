@@ -338,11 +338,16 @@ function MonthView({
     }
   }
   const monthLabel = monthFmt.format(new Date(Date.UTC(year, month - 1, 1)));
-  const summaryMetrics = [
+  const summaryMetrics: Array<{ label: string; value: string; color?: string }> = [
     { label: "Sessions", value: monthSessions.toLocaleString("en-US") },
     { label: "Trades", value: monthTrades.toLocaleString("en-US") },
     { label: "Accuracy", value: formatCalendarAccuracy(monthWins, monthLosses) },
     { label: "Profit factor", value: formatCalendarProfitFactor(monthGrossProfit, monthGrossLoss) },
+    {
+      label: "P&L",
+      value: fmtMoney(monthPnl),
+      color: monthPnl >= 0 ? "var(--green)" : "var(--red)",
+    },
   ];
 
   return (
@@ -388,29 +393,23 @@ function MonthView({
 
       <section
         aria-label={`${monthLabel} summary`}
-        className="flex flex-wrap items-end justify-between gap-x-12 gap-y-5"
+        className="overflow-x-auto pb-1"
       >
-        <dl className="flex flex-wrap gap-x-10 gap-y-4">
+        <dl className="relative grid w-max grid-cols-[74px_61px_76px_93px_85px] gap-x-10 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-[22px] before:rounded-full before:bg-[var(--surface-2)] before:content-['']">
           {summaryMetrics.map((metric) => (
-            <div key={metric.label} className="grid gap-0.5">
-              <dt className="text-[13px] font-medium text-[var(--muted)]">
+            <div key={metric.label} className="relative z-10 grid grid-rows-[22px_27px] gap-0.5 text-center">
+              <dt className="flex items-center justify-center whitespace-nowrap text-[12.5px] font-medium leading-4 text-[var(--muted)]">
                 {metric.label}
               </dt>
-              <dd className="text-xl font-semibold leading-[1.2] tabular-nums text-[var(--foreground)]">
+              <dd
+                className="text-[22px] font-semibold leading-[1.2] tabular-nums text-[var(--foreground)]"
+                style={metric.color ? { color: metric.color } : undefined}
+              >
                 {metric.value}
               </dd>
             </div>
           ))}
         </dl>
-        <div className="grid gap-0.5 sm:justify-items-end">
-          <span className="text-[13px] font-medium text-[var(--muted)]">P&amp;L</span>
-          <span
-            className="text-xl font-semibold leading-[1.2] tabular-nums"
-            style={{ color: monthPnl >= 0 ? "var(--green)" : "var(--red)" }}
-          >
-            {fmtMoney(monthPnl)}
-          </span>
-        </div>
       </section>
 
       <section aria-label={`${monthLabel} trading calendar`} className="space-y-2.5">
@@ -513,20 +512,21 @@ function MonthView({
                     );
                   })}
 
-                  <div className="grid min-h-24 place-items-center bg-[var(--background)] px-3.5 py-3 text-center">
+                  <div className="grid min-h-24 content-start gap-1 bg-[var(--background)] px-3.5 py-3">
                     {week.trades > 0 ? (
-                      <span className="flex items-baseline justify-center gap-2">
+                      <>
+                        <span aria-hidden="true" className="min-h-7 pb-1" />
                         <span
-                          className="text-[17px] font-medium leading-[1.25] tabular-nums"
+                          className="block text-[17px] font-medium leading-[1.25] tabular-nums"
                           style={{ color: week.pnl >= 0 ? "var(--green)" : "var(--red)" }}
                           aria-label={`Week ${weekIndex + 1} total P&L ${fmtMoney(week.pnl)}`}
                         >
                           {fmtMoney(week.pnl)}
                         </span>
-                        <span className="whitespace-nowrap text-[11.5px] leading-5 text-[var(--faint)] tabular-nums">
+                        <span className="block whitespace-nowrap text-[11.5px] leading-5 text-[var(--faint)] tabular-nums">
                           {week.trades.toLocaleString("en-US")} trades · {formatCalendarAccuracy(week.wins, week.losses)}
                         </span>
-                      </span>
+                      </>
                     ) : null}
                   </div>
                 </Fragment>

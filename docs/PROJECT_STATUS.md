@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-08-13 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-08-14 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -31,6 +31,20 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-08-14** — Calendar summary and weekly-total alignment
+  (branch `codex/calendar-stats-layout`).
+  - Reworked the month summary into one shared label band with five centered
+    metric columns, including P&L, while preserving the existing semantic
+    labels and theme tokens.
+  - Aligned weekly P&L and its trade/accuracy metadata with the corresponding
+    daily value lanes by reusing the calendar cell's empty date slot.
+  - Browser-verified desktop and 390px layouts with the committed synthetic
+    demo database. Label/value center axes and daily/weekly P&L coordinates
+    match exactly; Previous/Next navigation worked and the clean pass had no
+    console warnings or errors.
+  - Impeccable's layout detector and `npm run verify:quick` passed.
+  - **Stopped at:** implementation complete and committed on the task branch.
 
 - **2026-08-13** — Trade-chart execution-time integrity
   (branch `codex/chart-time-integrity`).
