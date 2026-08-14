@@ -22,6 +22,9 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
   ([PR #70](https://github.com/trading-journal-ai/trading-journal/pull/70)).
 
 ### Changed
+- Calendar now uses the compact month-at-a-glance layout as its canonical month
+  view, with month metrics, five weekday columns, weekly summaries, and direct
+  Journal-day links ([PR #71](https://github.com/trading-journal-ai/trading-journal/pull/71)).
 - Focused Journal days now use a compact five-session rail, textual trading-day
   navigation, consistent underline tabs, and the shared 1152px workspace
   ([PR #66](https://github.com/trading-journal-ai/trading-journal/pull/66)).

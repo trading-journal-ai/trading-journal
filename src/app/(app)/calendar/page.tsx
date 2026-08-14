@@ -8,6 +8,10 @@ import { tradeDayActivities } from "@/lib/tradeActivity";
 import { fmtMoney } from "@/lib/format";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { journalDayState } from "@/lib/journalDayStatus";
+import {
+  formatCalendarAccuracy,
+  formatCalendarProfitFactor,
+} from "@/lib/calendarMetrics";
 import CalendarRangeFilter from "@/components/CalendarRangeFilter";
 import PendingSubmitButton from "@/components/PendingSubmitButton";
 import PeriodTabs from "@/components/ui/PeriodTabs";
@@ -20,6 +24,8 @@ type DayAgg = {
   trades: number;
   wins: number;
   losses: number;
+  grossProfit: number;
+  grossLoss: number;
 };
 type CalendarSearch = {
   m?: string;
@@ -39,7 +45,6 @@ const monthShortFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
   month: "long",
 });
-const WORKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 const YEAR_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function shiftMonth(ym: string, delta: number): string {
@@ -122,12 +127,6 @@ type Workweek = {
   wins: number;
   losses: number;
 };
-
-function formatAccuracy(wins: number, losses: number): string {
-  const counted = wins + losses;
-  if (counted === 0) return "—";
-  return `${Math.round((wins / counted) * 100)}%`;
-}
 
 function workweeksForMonth(year: number, month: number, byDate: Map<string, DayAgg>): Workweek[] {
   const first = new Date(Date.UTC(year, month - 1, 1));
@@ -221,13 +220,22 @@ async function dailyAgg(accountId: number): Promise<{
     )) {
       periods.add(activity.date.slice(0, 7));
       const pnl = activity.realizedPnl;
-      const cur = byDate.get(activity.date) ?? { pnl: 0, trades: 0, wins: 0, losses: 0 };
+      const cur = byDate.get(activity.date) ?? {
+        pnl: 0,
+        trades: 0,
+        wins: 0,
+        losses: 0,
+        grossProfit: 0,
+        grossLoss: 0,
+      };
       cur.pnl += pnl;
       cur.trades += 1;
       if (pnl > 0) {
         cur.wins += 1;
+        cur.grossProfit += pnl;
       } else if (pnl < 0) {
         cur.losses += 1;
+        cur.grossLoss += Math.abs(pnl);
       }
       byDate.set(activity.date, cur);
     }
@@ -269,11 +277,23 @@ function ViewToggle({ active, monthHref, yearHref }: { active: "month" | "year";
   );
 }
 
-function NavButton({ href, children }: { href: string; children: React.ReactNode }) {
+function NavButton({
+  href,
+  children,
+  quiet = false,
+}: {
+  href: string;
+  children: React.ReactNode;
+  quiet?: boolean;
+}) {
   return (
     <Link
       href={href}
-      className="flex h-10 items-center rounded-md border border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)] hover:border-[var(--accent)]"
+      className={`flex h-10 items-center rounded-md px-3 text-[13px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
+        quiet
+          ? "text-[var(--muted)] hover:text-[var(--foreground)]"
+          : "border border-[var(--border)] text-[var(--body)] hover:border-[var(--accent)] hover:text-[var(--foreground)]"
+      }`}
     >
       {children}
     </Link>
@@ -299,153 +319,225 @@ function MonthView({
   const weeks = workweeksForMonth(year, month, byDate);
   const currentCalendarHref = calendarHref(params);
   let monthPnl = 0;
+  let monthTrades = 0;
+  let monthWins = 0;
+  let monthLosses = 0;
+  let monthGrossProfit = 0;
+  let monthGrossLoss = 0;
+  let monthSessions = 0;
   for (const week of weeks) {
-    monthPnl += week.pnl;
+    for (const day of week.days) {
+      if (!day.inMonth || !day.agg) continue;
+      monthSessions += 1;
+      monthPnl += day.agg.pnl;
+      monthTrades += day.agg.trades;
+      monthWins += day.agg.wins;
+      monthLosses += day.agg.losses;
+      monthGrossProfit += day.agg.grossProfit;
+      monthGrossLoss += day.agg.grossLoss;
+    }
   }
+  const monthLabel = monthFmt.format(new Date(Date.UTC(year, month - 1, 1)));
+  const summaryMetrics = [
+    { label: "Sessions", value: monthSessions.toLocaleString("en-US") },
+    { label: "Trades", value: monthTrades.toLocaleString("en-US") },
+    { label: "Accuracy", value: formatCalendarAccuracy(monthWins, monthLosses) },
+    { label: "Profit factor", value: formatCalendarProfitFactor(monthGrossProfit, monthGrossLoss) },
+  ];
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <ViewToggle
-            active="month"
-            monthHref={calendarHref({ ...params, view: undefined, y: undefined, m: ym })}
-            yearHref={calendarHref({ ...params, view: "year", y: String(year), m: undefined })}
-          />
-          <NavButton href={calendarHref({ ...params, m: shiftMonth(ym, -1), view: undefined, y: undefined })}>
-            Prev
-          </NavButton>
-          <NavButton href={calendarHref({ ...params, m: shiftMonth(ym, 1), view: undefined, y: undefined })}>
-            Next
-          </NavButton>
-        </div>
-        <CalendarRangeFilter
-          params={params}
-          clearHref={calendarHref({ ...params, range: undefined, from: undefined, to: undefined })}
-        />
-      </div>
-
-      <div className="grid grid-cols-6 pt-6">
-        <div className="col-span-6 flex items-baseline justify-between gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {monthFmt.format(new Date(Date.UTC(year, month - 1, 1)))}
+    <div className="mx-auto max-w-6xl space-y-7 pt-3">
+      <section aria-labelledby="calendar-month-heading">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h1
+            id="calendar-month-heading"
+            className="text-[28px] font-semibold leading-[1.1] tracking-[-0.02em]"
+          >
+            {monthLabel}
           </h1>
-          <div className="flex items-baseline gap-1.5 text-right text-[15px] font-normal">
-            <span className="text-[var(--muted)]">Monthly P&L</span>
-            <span className="font-semibold tabular-nums" style={{ color: monthPnl >= 0 ? "var(--green)" : "var(--red)" }}>
-              {fmtMoney(monthPnl)}
-            </span>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <NavButton
+              quiet
+              href={calendarHref({
+                ...params,
+                m: today.slice(0, 7),
+                view: undefined,
+                y: undefined,
+              })}
+            >
+              Today
+            </NavButton>
+            <NavButton href={calendarHref({ ...params, m: shiftMonth(ym, -1), view: undefined, y: undefined })}>
+              Previous
+            </NavButton>
+            <NavButton href={calendarHref({ ...params, m: shiftMonth(ym, 1), view: undefined, y: undefined })}>
+              Next
+            </NavButton>
+            <CalendarRangeFilter
+              params={params}
+              clearHref={calendarHref({ ...params, range: undefined, from: undefined, to: undefined })}
+            />
           </div>
         </div>
-      </div>
+        <ViewToggle
+          active="month"
+          monthHref={calendarHref({ ...params, view: undefined, y: undefined, m: ym })}
+          yearHref={calendarHref({ ...params, view: "year", y: String(year), m: undefined })}
+        />
+      </section>
 
-      <div>
-        <div className="grid grid-cols-6 px-1 pb-1">
-          {[...WORKDAYS, ""].map((d, index) => (
-            <div key={`${d}-${index}`} className="px-4 text-left text-sm font-semibold text-[var(--muted)]">
-              {d}
+      <section
+        aria-label={`${monthLabel} summary`}
+        className="flex flex-wrap items-end justify-between gap-x-12 gap-y-5"
+      >
+        <dl className="flex flex-wrap gap-x-10 gap-y-4">
+          {summaryMetrics.map((metric) => (
+            <div key={metric.label} className="grid gap-0.5">
+              <dt className="text-[13px] font-medium text-[var(--muted)]">
+                {metric.label}
+              </dt>
+              <dd className="text-xl font-semibold leading-[1.2] tabular-nums text-[var(--foreground)]">
+                {metric.value}
+              </dd>
             </div>
           ))}
+        </dl>
+        <div className="grid gap-0.5 sm:justify-items-end">
+          <span className="text-[13px] font-medium text-[var(--muted)]">P&amp;L</span>
+          <span
+            className="text-xl font-semibold leading-[1.2] tabular-nums"
+            style={{ color: monthPnl >= 0 ? "var(--green)" : "var(--red)" }}
+          >
+            {fmtMoney(monthPnl)}
+          </span>
         </div>
+      </section>
 
-        <div className="grid grid-cols-6 overflow-hidden rounded-[6px] bg-[var(--border)] gap-[2px]">
-          {weeks.map((week, weekIndex) => (
-            <Fragment key={weekIndex}>
-              {week.days.map((day) => {
-                const pos = day.agg ? day.agg.pnl >= 0 : false;
-                const state = journalDayState(
-                  day.agg?.trades ?? 0,
-                  noTradeDates.has(day.date) ? "no_trade" : null,
-                );
-                const canConfirmNoTrade = day.inMonth && day.date <= today && state === "unconfirmed_empty" && !readOnly;
-                const content = (
-                  <div
-                    data-calendar-date={day.date}
-                    className={`flex h-full min-h-36 flex-col bg-[var(--surface)] p-4 ${
-                      day.inMonth ? "" : "opacity-30"
-                    }`}
-                  >
-                    <span className="text-base font-semibold leading-none text-[var(--foreground)]">
-                      {day.day}
-                    </span>
-                    {state === "trades" ? (
-                      <span className="mt-auto">
-                        <span
-                          className="block text-lg font-semibold tabular-nums"
-                          style={{ color: pos ? "var(--green)" : "var(--red)" }}
-                        >
-                          {fmtMoney(day.agg!.pnl)}
+      <section aria-label={`${monthLabel} trading calendar`} className="space-y-2.5">
+        <div className="overflow-x-auto pb-2">
+          <div className="min-w-[940px]">
+            <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_205px] gap-px pb-2 text-[12.5px] font-semibold text-[var(--muted)]">
+              {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", ""].map((day, index) => (
+                <span key={`${day}-${index}`} className="px-[15px]">
+                  {day}
+                </span>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_205px] gap-px overflow-hidden rounded-lg bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)]">
+              {weeks.map((week, weekIndex) => (
+                <Fragment key={weekIndex}>
+                  {week.days.map((day) => {
+                    const positive = day.agg ? day.agg.pnl >= 0 : false;
+                    const isToday = day.date === today;
+                    const state = journalDayState(
+                      day.agg?.trades ?? 0,
+                      noTradeDates.has(day.date) ? "no_trade" : null,
+                    );
+                    const canConfirmNoTrade = day.inMonth
+                      && day.date <= today
+                      && state === "unconfirmed_empty"
+                      && !readOnly;
+                    const content = (
+                      <div
+                        data-calendar-date={day.date}
+                        className={`grid min-h-24 content-start gap-1 px-3.5 py-3 transition-colors ${
+                          day.inMonth
+                            ? state === "unconfirmed_empty" && !isToday
+                              ? "bg-[color-mix(in_srgb,var(--background)_55%,var(--surface))]"
+                              : "bg-[var(--background)]"
+                            : "bg-[color-mix(in_srgb,var(--background)_55%,var(--surface))] opacity-35"
+                        }`}
+                      >
+                        <span className="flex min-h-7 items-baseline gap-1.5 pb-1 text-[12.5px] font-medium leading-[1.3] tabular-nums">
+                          <span className={isToday ? "text-[var(--accent)]" : "text-[var(--foreground)]"}>
+                            {day.day}
+                          </span>
+                          {isToday ? (
+                            <span className="text-[11px] font-medium text-[var(--accent)]">Today</span>
+                          ) : null}
                         </span>
-                        <span className="block text-sm font-normal text-[var(--muted)]">
-                          {day.agg!.trades} {day.agg!.trades === 1 ? "trade" : "trades"}
-                        </span>
-                      </span>
-                    ) : state === "no_trade" && day.inMonth ? (
-                      <span className="mt-auto space-y-1.5">
-                        <span className="block font-mono text-[12px] font-medium text-[var(--muted)]">
-                          No-trade day
-                        </span>
-                        {!readOnly ? (
+                        {state === "trades" ? (
+                          <span>
+                            <span
+                              className="block text-[17px] font-medium leading-[1.25] tabular-nums"
+                              style={{ color: positive ? "var(--green)" : "var(--red)" }}
+                            >
+                              {fmtMoney(day.agg!.pnl)}
+                            </span>
+                            <span className="block truncate text-[11.5px] leading-5 text-[var(--faint)] tabular-nums">
+                              {day.agg!.trades.toLocaleString("en-US")} {day.agg!.trades === 1 ? "trade" : "trades"} · {formatCalendarAccuracy(day.agg!.wins, day.agg!.losses)}
+                            </span>
+                          </span>
+                        ) : state === "no_trade" && day.inMonth ? (
+                          <span className="space-y-1 text-[11.5px] leading-5 text-[var(--faint)]">
+                            <span className="block">No-trade day</span>
+                            {!readOnly ? (
+                              <form action={setNoTradeDayAction}>
+                                <input type="hidden" name="date" value={day.date} />
+                                <input type="hidden" name="selected" value="false" />
+                                <PendingSubmitButton
+                                  label="Undo"
+                                  pendingLabel="Undoing…"
+                                  className="text-[11.5px] font-semibold text-[var(--accent)] transition-colors hover:text-[var(--accent-strong)]"
+                                />
+                              </form>
+                            ) : null}
+                          </span>
+                        ) : isToday && day.inMonth ? (
+                          <span className="text-[12.5px] leading-5 text-[var(--faint)]">Not imported yet</span>
+                        ) : canConfirmNoTrade ? (
                           <form action={setNoTradeDayAction}>
                             <input type="hidden" name="date" value={day.date} />
-                            <input type="hidden" name="selected" value="false" />
+                            <input type="hidden" name="selected" value="true" />
                             <PendingSubmitButton
-                              label="Undo"
-                              pendingLabel="Undoing…"
-                              className="text-[12px] font-semibold text-[var(--accent)] transition-colors hover:text-[var(--accent-strong)]"
+                              label="Mark no-trade"
+                              pendingLabel="Marking…"
+                              className="text-left text-[11.5px] font-medium text-[var(--faint)] transition-colors hover:text-[var(--accent)]"
                             />
                           </form>
                         ) : null}
+                      </div>
+                    );
+                    return state === "trades" ? (
+                      <Link
+                        key={day.date}
+                        href={`/journal?date=${day.date}&returnTo=${encodeURIComponent(currentCalendarHref)}`}
+                        aria-label={`${day.date}: ${fmtMoney(day.agg!.pnl)}, ${day.agg!.trades} ${day.agg!.trades === 1 ? "trade" : "trades"}, ${formatCalendarAccuracy(day.agg!.wins, day.agg!.losses)} accuracy`}
+                        className="block bg-[var(--background)] transition-colors hover:bg-[var(--surface)] focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]"
+                      >
+                        {content}
+                      </Link>
+                    ) : (
+                      <div key={day.date}>{content}</div>
+                    );
+                  })}
+
+                  <div className="grid min-h-24 place-items-center bg-[var(--background)] px-3.5 py-3 text-center">
+                    {week.trades > 0 ? (
+                      <span className="flex items-baseline justify-center gap-2">
+                        <span
+                          className="text-[17px] font-medium leading-[1.25] tabular-nums"
+                          style={{ color: week.pnl >= 0 ? "var(--green)" : "var(--red)" }}
+                          aria-label={`Week ${weekIndex + 1} total P&L ${fmtMoney(week.pnl)}`}
+                        >
+                          {fmtMoney(week.pnl)}
+                        </span>
+                        <span className="whitespace-nowrap text-[11.5px] leading-5 text-[var(--faint)] tabular-nums">
+                          {week.trades.toLocaleString("en-US")} trades · {formatCalendarAccuracy(week.wins, week.losses)}
+                        </span>
                       </span>
-                    ) : canConfirmNoTrade ? (
-                      <form action={setNoTradeDayAction} className="mt-auto">
-                        <input type="hidden" name="date" value={day.date} />
-                        <input type="hidden" name="selected" value="true" />
-                        <PendingSubmitButton
-                          label="Mark no-trade"
-                          pendingLabel="Marking…"
-                          className="text-left text-[12px] font-medium text-[var(--faint)] transition-colors hover:text-[var(--accent)]"
-                        />
-                      </form>
                     ) : null}
                   </div>
-                );
-                return state === "trades" ? (
-                  <Link
-                    key={day.date}
-                    href={`/journal?date=${day.date}&returnTo=${encodeURIComponent(currentCalendarHref)}`}
-                    className="block bg-[var(--surface)]"
-                  >
-                    {content}
-                  </Link>
-                ) : (
-                  <div key={day.date} className="bg-[var(--surface)]">{content}</div>
-                );
-              })}
-
-              <div className="flex min-h-36 flex-col bg-[var(--surface)] p-4">
-                <span className="text-sm font-semibold leading-none text-[var(--foreground)]">
-                  Week {weekIndex + 1}
-                </span>
-                {week.trades > 0 && (
-                  <span className="mt-auto">
-                    <span
-                      className="block text-lg font-semibold tabular-nums"
-                      style={{ color: week.pnl >= 0 ? "var(--green)" : "var(--red)" }}
-                      aria-label={`Total P&L ${fmtMoney(week.pnl)}`}
-                    >
-                      {fmtMoney(week.pnl)}
-                    </span>
-                    <span className="block text-sm font-normal text-[var(--muted)]">
-                      {formatAccuracy(week.wins, week.losses)} accuracy
-                    </span>
-                  </span>
-                )}
-              </div>
-            </Fragment>
-          ))}
+                </Fragment>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
+        <p className="text-[12.5px] leading-5 text-[var(--faint)]">
+          Select a traded day to open its Journal review.
+        </p>
+      </section>
     </div>
   );
 }

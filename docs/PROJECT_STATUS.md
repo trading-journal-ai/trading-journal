@@ -32,6 +32,34 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-13** — Calendar month-at-a-glance redesign
+  (branch `design/calendar-month-at-a-glance`).
+  - Recovered the approved collapsed-month prototype from the clean
+    `design/calendar-preview` worktree and implemented it on a fresh branch from
+    current `main`; the old branch remains untouched as the original paper trail.
+  - Rebuilt `/calendar` around a compact monthly performance strip, five weekday
+    columns, and a fixed weekly-summary rail using real session, trade, accuracy,
+    profit-factor, and P&L data.
+  - Preserved range filtering, no-trade controls, Month / Year navigation, theme
+    tokens, and direct Journal-day links with their Calendar return target.
+  - Added focused tests for Calendar accuracy and profit-factor formatting.
+  - Reconciled the redesign with the execution-date activity model from PR #73,
+    preserving swing-trade dates and partial/final realized P&L while retaining
+    the redesigned accuracy and profit-factor summaries.
+  - Browser-checked desktop and 390px layouts, Previous / Next, Year, and direct
+    Journal navigation; the narrow view has no document-level overflow and the
+    console remained free of warnings and errors.
+  - Repeated that interaction pass after the current-`main` reconciliation;
+    desktop and 390px remained visually intact, the document stayed within the
+    narrow viewport while the grid scrolled locally, and the console was clean.
+  - Compared the source and implementation side by side, corrected the empty-day
+    surface treatment, and recorded the passing evidence in `design-qa.md`.
+  - Focused metric tests and `npm run verify:full` passed under Node 22.13.0;
+    the existing broad NFT trace warning remains.
+  - Opened [PR #71](https://github.com/trading-journal-ai/trading-journal/pull/71).
+  - **Stopped at:** implementation reconciled with current `main`, fully
+    reverified, and ready to merge as the canonical Calendar.
+
 - **2026-08-13** — Journal scope-aware period heading regression
   (branch `fix/journal-scope-heading`).
   - Recovered the missing behavior from commit `3e22abb` on the old
