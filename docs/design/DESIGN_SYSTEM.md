@@ -315,7 +315,9 @@ Build once, reuse everywhere.
   does not remain above the Day / Week / Month review tabs. Focused Day uses a
   separate borderless five-day micro rail above its date heading: abbreviated
   weekday/date over outcome-colored P&L, with the selected date promoted by
-  foreground weight. Empty and future days keep their position but show no
+  foreground weight. The heading follows the Day / Week / Month selection:
+  full weekday and date for Day, the Monday–Friday range for Week, and month plus
+  year for Month. Empty and future days keep their position but show no
   invented value. Today / Previous / Next / Calendar remain textual controls in
   the same page-level header; Previous and Next step across trading weekdays.
   Both Journal tab groups use the semantic accent underline in this surface.

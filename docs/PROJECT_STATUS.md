@@ -32,6 +32,23 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-13** — Journal scope-aware period heading regression
+  (branch `fix/journal-scope-heading`).
+  - Recovered the missing behavior from commit `3e22abb` on the old
+    `design/calendar-preview` branch: Day shows the focused date, Week shows its
+    Monday–Friday range, and Month shows month plus year in the same header.
+  - Shared the review module's Day / Week / Month state with the date-navigation
+    header while preserving a local fallback for standalone preview surfaces.
+  - Added focused coverage for day, same-month week, cross-month week,
+    cross-year week, and month labels.
+  - Browser-verified all three period transitions at desktop and Week at 390px;
+    the heading matched the selected scope, the narrow page had no horizontal
+    overflow, and the final preview console was clean.
+  - Focused tests and `npm run verify:full` passed under Node 22.13.0; the
+    existing broad NFT trace warning remains.
+  - **Stopped at:** regression fixed and fully verified; branch is ready for PR
+    packaging.
+
 - **2026-08-13** — Journal today-import fast path
   (branch `design/importer-update`).
   - Recovered the Claude Design handoff and matched its focused empty-Day
