@@ -1,76 +1,59 @@
-# Design QA — Journal Day micro calendar
+# Calendar month-at-a-glance design QA
 
-- Source visual truth: `/Users/justin/Desktop/screenshots/Screenshot 2026-08-10 at 10.51.05 AM.png`
-- Claude Design reference: `/private/tmp/trading-journal-design-review.n5CAlr/designs/Journal Day v2 richer.dc.html`
-- Implementation screenshot: `/private/tmp/journal-shared-width-final.png`
-- Side-by-side comparison: `/private/tmp/journal-shared-width-comparison.png`
-- Route/state: `/journal?date=2026-08-05`, Day → P&L selected
-- Browser: Codex in-app Browser
-- Comparison viewport: 1440 × 838 CSS pixels
-- Source pixels: 2496 × 1452, normalized to 1440 × 838
+- **Source visual truth:** `/Users/justin/Working/trading-journal/.claude/worktrees/calendar-preview/docs/design/prototypes/calendar-journal/calendar-month--collapsed.html`
+- **Reference screenshot:** `/private/tmp/calendar-month-reference.jpg`
+- **Rendered implementation:** `http://127.0.0.1:4317/calendar?m=2026-08`
+- **Implementation screenshot:** `/private/tmp/calendar-month-implementation.jpg`
+- **Full-view comparison:** `/private/tmp/calendar-month-comparison-pass1.png`
+- **Focused post-fix comparison:** `/private/tmp/calendar-month-focused-comparison.png`
+- **State:** Light theme, August 2026, populated month, collapsed calendar cells
 
-## Comparison result
+## Capture normalization
 
-The focused Journal day now follows the reference hierarchy: a sparse five-day
-micro rail, full date heading with textual date controls, two underline tab
-groups on one hairline, then the day evidence. The rail-to-heading,
-heading-to-tabs, and tabs-to-evidence rhythm visually align with the normalized
-source. The restored default Light theme also matches the
-reference's white canvas, cool-gray evidence surface, and blue interaction
-accent; the earlier warm Daylight default was a visible mismatch.
-
-The source crop uses a wider one-off canvas. The owner reconfirmed the product's
-shared workspace measure after the initial match: Journal, Calendar, Trades, and
-Analytics use `max-w-6xl` (72rem / 1152px). The implementation intentionally
-honors that cross-product contract instead of the reference crop's outer inset.
-
-The implementation intentionally retains the persistent production app header
-and renders live journal data. The source crop omits that header and uses static
-prototype chart/ticker data; these are state/content differences rather than
-fidelity defects in the requested navigation and header surfaces.
-
-## Required fidelity surfaces
-
-- Typography: passed; existing Geist styles reproduce the compact day labels,
-  emphasized selected date, page title, controls, and tab hierarchy.
-- Spacing and layout: passed; the review module uses the shared 1152px workspace
-  measure and keeps the micro rail borderless and compact.
-- Color and tokens: passed; the updated Light tokens remain intact and now boot
-  by default (`#fff` canvas, `#f6f8fa` surface, `#0969da` accent). Outcome colors
-  and the semantic accent underline use existing production roles.
-- Copy and content: passed; Today, Previous, Next, Calendar, Day, Week, Month,
-  P&L, Trades, Chart read, and Coach match the reference.
-- Assets: passed; the target adds no new image or icon asset.
-
-## Interaction checks
-
-- Next navigates from `2026-08-05` to `2026-08-06` and updates the heading to
-  `Thursday, August 6`.
-- Previous returns to `2026-08-05` and restores `Wednesday, August 5`.
-- Week → P&L still exposes the richer `Week at a glance` strip; it was not
-  repurposed as the compact header rail.
-- Settings switches Daylight → Light without a reload; returning to Journal
-  preserves the explicit Light selection.
-- No framework overlay or browser console warnings/errors were present.
+- Desktop CSS viewport: `1280 x 720`; source and implementation full-page captures are `1280 x 912` and `1280 x 865` respectively.
+- The first full-view comparison used equal 1280px-wide captures at 1:1 output size.
+- After the responsive breakpoint check, the in-app browser returned the post-fix implementation at 2x CSS sampling inside a 1280px-wide crop. The focused comparison therefore uses the matching visible `640 x 132` CSS grid region: the source crop is upsampled 2x to the implementation's `1280 x 264` pixel sampling before comparison. No density-derived typography or spacing findings were filed.
+- Mobile CSS viewport: `390 x 844`; screenshot captured at `390 x 844`. The document remained 390px wide, while the dense calendar grid correctly used its own horizontal scroller.
 
 ## Findings
 
-No actionable P0, P1, or P2 differences remain on the requested desktop header
-and navigation surfaces. The source's wider content measure is an intentional
-deviation superseded by the owner's shared-workspace clarification. The in-app
-browser did not honor the requested 390px viewport override during this pass, so
-the narrow breakpoint was not claimed as browser-verified here; overflow and
-wrapping behavior remain explicit in the component structure.
+- **[P2, fixed] Empty calendar cells lacked the prototype's quiet surface distinction.**
+  - Location: month grid cells in `src/app/(app)/calendar/page.tsx`.
+  - Evidence: the first implementation used the page background for both traded and empty in-month days, while the reference gives empty days a slightly quieter surface.
+  - Impact: the traded-session rows did not separate as clearly from the unused remainder of the month.
+  - Fix: unconfirmed empty days now use a subtle `--background` / `--surface` mix; traded, today, no-trade, and weekly-summary cells retain the open page surface.
+  - Post-fix evidence: `/private/tmp/calendar-month-focused-comparison.png`.
+
+No actionable P0, P1, or P2 findings remain.
+
+## Required fidelity surfaces
+
+- **Fonts and typography:** Uses the app's Geist Sans stack and matches the reference hierarchy: 28px month title, 20px summary values, 17px daily/weekly P&L, and compact 11.5–13px metadata. The app intentionally omits a leading plus sign on positive currency to preserve its established money format and the accepted Journal micro-calendar convention.
+- **Spacing and layout rhythm:** The title, underline tabs, summary strip, 96px cells, five weekday tracks, and 205px weekly rail match the reference. The implementation retains the shared 1152px Calendar/Journal/Trades/Analytics workspace rather than the prototype's additional 20px inner inset.
+- **Colors and tokens:** Semantic green/red P&L, accent today label, hairline grid, white active cells, and quiet empty-cell surface all map to existing theme tokens and adapt across themes.
+- **Image quality and assets:** The screen contains no visual image assets. The existing calendar icon in the range filter is reused; no substitute imagery, handcrafted SVG, or placeholder art was added.
+- **Copy and content:** Month, summary labels, weekday labels, today state, trade counts, accuracy, and P&L are real app data. The footer says traded days open their Journal review, reflecting the established product behavior rather than the prototype's unimplemented inline-expansion copy.
+
+## Interaction and responsive checks
+
+- Previous moved from August to July; Next returned to August.
+- Year opened `/calendar?view=year&y=2026`.
+- Selecting August 3 opened `/journal?date=2026-08-03` with the Calendar return target intact.
+- The 390px viewport had no document-level horizontal overflow; only the dense calendar grid scrolls horizontally.
+- Browser console contained only React DevTools / Fast Refresh development logs; no warnings or errors.
+- After reconciliation with the execution-date activity model, the same desktop
+  and 390px flows passed again with a clean console; the document remained
+  viewport-bound and the updated month/week metrics rendered in the approved
+  layout.
 
 ## Comparison history
 
-- Pass 1: the micro rail and controls matched, but the 1152px module cap made
-  the header substantially narrower than the source.
-- Pass 2: removed that cap and restored the source's roughly 40px desktop
-  insets.
-- Pass 3: recovered the `DEFAULT_THEME = "light"` change that had remained only
-  on `design/calendar-preview`; the cool-white source comparison passed.
-- Pass 4: restored Journal to the established `max-w-6xl` workspace shared by
-  Calendar, Trades, and Analytics; all four measured exactly 1152px at 1440px.
+1. **Pass 1:** Full-view side-by-side comparison found one P2 surface mismatch: empty and traded cells shared the same white treatment.
+2. **Fix:** Added the quiet empty-cell token mix while keeping data-bearing and today cells white.
+3. **Pass 2:** Focused, density-normalized grid comparison confirmed the reference's active/empty surface distinction. No new P0/P1/P2 issue appeared.
 
-final result: passed
+## Follow-up polish
+
+- None required for this slice. The recovered prototype's optional inline day expansion remains intentionally out of scope because Calendar is the browse/index mode and traded days already open the full Journal review.
+
+**final result: passed**

@@ -297,11 +297,21 @@ Build once, reuse everywhere.
 - **Charts** — titles use Eyebrow with a rule beneath; generous space before
   chart groups; two-column grids need enough gutter to avoid merging; cumulative
   P&L usually spans full width before smaller distribution charts.
-- **Calendar** — month view earns its grid; cells use `--hairline` rules, modest
-  radius, no dots; quiet compact day headers; clear day-number/P&L/count
-  hierarchy; today uses the accent day number or a subtle marker; weekly total
-  column flat, not filled; year mini-months may use subtle green/red heatmap
-  fills. The Journal week strip uses a fixed Geist Sans lockup: weekday/date is
+- **Calendar** — month view earns its grid. It opens with the month title and
+  textual Today / Previous / Next controls, underline Month / Year tabs, then a
+  compact performance strip for sessions, trades, accuracy, profit factor, and
+  P&L. The month grid uses five weekday columns plus a fixed 205px weekly-summary
+  rail; each cell is at least 96px tall. Cells use `--hairline` rules, an 8px
+  outer radius, and no dots. Traded, today, and weekly-summary cells remain on
+  the open page surface; unused days get only a quiet `--background` / `--surface`
+  mix. Day number, P&L, and `trades · accuracy` form the scan hierarchy. Today
+  uses the accent day number and a compact label; weekly totals stay flat rather
+  than becoming separate cards. Selecting a traded day opens its full Journal
+  review with a Calendar return target. At narrow widths the dense grid keeps
+  its desktop geometry inside a local horizontal scroller rather than shrinking
+  the financial labels or overflowing the page. Year mini-months may use subtle
+  green/red heatmap fills. The Journal week strip uses a fixed Geist Sans lockup:
+  weekday/date is
   semibold 16px, P&L is semibold 14px, and the grouped
   trades/win-rate/profit-factor pill is regular 11px. Hover and keyboard focus
   ease in a small semantic-accent corner dot and change the pill text to the
