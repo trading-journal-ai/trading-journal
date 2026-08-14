@@ -14,6 +14,11 @@ import { opportunityContextsForTrades } from "@/lib/coach/opportunityContextServ
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { tradingWeekDates } from "@/lib/journalPnlViews";
 import { netPnl } from "@/lib/pnl";
+import {
+  heldCalendarDays,
+  tradeDayActivities,
+  type TradeDayActivity,
+} from "@/lib/tradeActivity";
 import { etDateString, etDayRange } from "@/lib/time";
 import ArchiveSidebar, { type ArchiveSidebarMonth } from "@/components/ArchiveSidebar";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
@@ -409,8 +414,14 @@ function isOptionalCoachReadError(error: unknown): boolean {
   return false;
 }
 
-function summarizeTrades(trades: TradeRow[], fills: number): ReviewSummary {
-  const pnls = trades.map((trade) => netPnl(trade) ?? 0);
+function summarizeTrades(
+  trades: TradeRow[],
+  fills: number,
+  activityByTradeId?: Map<number, TradeDayActivity>,
+): ReviewSummary {
+  const pnls = trades.map((trade) =>
+    activityByTradeId?.get(trade.id)?.realizedPnl ?? netPnl(trade) ?? 0
+  );
   const winners = pnls.filter((pnl) => pnl > 0);
   const losers = pnls.filter((pnl) => pnl < 0);
   const grossWins = winners.reduce((sum, value) => sum + value, 0);
@@ -645,6 +656,7 @@ function buildDayData(
   date: string,
   trades: TradeRow[],
   executions: ExecutionRow[],
+  activityByTradeId: Map<number, TradeDayActivity>,
   notedTickerKeys: Set<string>,
   taggedTradeIds: Set<number>,
   entryContexts?: Map<number, TradeOpportunityContext>,
@@ -659,6 +671,7 @@ function buildDayData(
   const summary = summarizeTrades(
     trades,
     trades.reduce((sum, trade) => sum + (executionCountByTrade.get(trade.id) ?? 0), 0),
+    activityByTradeId,
   );
   const tickers = new Map<string, TickerRow>();
 
@@ -669,25 +682,32 @@ function buildDayData(
       trades: 0,
       noted: notedTickerKeys.has(`${date}:${trade.symbol}`),
     };
-    current.pnl += netPnl(trade) ?? 0;
+    current.pnl += activityByTradeId.get(trade.id)?.realizedPnl ?? 0;
     current.trades += 1;
     tickers.set(trade.symbol, current);
   });
 
   const { start } = etDayRange(date);
   let cumulative = 0;
-  const firstTimestamp = trades[0]?.entryAt ?? start;
+  const firstTimestamp = trades
+    .map((trade) => activityByTradeId.get(trade.id)?.firstExecutionAt)
+    .filter((value): value is number => value != null)
+    .sort((left, right) => left - right)[0] ?? start;
   const pnlPoints: PnlPoint[] = [{
     time: formatTime(firstTimestamp),
     timestamp: firstTimestamp,
     value: 0,
   }];
   trades
-    .filter((trade) => trade.exitAt != null)
-    .sort((a, b) => (a.exitAt ?? 0) - (b.exitAt ?? 0))
+    .filter((trade) => activityByTradeId.has(trade.id))
+    .sort((a, b) =>
+      (activityByTradeId.get(a.id)?.lastExecutionAt ?? 0)
+      - (activityByTradeId.get(b.id)?.lastExecutionAt ?? 0)
+    )
     .forEach((trade) => {
-      cumulative += netPnl(trade) ?? 0;
-      const timestamp = trade.exitAt ?? trade.entryAt ?? start;
+      const activity = activityByTradeId.get(trade.id)!;
+      cumulative += activity.realizedPnl;
+      const timestamp = activity.lastExecutionAt;
       pnlPoints.push({
         time: formatTime(timestamp),
         timestamp,
@@ -696,7 +716,11 @@ function buildDayData(
     });
 
   if (pnlPoints.length === 1) {
-    const timestamp = trades.at(-1)?.entryAt ?? start;
+    const timestamp = trades
+      .map((trade) => activityByTradeId.get(trade.id)?.lastExecutionAt)
+      .filter((value): value is number => value != null)
+      .sort((left, right) => left - right)
+      .at(-1) ?? start;
     pnlPoints.push({
       time: formatTime(timestamp),
       timestamp,
@@ -708,6 +732,17 @@ function buildDayData(
     trades.length,
     trades.map((trade) => entryContexts?.get(trade.id)),
   );
+  const coachTrades = trades.map((trade) => {
+    const activity = activityByTradeId.get(trade.id);
+    return {
+      ...trade,
+      entryAt: activity?.firstExecutionAt ?? trade.entryAt,
+      exitAt: activity?.kind === "opened"
+        ? null
+        : activity?.lastExecutionAt ?? trade.exitAt,
+      realizedPnl: activity?.realizedPnl ?? 0,
+    };
+  });
 
   return {
     day: {
@@ -717,20 +752,33 @@ function buildDayData(
       ...summary,
     },
     tickerRows: [...tickers.values()].sort((a, b) => b.pnl - a.pnl),
-    tradeRows: trades.map((trade) => ({
+    tradeRows: trades.map((trade) => {
+      const activity = activityByTradeId.get(trade.id);
+      const heldDays = activity == null
+        ? null
+        : heldCalendarDays(trade.entryAt, activity.lastExecutionAt);
+      const hold = activity?.kind === "opened" && trade.exitAt != null
+        ? "Opened · swing"
+        : activity?.kind === "adjusted"
+          ? `Held ${heldDays ?? 0}d · adjusted`
+          : activity?.kind === "closed" && heldDays != null && heldDays > 0
+            ? `Held ${heldDays}d · closed`
+            : formatHold(trade.entryAt, trade.exitAt);
+      return {
       id: trade.id,
-      time: trade.entryAt == null ? "—" : formatTime(trade.entryAt),
+      time: activity == null ? "—" : formatTime(activity.firstExecutionAt),
       symbol: trade.symbol,
       side: trade.side,
       quantity: trade.quantity,
-      hold: formatHold(trade.entryAt, trade.exitAt),
+      hold,
       setup: trade.setup,
       tagged: taggedTradeIds.has(trade.id),
-      pnl: netPnl(trade) ?? 0,
-    })),
+      pnl: activity?.realizedPnl ?? 0,
+      };
+    }),
     taggedTrades: trades.filter((trade) => taggedTradeIds.has(trade.id)).length,
     pnlPoints,
-    coachRead: buildSessionFactPack(trades),
+    coachRead: buildSessionFactPack(coachTrades),
     chartRead,
     marketContext: buildMarketContext(marketContextRow, trades),
   };
@@ -765,12 +813,15 @@ async function loadReviewRange({
   const baselineTo = isoAddDays(range.from, -1);
   const { start: baselineStart } = etDayRange(baselineFrom);
   const { start: baselineEnd } = etDayRange(range.from);
-  const [tradeRowsForRange, baselineRows, marketContextRows] = await Promise.all([
+  const [rangeExecutionTradeRows, baselineRows, marketContextRows] = await Promise.all([
     db
-      .select()
-      .from(schema.trades)
-      .where(and(eq(schema.trades.accountId, accountId), gte(schema.trades.entryAt, start), lte(schema.trades.entryAt, end)))
-      .orderBy(asc(schema.trades.entryAt)),
+      .select({ tradeId: schema.executions.tradeId })
+      .from(schema.executions)
+      .where(and(
+        eq(schema.executions.accountId, accountId),
+        gte(schema.executions.executedAt, start),
+        lte(schema.executions.executedAt, end),
+      )),
     db
       .select()
       .from(schema.trades)
@@ -778,11 +829,19 @@ async function loadReviewRange({
       .orderBy(asc(schema.trades.entryAt)),
     loadMarketContextRows(range.from, range.to),
   ]);
-  const trades = tradeRowsForRange.filter((trade) => {
-    if (trade.entryAt == null) return false;
-    const entryDate = etDateString(trade.entryAt);
-    return entryDate >= range.from && entryDate <= range.to;
-  });
+  const rangeTradeIds = [...new Set(
+    rangeExecutionTradeRows.flatMap((row) => row.tradeId == null ? [] : [row.tradeId]),
+  )];
+  const trades = rangeTradeIds.length > 0
+    ? await db
+        .select()
+        .from(schema.trades)
+        .where(and(
+          eq(schema.trades.accountId, accountId),
+          inArray(schema.trades.id, rangeTradeIds),
+        ))
+        .orderBy(asc(schema.trades.entryAt))
+    : [];
   const baselineTrades = baselineRows.filter((trade) => {
     if (trade.entryAt == null) return false;
     const entryDate = etDateString(trade.entryAt);
@@ -790,14 +849,34 @@ async function loadReviewRange({
   });
 
   const tradeIds = trades.map((trade) => trade.id);
-  const tickerScopeKeys = [...new Set(trades.map((trade) => `${etDateString(trade.entryAt ?? start)}:${trade.symbol}`))];
+  const allExecutions = tradeIds.length > 0
+    ? await db
+        .select()
+        .from(schema.executions)
+        .where(inArray(schema.executions.tradeId, tradeIds))
+        .orderBy(asc(schema.executions.executedAt))
+    : [];
+  const activityByTradeId = new Map<number, TradeDayActivity[]>();
+  for (const trade of trades) {
+    activityByTradeId.set(
+      trade.id,
+      tradeDayActivities(
+        trade,
+        allExecutions.filter((execution) => execution.tradeId === trade.id),
+      ),
+    );
+  }
+  const tickerScopeKeys = [...new Set(trades.flatMap((trade) =>
+    (activityByTradeId.get(trade.id) ?? [])
+      .filter((activity) => activity.date >= range.from && activity.date <= range.to)
+      .map((activity) => `${activity.date}:${trade.symbol}`)
+  ))];
   const [executions, tickerNotes, tradeTagRows] = tradeIds.length > 0
     ? await Promise.all([
-        db
-          .select()
-          .from(schema.executions)
-          .where(inArray(schema.executions.tradeId, tradeIds))
-          .orderBy(asc(schema.executions.executedAt)),
+        Promise.resolve(allExecutions.filter((execution) => {
+          const executionDate = etDateString(execution.executedAt);
+          return executionDate >= range.from && executionDate <= range.to;
+        })),
         tickerScopeKeys.length > 0
           ? db
               .select({ scopeKey: schema.journalEntries.scopeKey })
@@ -822,10 +901,15 @@ async function loadReviewRange({
   const executionsByDate = new Map<string, ExecutionRow[]>();
   const marketContextByDate = new Map(marketContextRows.map((row) => [row.sessionDateEt, row]));
 
+  const dayActivityByTradeId = new Map<string, Map<number, TradeDayActivity>>();
   trades.forEach((trade) => {
-    if (trade.entryAt == null) return;
-    const key = etDateString(trade.entryAt);
-    tradesByDate.set(key, [...(tradesByDate.get(key) ?? []), trade]);
+    for (const activity of activityByTradeId.get(trade.id) ?? []) {
+      if (activity.date < range.from || activity.date > range.to) continue;
+      tradesByDate.set(activity.date, [...(tradesByDate.get(activity.date) ?? []), trade]);
+      const dayMap = dayActivityByTradeId.get(activity.date) ?? new Map<number, TradeDayActivity>();
+      dayMap.set(trade.id, activity);
+      dayActivityByTradeId.set(activity.date, dayMap);
+    }
   });
   executions.forEach((execution) => {
     const key = etDateString(execution.executedAt);
@@ -860,6 +944,7 @@ async function loadReviewRange({
         entryDate,
         dayTrades,
         executionsByDate.get(entryDate) ?? [],
+        dayActivityByTradeId.get(entryDate) ?? new Map(),
         notedTickerKeys,
         taggedTradeIds,
         entryContexts,
@@ -906,7 +991,22 @@ async function loadReviewRange({
           : firstDay?.displayDate ?? dateFmt.format(utcDate(anchor)),
     days,
     weeks,
-    coachRead: buildSessionFactPack(trades, { baselineTrades, baselineLabel: "Prior 30 days" }),
+    coachRead: buildSessionFactPack(
+      trades.map((trade) => {
+        const visibleActivities = (activityByTradeId.get(trade.id) ?? [])
+          .filter((activity) => activity.date >= range.from && activity.date <= range.to);
+        return {
+          ...trade,
+          entryAt: visibleActivities[0]?.firstExecutionAt ?? trade.entryAt,
+          exitAt: visibleActivities.at(-1)?.lastExecutionAt ?? trade.exitAt,
+          realizedPnl: visibleActivities.reduce(
+            (sum, activity) => sum + activity.realizedPnl,
+            0,
+          ),
+        };
+      }),
+      { baselineTrades, baselineLabel: "Prior 30 days" },
+    ),
     chartRead: combineChartReads(days.map((day) => day.chartRead)),
   };
 }

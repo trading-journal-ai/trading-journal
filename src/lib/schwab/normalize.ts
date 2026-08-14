@@ -97,6 +97,15 @@ function positionEffect(
   return null;
 }
 
+function isSupportedStockOrEtf(instrument: RecordValue | null) {
+  const assetType = stringValue(instrument?.assetType).toUpperCase();
+  if (!assetType || assetType === "EQUITY") return true;
+
+  const instrumentType = stringValue(instrument?.type).toUpperCase();
+  return assetType === "COLLECTIVE_INVESTMENT"
+    && instrumentType === "EXCHANGE_TRADED_FUND";
+}
+
 function feeEvents(transactions: unknown[]) {
   const events: FeeEvent[] = [];
   for (const value of transactions) {
@@ -214,8 +223,7 @@ export function normalizeSchwabHistory(
         const instrument = orderLeg && isRecord(orderLeg.instrument)
           ? orderLeg.instrument
           : null;
-        const assetType = stringValue(instrument?.assetType).toUpperCase();
-        if (assetType && assetType !== "EQUITY") {
+        if (!isSupportedStockOrEtf(instrument)) {
           excludedAssets += 1;
           continue;
         }
@@ -290,7 +298,7 @@ export function normalizeSchwabHistory(
 
   const warnings = [
     excludedAssets > 0
-      ? `${excludedAssets} non-equity execution ${excludedAssets === 1 ? "leg was" : "legs were"} excluded.`
+      ? `${excludedAssets} unsupported-asset execution ${excludedAssets === 1 ? "leg was" : "legs were"} excluded.`
       : null,
     malformedExecutions > 0
       ? `${malformedExecutions} execution ${malformedExecutions === 1 ? "leg was" : "legs were"} excluded because required fields were missing or invalid.`

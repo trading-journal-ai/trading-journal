@@ -152,6 +152,14 @@ function tosWarnings(
   const warnings: string[] = [];
   const executionSource: TosExecutionSource = statement.executionSource;
   const cash = inspection.tos.cashBalance;
+  if (executionSource === "reconciled") {
+    warnings.push(
+      `Imported ${statement.cashBalanceExecutions} Cash Balance fills and enriched ${statement.exactSectionMatches} exact matches with Account Trade History details.`,
+    );
+    warnings.push(
+      "Cash Balance-only fills do not provide position effect; TO OPEN and TO CLOSE were inferred from position changes and known share splits.",
+    );
+  }
   if (executionSource === "cash_balance") {
     const filter = inspection.tos.tradeHistory.filteredBy;
     warnings.push(

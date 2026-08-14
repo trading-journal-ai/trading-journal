@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { and, eq, gte, lte, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getActiveAccount } from "@/lib/accountScope";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { fmtDate, fmtMoney, fmtPrice } from "@/lib/format";
 import { grossPnl, netPnl } from "@/lib/pnl";
 import { etDateString, etDayRange } from "@/lib/time";
+import { tradeDayActivities } from "@/lib/tradeActivity";
 import ReportRangeFilter from "@/components/ReportRangeFilter";
 import PeriodTabs from "@/components/ui/PeriodTabs";
 import { RowLink } from "./RowLink";
@@ -165,14 +166,27 @@ async function loadTrades(filters: TradeFilters, accountId: number) {
   const { symbol, side, tag, sort, dir, perPage } = filters;
   const range = dateRangeFor(filters);
   const accountWhere = eq(schema.trades.accountId, accountId);
-  const where =
-    range
-      ? (() => {
-          const { start } = etDayRange(range.from);
-          const { end } = etDayRange(range.to);
-          return and(accountWhere, gte(schema.trades.entryAt, start), lte(schema.trades.entryAt, end));
-        })()
-      : accountWhere;
+  let activityTradeIds: number[] | null = null;
+  if (range) {
+    const { start } = etDayRange(range.from);
+    const { end } = etDayRange(range.to);
+    activityTradeIds = [...new Set(
+      (await db
+        .select({ tradeId: schema.executions.tradeId })
+        .from(schema.executions)
+        .where(and(
+          eq(schema.executions.accountId, accountId),
+          gte(schema.executions.executedAt, start),
+          lte(schema.executions.executedAt, end),
+        )))
+        .flatMap((row) => row.tradeId == null ? [] : [row.tradeId]),
+    )];
+  }
+  const where = activityTradeIds == null
+    ? accountWhere
+    : activityTradeIds.length > 0
+      ? and(accountWhere, inArray(schema.trades.id, activityTradeIds))
+      : and(accountWhere, sql`0 = 1`);
 
   let rows = await db
     .select()
@@ -180,23 +194,24 @@ async function loadTrades(filters: TradeFilters, accountId: number) {
     .where(where)
     .limit(2000);
 
-  // The epoch window has slack for DST; refine to exact ET market dates.
-  if (range) {
-    rows = rows.filter((t) => {
-      if (t.entryAt == null) return false;
-      const entryDate = etDateString(t.entryAt);
-      return entryDate >= range.from && entryDate <= range.to;
-    });
-  }
   if (symbol) rows = rows.filter((t) => t.symbol.toUpperCase().includes(symbol));
   if (side) rows = rows.filter((t) => t.side === side);
 
-  const execCounts = await db
-    .select({ tradeId: schema.executions.tradeId, n: sql<number>`count(*)` })
-    .from(schema.executions)
-    .groupBy(schema.executions.tradeId);
-
-  const countByTrade = new Map(execCounts.map((r) => [r.tradeId, r.n]));
+  const rowTradeIds = rows.map((row) => row.id);
+  const executionRows = rowTradeIds.length > 0
+    ? await db
+        .select()
+        .from(schema.executions)
+        .where(inArray(schema.executions.tradeId, rowTradeIds))
+    : [];
+  const executionsByTradeId = new Map<number, typeof executionRows>();
+  for (const execution of executionRows) {
+    if (execution.tradeId == null) continue;
+    executionsByTradeId.set(
+      execution.tradeId,
+      [...(executionsByTradeId.get(execution.tradeId) ?? []), execution],
+    );
+  }
 
   if (tag) {
     const taggedRows = await db
@@ -212,10 +227,21 @@ async function loadTrades(filters: TradeFilters, accountId: number) {
 
   const mapped = rows.map((t) => {
     const gross = grossPnl(t);
+    const activities = tradeDayActivities(t, executionsByTradeId.get(t.id) ?? []);
+    const visibleActivities = range
+      ? activities.filter((activity) => activity.date >= range.from && activity.date <= range.to)
+      : activities;
+    const activityDate = range
+      ? visibleActivities[0]?.date ?? (t.entryAt == null ? null : etDateString(t.entryAt))
+      : t.entryAt == null ? null : etDateString(t.entryAt);
+    const activityPnl = range
+      ? visibleActivities.reduce((sum, activity) => sum + activity.realizedPnl, 0)
+      : netPnl(t);
     return {
       ...t,
-      execs: countByTrade.get(t.id) ?? 0,
-      pnl: netPnl(t),
+      activityDate,
+      execs: executionsByTradeId.get(t.id)?.length ?? 0,
+      pnl: activityPnl,
       perShare: gross == null || t.quantity === 0 ? null : gross / Math.abs(t.quantity),
     };
   });
@@ -232,7 +258,7 @@ async function loadTrades(filters: TradeFilters, accountId: number) {
         case "perShare": return t.perShare;
         case "pnl": return t.pnl;
         case "date":
-        default: return t.entryAt ?? 0;
+        default: return t.activityDate ?? "";
       }
     };
     const av = value(a);
@@ -264,13 +290,13 @@ async function loadTagOptions() {
 async function loadLatestTradeDate(accountId: number): Promise<string | null> {
   const row = (
     await db
-      .select({ latestEntryAt: sql<number | null>`max(${schema.trades.entryAt})` })
-      .from(schema.trades)
-      .where(eq(schema.trades.accountId, accountId))
+      .select({ latestExecutionAt: sql<number | null>`max(${schema.executions.executedAt})` })
+      .from(schema.executions)
+      .where(eq(schema.executions.accountId, accountId))
       .limit(1)
   )[0];
 
-  return row?.latestEntryAt == null ? null : etDateString(row.latestEntryAt);
+  return row?.latestExecutionAt == null ? null : etDateString(row.latestExecutionAt);
 }
 
 async function defaultLandingFilters(filters: TradeFilters, accountId: number): Promise<TradeFilters> {
@@ -533,18 +559,20 @@ export default async function TradesPage({
               return (
                 <RowLink
                   key={t.id}
-                  href={t.entryAt == null
+                  href={t.activityDate == null
                     ? currentHref
-                    : `/trades/review?date=${etDateString(t.entryAt)}&symbol=${t.symbol}&trade=${t.id}&returnTo=${encodeURIComponent(currentHref)}`}
+                    : `/trades/review?date=${t.activityDate}&symbol=${t.symbol}&trade=${t.id}&returnTo=${encodeURIComponent(currentHref)}`}
                   className="border-b border-[var(--hairline)] last:border-0 hover:bg-[var(--surface)] cursor-pointer"
                 >
-                  <td className="px-3 py-3 whitespace-nowrap">{fmtDate(t.entryAt)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    {t.activityDate == null ? "—" : fmtDate(etDayRange(t.activityDate).start)}
+                  </td>
                   <td className="px-3 py-3 font-medium">
-                    {t.entryAt == null ? (
+                    {t.activityDate == null ? (
                       t.symbol
                     ) : (
                       <Link
-                        href={`/trades/review?date=${etDateString(t.entryAt)}&symbol=${t.symbol}&trade=${t.id}&returnTo=${encodeURIComponent(currentHref)}`}
+                        href={`/trades/review?date=${t.activityDate}&symbol=${t.symbol}&trade=${t.id}&returnTo=${encodeURIComponent(currentHref)}`}
                         className="hover:text-[var(--accent)] hover:underline"
                       >
                         {t.symbol}

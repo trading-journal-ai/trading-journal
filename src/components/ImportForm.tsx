@@ -19,6 +19,7 @@ import type {
   SchwabImportPreview,
   SchwabPreviewActionResult,
 } from "@/lib/schwab/types";
+import { SCHWAB_MAX_LOOKBACK_DAYS } from "@/lib/schwab/dates";
 import { schwabPreviewPresentation } from "@/lib/schwab/previewPresentation";
 
 type SelectedFile = {
@@ -434,8 +435,8 @@ function SchwabImportReadyState({
             </p>
           ) : (
             <p className="text-xs leading-5 text-[var(--muted)]">
-              The first sync version is limited to the most recent 60 days. Use a
-              statement file for older history.
+              Schwab sync supports the most recent {SCHWAB_MAX_LOOKBACK_DAYS} days.
+              Use a statement file for older history.
             </p>
           )}
         </fieldset>
@@ -1383,7 +1384,7 @@ function initialSchwabDateRange() {
 
 function schwabDateLimits() {
   return {
-    min: schwabLookbackRange(60).from,
+    min: schwabLookbackRange(SCHWAB_MAX_LOOKBACK_DAYS).from,
     max: marketDateInputValue(new Date()),
   };
 }
@@ -1395,7 +1396,9 @@ function schwabDateRangeError(
 ) {
   if (!fromDate || !toDate) return "Choose both a start date and an end date.";
   if (fromDate > toDate) return "The start date must be on or before the end date.";
-  if (fromDate < limits.min) return "Initial Schwab sync is limited to the most recent 60 days.";
+  if (fromDate < limits.min) {
+    return `Schwab sync is limited to the most recent ${SCHWAB_MAX_LOOKBACK_DAYS} days.`;
+  }
   if (toDate > limits.max) return "The end date cannot be in the future.";
   return null;
 }

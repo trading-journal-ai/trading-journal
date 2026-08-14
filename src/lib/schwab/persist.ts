@@ -1,5 +1,6 @@
 import { and, asc, eq, gte, inArray, lte, max } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import type { ParsedExecution } from "@/lib/import/tos";
 import { etDateString } from "@/lib/time";
 import { compareExecutions } from "./duplicates";
 import type { SchwabNormalizedExecution } from "./normalize";
@@ -11,7 +12,7 @@ import {
 
 const INSERT_CHUNK_SIZE = 100;
 
-type SchwabPersistenceSummary = {
+export type ExecutionPersistenceSummary = {
   batchId: number | null;
   parsed: number;
   inserted: number;
@@ -25,6 +26,21 @@ type SchwabPersistenceSummary = {
   insertedTo: string | null;
   insertedDates: string[];
   duplicateDates: string[];
+};
+
+export type PersistableExecution = ParsedExecution & {
+  brokerExecutionKey?: string | null;
+};
+
+type PersistExecutionLedgerInput = {
+  accountId: number;
+  from: string;
+  to: string;
+  executions: PersistableExecution[];
+  source: "schwab_api" | "tos_csv";
+  fileName: string;
+  requireBrokerExecutionKeys?: boolean;
+  symbolAliases?: Array<{ brokerSymbol: string; canonicalSymbol: string }>;
 };
 
 export class SchwabAppendSafetyError extends Error {
@@ -66,21 +82,25 @@ function existingExecutionAsReconciliation(
   };
 }
 
-function validateIncomingIdentities(executions: SchwabNormalizedExecution[]) {
+function validateIncomingIdentities(
+  executions: PersistableExecution[],
+  requireBrokerExecutionKeys: boolean,
+) {
   const brokerKeys = new Set<string>();
   const canonicalKeys = new Set<string>();
   for (const execution of executions) {
+    const brokerExecutionKey = execution.brokerExecutionKey ?? null;
     if (
-      !execution.brokerExecutionKey
-      || brokerKeys.has(execution.brokerExecutionKey)
+      (requireBrokerExecutionKeys && !brokerExecutionKey)
+      || (brokerExecutionKey != null && brokerKeys.has(brokerExecutionKey))
       || !execution.sourceRowHash
       || canonicalKeys.has(execution.sourceRowHash)
     ) {
       throw new SchwabAppendSafetyError(
-        "Schwab returned missing or repeated execution identities. No data was changed.",
+        "The import contains missing or repeated execution identities. No data was changed.",
       );
     }
-    brokerKeys.add(execution.brokerExecutionKey);
+    if (brokerExecutionKey != null) brokerKeys.add(brokerExecutionKey);
     canonicalKeys.add(execution.sourceRowHash);
   }
 }
@@ -90,8 +110,22 @@ export async function persistSchwabExecutions(input: {
   from: string;
   to: string;
   executions: SchwabNormalizedExecution[];
-}): Promise<SchwabPersistenceSummary> {
-  validateIncomingIdentities(input.executions);
+}): Promise<ExecutionPersistenceSummary> {
+  return persistExecutionLedger({
+    ...input,
+    source: "schwab_api",
+    fileName: `Schwab ${input.from} to ${input.to}`,
+    requireBrokerExecutionKeys: true,
+  });
+}
+
+export async function persistExecutionLedger(
+  input: PersistExecutionLedgerInput,
+): Promise<ExecutionPersistenceSummary> {
+  validateIncomingIdentities(
+    input.executions,
+    input.requireBrokerExecutionKeys ?? false,
+  );
   if (input.executions.length === 0) {
     return {
       batchId: null,
@@ -111,6 +145,25 @@ export async function persistSchwabExecutions(input: {
   }
 
   return db.transaction(async (tx) => {
+    for (const alias of input.symbolAliases ?? []) {
+      await tx
+        .update(schema.executions)
+        .set({ symbol: alias.canonicalSymbol })
+        .where(and(
+          eq(schema.executions.accountId, input.accountId),
+          eq(schema.executions.symbol, alias.brokerSymbol),
+        ))
+        .run();
+      await tx
+        .update(schema.trades)
+        .set({ symbol: alias.canonicalSymbol })
+        .where(and(
+          eq(schema.trades.accountId, input.accountId),
+          eq(schema.trades.symbol, alias.brokerSymbol),
+        ))
+        .run();
+    }
+
     const firstExecutionAt = Math.min(
       ...input.executions.map((execution) => execution.executedAt),
     );
@@ -128,7 +181,9 @@ export async function persistSchwabExecutions(input: {
       .orderBy(asc(schema.executions.executedAt), asc(schema.executions.id));
 
     const incomingBrokerKeys = new Set(
-      input.executions.map((execution) => execution.brokerExecutionKey),
+      input.executions
+        .map((execution) => execution.brokerExecutionKey)
+        .filter((key): key is string => key != null),
     );
     const duplicateBrokerKeys = new Set(
       existingInRange
@@ -138,10 +193,14 @@ export async function persistSchwabExecutions(input: {
         ),
     );
     const brokerDuplicateExecutions = input.executions.filter(
-      (execution) => duplicateBrokerKeys.has(execution.brokerExecutionKey),
+      (execution) =>
+        execution.brokerExecutionKey != null
+        && duplicateBrokerKeys.has(execution.brokerExecutionKey),
     );
     const withoutBrokerDuplicates = input.executions.filter(
-      (execution) => !duplicateBrokerKeys.has(execution.brokerExecutionKey),
+      (execution) =>
+        execution.brokerExecutionKey == null
+        || !duplicateBrokerKeys.has(execution.brokerExecutionKey),
     );
     const comparableExisting = existingInRange.filter(
       (execution) =>
@@ -178,6 +237,28 @@ export async function persistSchwabExecutions(input: {
     const candidateSymbols = [
       ...new Set(newExecutions.map((execution) => execution.symbol)),
     ];
+    const openTrades = await tx
+      .select()
+      .from(schema.trades)
+      .where(and(
+        eq(schema.trades.accountId, input.accountId),
+        eq(schema.trades.status, "open"),
+        inArray(schema.trades.symbol, candidateSymbols),
+      ));
+    const openTradeCountBySymbol = new Map<string, number>();
+    for (const trade of openTrades) {
+      openTradeCountBySymbol.set(
+        trade.symbol,
+        (openTradeCountBySymbol.get(trade.symbol) ?? 0) + 1,
+      );
+    }
+    const ambiguousSymbol = [...openTradeCountBySymbol].find(([, count]) => count > 1);
+    if (ambiguousSymbol) {
+      throw new SchwabAppendSafetyError(
+        `${ambiguousSymbol[0]} has multiple open trade records. The import was rolled back so existing journal relationships remain untouched.`,
+      );
+    }
+    const openTradeBySymbol = new Map(openTrades.map((trade) => [trade.symbol, trade]));
     const latestExisting = await tx
       .select({
         symbol: schema.executions.symbol,
@@ -193,6 +274,11 @@ export async function persistSchwabExecutions(input: {
       latestExisting.map((row) => [row.symbol, row.executedAt]),
     );
     const historicalNewExecutions = newExecutions.filter((execution) => {
+      const openTrade = openTradeBySymbol.get(execution.symbol);
+      if (
+        openTrade?.entryAt != null
+        && execution.executedAt >= openTrade.entryAt
+      ) return false;
       const latest = latestBySymbol.get(execution.symbol);
       return latest != null && execution.executedAt <= latest;
     });
@@ -213,8 +299,8 @@ export async function persistSchwabExecutions(input: {
       !reviewExecutionHashes.has(execution.sourceRowHash)
     );
     const forwardExecutionHashes = new Set(
-      importableExecutions
-        .filter((execution) => !historicalExecutionHashes.has(execution.sourceRowHash))
+        importableExecutions
+          .filter((execution) => !historicalExecutionHashes.has(execution.sourceRowHash))
         .map((execution) => execution.sourceRowHash),
     );
     const affectedSymbols = [
@@ -251,8 +337,8 @@ export async function persistSchwabExecutions(input: {
       .values({
         kind: "executions",
         accountId: input.accountId,
-        source: "schwab_api",
-        fileName: `Schwab ${input.from} to ${input.to}`,
+        source: input.source,
+        fileName: input.fileName,
         rowCount: 0,
       })
       .returning({ id: schema.importBatches.id })
@@ -273,7 +359,7 @@ export async function persistSchwabExecutions(input: {
           fees: execution.fees,
           posEffect: execution.posEffect,
           brokerOrderKey: execution.brokerOrderKey,
-          brokerExecutionKey: execution.brokerExecutionKey,
+          brokerExecutionKey: execution.brokerExecutionKey ?? null,
           canonicalExecutionKey: execution.sourceRowHash,
           sourceRowHash: execution.sourceRowHash,
           importBatchId: batch.id,
@@ -293,29 +379,8 @@ export async function persistSchwabExecutions(input: {
     }
 
     const newExecutionIds = new Set(insertedRows.map((row) => row.id));
-    const openTrades = await tx
-      .select()
-      .from(schema.trades)
-      .where(and(
-        eq(schema.trades.accountId, input.accountId),
-        eq(schema.trades.status, "open"),
-        inArray(schema.trades.symbol, forwardSymbols),
-      ));
-    const openTradeCountBySymbol = new Map<string, number>();
-    for (const trade of openTrades) {
-      openTradeCountBySymbol.set(
-        trade.symbol,
-        (openTradeCountBySymbol.get(trade.symbol) ?? 0) + 1,
-      );
-    }
-    const ambiguousSymbol = [...openTradeCountBySymbol].find(([, count]) => count > 1);
-    if (ambiguousSymbol) {
-      throw new SchwabAppendSafetyError(
-        `${ambiguousSymbol[0]} has multiple open trade records. The Schwab import was rolled back so existing journal relationships remain untouched.`,
-      );
-    }
-
-    const openTradeIds = openTrades.map((trade) => trade.id);
+    const forwardOpenTrades = openTrades.filter((trade) => forwardSymbols.includes(trade.symbol));
+    const openTradeIds = forwardOpenTrades.map((trade) => trade.id);
     const candidateExecutions = await tx
       .select()
       .from(schema.executions)

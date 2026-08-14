@@ -108,7 +108,7 @@ describe("parseTosStatement", () => {
 
     const parsed = parseTosStatementWithMetadata(statement);
 
-    expect(parsed.executionSource).toBe("cash_balance");
+    expect(parsed.executionSource).toBe("reconciled");
     expect(parsed.tradeHistoryFilter).toBe("SKDD");
     expect(parsed.executions).toHaveLength(4);
     expect(parsed.executions.map((execution) => execution.symbol)).toEqual([
@@ -138,6 +138,34 @@ describe("parseTosStatement", () => {
     expect(parsed.tradeHistoryFilter).toBeNull();
     expect(parsed.executions).toHaveLength(2);
     expect(parsed.executions[1]?.fees).toBeCloseTo(0.02, 2);
+  });
+
+  it("reconciles an unlabeled one-day Trade History section with the full Cash Balance range", () => {
+    const statement = [
+      "Cash Balance",
+      "DATE,TIME,TYPE,REF #,DESCRIPTION,Misc Fees,Commissions & Fees,AMOUNT,BALANCE",
+      "6/5/26,08:00:00,TRD,1001,BOT +100 NVDL @60,,,0,0",
+      "8/5/26,08:00:00,TRD,1002,SOLD -300 NVDL @25,,,0,0",
+      "8/13/26,08:00:00,TRD,1003,BOT +10 SNDQ @20,,,0,0",
+      "8/13/26,08:01:00,TRD,1004,SOLD -10 SNDQ @21,,,0,0",
+      "",
+      "Account Trade History",
+      ",Exec Time,Spread,Side,Qty,Pos Effect,Symbol,Type,Price,Net Price,Order Type",
+      ",8/13/26 08:00:00,STOCK,BUY,+10,TO OPEN,SNDQ,STOCK,20,20,LMT",
+      ",8/13/26 08:01:00,STOCK,SELL,-10,TO CLOSE,SNDQ,STOCK,21,21,LMT",
+    ].join("\n");
+
+    const parsed = parseTosStatementWithMetadata(statement);
+
+    expect(parsed.executionSource).toBe("reconciled");
+    expect(parsed.cashBalanceExecutions).toBe(4);
+    expect(parsed.tradeHistoryExecutions).toBe(2);
+    expect(parsed.exactSectionMatches).toBe(2);
+    expect(parsed.executions).toHaveLength(4);
+    expect(parsed.executions.filter((execution) => execution.symbol === "SNDQ"))
+      .toHaveLength(2);
+    expect(parsed.executions.find((execution) => execution.symbol === "NVDL" && execution.side === "sell")?.posEffect)
+      .toBe("TO CLOSE");
   });
 
   it("normalizes a post-split CUSIP while preserving its broker identifier", () => {
@@ -204,5 +232,45 @@ describe("matchTrades", () => {
     for (const [symbol, exp] of Object.entries(expected)) {
       expect(gross.get(symbol) ?? 0).toBeCloseTo(exp, 1);
     }
+  });
+
+  it("reconciles the NVDL 3-for-1 split without inventing a short trade", () => {
+    const executions = [
+      {
+        symbol: "NVDL",
+        side: "buy" as const,
+        quantity: 100,
+        price: 60,
+        executedAt: Date.parse("2026-06-05T15:00:00Z") / 1000,
+        posEffect: "TO OPEN",
+        fees: 0,
+        brokerOrderKey: null,
+        sourceRowHash: "nvdl-open",
+      },
+      {
+        symbol: "NVDL",
+        side: "sell" as const,
+        quantity: 300,
+        price: 25,
+        executedAt: Date.parse("2026-08-05T15:00:00Z") / 1000,
+        posEffect: "TO CLOSE",
+        fees: 0,
+        brokerOrderKey: null,
+        sourceRowHash: "nvdl-close",
+      },
+    ];
+
+    const trades = matchTrades(executions);
+
+    expect(trades).toHaveLength(1);
+    expect(trades[0]).toMatchObject({
+      symbol: "NVDL",
+      side: "long",
+      quantity: 300,
+      avgEntryPrice: 20,
+      avgExitPrice: 25,
+      status: "closed",
+      pnl: 1500,
+    });
   });
 });
