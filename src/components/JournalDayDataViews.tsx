@@ -7,6 +7,7 @@ import JournalReviewTabs, {
   type JournalDataScope,
   type JournalDataView,
 } from "@/components/JournalReviewTabs";
+import { useOptionalJournalDateNavigation } from "@/components/JournalDateNavigation";
 import { tradingCalendarWeeks, tradingWeekDates } from "@/lib/journalPnlViews";
 
 export type { JournalDataScope, JournalDataView } from "@/components/JournalReviewTabs";
@@ -188,7 +189,10 @@ export default function JournalReviewModule({
   dayCoachSlot?: ReactNode;
   weekOverview?: ReactNode;
 }) {
-  const [scope, setScope] = useState<JournalDataScope>("day");
+  const navigation = useOptionalJournalDateNavigation();
+  const [localScope, setLocalScope] = useState<JournalDataScope>("day");
+  const scope = navigation?.scope ?? localScope;
+  const setScope = navigation?.setScope ?? setLocalScope;
   const [view, setView] = useState<JournalDataView>("pnl");
 
   function selectScope(nextScope: JournalDataScope) {

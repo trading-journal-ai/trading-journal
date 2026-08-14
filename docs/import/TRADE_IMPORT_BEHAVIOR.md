@@ -1,7 +1,7 @@
 # Trade Import and Reconciliation Behavior
 
 > Status: current-state audit and target contract
-> Last reviewed: 2026-07-25
+> Last reviewed: 2026-08-13
 > Scope: stock and ETF executions imported through Schwab REST, ThinkorSwim
 > statements, and DAS/TraderVue summaries
 
@@ -24,8 +24,9 @@ The durable model is correct:
 5. If the system cannot prove how a fill belongs, it should skip it for review
    or fail atomically—not guess.
 
-The Schwab direct-import path implements most of this contract. The older file
-importer does not yet provide the same incremental-reconciliation guarantees.
+Schwab direct import and ThinkorSwim statement import now share the same
+incremental reconciliation and atomic persistence path. DAS/TraderVue summary
+files remain synthetic trade summaries rather than broker execution ledgers.
 The largest remaining correctness risks are listed in
 [Known correctness gaps](#known-correctness-gaps).
 
@@ -148,7 +149,9 @@ file uploads.
 ### 1. Fetch
 
 - The user selects a masked Schwab account and ET date range.
-- The range is limited to the most recent 60 days.
+- The range is limited to the most recent 365 days. The live Schwab API probe
+  accepts orders and trade transactions at the one-year boundary; older
+  history still requires a statement file.
 - Requests are split into seven-day chunks.
 - Orders receive an additional seven-day entered-order lookback so an order
   entered shortly before the selected range can still contribute fills inside
@@ -166,7 +169,10 @@ chunk cannot leave a partial database import.
 - Each `FILL` execution leg becomes its own execution.
 - Quantity, price, timestamp, symbol, instruction, and position effect are
   validated.
-- Non-equity legs and malformed fills are excluded with warnings.
+- Stock legs reported by Schwab as `EQUITY` are accepted. ETF legs reported as
+  `COLLECTIVE_INVESTMENT` are also accepted when Schwab identifies the
+  instrument subtype as `EXCHANGE_TRADED_FUND`; other collective investments,
+  non-equity legs, and malformed fills remain excluded with warnings.
 - Fee records are attached to the closest execution from the same order.
 - Raw Schwab account and order identifiers are not persisted. HMAC identities
   are stored instead.
@@ -256,16 +262,18 @@ Thursday: sell 100       → trade 42 becomes closed
 Normal Schwab sync updates trade 42 in place each time. It does not create a
 new Tuesday short trade and does not replace Monday's note.
 
-### Current Journal display limitation
+### Journal activity-date projection
 
-The review loader currently selects and groups trades by `entryAt`. A multi-day
-trade therefore primarily belongs to its opening day even though executions
-are timestamped on later days. This differs from established journal behavior,
-where each activity day shows whether the trade opened, adjusted, partially
-closed, or fully closed and daily P&L appears when it was realized.
+Calendar, Journal, Trades/Analytics date filters, and ticker-day review project
+one stable trade onto every ET date containing one of its executions. The
+opening date is shown as opened, intermediate reductions or additions as
+adjusted, and the final date as closed. Realized P&L is replayed from the
+execution ledger and attributed to each partial or full exit date, so the
+lifecycle total is not duplicated on the opening date.
 
-The import data can support that view, but the day-level Journal projection
-needs to be updated.
+An overnight lifecycle retains one trade ID and one set of notes, tags, and
+attachments. The day projection is a read model; it does not duplicate the
+underlying trade row.
 
 ## Error and edge-case matrix
 
@@ -291,28 +299,21 @@ needs to be updated.
 | Concurrent duplicate insertion | Roll back | None | Refresh preview |
 | Existing notes on an open trade | Preserve through stable trade ID | Notes unchanged | None |
 
-## File import is not yet equivalent
+## ThinkorSwim file/API parity
 
-ThinkorSwim and DAS/TraderVue files share the execution/trade schema, but the
-legacy persistence path in [`src/lib/import/persist.ts`](../../src/lib/import/persist.ts)
-uses a batch-local rule:
+ThinkorSwim statements and Schwab API history now enter the same execution
+ledger and use the same cross-source dedupe, historical classification,
+open-trade update, stable-ID preservation, and transaction rollback rules.
 
-- it inserts new executions;
-- it creates a trade only when every execution in that normalized trade is new;
-- if only part of a normalized trade is new, it warns and skips creating that
-  trade.
+The statement adapter also reconciles its sections instead of trusting the
+`Account Trade History` title as a completeness signal. Exact Trade History
+fills enrich matching Cash Balance rows with position effect, while unmatched
+Cash Balance rows extend the imported date coverage. A statement whose detailed
+section contains only one day can therefore still import its full ledger.
 
-Consequences:
-
-- Re-importing the exact same file is idempotent.
-- A complete, self-contained file imports correctly.
-- A file containing an opening fill already stored plus a new closing fill may
-  insert the close but leave the new execution unassigned instead of updating
-  the existing open trade.
-- CSV position flips can also produce ambiguous execution-to-trade linkage.
-
-Until the file importer uses the same reconciliation engine as Schwab, use a
-complete statement range and review any partial-trade warning.
+Repeated and overlapping file/API imports are idempotent. A statement close can
+update an existing API-created open trade in place, including when later closed
+trades in the same symbol are already stored.
 
 ## Known correctness gaps
 
@@ -326,13 +327,7 @@ complete statement range and review any partial-trade warning.
    invariant. A close-first fill must be sent to **Needs review**, never allowed
    to create the opposite position.
 
-2. **Unify API and file reconciliation**
-
-   Both sources should use the same account/symbol position ledger and stable
-   open-trade update path. No confirmed import should leave a new execution
-   without exactly one compatible trade unless it is explicitly quarantined.
-
-3. **Long-lived Schwab orders**
+2. **Long-lived Schwab orders**
 
    Orders entered more than seven days before the selected range may fill
    inside it. The current order-entry lookback is seven days, and transaction
@@ -340,7 +335,7 @@ complete statement range and review any partial-trade warning.
    query the maximum safe order lookback or normalize trade transactions as a
    completeness cross-check.
 
-4. **Post-import position validation**
+3. **Post-import broker-position validation**
 
    After normalization and before commit, replay the account/symbol ledger and
    verify:
@@ -349,12 +344,6 @@ complete statement range and review any partial-trade warning.
    - every imported execution is assigned exactly once;
    - stored open quantity agrees with the reconstructed quantity; and
    - when available, reconstructed positions agree with broker positions.
-
-5. **Multi-day Journal projection**
-
-   Show a trade on every ET date with execution activity. Attribute realized
-   P&L to partial/full exit dates while retaining one stable trade record and
-   one continuous note history.
 
 ### P1 — explicit repair and complex cases
 
@@ -368,8 +357,9 @@ complete statement range and review any partial-trade warning.
    distinguish “swing AAPL” from “day-trade AAPL.”
 4. Add deterministic sequence handling for genuinely simultaneous fills where
    timestamps alone cannot establish order.
-5. Reconcile corporate actions, transfers, symbol changes, splits, and
-   zero-price expirations before expanding beyond stocks/ETFs.
+5. Replace the source-backed local split registry with a broker or market-data
+   corporate-action feed; transfers, symbol changes, unregistered splits, and
+   zero-price expirations still require explicit review.
 6. Improve per-fill fee allocation and compare imported net P&L against a
    statement or broker summary.
 

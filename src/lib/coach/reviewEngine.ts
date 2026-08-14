@@ -14,6 +14,7 @@ export type ReviewTradeInput = TradeLike & {
   exitAt: number | null;
   stopLoss?: number | null;
   setup?: string | null;
+  realizedPnl?: number | null;
 };
 
 export type SegmentFact = {
@@ -181,7 +182,7 @@ function riskDollarsForTrade(trade: ReviewTradeInput): number | null {
 
 function analyzeTrades(trades: ReviewTradeInput[]): AnalyzedTrade[] {
   return trades.flatMap((trade) => {
-    const pnl = netPnl(trade);
+    const pnl = trade.realizedPnl ?? netPnl(trade);
     if (pnl == null) return [];
     const riskDollars = riskDollarsForTrade(trade);
 

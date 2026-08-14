@@ -451,6 +451,13 @@ function recommend({ format, appExport, dasTradeSummary, cashBalance, orderHisto
   if (appExport.detected && appExport.tradeRows > 0) {
     return "Usable for private coach evals with trade-level P&L facts.";
   }
+  if (
+    tradeHistory.usableFills > 0
+    && cashBalance.cashUnmatched != null
+    && cashBalance.cashUnmatched > 0
+  ) {
+    return "Usable by reconciling detailed Trade History fills with the full Cash Balance ledger, which has longer coverage.";
+  }
   if (tradeHistory.usableFills > 0 && !tradeHistory.filteredBy) {
     return "Usable for import/chart reconstruction from TOS fill-level trade history.";
   }

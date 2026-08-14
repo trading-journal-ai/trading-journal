@@ -2,6 +2,7 @@ import TradeJournalReview from "@/components/TradeJournalReview";
 import { getActiveAccount } from "@/lib/accountScope";
 import { db, schema } from "@/lib/db";
 import { etDateString } from "@/lib/time";
+import type { JournalPeriodScope } from "@/lib/journalPeriodLabel";
 import { and, desc, eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
@@ -28,15 +29,19 @@ function validMonth(value: string | undefined): string | undefined {
   return value && /^\d{4}-\d{2}$/.test(value) ? value : undefined;
 }
 
+function validScope(value: string | undefined): JournalPeriodScope {
+  return value === "week" || value === "month" ? value : "day";
+}
+
 async function latestJournalDate(accountId: number): Promise<string | undefined> {
-  const [latestTrade] = await db
-    .select({ entryAt: schema.trades.entryAt })
-    .from(schema.trades)
-    .where(eq(schema.trades.accountId, accountId))
-    .orderBy(desc(schema.trades.entryAt))
+  const [latestExecution] = await db
+    .select({ executedAt: schema.executions.executedAt })
+    .from(schema.executions)
+    .where(eq(schema.executions.accountId, accountId))
+    .orderBy(desc(schema.executions.executedAt))
     .limit(1);
 
-  if (latestTrade?.entryAt != null) return etDateString(latestTrade.entryAt);
+  if (latestExecution?.executedAt != null) return etDateString(latestExecution.executedAt);
 
   const [latestDayNote] = await db
     .select({ scopeKey: schema.journalEntries.scopeKey })
@@ -62,10 +67,12 @@ export default async function JournalPage({
     from?: string;
     month?: string;
     returnTo?: string;
+    scope?: string;
   }>;
 }) {
   const params = await searchParams;
   const activeAccount = await getActiveAccount();
+  const requestedScope = validScope(params.scope);
   const requestedDate = validDate(params.date);
   const requestedMonth = validMonth(params.month)
     ?? (params.preset === "month" || params.preset === "week"
@@ -77,11 +84,14 @@ export default async function JournalPage({
   const filters = requestedMonth
     ? { preset: "month" as const, from: `${requestedMonth}-01`, month: requestedMonth }
     : { preset: "today" as const, date: journalDate };
-  const journalHref = requestedMonth
+  const baseJournalHref = requestedMonth
     ? `/journal?month=${requestedMonth}`
     : journalDate
       ? `/journal?date=${journalDate}`
       : "/journal";
+  const journalUrl = new URL(baseJournalHref, "http://journal.local");
+  if (requestedScope !== "day") journalUrl.searchParams.set("scope", requestedScope);
+  const journalHref = `${journalUrl.pathname}${journalUrl.search}`;
   const returnTo = appendReturnTo(journalHref, params.returnTo);
 
   return (
@@ -91,6 +101,7 @@ export default async function JournalPage({
       returnTo={returnTo}
       backHref={params.returnTo}
       accountId={activeAccount.id}
+      initialScope={requestedScope}
       showArchiveSidebar={false}
       archiveLinkMode="review-module"
     />

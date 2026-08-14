@@ -458,6 +458,13 @@ function recommendationFor(
   if (appExport.detected && appExport.tradeRows > 0) {
     return "This app export is useful for private coach evals, but it is not a broker import format.";
   }
+  if (
+    tradeHistory.usableFills > 0
+    && cashBalance.cashUnmatched != null
+    && cashBalance.cashUnmatched > 0
+  ) {
+    return "This ThinkorSwim statement can be imported by reconciling detailed Trade History fills with the full Cash Balance ledger, which has longer coverage.";
+  }
   if (tradeHistory.usableFills > 0 && !tradeHistory.filteredBy) {
     return "This ThinkorSwim statement can be imported from fill-level trade history.";
   }

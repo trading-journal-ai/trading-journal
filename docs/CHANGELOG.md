@@ -22,11 +22,22 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
   ([PR #70](https://github.com/trading-journal-ai/trading-journal/pull/70)).
 
 ### Changed
+- Calendar now uses the compact month-at-a-glance layout as its canonical month
+  view, with month metrics, five weekday columns, weekly summaries, and direct
+  Journal-day links ([PR #71](https://github.com/trading-journal-ai/trading-journal/pull/71)).
 - Focused Journal days now use a compact five-session rail, textual trading-day
   navigation, consistent underline tabs, and the shared 1152px workspace
   ([PR #66](https://github.com/trading-journal-ai/trading-journal/pull/66)).
 
 ### Fixed
+- Journal period headings and Today / Previous / Next navigation now stay in
+  sync across Day, Week, and Month, with the active scope preserved in the URL
+  ([PR #72](https://github.com/trading-journal-ai/trading-journal/pull/72)).
+- Thinkorswim statement uploads and Schwab automatic imports now share an
+  idempotent execution ledger, preserve full statement coverage, support ETFs,
+  account for known share splits, and place swing activity and realized P&L on
+  the dates executions occurred
+  ([PR #73](https://github.com/trading-journal-ai/trading-journal/pull/73)).
 - Local `journal` launcher now removes stale Next.js locks, reuses live lock
   metadata, and opens the exact active localhost URL automatically
   ([PR #65](https://github.com/trading-journal-ai/trading-journal/pull/65)).

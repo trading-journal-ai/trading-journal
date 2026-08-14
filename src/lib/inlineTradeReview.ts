@@ -9,7 +9,8 @@ import { fmtMoney } from "@/lib/format";
 import { analyzeTradeExecutions } from "@/lib/executionAnalysis";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { netPnl } from "@/lib/pnl";
-import { etDayRange, etDateString, reviewSessionRange } from "@/lib/time";
+import { heldCalendarDays, tradeDayActivities } from "@/lib/tradeActivity";
+import { etDayRange, reviewSessionRange } from "@/lib/time";
 
 const DEFAULT_REVIEW_TAGS = ["No setup", "VWAP reclaim", "HOD retest", "Late entry", "EMA rail", "Extension chase"];
 
@@ -42,6 +43,8 @@ function formatTradeTime(value: number | null): string {
 
 function formatHoldDuration(entryAt: number | null, exitAt: number | null): string | null {
   if (entryAt == null || exitAt == null) return null;
+  const heldDays = heldCalendarDays(entryAt, exitAt);
+  if (heldDays != null && heldDays > 0) return `${heldDays}d`;
   const seconds = Math.max(0, exitAt - entryAt);
   if (seconds < 60) return `${seconds}s`;
   const minutes = Math.floor(seconds / 60);
@@ -75,14 +78,30 @@ export async function loadInlineTradeReview({
   tradeId: number;
 }): Promise<InlineTradeReviewData | null> {
   const { start, end } = etDayRange(date);
-  const dayTrades = (
-    await db
-      .select()
-      .from(schema.trades)
-      .where(and(eq(schema.trades.accountId, accountId), gte(schema.trades.entryAt, start), lte(schema.trades.entryAt, end)))
-      .orderBy(asc(schema.trades.entryAt))
-  ).filter((trade) => trade.entryAt != null && etDateString(trade.entryAt) === date);
-  const trades = dayTrades.filter((trade) => trade.symbol === symbol);
+  const activityTradeIds = [
+    ...new Set(
+      (await db
+        .select({ tradeId: schema.executions.tradeId })
+        .from(schema.executions)
+        .where(and(
+          eq(schema.executions.accountId, accountId),
+          eq(schema.executions.symbol, symbol),
+          gte(schema.executions.executedAt, start),
+          lte(schema.executions.executedAt, end),
+        )))
+        .flatMap((row) => row.tradeId == null ? [] : [row.tradeId]),
+    ),
+  ];
+  const trades = activityTradeIds.length > 0
+    ? await db
+        .select()
+        .from(schema.trades)
+        .where(and(
+          eq(schema.trades.accountId, accountId),
+          inArray(schema.trades.id, activityTradeIds),
+        ))
+        .orderBy(asc(schema.trades.entryAt))
+    : [];
   const selectedTrade = trades.find((trade) => trade.id === tradeId);
   if (!selectedTrade) return null;
 
@@ -92,6 +111,13 @@ export async function loadInlineTradeReview({
     .from(schema.executions)
     .where(inArray(schema.executions.tradeId, tradeIds))
     .orderBy(asc(schema.executions.executedAt), asc(schema.executions.id));
+  const activityByTradeId = new Map(trades.flatMap((trade) => {
+    const activity = tradeDayActivities(
+      trade,
+      executions.filter((execution) => execution.tradeId === trade.id),
+    ).find((item) => item.date === date);
+    return activity ? [[trade.id, activity] as const] : [];
+  }));
 
   const [tickerReviewNote, tagOptions, tradeTagRows, tickerTagRows, attachmentRows] = await Promise.all([
     db
@@ -163,7 +189,13 @@ export async function loadInlineTradeReview({
   ]));
 
   const tradeNumberById = new Map(trades.map((trade, index) => [trade.id, index + 1]));
-  const tradePnlById = new Map(trades.map((trade) => [trade.id, netPnl(trade)]));
+  const tradePnlById = new Map(trades.map((trade) => {
+    const activity = activityByTradeId.get(trade.id);
+    return [
+      trade.id,
+      activity?.kind === "opened" ? null : activity?.realizedPnl ?? netPnl(trade),
+    ];
+  }));
   const tradePerShareById = new Map(trades.map((trade) => {
     const tradePnl = tradePnlById.get(trade.id);
     return [trade.id, tradePnl == null || trade.quantity === 0 ? null : tradePnl / Math.abs(trade.quantity)];
@@ -172,6 +204,10 @@ export async function loadInlineTradeReview({
   const workspaceTrades: TickerReviewTrade[] = trades.map((trade, index) => {
     const tradePnl = tradePnlById.get(trade.id) ?? null;
     const perShare = tradePerShareById.get(trade.id) ?? null;
+    const activity = activityByTradeId.get(trade.id);
+    const heldDays = activity == null
+      ? null
+      : heldCalendarDays(trade.entryAt, activity.lastExecutionAt);
     return {
       id: trade.id,
       number: index + 1,
@@ -180,12 +216,18 @@ export async function loadInlineTradeReview({
       exitAt: trade.exitAt,
       avgEntryPrice: trade.avgEntryPrice,
       avgExitPrice: trade.avgExitPrice,
-      entryTime: formatTradeTime(trade.entryAt),
+      entryTime: formatTradeTime(activity?.firstExecutionAt ?? trade.entryAt),
       shares: Math.abs(trade.quantity).toLocaleString("en-US"),
       executions: (executionCountByTradeId.get(trade.id) ?? 0).toLocaleString("en-US"),
       entryPrice: formatLedgerPrice(trade.avgEntryPrice),
       exitPrice: formatLedgerPrice(trade.avgExitPrice),
-      holdDuration: formatHoldDuration(trade.entryAt, trade.exitAt),
+      holdDuration: activity?.kind === "opened" && trade.exitAt != null
+        ? "Swing · opened"
+        : activity?.kind === "adjusted"
+          ? `Held ${heldDays ?? 0}d · adjusted`
+          : activity?.kind === "closed" && heldDays != null && heldDays > 0
+            ? `Held ${heldDays}d · closed`
+            : formatHoldDuration(trade.entryAt, trade.exitAt),
       pnl: tradePnl == null ? "Open" : fmtMoney(tradePnl),
       pnlValue: tradePnl,
       pnlTone: pnlTone(tradePnl),
@@ -220,7 +262,10 @@ export async function loadInlineTradeReview({
     candles,
     candleSource: candleResult.candles.length > 0 ? "market" : "execution_fallback",
     candleStatus: candleResult.status,
-    initialFocusTime: selectedTrade.entryAt ?? undefined,
+    initialFocusTime:
+      activityByTradeId.get(selectedTrade.id)?.firstExecutionAt
+      ?? selectedTrade.entryAt
+      ?? undefined,
     initialTradeId: tradeId,
     markers: trades.flatMap((trade) => (
       (executionAnalysisByTradeId.get(trade.id)?.executions ?? []).map((execution) => ({

@@ -41,6 +41,10 @@ No actionable P0, P1, or P2 findings remain.
 - Selecting August 3 opened `/journal?date=2026-08-03` with the Calendar return target intact.
 - The 390px viewport had no document-level horizontal overflow; only the dense calendar grid scrolls horizontally.
 - Browser console contained only React DevTools / Fast Refresh development logs; no warnings or errors.
+- After reconciliation with the execution-date activity model, the same desktop
+  and 390px flows passed again with a clean console; the document remained
+  viewport-bound and the updated month/week metrics rendered in the approved
+  layout.
 
 ## Comparison history
 

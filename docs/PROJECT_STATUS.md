@@ -43,16 +43,99 @@ stopped. This is the "when did we last work on it" trail.
   - Preserved range filtering, no-trade controls, Month / Year navigation, theme
     tokens, and direct Journal-day links with their Calendar return target.
   - Added focused tests for Calendar accuracy and profit-factor formatting.
+  - Reconciled the redesign with the execution-date activity model from PR #73,
+    preserving swing-trade dates and partial/final realized P&L while retaining
+    the redesigned accuracy and profit-factor summaries.
   - Browser-checked desktop and 390px layouts, Previous / Next, Year, and direct
     Journal navigation; the narrow view has no document-level overflow and the
     console remained free of warnings and errors.
+  - Repeated that interaction pass after the current-`main` reconciliation;
+    desktop and 390px remained visually intact, the document stayed within the
+    narrow viewport while the grid scrolled locally, and the console was clean.
   - Compared the source and implementation side by side, corrected the empty-day
     surface treatment, and recorded the passing evidence in `design-qa.md`.
   - Focused metric tests and `npm run verify:full` passed under Node 22.13.0;
     the existing broad NFT trace warning remains.
   - Opened [PR #71](https://github.com/trading-journal-ai/trading-journal/pull/71).
-  - **Stopped at:** implementation, design QA, and repository verification
-    complete; PR #71 is ready for owner review.
+  - **Stopped at:** implementation reconciled with current `main`, fully
+    reverified, and ready to merge as the canonical Calendar.
+
+- **2026-08-13** — Journal scope-aware period heading regression
+  (branch `fix/journal-scope-heading`).
+  - Recovered the missing behavior from commit `3e22abb` on the old
+    `design/calendar-preview` branch: Day shows the focused date, Week shows its
+    Monday–Friday range, and Month shows month plus year in the same header.
+  - Shared the review module's Day / Week / Month state with the date-navigation
+    header while preserving a local fallback for standalone preview surfaces.
+  - Added focused coverage for day, same-month week, cross-month week,
+    cross-year week, and month labels.
+  - Wired Today / Previous / Next to the selected scope: Day moves across
+    trading weekdays, Week moves by seven days, and Month moves by one calendar
+    month. The active scope is URL-backed and survives navigation, refresh, and
+    return links.
+  - Added boundary coverage for weekend skipping, week stepping, shorter-month
+    clamping, scope URLs, and all three navigation destination sets.
+  - Browser-verified all three period transitions at desktop and Week at 390px;
+    the heading matched the selected scope, the narrow page had no horizontal
+    overflow, and the final preview console was clean. A second interaction pass
+    verified Day's Friday-to-Monday step, Previous Week, Previous/Next Month,
+    scope-preserving Today, direct scoped URLs, and scope persistence after data
+    navigation.
+  - Eight focused period-label/navigation tests and `npm run verify:full` passed
+    under Node 22.13.0; the existing broad NFT trace warning remains.
+  - Opened [PR #72](https://github.com/trading-journal-ai/trading-journal/pull/72).
+  - **Stopped at:** heading and period navigation regressions fixed and fully
+    verified; PR #72 is ready for owner review.
+
+- **2026-08-13** — Import parity, statement coverage, splits, and swing dates
+  (branch `fix/import-parity-and-swings`).
+  - Unified ThinkorSwim statement persistence with the Schwab append-only
+    execution ledger, including cross-source dedupe and stable open-trade
+    updates.
+  - Reconciled detailed Trade History rows with the full Cash Balance ledger
+    instead of treating an unlabeled one-day detailed section as complete.
+  - Added source-backed share-split quantity/basis adjustment and verified a
+    multi-day ETF lifecycle closes without inventing an opposite position.
+  - Projected trades onto every ET execution date in Journal, Calendar, Trades,
+    Analytics, and ticker review; partial/final realized P&L now belongs to exit
+    dates.
+  - Focused tests, type verification, and a gitignored private-statement import
+    into a temporary database passed; the real Journal database was not
+    mutated.
+  - Focused importer/activity tests and `npm run verify:full` passed under Node
+    22.13.0; the existing broad NFT trace warning remains.
+  - **Stopped at:** implementation complete and committed on the isolated
+    branch; the real Journal database was not mutated or backfilled.
+
+- **2026-08-13** — Schwab ETF import coverage
+  (branch `fix/schwab-etf-import`).
+  - Reconciled Schwab transaction history against Journal executions and traced
+    complete missing instruments to Schwab's `COLLECTIVE_INVESTMENT`
+    classification for exchange-traded funds.
+  - Updated the Schwab normalizer to accept only the
+    `EXCHANGE_TRADED_FUND` subtype while continuing to exclude mutual funds,
+    options, and other unsupported assets.
+  - Added focused regression coverage for accepted ETFs, rejected collective
+    investments, and symbol-safe diagnostics; updated the import contract.
+  - Focused normalizer tests and `npm run verify:full` passed under Node
+    22.13.0. The existing broad NFT trace warning remains.
+  - **Stopped at:** implementation complete and committed on the isolated
+    branch; existing local Journal data was not mutated or backfilled.
+
+- **2026-08-13** — Schwab one-year history range
+  (branch `fix/schwab-history-range`).
+  - Confirmed with sanitized, read-only live probes that Schwab returns valid
+    order and transaction history beyond the app's assumed 60-day cutoff and
+    at the one-year boundary.
+  - Replaced the client and server 60-day floor with a shared 365-day limit;
+    retained Eastern Time boundaries, seven-day request chunks, future-date
+    rejection, and the existing result-cap safeguard.
+  - Updated the importer copy and import contract to direct history older than
+    one year to statement files.
+  - Focused date-range tests and `npm run verify:full` passed under Node
+    22.13.0. The existing broad NFT trace warning remains.
+  - **Stopped at:** implementation complete on the isolated branch; no local
+    Journal data was imported or changed.
 
 - **2026-08-13** — Journal today-import fast path
   (branch `design/importer-update`).
