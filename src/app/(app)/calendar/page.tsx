@@ -3,8 +3,8 @@ import { eq } from "drizzle-orm";
 import { Fragment } from "react";
 import { db, schema } from "@/lib/db";
 import { getActiveAccount } from "@/lib/accountScope";
-import { netPnl } from "@/lib/pnl";
 import { etDateString } from "@/lib/time";
+import { tradeDayActivities } from "@/lib/tradeActivity";
 import { fmtMoney } from "@/lib/format";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { journalDayState } from "@/lib/journalDayStatus";
@@ -170,18 +170,32 @@ async function dailyAgg(accountId: number): Promise<{
   periods: Set<string>;
   today: string;
 }> {
-  const [trades, noTradeRows] = await Promise.all([
+  const [trades, executions, noTradeRows] = await Promise.all([
     db
       .select({
+        id: schema.trades.id,
+        symbol: schema.trades.symbol,
         side: schema.trades.side,
         quantity: schema.trades.quantity,
         avgEntryPrice: schema.trades.avgEntryPrice,
         avgExitPrice: schema.trades.avgExitPrice,
         fees: schema.trades.fees,
         entryAt: schema.trades.entryAt,
+        exitAt: schema.trades.exitAt,
       })
       .from(schema.trades)
       .where(eq(schema.trades.accountId, accountId)),
+    db
+      .select({
+        tradeId: schema.executions.tradeId,
+        executedAt: schema.executions.executedAt,
+        side: schema.executions.side,
+        quantity: schema.executions.quantity,
+        price: schema.executions.price,
+        fees: schema.executions.fees,
+      })
+      .from(schema.executions)
+      .where(eq(schema.executions.accountId, accountId)),
     db
       .select({ date: schema.journalDayStatuses.date })
       .from(schema.journalDayStatuses)
@@ -192,20 +206,31 @@ async function dailyAgg(accountId: number): Promise<{
   const noTradeDates = new Set(noTradeRows.map((row) => row.date));
   const periods = new Set<string>();
   noTradeDates.forEach((date) => periods.add(date.slice(0, 7)));
-  for (const t of trades) {
-    if (t.entryAt == null) continue;
-    const date = etDateString(t.entryAt);
-    periods.add(date.slice(0, 7));
-    const pnl = netPnl(t) ?? 0;
-    const cur = byDate.get(date) ?? { pnl: 0, trades: 0, wins: 0, losses: 0 };
-    cur.pnl += pnl;
-    cur.trades += 1;
-    if (pnl > 0) {
-      cur.wins += 1;
-    } else if (pnl < 0) {
-      cur.losses += 1;
+  const executionsByTradeId = new Map<number, typeof executions>();
+  for (const execution of executions) {
+    if (execution.tradeId == null) continue;
+    executionsByTradeId.set(
+      execution.tradeId,
+      [...(executionsByTradeId.get(execution.tradeId) ?? []), execution],
+    );
+  }
+  for (const trade of trades) {
+    for (const activity of tradeDayActivities(
+      trade,
+      executionsByTradeId.get(trade.id) ?? [],
+    )) {
+      periods.add(activity.date.slice(0, 7));
+      const pnl = activity.realizedPnl;
+      const cur = byDate.get(activity.date) ?? { pnl: 0, trades: 0, wins: 0, losses: 0 };
+      cur.pnl += pnl;
+      cur.trades += 1;
+      if (pnl > 0) {
+        cur.wins += 1;
+      } else if (pnl < 0) {
+        cur.losses += 1;
+      }
+      byDate.set(activity.date, cur);
     }
-    byDate.set(date, cur);
   }
   return {
     byDate,

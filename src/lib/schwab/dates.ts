@@ -1,6 +1,6 @@
 import { MARKET_TZ, zonedDateTimeToUtcMs } from "@/lib/time";
 
-export const SCHWAB_MAX_LOOKBACK_DAYS = 60;
+export const SCHWAB_MAX_LOOKBACK_DAYS = 365;
 export const SCHWAB_HISTORY_CHUNK_DAYS = 7;
 export const SCHWAB_ORDER_ENTRY_LOOKBACK_DAYS = 7;
 
@@ -100,7 +100,7 @@ export function validateSchwabDateRange(
   const minimum = shiftDate(today, -(SCHWAB_MAX_LOOKBACK_DAYS - 1));
   if (from < minimum) {
     throw new SchwabDateRangeError(
-      `Initial Schwab sync is limited to the most recent ${SCHWAB_MAX_LOOKBACK_DAYS} days.`,
+      `Schwab sync is limited to the most recent ${SCHWAB_MAX_LOOKBACK_DAYS} days.`,
     );
   }
   if (to > today) {

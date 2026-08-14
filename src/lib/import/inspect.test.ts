@@ -127,4 +127,24 @@ describe("inspectBrokerCsv", () => {
     expect(result.tos.tradeHistory.usableFills).toBe(2);
     expect(result.recommendation).toContain("full Cash Balance ledger");
   });
+
+  it("calls out an unlabeled coverage mismatch between statement sections", () => {
+    const csv = [
+      "Cash Balance",
+      "DATE,TIME,TYPE,REF #,DESCRIPTION,Misc Fees,Commissions & Fees,AMOUNT,BALANCE",
+      "6/5/26,08:00:00,TRD,1001,BOT +100 NVDL @60,,,0,0",
+      "8/5/26,08:00:00,TRD,1002,SOLD -300 NVDL @25,,,0,0",
+      "8/13/26,08:00:00,TRD,1003,BOT +10 SNDQ @20,,,0,0",
+      "",
+      "Account Trade History",
+      ",Exec Time,Spread,Side,Qty,Pos Effect,Symbol,Type,Price,Net Price,Order Type",
+      ",8/13/26 08:00:00,STOCK,BUY,+10,TO OPEN,SNDQ,STOCK,20,20,LMT",
+    ].join("\n");
+
+    const result = inspectBrokerCsv(csv);
+
+    expect(result.tos.cashBalance.tradeHistoryExactMatches).toBe(1);
+    expect(result.tos.cashBalance.cashUnmatched).toBe(2);
+    expect(result.recommendation).toContain("reconciling detailed Trade History");
+  });
 });

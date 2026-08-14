@@ -7,6 +7,7 @@
  * + a new opposite trade. (See docs/product/PRODUCT_SPEC.md §5.)
  */
 import type { ParsedExecution } from "./tos";
+import { shareSplitMultiplierBetween } from "./corporateActions";
 
 export type MatchedTrade = {
   symbol: string;
@@ -78,6 +79,21 @@ export function matchTrades(executions: ParsedExecution[]): MatchedTrade[] {
     let b: Builder | null = null;
 
     for (const f of fills) {
+      if (b) {
+        const splitMultiplier = shareSplitMultiplierBetween(
+          b.symbol,
+          b.lastAt,
+          f.executedAt,
+        );
+        if (splitMultiplier !== 1) {
+          // A split changes share units, not invested capital or proceeds.
+          // Restate every quantity accumulated in the active lifecycle so the
+          // post-split close reconciles without creating a synthetic trade.
+          b.openQty *= splitMultiplier;
+          b.closeQty *= splitMultiplier;
+          b.position *= splitMultiplier;
+        }
+      }
       let remaining = f.quantity;
       const isBuy = f.side === "buy";
 

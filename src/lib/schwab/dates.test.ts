@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  SCHWAB_MAX_LOOKBACK_DAYS,
   SCHWAB_ORDER_ENTRY_LOOKBACK_DAYS,
   validateSchwabDateRange,
   SchwabDateRangeError,
@@ -35,6 +36,17 @@ describe("validateSchwabDateRange", () => {
     expect(fall.endEpochExclusive - fall.startEpoch).toBe(25 * 3600);
   });
 
+  it("accepts history inside the one-year window", () => {
+    const now = new Date("2026-08-13T18:00:00Z");
+    const range = validateSchwabDateRange("2026-01-01", "2026-01-31", now);
+
+    expect(SCHWAB_MAX_LOOKBACK_DAYS).toBe(365);
+    expect(range.from).toBe("2026-01-01");
+    expect(range.to).toBe("2026-01-31");
+    expect(range.transactionChunks).toHaveLength(5);
+    expect(range.orderChunks[0]?.from).toBe("2025-12-25");
+  });
+
   it("rejects invalid, future, reversed, and out-of-range dates", () => {
     const now = new Date("2026-07-25T18:00:00Z");
     expect(() => validateSchwabDateRange("2026-02-30", "2026-07-25", now))
@@ -43,7 +55,7 @@ describe("validateSchwabDateRange", () => {
       .toThrow("on or before");
     expect(() => validateSchwabDateRange("2026-07-01", "2026-07-26", now))
       .toThrow("future");
-    expect(() => validateSchwabDateRange("2026-05-01", "2026-05-02", now))
-      .toThrow("60 days");
+    expect(() => validateSchwabDateRange("2025-07-25", "2025-07-26", now))
+      .toThrow("365 days");
   });
 });

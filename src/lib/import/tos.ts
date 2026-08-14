@@ -9,6 +9,7 @@
 import { createHash } from "node:crypto";
 import { tosWallClockToEpochSeconds } from "@/lib/time";
 import { parseCsvLine } from "./csv";
+import { shareSplitMultiplierBetween } from "./corporateActions";
 import {
   normalizeBrokerSymbol,
   resolveSecurityIdentifier,
@@ -28,12 +29,15 @@ export type ParsedExecution = {
   sourceRowHash: string;
 };
 
-export type TosExecutionSource = "trade_history" | "cash_balance";
+export type TosExecutionSource = "trade_history" | "cash_balance" | "reconciled";
 
 export type ParsedTosStatement = {
   executions: ParsedExecution[];
   executionSource: TosExecutionSource;
   tradeHistoryFilter: string | null;
+  cashBalanceExecutions: number;
+  tradeHistoryExecutions: number;
+  exactSectionMatches: number;
   securityIdentifiers: SecurityIdentifierResolution[];
 };
 
@@ -173,15 +177,60 @@ function assignSourceRowHashes(executions: ParsedExecution[]): ParsedExecution[]
 
 function inferCashPositionEffects(executions: ParsedExecution[]): void {
   const positions = new Map<string, number>();
+  const previousExecutionAt = new Map<string, number>();
   executions.sort((a, b) => a.executedAt - b.executedAt || a.symbol.localeCompare(b.symbol));
 
   for (const execution of executions) {
-    const position = positions.get(execution.symbol) ?? 0;
+    const previousAt = previousExecutionAt.get(execution.symbol);
+    const splitMultiplier = previousAt == null
+      ? 1
+      : shareSplitMultiplierBetween(execution.symbol, previousAt, execution.executedAt);
+    const position = (positions.get(execution.symbol) ?? 0) * splitMultiplier;
     const delta = execution.side === "buy" ? execution.quantity : -execution.quantity;
     const addsToPosition = position === 0 || Math.sign(position) === Math.sign(delta);
     execution.posEffect = addsToPosition ? "TO OPEN" : "TO CLOSE";
     positions.set(execution.symbol, position + delta);
+    previousExecutionAt.set(execution.symbol, execution.executedAt);
   }
+}
+
+function fillComparisonKey(execution: ParsedExecution): string {
+  return [
+    execution.symbol,
+    execution.executedAt,
+    execution.side,
+    Number(execution.quantity.toFixed(8)),
+    Number(execution.price.toFixed(8)),
+  ].join("|");
+}
+
+function reconcileStatementExecutions(
+  cashExecutions: ParsedExecution[],
+  tradeHistoryExecutions: ParsedExecution[],
+): { executions: ParsedExecution[]; exactMatches: number } {
+  const cashByKey = new Map<string, ParsedExecution[]>();
+  for (const execution of cashExecutions) {
+    const key = fillComparisonKey(execution);
+    cashByKey.set(key, [...(cashByKey.get(key) ?? []), execution]);
+  }
+
+  let exactMatches = 0;
+  for (const execution of tradeHistoryExecutions) {
+    const key = fillComparisonKey(execution);
+    const candidates = cashByKey.get(key);
+    if (!candidates?.length) continue;
+    candidates.shift();
+    exactMatches += 1;
+  }
+
+  const cashOnlyExecutions = [...cashByKey.values()].flat();
+  return {
+    executions: assignSourceRowHashes([
+      ...cashOnlyExecutions,
+      ...tradeHistoryExecutions,
+    ]),
+    exactMatches,
+  };
 }
 
 function parseCashBalanceExecutions(lines: string[]): ParsedExecution[] {
@@ -304,26 +353,63 @@ function parseTradeHistoryExecutions(lines: string[], section: StatementSection)
 export function parseTosStatementWithMetadata(csv: string): ParsedTosStatement {
   const lines = csv.replace(/^﻿/, "").split(/\r?\n/);
   const tradeHistorySection = sliceSection(lines, "Account Trade History");
+  const cashExecutions = parseCashBalanceExecutions(lines);
+  const tradeHistoryExecutions = tradeHistorySection
+    ? parseTradeHistoryExecutions(lines, tradeHistorySection)
+    : [];
 
-  if (tradeHistorySection && !tradeHistorySection.filteredBy) {
-    const executions = parseTradeHistoryExecutions(lines, tradeHistorySection);
-    if (executions.length > 0) {
+  if (cashExecutions.length > 0 && tradeHistoryExecutions.length > 0) {
+    const reconciled = reconcileStatementExecutions(
+      cashExecutions,
+      tradeHistoryExecutions,
+    );
+    if (
+      !tradeHistorySection?.filteredBy
+      && reconciled.exactMatches === cashExecutions.length
+      && reconciled.exactMatches === tradeHistoryExecutions.length
+    ) {
       return {
-        executions,
+        executions: tradeHistoryExecutions,
         executionSource: "trade_history",
         tradeHistoryFilter: null,
-        securityIdentifiers: statementSecurityIdentifiers(executions),
+        cashBalanceExecutions: cashExecutions.length,
+        tradeHistoryExecutions: tradeHistoryExecutions.length,
+        exactSectionMatches: reconciled.exactMatches,
+        securityIdentifiers: statementSecurityIdentifiers(tradeHistoryExecutions),
       };
     }
+    return {
+      executions: reconciled.executions,
+      executionSource: "reconciled",
+      tradeHistoryFilter: tradeHistorySection?.filteredBy ?? null,
+      cashBalanceExecutions: cashExecutions.length,
+      tradeHistoryExecutions: tradeHistoryExecutions.length,
+      exactSectionMatches: reconciled.exactMatches,
+      securityIdentifiers: statementSecurityIdentifiers(reconciled.executions),
+    };
   }
 
-  const cashExecutions = parseCashBalanceExecutions(lines);
   if (cashExecutions.length > 0) {
     return {
       executions: cashExecutions,
       executionSource: "cash_balance",
       tradeHistoryFilter: tradeHistorySection?.filteredBy ?? null,
+      cashBalanceExecutions: cashExecutions.length,
+      tradeHistoryExecutions: tradeHistoryExecutions.length,
+      exactSectionMatches: 0,
       securityIdentifiers: statementSecurityIdentifiers(cashExecutions),
+    };
+  }
+
+  if (tradeHistoryExecutions.length > 0) {
+    return {
+      executions: tradeHistoryExecutions,
+      executionSource: "trade_history",
+      tradeHistoryFilter: tradeHistorySection?.filteredBy ?? null,
+      cashBalanceExecutions: 0,
+      tradeHistoryExecutions: tradeHistoryExecutions.length,
+      exactSectionMatches: 0,
+      securityIdentifiers: statementSecurityIdentifiers(tradeHistoryExecutions),
     };
   }
 

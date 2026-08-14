@@ -316,6 +316,141 @@ describe("append-only Schwab persistence", () => {
     ).toHaveLength(1);
   });
 
+  it("backfills a post-split CSV close into an older open trade even when later trades exist", async () => {
+    const account = await createAccount();
+    const openedAt = Date.parse("2026-06-05T15:00:00Z") / 1000;
+    const closedAt = Date.parse("2026-08-05T15:00:00Z") / 1000;
+    const laterAt = Date.parse("2026-08-13T15:00:00Z") / 1000;
+    const swing = await db
+      .insert(schema.trades)
+      .values({
+        accountId: account.id,
+        symbol: "NVDL",
+        side: "long",
+        quantity: 100,
+        avgEntryPrice: 60,
+        entryAt: openedAt,
+        fees: 0,
+        status: "open",
+        setup: "swing",
+      })
+      .returning()
+      .get();
+    await db.insert(schema.executions).values({
+      accountId: account.id,
+      tradeId: swing.id,
+      symbol: "NVDL",
+      side: "buy",
+      quantity: 100,
+      price: 60,
+      executedAt: openedAt,
+      posEffect: "TO OPEN",
+      fees: 0,
+      canonicalExecutionKey: "stored-nvdl-open",
+      sourceRowHash: "stored-nvdl-open",
+    });
+    const laterTrade = await db
+      .insert(schema.trades)
+      .values({
+        accountId: account.id,
+        symbol: "NVDL",
+        side: "long",
+        quantity: 10,
+        avgEntryPrice: 20,
+        entryAt: laterAt,
+        avgExitPrice: 21,
+        exitAt: laterAt + 60,
+        fees: 0,
+        status: "closed",
+      })
+      .returning()
+      .get();
+    await db.insert(schema.executions).values([
+      {
+        accountId: account.id,
+        tradeId: laterTrade.id,
+        symbol: "NVDL",
+        side: "buy" as const,
+        quantity: 10,
+        price: 20,
+        executedAt: laterAt,
+        posEffect: "TO OPEN",
+        fees: 0,
+        canonicalExecutionKey: "later-open",
+        sourceRowHash: "later-open",
+      },
+      {
+        accountId: account.id,
+        tradeId: laterTrade.id,
+        symbol: "NVDL",
+        side: "sell" as const,
+        quantity: 10,
+        price: 21,
+        executedAt: laterAt + 60,
+        posEffect: "TO CLOSE",
+        fees: 0,
+        canonicalExecutionKey: "later-close",
+        sourceRowHash: "later-close",
+      },
+    ]);
+
+    const result = await persist.persistExecutionLedger({
+      accountId: account.id,
+      from: "2026-06-05",
+      to: "2026-08-05",
+      source: "tos_csv",
+      fileName: "<account-statement>.csv",
+      executions: [
+        {
+          symbol: "NVDL",
+          side: "buy",
+          quantity: 100,
+          price: 60,
+          executedAt: openedAt,
+          posEffect: "TO OPEN",
+          fees: 0,
+          brokerOrderKey: null,
+          sourceRowHash: "incoming-nvdl-open",
+        },
+        {
+          symbol: "NVDL",
+          side: "sell",
+          quantity: 300,
+          price: 25,
+          executedAt: closedAt,
+          posEffect: "TO CLOSE",
+          fees: 0,
+          brokerOrderKey: null,
+          sourceRowHash: "incoming-nvdl-close",
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      inserted: 1,
+      duplicates: 1,
+      reviewExecutions: 0,
+      tradesCreated: 0,
+      tradesUpdated: 1,
+    });
+    expect(await db.select().from(schema.trades).where(eq(schema.trades.id, swing.id)).get())
+      .toMatchObject({
+        quantity: 300,
+        avgEntryPrice: 20,
+        avgExitPrice: 25,
+        exitAt: closedAt,
+        status: "closed",
+        setup: "swing",
+      });
+    expect(await db.select().from(schema.trades).where(eq(schema.trades.id, laterTrade.id)).get())
+      .toMatchObject({
+        quantity: 10,
+        avgEntryPrice: 20,
+        avgExitPrice: 21,
+        status: "closed",
+      });
+  });
+
   it("fills missing days between imported days without changing existing trades or notes", async () => {
     const account = await createAccount();
     const epoch = (value: string) => Date.parse(value) / 1000;

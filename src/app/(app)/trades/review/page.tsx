@@ -12,7 +12,8 @@ import { fmtDate, fmtMoney } from "@/lib/format";
 import { analyzeTradeExecutions } from "@/lib/executionAnalysis";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { netPnl } from "@/lib/pnl";
-import { etDayRange, etDateString, reviewSessionRange } from "@/lib/time";
+import { heldCalendarDays, tradeDayActivities } from "@/lib/tradeActivity";
+import { etDayRange, reviewSessionRange } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,8 @@ function formatTradeTime(value: number | null): string {
 
 function formatHoldDuration(entryAt: number | null, exitAt: number | null): string | null {
   if (entryAt == null || exitAt == null) return null;
+  const heldDays = heldCalendarDays(entryAt, exitAt);
+  if (heldDays != null && heldDays > 0) return `${heldDays}d`;
   const seconds = Math.max(0, exitAt - entryAt);
   if (seconds < 60) return `${seconds}s`;
   const minutes = Math.floor(seconds / 60);
@@ -87,13 +90,41 @@ export default async function TickerDayReviewPage({
   }
 
   const { start, end } = etDayRange(date);
-  const dayTrades = (
-    await db
-      .select()
-      .from(schema.trades)
-      .where(and(eq(schema.trades.accountId, activeAccount.id), gte(schema.trades.entryAt, start), lte(schema.trades.entryAt, end)))
-      .orderBy(asc(schema.trades.entryAt))
-  ).filter((trade) => trade.entryAt != null && etDateString(trade.entryAt) === date);
+  const activityTradeIds = [...new Set(
+    (await db
+      .select({ tradeId: schema.executions.tradeId })
+      .from(schema.executions)
+      .where(and(
+        eq(schema.executions.accountId, activeAccount.id),
+        gte(schema.executions.executedAt, start),
+        lte(schema.executions.executedAt, end),
+      )))
+      .flatMap((row) => row.tradeId == null ? [] : [row.tradeId]),
+  )];
+  const dayTrades = activityTradeIds.length > 0
+    ? await db
+        .select()
+        .from(schema.trades)
+        .where(and(
+          eq(schema.trades.accountId, activeAccount.id),
+          inArray(schema.trades.id, activityTradeIds),
+        ))
+        .orderBy(asc(schema.trades.entryAt))
+    : [];
+  const dayTradeExecutions = activityTradeIds.length > 0
+    ? await db
+        .select()
+        .from(schema.executions)
+        .where(inArray(schema.executions.tradeId, activityTradeIds))
+        .orderBy(asc(schema.executions.executedAt), asc(schema.executions.id))
+    : [];
+  const activityByTradeId = new Map(dayTrades.flatMap((trade) => {
+    const activity = tradeDayActivities(
+      trade,
+      dayTradeExecutions.filter((execution) => execution.tradeId === trade.id),
+    ).find((item) => item.date === date);
+    return activity ? [[trade.id, activity] as const] : [];
+  }));
 
   const trades = dayTrades.filter((trade) => trade.symbol === symbol);
   const tradeIds = trades.map((trade) => trade.id);
@@ -101,20 +132,19 @@ export default async function TickerDayReviewPage({
   // Every ticker traded this day, for switching without leaving the review.
   const pnlBySymbol = new Map<string, number>();
   for (const trade of dayTrades) {
-    pnlBySymbol.set(trade.symbol, (pnlBySymbol.get(trade.symbol) ?? 0) + (netPnl(trade) ?? 0));
+    pnlBySymbol.set(
+      trade.symbol,
+      (pnlBySymbol.get(trade.symbol) ?? 0)
+      + (activityByTradeId.get(trade.id)?.realizedPnl ?? 0),
+    );
   }
   const dayTickers = [...pnlBySymbol.entries()]
     .map(([tickerSymbol, pnl]) => ({ symbol: tickerSymbol, pnl }))
     .sort((a, b) => b.pnl - a.pnl);
 
-  const execs =
-    tradeIds.length > 0
-      ? await db
-          .select()
-          .from(schema.executions)
-          .where(inArray(schema.executions.tradeId, tradeIds))
-          .orderBy(asc(schema.executions.executedAt), asc(schema.executions.id))
-      : [];
+  const execs = dayTradeExecutions.filter((execution) =>
+    execution.tradeId != null && tradeIds.includes(execution.tradeId)
+  );
   const [tickerReviewNote, tagOptions, tradeTagRows, tickerTagRows, attachmentRows] = await Promise.all([
     db
       .select()
@@ -170,9 +200,12 @@ export default async function TickerDayReviewPage({
   const { candles } = candleResult;
   const chartCandles = candles.length > 0 ? candles : fallbackCandlesFromExecutions(execs, candleFrom, candleTo);
 
-  const totalPnl = trades.reduce((sum, trade) => sum + (netPnl(trade) ?? 0), 0);
+  const totalPnl = trades.reduce(
+    (sum, trade) => sum + (activityByTradeId.get(trade.id)?.realizedPnl ?? 0),
+    0,
+  );
   const totalShares = trades.reduce((sum, trade) => sum + Math.abs(trade.quantity), 0);
-  const tradePnls = trades.map((trade) => netPnl(trade) ?? 0);
+  const tradePnls = trades.map((trade) => activityByTradeId.get(trade.id)?.realizedPnl ?? 0);
   const wins = tradePnls.filter((pnl) => pnl > 0).length;
   const losses = tradePnls.filter((pnl) => pnl < 0).length;
   const counted = wins + losses;
@@ -203,7 +236,13 @@ export default async function TickerDayReviewPage({
     ),
   ]));
   const tradeNumberById = new Map(trades.map((trade, index) => [trade.id, index + 1]));
-  const tradePnlById = new Map(trades.map((trade) => [trade.id, netPnl(trade)]));
+  const tradePnlById = new Map(trades.map((trade) => {
+    const activity = activityByTradeId.get(trade.id);
+    return [
+      trade.id,
+      activity?.kind === "opened" ? null : activity?.realizedPnl ?? netPnl(trade),
+    ];
+  }));
   const tradePerShareById = new Map(trades.map((trade) => {
     const tradePnl = tradePnlById.get(trade.id);
     return [trade.id, tradePnl == null || trade.quantity === 0 ? null : tradePnl / Math.abs(trade.quantity)];
@@ -215,6 +254,10 @@ export default async function TickerDayReviewPage({
   const workspaceTrades = trades.map((trade, index) => {
     const tradePnl = tradePnlById.get(trade.id) ?? null;
     const perShare = tradePerShareById.get(trade.id) ?? null;
+    const activity = activityByTradeId.get(trade.id);
+    const heldDays = activity == null
+      ? null
+      : heldCalendarDays(trade.entryAt, activity.lastExecutionAt);
     return {
       id: trade.id,
       number: index + 1,
@@ -223,12 +266,18 @@ export default async function TickerDayReviewPage({
       exitAt: trade.exitAt,
       avgEntryPrice: trade.avgEntryPrice,
       avgExitPrice: trade.avgExitPrice,
-      entryTime: formatTradeTime(trade.entryAt),
+      entryTime: formatTradeTime(activity?.firstExecutionAt ?? trade.entryAt),
       shares: Math.abs(trade.quantity).toLocaleString("en-US"),
       executions: (executionCountByTradeId.get(trade.id) ?? 0).toLocaleString("en-US"),
       entryPrice: formatLedgerPrice(trade.avgEntryPrice),
       exitPrice: formatLedgerPrice(trade.avgExitPrice),
-      holdDuration: formatHoldDuration(trade.entryAt, trade.exitAt),
+      holdDuration: activity?.kind === "opened" && trade.exitAt != null
+        ? "Swing · opened"
+        : activity?.kind === "adjusted"
+          ? `Held ${heldDays ?? 0}d · adjusted`
+          : activity?.kind === "closed" && heldDays != null && heldDays > 0
+            ? `Held ${heldDays}d · closed`
+            : formatHoldDuration(trade.entryAt, trade.exitAt),
       pnl: tradePnl == null ? "Open" : fmtMoney(tradePnl),
       pnlValue: tradePnl,
       pnlTone: pnlTone(tradePnl),
@@ -301,7 +350,13 @@ export default async function TickerDayReviewPage({
                 enableTradeScopeToggle
                 excursionsEnabled={candleResult.status === "market"}
                 initialActiveTradeNumber={initialChartTradeNumber}
-                initialFocusTime={initialChartTrade?.entryAt ?? trades[0]?.entryAt ?? undefined}
+                initialFocusTime={
+                  (initialChartTrade
+                    ? activityByTradeId.get(initialChartTrade.id)?.firstExecutionAt
+                    : undefined)
+                  ?? activityByTradeId.get(trades[0]?.id ?? -1)?.firstExecutionAt
+                  ?? undefined
+                }
                 markers={trades.flatMap((trade) => (
                   (executionAnalysisByTradeId.get(trade.id)?.executions ?? []).map((execution) => ({
                     id: execution.id,

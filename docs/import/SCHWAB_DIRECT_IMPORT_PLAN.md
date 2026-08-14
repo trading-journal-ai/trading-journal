@@ -334,8 +334,9 @@ The one-day probe must confirm this before persistence is implemented.
 - Interpret the user's selected dates in `America/New_York`.
 - Convert ET day boundaries to the ISO timestamps expected by Schwab.
 - Reject missing dates, `from > to`, and future dates before calling Schwab.
-- Initially enforce the current expected 60-day history boundary, but make the
-  limit a named constant confirmed by the live API probe.
+- Enforce a 365-day history boundary, confirmed by live read-only probes for
+  orders and trade transactions at the one-year boundary. Keep the limit as a
+  named constant and use statement files for older history.
 - Chunk requests into small intervals so a high-volume account does not silently
   hit the order result cap.
 - Merge chunks by stable broker identity before normalization.
