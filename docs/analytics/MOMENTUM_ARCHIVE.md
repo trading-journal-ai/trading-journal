@@ -6,7 +6,8 @@
 > collision in the ingest inflates 7% of Core movers and 43% of everything above
 > +400%. Diagnosed, not fixed — see
 > [Known defect](#known-defect-preferred-share-ticker-collision) before trusting
-> the largest gainers.
+> the largest gainers. The self-contained implementation handoff is
+> [Momentum Archive data-integrity remediation](../product/handoffs/2026-08-momentum-archive-data-integrity/README.md).
 
 Momentum Archive is a private historical-research surface for studying common-stock momentum days and, later, comparing that opportunity set with Journal trades. Trading Journal owns the archive lifecycle, domain rules, queries, UI, and candidate candle cache.
 

@@ -32,6 +32,23 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-25** — Momentum Archive data-integrity remediation handoff
+  (branch `codex/momentum-archive`).
+  - Recorded the confirmed TPC/TpC case-sensitive identity failure, exact
+    August 17–18 price evidence, collision inventory, and the distinction
+    between structurally valid and semantically corrupt archive data.
+  - Defined the cross-repository boundary: Trading Journal owns product
+    acceptance and archive verification, while the current lossy raw-to-summary
+    transform remains in Trading Server.
+  - Specified the exact-symbol contract, regression fixtures, semantic quality
+    gates, staged rebuild, atomic cutover, and acceptance criteria.
+  - Kept TradingView float capture explicitly deferred and distinguished the
+    proposed multi-day `is_continuation` field from the existing intraday
+    `Cont.` path leg.
+  - **Stopped at:** docs-only handoff complete; no application code or private
+    archive data changed. See
+    `docs/product/handoffs/2026-08-momentum-archive-data-integrity/README.md`.
+
 - **2026-08-25** — Momentum Archive top-gainers rework and a data-integrity find
   (branch `codex/momentum-archive`).
   - Turned the session control from a display lens into a peak-session filter.
