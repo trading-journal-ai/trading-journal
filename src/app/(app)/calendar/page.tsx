@@ -15,6 +15,7 @@ import {
 import CalendarRangeFilter from "@/components/CalendarRangeFilter";
 import PendingSubmitButton from "@/components/PendingSubmitButton";
 import PeriodTabs from "@/components/ui/PeriodTabs";
+import PillStatsBar, { type PillStatMetric } from "@/components/ui/PillStatsBar";
 import { setNoTradeDayAction } from "@/app/journal/actions";
 
 export const dynamic = "force-dynamic";
@@ -338,11 +339,17 @@ function MonthView({
     }
   }
   const monthLabel = monthFmt.format(new Date(Date.UTC(year, month - 1, 1)));
-  const summaryMetrics = [
-    { label: "Sessions", value: monthSessions.toLocaleString("en-US") },
-    { label: "Trades", value: monthTrades.toLocaleString("en-US") },
-    { label: "Accuracy", value: formatCalendarAccuracy(monthWins, monthLosses) },
-    { label: "Profit factor", value: formatCalendarProfitFactor(monthGrossProfit, monthGrossLoss) },
+  const summaryMetrics: PillStatMetric[] = [
+    { label: "Sessions", value: monthSessions.toLocaleString("en-US"), width: 74 },
+    { label: "Trades", value: monthTrades.toLocaleString("en-US"), width: 61 },
+    { label: "Accuracy", value: formatCalendarAccuracy(monthWins, monthLosses), width: 76 },
+    { label: "Profit factor", value: formatCalendarProfitFactor(monthGrossProfit, monthGrossLoss), width: 93 },
+    {
+      label: "P&L",
+      value: fmtMoney(monthPnl),
+      width: 85,
+      tone: monthPnl > 0 ? "positive" : monthPnl < 0 ? "negative" : "muted",
+    },
   ];
 
   return (
@@ -386,32 +393,7 @@ function MonthView({
         />
       </section>
 
-      <section
-        aria-label={`${monthLabel} summary`}
-        className="flex flex-wrap items-end justify-between gap-x-12 gap-y-5"
-      >
-        <dl className="flex flex-wrap gap-x-10 gap-y-4">
-          {summaryMetrics.map((metric) => (
-            <div key={metric.label} className="grid gap-0.5">
-              <dt className="text-[13px] font-medium text-[var(--muted)]">
-                {metric.label}
-              </dt>
-              <dd className="text-xl font-semibold leading-[1.2] tabular-nums text-[var(--foreground)]">
-                {metric.value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-        <div className="grid gap-0.5 sm:justify-items-end">
-          <span className="text-[13px] font-medium text-[var(--muted)]">P&amp;L</span>
-          <span
-            className="text-xl font-semibold leading-[1.2] tabular-nums"
-            style={{ color: monthPnl >= 0 ? "var(--green)" : "var(--red)" }}
-          >
-            {fmtMoney(monthPnl)}
-          </span>
-        </div>
-      </section>
+      <PillStatsBar ariaLabel={`${monthLabel} summary`} metrics={summaryMetrics} />
 
       <section aria-label={`${monthLabel} trading calendar`} className="space-y-2.5">
         <div className="overflow-x-auto pb-2">
@@ -424,7 +406,7 @@ function MonthView({
               ))}
             </div>
 
-            <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_205px] gap-px overflow-hidden rounded-lg bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)]">
+            <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_205px] gap-px overflow-hidden rounded-lg border border-[var(--review-card-border)] bg-[var(--review-card-divider)] shadow-[var(--review-card-shadow)]">
               {weeks.map((week, weekIndex) => (
                 <Fragment key={weekIndex}>
                   {week.days.map((day) => {
@@ -441,12 +423,15 @@ function MonthView({
                     const content = (
                       <div
                         data-calendar-date={day.date}
-                        className={`grid min-h-24 content-start gap-1 px-3.5 py-3 transition-colors ${
+                        data-calendar-state={isToday ? "selected" : state}
+                        className={`calendar-day-cell grid min-h-24 content-start gap-1 px-3.5 py-3 ${
                           day.inMonth
                             ? state === "unconfirmed_empty" && !isToday
-                              ? "bg-[color-mix(in_srgb,var(--background)_55%,var(--surface))]"
-                              : "bg-[var(--background)]"
-                            : "bg-[color-mix(in_srgb,var(--background)_55%,var(--surface))] opacity-35"
+                              ? "calendar-day-cell--muted"
+                              : isToday
+                                ? "calendar-day-cell--selected"
+                                : ""
+                            : "calendar-day-cell--muted opacity-35"
                         }`}
                       >
                         <span className="flex min-h-7 items-baseline gap-1.5 pb-1 text-[12.5px] font-medium leading-[1.3] tabular-nums">
@@ -504,7 +489,8 @@ function MonthView({
                         key={day.date}
                         href={`/journal?date=${day.date}&returnTo=${encodeURIComponent(currentCalendarHref)}`}
                         aria-label={`${day.date}: ${fmtMoney(day.agg!.pnl)}, ${day.agg!.trades} ${day.agg!.trades === 1 ? "trade" : "trades"}, ${formatCalendarAccuracy(day.agg!.wins, day.agg!.losses)} accuracy`}
-                        className="block bg-[var(--background)] transition-colors hover:bg-[var(--surface)] focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]"
+                        aria-current={isToday ? "date" : undefined}
+                        className="calendar-day-link group block focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]"
                       >
                         {content}
                       </Link>
@@ -513,20 +499,21 @@ function MonthView({
                     );
                   })}
 
-                  <div className="grid min-h-24 place-items-center bg-[var(--background)] px-3.5 py-3 text-center">
+                  <div className="calendar-day-cell grid min-h-24 content-start gap-1 px-3.5 py-3">
                     {week.trades > 0 ? (
-                      <span className="flex items-baseline justify-center gap-2">
+                      <>
+                        <span aria-hidden="true" className="min-h-7 pb-1" />
                         <span
-                          className="text-[17px] font-medium leading-[1.25] tabular-nums"
+                          className="block text-[17px] font-medium leading-[1.25] tabular-nums"
                           style={{ color: week.pnl >= 0 ? "var(--green)" : "var(--red)" }}
                           aria-label={`Week ${weekIndex + 1} total P&L ${fmtMoney(week.pnl)}`}
                         >
                           {fmtMoney(week.pnl)}
                         </span>
-                        <span className="whitespace-nowrap text-[11.5px] leading-5 text-[var(--faint)] tabular-nums">
+                        <span className="block whitespace-nowrap text-[11.5px] leading-5 text-[var(--faint)] tabular-nums">
                           {week.trades.toLocaleString("en-US")} trades · {formatCalendarAccuracy(week.wins, week.losses)}
                         </span>
-                      </span>
+                      </>
                     ) : null}
                   </div>
                 </Fragment>

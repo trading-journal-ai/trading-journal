@@ -26,6 +26,12 @@
   --execution-sell: #ff6257;
   --green-tint: rgba(29, 178, 107, 0.14);
   --red-tint: rgba(240, 81, 67, 0.14);
+  --review-card-bg: var(--background);
+  --review-card-border: color-mix(in srgb, var(--foreground) 4%, transparent);
+  --review-card-divider: color-mix(in srgb, var(--foreground) 6%, transparent);
+  --review-card-hover: color-mix(in srgb, var(--background) 55%, var(--surface));
+  --review-card-selected: color-mix(in srgb, var(--accent) 6%, var(--background));
+  --review-card-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 10px -2px rgba(16, 24, 40, 0.06);
   --font-metric: var(--font-mono); /* cool themes (dark, light): mono metric strips */
   /* Trade-review tag chips — dark tints (also inherited by evening). */
   --tag-reinforcing-bg: #16301f;
@@ -171,7 +177,19 @@ body {
 
 .journal-week-day,
 .journal-week-day--selected {
-  background: var(--background);
+  background: var(--review-card-bg);
+  transition: background-color 170ms ease;
+}
+
+.journal-week-day:hover,
+.journal-week-day:focus-visible {
+  background: var(--review-card-hover);
+}
+
+.journal-week-day--selected,
+.journal-week-day--selected:hover,
+.journal-week-day--selected:focus-visible {
+  background: var(--review-card-selected);
 }
 
 .journal-week-day::before {
@@ -198,27 +216,44 @@ body {
   transition: none;
 }
 
-.journal-week-day:hover::before,
-.journal-week-day:focus-visible::before,
 .journal-week-day--selected::before {
   opacity: 1;
-}
-
-.journal-week-day:hover .journal-week-day__metrics,
-.journal-week-day:focus-visible .journal-week-day__metrics {
-  color: var(--accent);
 }
 
 .journal-week-day--selected .journal-week-day__metrics,
 .journal-week-day--selected:hover .journal-week-day__metrics,
 .journal-week-day--selected:focus-visible .journal-week-day__metrics {
-  background-color: var(--accent);
-  color: var(--action-foreground);
+  background-color: color-mix(in srgb, var(--accent) 14%, var(--review-card-bg));
+  color: var(--accent-strong);
+}
+
+.calendar-day-cell {
+  background: var(--review-card-bg);
+  transition: background-color 170ms ease;
+}
+
+.calendar-day-cell--muted {
+  background: var(--review-card-hover);
+}
+
+.calendar-day-cell--selected {
+  background: var(--review-card-selected);
+}
+
+.calendar-day-link:hover .calendar-day-cell,
+.calendar-day-link:focus-visible .calendar-day-cell {
+  background: var(--review-card-hover);
+}
+
+.calendar-day-link:hover .calendar-day-cell--selected,
+.calendar-day-link:focus-visible .calendar-day-cell--selected {
+  background: var(--review-card-selected);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .journal-week-day::before,
-  .journal-week-day__metrics {
+  .journal-week-day__metrics,
+  .calendar-day-cell {
     transition: none;
   }
 }

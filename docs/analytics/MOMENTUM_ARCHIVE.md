@@ -25,6 +25,11 @@ Market Archive data is private application data, not repository content. The def
 
 `market-history.sqlite` remains separate from the writable Journal database. The application opens it with SQLite read-only mode, `query_only`, DELETE journaling, and filesystem read-only permissions. This prevents archive research from mutating operational Journal data or the historical snapshot.
 
+Runtime health checks also require the `market-archive-exact-symbol-v2`
+provenance columns, reconciled exact-symbol counts, valid source and summary
+hashes, and zero recorded duplicate minute rows. A structurally valid legacy
+archive therefore fails closed instead of silently restoring folded identities.
+
 Two optional local overrides exist for development and recovery:
 
 - `MARKET_ARCHIVE_HOME` relocates the complete archive directory.

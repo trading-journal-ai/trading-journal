@@ -268,6 +268,10 @@ Build once, reuse everywhere.
   The trader's own annotations use amber `--accent` instead.
 - **StatBlock** (`src/components/ui/StatBlock.tsx`) — stacked label above mono
   value for dashboard summary metrics.
+- **PillStatsBar** (`src/components/ui/PillStatsBar.tsx`) — compact range
+  summary with one shared label capsule and centered, tabular values. Calendar
+  Month and Journal Month reuse it for sessions, trades, accuracy, profit
+  factor, and optional outcome-colored P&L.
 - **ReportsStatsMatrix** — diagnostic stats table for Reports (default when
   comparing many metrics). Compact summary strip first, then grouped rows
   (Performance, Accuracy, Sizing, Timing); label-left/value-right per cell;
@@ -299,8 +303,8 @@ Build once, reuse everywhere.
   P&L usually spans full width before smaller distribution charts.
 - **Calendar** — month view earns its grid. It opens with the month title and
   textual Today / Previous / Next controls, underline Month / Year tabs, then a
-  compact performance strip for sessions, trades, accuracy, profit factor, and
-  P&L. The month grid uses five weekday columns plus a fixed 205px weekly-summary
+  shared `PillStatsBar` for sessions, trades, accuracy, profit factor, and P&L.
+  The month grid uses five weekday columns plus a fixed 205px weekly-summary
   rail; each cell is at least 96px tall. Cells use `--hairline` rules, an 8px
   outer radius, and no dots. Traded, today, and weekly-summary cells remain on
   the open page surface; unused days get only a quiet `--background` / `--surface`
@@ -337,7 +341,14 @@ Build once, reuse everywhere.
 - **Journal** — prose-first. Headers use Display/Page title; recap text uses Body
   large; metrics sit under the header as quiet mono metadata; ticker rail compact
   and sorted best-to-worst; pills secondary; reading mode hides edit controls
-  until interaction. When the selected day changes, only the daily P&L chart
+  until interaction. The Month P&L calendar keeps cell surfaces neutral and
+  communicates outcomes through signed red/green P&L figures only. When the
+  Day Trades view is active, reuse `PillStatsBar` for trades, accuracy, profit
+  factor, and P&L; pair it with a compact win/loss distribution. The trade ledger
+  shows shares, execution count, entry, exit, per-share result, hold time, context,
+  and P&L. Saved tags/setups appear as compact context pills; missing annotations
+  remain explicit as “Needs context.” Rows retain the inline review disclosure.
+  When the selected day changes, only the daily P&L chart
   surface fades in briefly; its card, heading, and surrounding review structure
   remain fixed so the transition reads as updated data rather than a page reload.
   During slower date navigation, fade the outgoing chart completely, then reveal

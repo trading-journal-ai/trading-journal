@@ -27,13 +27,29 @@ function pathsFor(databasePath: string): MarketArchivePaths {
   };
 }
 
-function fixtureArchive(): MarketArchivePaths {
+function fixtureArchive({ exactIdentity = true }: { exactIdentity?: boolean } = {}): MarketArchivePaths {
   const directory = mkdtempSync(join(tmpdir(), "market-archive-client-"));
   temporaryDirectories.push(directory);
   const databasePath = join(directory, "market-history.sqlite");
   const database = new Database(databasePath);
   database.exec(`
-    create table archive_dates (session_date text primary key, source_file text not null, symbol_count integer not null);
+    create table archive_dates (
+      session_date text primary key,
+      source_file text not null,
+      symbol_count integer not null
+      ${exactIdentity ? `,
+      source_bytes integer not null,
+      source_sha256 text not null,
+      summary_bytes integer not null,
+      summary_sha256 text not null,
+      transform_version text not null,
+      raw_exact_symbol_count integer not null,
+      derived_exact_symbol_count integer not null,
+      casefold_collision_count integer not null,
+      casefold_collision_groups_json text not null,
+      duplicate_minute_rows integer not null,
+      reference_covered_symbols integer not null` : ""}
+    );
     create table corporate_action_splits (event_id text primary key);
     create table instrument_snapshots (snapshot_date text not null, symbol text not null);
     create table symbol_days (
@@ -48,7 +64,10 @@ function fixtureArchive(): MarketArchivePaths {
     );
     create table session_stats (session_date text not null, symbol text not null, session text not null);
 
-    insert into archive_dates values ('2026-08-21', 'one.csv.gz', 1), ('2026-08-24', 'two.csv.gz', 2);
+    ${exactIdentity ? `insert into archive_dates values
+      ('2026-08-21', 'one.csv.gz', 1, 100, lower(hex(zeroblob(32))), 90, lower(hex(zeroblob(32))), 'market-archive-exact-symbol-v2', 1, 1, 0, '[]', 0, 1),
+      ('2026-08-24', 'two.csv.gz', 2, 200, lower(hex(zeroblob(32))), 180, lower(hex(zeroblob(32))), 'market-archive-exact-symbol-v2', 2, 2, 0, '[]', 0, 2);`
+      : "insert into archive_dates values ('2026-08-21', 'one.csv.gz', 1), ('2026-08-24', 'two.csv.gz', 2);"}
     insert into symbol_days values
       ('2026-08-24', 'CORE', 1, 0, 'CS', 2.00, '2026-08-21'),
       ('2026-08-24', 'ETF', 1, 0, 'ETF', 2.00, '2026-08-21'),
@@ -83,6 +102,13 @@ describe("Market Archive client", () => {
         symbolDays: 3,
       },
       coverage: { from: "2026-08-21", to: "2026-08-24" },
+    });
+  });
+
+  it("rejects a structurally valid legacy archive without exact-identity provenance", () => {
+    expect(createMarketArchiveClient(fixtureArchive({ exactIdentity: false })).health()).toMatchObject({
+      available: false,
+      reason: "invalid_archive",
     });
   });
 

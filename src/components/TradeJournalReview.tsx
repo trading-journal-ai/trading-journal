@@ -646,7 +646,7 @@ function buildDayData(
   executions: ExecutionRow[],
   activityByTradeId: Map<number, TradeDayActivity>,
   notedTickerKeys: Set<string>,
-  taggedTradeIds: Set<number>,
+  tradeTagsByTradeId: Map<number, string[]>,
   entryContexts?: Map<number, TradeOpportunityContext>,
   marketContextRow?: MarketContextRow,
 ): ReviewData {
@@ -742,6 +742,8 @@ function buildDayData(
     tickerRows: [...tickers.values()].sort((a, b) => b.pnl - a.pnl),
     tradeRows: trades.map((trade) => {
       const activity = activityByTradeId.get(trade.id);
+      const pnl = activity?.realizedPnl ?? 0;
+      const quantity = Math.abs(trade.quantity);
       const heldDays = activity == null
         ? null
         : heldCalendarDays(trade.entryAt, activity.lastExecutionAt);
@@ -757,14 +759,18 @@ function buildDayData(
       time: activity == null ? "—" : formatTime(activity.firstExecutionAt),
       symbol: trade.symbol,
       side: trade.side,
-      quantity: trade.quantity,
+      quantity,
+      executionCount: executionCountByTrade.get(trade.id) ?? 0,
+      entryPrice: trade.avgEntryPrice,
+      exitPrice: trade.avgExitPrice,
+      perShare: quantity === 0 ? null : pnl / quantity,
       hold,
       setup: trade.setup,
-      tagged: taggedTradeIds.has(trade.id),
-      pnl: activity?.realizedPnl ?? 0,
+      tags: tradeTagsByTradeId.get(trade.id) ?? [],
+      pnl,
       };
     }),
-    taggedTrades: trades.filter((trade) => taggedTradeIds.has(trade.id)).length,
+    taggedTrades: trades.filter((trade) => (tradeTagsByTradeId.get(trade.id)?.length ?? 0) > 0).length,
     pnlPoints,
     coachRead: buildSessionFactPack(coachTrades),
     chartRead,
@@ -878,13 +884,18 @@ async function loadReviewRange({
               )
           : Promise.resolve([]),
         db
-          .select({ tradeId: schema.tradeTags.tradeId })
+          .select({ tradeId: schema.tradeTags.tradeId, name: schema.tags.name })
           .from(schema.tradeTags)
-          .where(inArray(schema.tradeTags.tradeId, tradeIds)),
+          .innerJoin(schema.tags, eq(schema.tags.id, schema.tradeTags.tagId))
+          .where(inArray(schema.tradeTags.tradeId, tradeIds))
+          .orderBy(asc(schema.tradeTags.tradeId), asc(schema.tags.name)),
       ])
     : [[], [], []];
   const notedTickerKeys = new Set(tickerNotes.flatMap((row) => (row.scopeKey ? [row.scopeKey] : [])));
-  const taggedTradeIds = new Set(tradeTagRows.map((row) => row.tradeId));
+  const tradeTagsByTradeId = new Map<number, string[]>();
+  tradeTagRows.forEach((row) => {
+    tradeTagsByTradeId.set(row.tradeId, [...(tradeTagsByTradeId.get(row.tradeId) ?? []), row.name]);
+  });
   const tradesByDate = new Map<string, TradeRow[]>();
   const executionsByDate = new Map<string, ExecutionRow[]>();
   const marketContextByDate = new Map(marketContextRows.map((row) => [row.sessionDateEt, row]));
@@ -934,7 +945,7 @@ async function loadReviewRange({
         executionsByDate.get(entryDate) ?? [],
         dayActivityByTradeId.get(entryDate) ?? new Map(),
         notedTickerKeys,
-        taggedTradeIds,
+        tradeTagsByTradeId,
         entryContexts,
         marketContextByDate.get(entryDate),
       ),
@@ -1344,14 +1355,22 @@ function RunningPnlChart({
   pnlPoints,
   showTotal = true,
   heightClassName = "h-[380px]",
+  framed = true,
+  className = "",
 }: {
   day: ReviewDay;
   pnlPoints: PnlPoint[];
   showTotal?: boolean;
   heightClassName?: string;
+  framed?: boolean;
+  className?: string;
 }) {
   return (
-    <section className={`flex ${heightClassName} flex-col rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-4`}>
+    <section
+      className={`flex ${heightClassName} flex-col bg-[var(--review-card-bg)] px-4 py-4 ${
+        framed ? "rounded-lg border border-[var(--border)]" : ""
+      } ${className}`}
+    >
       <div className="mb-2 flex items-center justify-between gap-4">
         <h2 className="text-[15px] font-semibold text-[var(--foreground)]">Daily P&L</h2>
         {showTotal ? (
@@ -1556,15 +1575,17 @@ function JournalReviewModuleForDay({
           confidence: coachRead.confidence.label,
         }}
         pnlContent={day.trades > 0 ? (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+          <div className="grid overflow-hidden rounded-lg border border-[var(--review-card-border)] bg-[var(--review-card-bg)] shadow-[var(--review-card-shadow)] lg:grid-cols-[minmax(0,1fr)_280px]">
             <RunningPnlChart
               day={day}
               pnlPoints={pnlPoints}
               showTotal={false}
               heightClassName="h-[420px]"
+              framed={false}
+              className="border-b border-[var(--hairline)] lg:border-b-0 lg:border-r"
             />
             <TickerReviewRail
-              className="journal-day-rail-enter"
+              className="journal-day-rail-enter h-[420px] bg-[var(--review-card-bg)] px-4 py-3"
               rows={tickerRows.map((row) => ({
                 symbol: row.symbol,
                 pnl: row.pnl,
@@ -1574,7 +1595,7 @@ function JournalReviewModuleForDay({
               accuracy={day.accuracy}
               profitFactor={day.profitFactor}
               pnl={day.pnl}
-              heightClassName="h-[420px]"
+              heightClassName="h-full"
             />
           </div>
         ) : (

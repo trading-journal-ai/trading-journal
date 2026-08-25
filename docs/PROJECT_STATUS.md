@@ -162,6 +162,54 @@ stopped. This is the "when did we last work on it" trail.
   - Five focused navigation tests and `npm run verify:full` passed under Node
     22.13.0; the existing broad NFT trace warning remains.
   - **Stopped at:** fix complete and ready for review.
+- **2026-08-14** — Calendar and journal card-state styling
+  (branch `codex/review-card-states`).
+  - Matched the design-review handoff's soft 1px edge, two-layer shadow, 8px
+    radius, neutral hover lift, and 6% accent-selected surface across the month
+    calendar and Week at a glance.
+  - Kept the accepted month stats strip, calendar spacing, and all existing
+    content unchanged.
+  - Combined the existing Daily P&L chart and ticker rail into one shared card
+    with a continuous hairline divider; no reference-only sidebar content was
+    copied.
+  - Follow-up: moved the chart canvas from the quiet `--surface` fill to the
+    shared card background, making it white in the light theme without
+    hard-coding a theme-specific color.
+  - Extracted the centered capsule summary into a reusable `PillStatsBar` and
+    replaced Journal Month's four boxed summary metrics with it. Month calendar
+    cells now stay neutral while signed P&L figures carry the outcome color.
+  - Rebuilt Day → Trades from the richer design handoff: the shared stats bar,
+    win/loss distribution, expanded execution/price ledger columns, real tag or
+    setup context pills, functional show-all behavior, and the existing inline
+    trade-review disclosure now share one soft card surface.
+  - Browser-verified the day card, week selected/hover states, month
+    selected/hover states, and the 390px day layout with a clean console.
+    Side-by-side design QA passed after correcting two P2 details.
+  - Rechecked the shared stats bar on Calendar Month at 1440px and Journal
+    Month at 1440px/390px; the capsule alignment, local overflow, and neutral
+    month cells render as intended.
+  - Impeccable's detector reported no new actionable findings; its output was
+    limited to the existing typography/radius advisories in the touched files,
+    including the preserved 22px value size moved into `PillStatsBar`.
+  - `npm run verify:types` and a production Webpack build passed under Node
+    22.13.0. The default Turbopack build cannot resolve this worktree's shared
+    `node_modules` symlink, so the equivalent build was run with `--webpack`.
+  - **Stopped at:** implementation, design QA, and project verification
+    complete on the task branch.
+
+- **2026-08-14** — Calendar summary and weekly-total alignment
+  (branch `codex/calendar-stats-layout`).
+  - Reworked the month summary into one shared label band with five centered
+    metric columns, including P&L, while preserving the existing semantic
+    labels and theme tokens.
+  - Aligned weekly P&L and its trade/accuracy metadata with the corresponding
+    daily value lanes by reusing the calendar cell's empty date slot.
+  - Browser-verified desktop and 390px layouts with the committed synthetic
+    demo database. Label/value center axes and daily/weekly P&L coordinates
+    match exactly; Previous/Next navigation worked and the clean pass had no
+    console warnings or errors.
+  - Impeccable's layout detector and `npm run verify:quick` passed.
+  - **Stopped at:** implementation complete and committed on the task branch.
 
 - **2026-08-13** — Trade-chart execution-time integrity
   (branch `codex/chart-time-integrity`).

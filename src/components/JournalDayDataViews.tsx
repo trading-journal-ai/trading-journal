@@ -8,6 +8,7 @@ import JournalReviewTabs, {
   type JournalDataView,
 } from "@/components/JournalReviewTabs";
 import { useOptionalJournalDateNavigation } from "@/components/JournalDateNavigation";
+import PillStatsBar, { type PillStatMetric } from "@/components/ui/PillStatsBar";
 import { tradingCalendarWeeks, tradingWeekDates } from "@/lib/journalPnlViews";
 import InlineLedgerDisclosure, { useInlineLedgerDisclosure } from "@/components/ui/InlineLedgerDisclosure";
 
@@ -28,9 +29,13 @@ export type JournalDayTradeRow = {
   symbol: string;
   side: "long" | "short";
   quantity: number;
+  executionCount: number;
+  entryPrice: number | null;
+  exitPrice: number | null;
+  perShare: number | null;
   hold: string;
   setup: string | null;
-  tagged: boolean;
+  tags: string[];
   pnl: number;
 };
 
@@ -136,6 +141,15 @@ function money(value: number) {
   })}`;
 }
 
+function perShareMoney(value: number) {
+  const sign = value > 0 ? "+" : value < 0 ? "−" : "";
+  const precision = Math.abs(value) > 0 && Math.abs(value) < 0.01 ? 4 : 2;
+  return `${sign}$${Math.abs(value).toLocaleString("en-US", {
+    minimumFractionDigits: precision,
+    maximumFractionDigits: precision,
+  })}`;
+}
+
 function percent(value: number | null) {
   return value == null ? "—" : `${value}%`;
 }
@@ -148,6 +162,16 @@ function pnlClass(value: number) {
   if (value > 0) return "text-[var(--green)]";
   if (value < 0) return "text-[var(--red)]";
   return "text-[var(--muted)]";
+}
+
+function price(value: number | null) {
+  return value == null ? "—" : `$${value.toFixed(2)}`;
+}
+
+function outcomeTone(value: number): PillStatMetric["tone"] {
+  if (value > 0) return "positive";
+  if (value < 0) return "negative";
+  return "muted";
 }
 
 function factClass(tone: JournalDayProcessFact["tone"] | JournalHorizonRow["tone"]) {
@@ -268,21 +292,20 @@ function DayViews({
   if (view === "pnl") return <div role="tabpanel">{pnlContent}</div>;
 
   if (view === "trades") {
+    const summaryMetrics: PillStatMetric[] = [
+      { label: "Trades", value: String(summary.trades), width: 61 },
+      { label: "Accuracy", value: percent(summary.accuracy), width: 76 },
+      { label: "Profit factor", value: ratio(summary.profitFactor), width: 93 },
+      { label: "P&L", value: money(summary.pnl), width: 110, tone: outcomeTone(summary.pnl) },
+    ];
+
     return (
       <div role="tabpanel">
-        <div aria-label="Trade summary" className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1 font-mono text-[13px] tabular-nums text-[var(--muted)]">
-          <span><span className="font-semibold text-[var(--foreground)]">{summary.trades}</span> trades</span>
-          <span aria-hidden="true" className="text-[var(--faint)]">·</span>
-          <span><span className="font-semibold text-[var(--foreground)]">{percent(summary.accuracy)}</span> accuracy</span>
-          <span aria-hidden="true" className="text-[var(--faint)]">·</span>
-          <span>PF <span className="font-semibold text-[var(--foreground)]">{ratio(summary.profitFactor)}</span></span>
-          <span aria-hidden="true" className="text-[var(--faint)]">·</span>
-          <span className={`font-semibold ${pnlClass(summary.pnl)}`}>{money(summary.pnl)} total</span>
+        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
+          <PillStatsBar ariaLabel="Trade summary" metrics={summaryMetrics} />
+          <WinLossBar tradeRows={tradeRows} />
         </div>
         <TradeTable date={date} returnTo={returnTo} tradeRows={tradeRows} />
-        <p className="mt-3 text-[12px] text-[var(--muted)]">
-          {summary.taggedTrades} of {summary.trades} trades have structured tag context. Missing setup or tag data stays visible instead of being inferred.
-        </p>
       </div>
     );
   }
@@ -304,6 +327,37 @@ function DayViews({
   }
 
   return coachSlot ? <div role="tabpanel">{coachSlot}</div> : <CoachRead coach={coach} label="Deterministic diagnosis" />;
+}
+
+function WinLossBar({ tradeRows }: { tradeRows: JournalDayTradeRow[] }) {
+  const wins = tradeRows.filter((trade) => trade.pnl > 0).length;
+  const losses = tradeRows.filter((trade) => trade.pnl < 0).length;
+  const flats = tradeRows.length - wins - losses;
+  const decisiveTrades = wins + losses;
+  const label = [
+    `${wins} ${wins === 1 ? "win" : "wins"}`,
+    `${losses} ${losses === 1 ? "loss" : "losses"}`,
+    ...(flats > 0 ? [`${flats} flat`] : []),
+  ].join(" · ");
+
+  return (
+    <div className="grid min-w-[180px] justify-items-end gap-1.5 pb-1">
+      <span className="text-[12.5px] leading-5 text-[var(--muted)] tabular-nums">{label}</span>
+      <div
+        role="img"
+        aria-label={`${label}. Win-loss distribution.`}
+        className="flex h-1.5 w-[180px] overflow-hidden rounded-full bg-[var(--surface-2)]"
+      >
+        {decisiveTrades === 0 ? null : (
+          <>
+            {wins > 0 ? <span aria-hidden="true" className="bg-[var(--green)]" style={{ flexGrow: wins }} /> : null}
+            {wins > 0 && losses > 0 ? <span aria-hidden="true" className="w-0.5 shrink-0 bg-[var(--review-card-bg)]" /> : null}
+            {losses > 0 ? <span aria-hidden="true" className="bg-[var(--red)]" style={{ flexGrow: losses }} /> : null}
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function WeekViews({
@@ -696,14 +750,10 @@ function MonthPnlCalendar({ monthKey, rows }: { monthKey: string; rows: JournalS
         <div className="grid grid-cols-5 gap-px bg-[var(--hairline)]">
           {weeks.flatMap((week) => week).map((day) => {
             const session = day.inMonth ? sessionsByDate.get(day.date) : undefined;
-            const positive = (session?.pnl ?? 0) >= 0;
             return (
               <div
                 key={day.date}
                 className={`flex min-h-24 flex-col bg-[var(--surface)] px-3 py-3 ${day.inMonth ? "" : "opacity-30"}`}
-                style={session
-                  ? { backgroundColor: positive ? "color-mix(in oklch, var(--green) 8%, var(--surface))" : "color-mix(in oklch, var(--red) 8%, var(--surface))" }
-                  : undefined}
                 aria-label={session
                   ? `${longDateLabel(day.date)}: ${money(session.pnl)}, ${session.trades} trades`
                   : `${longDateLabel(day.date)}: no imported session`}
@@ -755,18 +805,20 @@ function longDateLabel(date: string): string {
 }
 
 function RangeHeader({ summary, question }: { summary: JournalRangeSummary; question: string }) {
+  const metrics: PillStatMetric[] = [
+    { label: "Sessions", value: String(summary.sessions), width: 74 },
+    { label: "Trades", value: String(summary.trades), width: 61 },
+    { label: "Accuracy", value: percent(summary.accuracy), width: 76 },
+    { label: "Profit factor", value: ratio(summary.profitFactor), width: 93 },
+  ];
+
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div><SectionLabel>{summary.label}</SectionLabel><p className="mt-2 text-[14px] leading-6 text-[var(--body)]">{question}</p></div>
         <div className={`font-mono text-[18px] font-semibold tabular-nums ${pnlClass(summary.pnl)}`}>{money(summary.pnl)}</div>
       </div>
-      <MetricGrid className="mt-5">
-        <Metric label="Sessions" value={String(summary.sessions)} />
-        <Metric label="Trades" value={String(summary.trades)} />
-        <Metric label="Accuracy" value={percent(summary.accuracy)} />
-        <Metric label="Profit factor" value={ratio(summary.profitFactor)} />
-      </MetricGrid>
+      <PillStatsBar ariaLabel={`${summary.label} summary metrics`} className="mt-5" metrics={metrics} />
     </div>
   );
 }
@@ -808,44 +860,77 @@ function TradeTable({
   tradeRows: JournalDayTradeRow[];
 }) {
   const disclosure = useInlineLedgerDisclosure<number>();
+  const [showAll, setShowAll] = useState(false);
+  const hasMore = tradeRows.length > 5;
+  const visibleTradeRows = showAll ? tradeRows : tradeRows.slice(0, 5);
 
   return (
-    <div className="mt-3 overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface)]">
-      <table className="w-full min-w-[610px] border-collapse text-left text-[12px]">
-        <thead className="text-[var(--muted)]"><tr className="border-b border-[var(--hairline)]"><th className="px-4 py-3 font-medium">Time</th><th className="px-2 py-3 font-medium">Symbol</th><th className="px-2 py-3 font-medium">Side / shares</th><th className="px-2 py-3 font-medium">Held</th><th className="px-2 py-3 font-medium">Setup</th><th className="px-2 py-3 font-medium">Context</th><th className="px-4 py-3 text-right font-medium">P&L</th></tr></thead>
-        <tbody>
-          {tradeRows.map((trade) => {
+    <div className="mt-5 overflow-x-auto rounded-lg border border-[var(--review-card-border)] bg-[var(--review-card-bg)] shadow-[var(--review-card-shadow)]">
+      <div className="min-w-[1060px]">
+        <table className="w-full table-fixed border-collapse text-left text-[13px] leading-5">
+          <colgroup>
+            <col className="w-[9%]" />
+            <col className="w-[9%]" />
+            <col className="w-[8%]" />
+            <col className="w-[7%]" />
+            <col className="w-[10%]" />
+            <col className="w-[10%]" />
+            <col className="w-[11%]" />
+            <col className="w-[10%]" />
+            <col className="w-[16%]" />
+            <col className="w-[10%]" />
+          </colgroup>
+          <thead className="text-[var(--muted)]">
+            <tr className="border-b border-[var(--hairline)] text-[12.5px]">
+              <th className="px-4 py-3.5 font-semibold">Time</th>
+              <th className="px-3 py-3.5 font-semibold">Symbol</th>
+              <th className="px-3 py-3.5 font-semibold">Shares</th>
+              <th className="px-3 py-3.5 font-semibold">Execs</th>
+              <th className="px-3 py-3.5 font-semibold">Entry</th>
+              <th className="px-3 py-3.5 font-semibold">Exit</th>
+              <th className="px-3 py-3.5 font-semibold">Per share</th>
+              <th className="px-3 py-3.5 font-semibold">Held</th>
+              <th className="px-3 py-3.5 font-semibold">Context</th>
+              <th className="px-4 py-3.5 text-right font-semibold">P&amp;L</th>
+            </tr>
+          </thead>
+          <tbody>
+          {visibleTradeRows.map((trade) => {
             const expanded = disclosure.expandedId === trade.id;
             const closing = disclosure.closingId === trade.id;
             const panelId = `inline-trade-review-${trade.id}`;
             return (
               <Fragment key={trade.id}>
                 <tr
-                  className={`cursor-pointer border-b border-[var(--hairline)] text-[var(--body)] transition-colors hover:bg-[var(--surface-2)] ${expanded && !closing ? "bg-[var(--surface-2)]" : ""}`}
+                  className={`cursor-pointer border-b border-[var(--hairline)] text-[var(--body)] transition-colors hover:bg-[var(--review-card-hover)] ${expanded && !closing ? "bg-[var(--review-card-selected)]" : ""}`}
                   onClick={() => disclosure.toggle(trade.id)}
                 >
-                  <td className="px-4 py-3 font-mono tabular-nums">
+                  <td className="px-4 py-3.5 tabular-nums text-[var(--muted)]">
                     <button
                       type="button"
                       aria-controls={panelId}
                       aria-expanded={expanded && !closing}
-                      className="inline-flex cursor-pointer items-center gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                      className="inline-flex cursor-pointer items-center text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                     >
-                      <span aria-hidden="true" className={`text-[10px] text-[var(--accent)] transition-transform ${expanded && !closing ? "rotate-90" : ""}`}>›</span>
                       <span>{trade.time}</span>
                       <span className="sr-only">Review {trade.symbol} trade</span>
                     </button>
                   </td>
-                  <td className="px-2 py-3 font-semibold text-[var(--foreground)]">{trade.symbol}</td>
-                  <td className="px-2 py-3 capitalize">{trade.side} · {trade.quantity.toLocaleString()}</td>
-                  <td className="px-2 py-3 font-mono tabular-nums">{trade.hold}</td>
-                  <td className="px-2 py-3">{trade.setup ?? "Not captured"}</td>
-                  <td className="px-2 py-3">{trade.tagged ? "Tagged" : "Needs context"}</td>
-                  <td className={`px-4 py-3 text-right font-mono tabular-nums ${pnlClass(trade.pnl)}`}>{money(trade.pnl)}</td>
+                  <td className="px-3 py-3.5 font-semibold text-[var(--foreground)]">{trade.symbol}</td>
+                  <td className="px-3 py-3.5 tabular-nums">{trade.quantity.toLocaleString("en-US")}</td>
+                  <td className="px-3 py-3.5 tabular-nums text-[var(--muted)]">{trade.executionCount}</td>
+                  <td className="px-3 py-3.5 tabular-nums">{price(trade.entryPrice)}</td>
+                  <td className="px-3 py-3.5 tabular-nums">{price(trade.exitPrice)}</td>
+                  <td className={`px-3 py-3.5 tabular-nums ${trade.perShare == null ? "text-[var(--muted)]" : pnlClass(trade.perShare)}`}>
+                    {trade.perShare == null ? "—" : perShareMoney(trade.perShare)}
+                  </td>
+                  <td className="px-3 py-3.5 whitespace-nowrap tabular-nums text-[var(--muted)]">{trade.hold}</td>
+                  <td className="px-3 py-3.5"><TradeContext trade={trade} /></td>
+                  <td className={`px-4 py-3.5 text-right font-semibold tabular-nums ${pnlClass(trade.pnl)}`}>{money(trade.pnl)}</td>
                 </tr>
                 {expanded ? (
                   <tr id={panelId}>
-                    <td colSpan={7} className="border-b border-[var(--border)] bg-[var(--background)] p-0">
+                    <td colSpan={10} className="border-b border-[var(--border)] bg-[var(--background)] p-0">
                       <InlineLedgerDisclosure closing={closing}>
                         <InlineTradeReviewPanel
                           date={date}
@@ -861,9 +946,50 @@ function TradeTable({
               </Fragment>
             );
           })}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+        <div className="flex items-center justify-between gap-4 px-4 py-3.5 text-[13px]">
+          <span className="text-[var(--faint)]">
+            {hasMore && !showAll ? `Showing 5 of ${tradeRows.length} trades` : `All ${tradeRows.length} trades`}
+          </span>
+          {hasMore ? (
+            <button
+              type="button"
+              className="font-semibold text-[var(--muted)] transition-colors hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+              onClick={() => setShowAll((current) => !current)}
+            >
+              {showAll ? "Show less" : "Show all"}
+            </button>
+          ) : null}
+        </div>
+      </div>
     </div>
+  );
+}
+
+function TradeContext({ trade }: { trade: JournalDayTradeRow }) {
+  const labels = [...new Set([...(trade.tags ?? []), ...(trade.setup ? [trade.setup] : [])])];
+  const label = labels[0];
+  if (!label) return <span className="text-[var(--faint)]">Needs context</span>;
+
+  const normalized = label.trim().toLowerCase();
+  const tone = normalized === "needs review"
+    ? { background: "var(--tag-review-bg)", foreground: "var(--tag-review-fg)" }
+    : normalized === "good trade" || normalized === "best setup"
+      ? { background: "var(--tag-reinforcing-bg)", foreground: "var(--tag-reinforcing-fg)" }
+      : { background: "var(--tag-neutral-bg)", foreground: "var(--tag-neutral-fg)" };
+
+  return (
+    <span className="inline-flex max-w-full items-center gap-1.5">
+      <span
+        className="inline-flex max-w-[150px] items-center truncate rounded-full px-2.5 py-1 text-[11px] font-medium leading-4"
+        style={{ backgroundColor: tone.background, color: tone.foreground }}
+        title={labels.join(", ")}
+      >
+        {label}
+      </span>
+      {labels.length > 1 ? <span className="text-[11px] text-[var(--faint)]">+{labels.length - 1}</span> : null}
+    </span>
   );
 }
 

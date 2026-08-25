@@ -18,6 +18,20 @@ const REQUIRED_TABLES = [
   "session_stats",
   "symbol_days",
 ] as const;
+const EXACT_IDENTITY_TRANSFORM_VERSION = "market-archive-exact-symbol-v2";
+const EXACT_IDENTITY_COLUMNS = [
+  "source_bytes",
+  "source_sha256",
+  "summary_bytes",
+  "summary_sha256",
+  "transform_version",
+  "raw_exact_symbol_count",
+  "derived_exact_symbol_count",
+  "casefold_collision_count",
+  "casefold_collision_groups_json",
+  "duplicate_minute_rows",
+  "reference_covered_symbols",
+] as const;
 
 export type MarketArchiveHealth = {
   available: boolean;
@@ -43,6 +57,13 @@ type CoverageRow = {
 
 type CountRow = { count: number };
 type TableRow = { name: string };
+type TableInfoRow = { name: string };
+type IdentityHealthRow = {
+  duplicateMinuteRows: number;
+  invalidProvenanceDates: number;
+  transformVersions: string | null;
+  unreconciledDates: number;
+};
 
 export type MarketArchiveClient = {
   health(): MarketArchiveHealth;
@@ -63,6 +84,29 @@ function openReadOnly(databasePath: string): Database.Database {
   return database;
 }
 
+function hasExactIdentity(database: Database.Database): boolean {
+  const columns = new Set(
+    (database.pragma("table_info(archive_dates)") as TableInfoRow[]).map((column) => column.name),
+  );
+  if (EXACT_IDENTITY_COLUMNS.some((column) => !columns.has(column))) return false;
+
+  const identity = database.prepare(`
+    select
+      coalesce(sum(case when raw_exact_symbol_count != derived_exact_symbol_count
+        or derived_exact_symbol_count != symbol_count then 1 else 0 end), 0) as unreconciledDates,
+      coalesce(sum(duplicate_minute_rows), 0) as duplicateMinuteRows,
+      coalesce(sum(case when source_bytes <= 0 or length(source_sha256) != 64
+        or summary_bytes <= 0 or length(summary_sha256) != 64 then 1 else 0 end), 0) as invalidProvenanceDates,
+      group_concat(distinct transform_version) as transformVersions
+    from archive_dates
+  `).get() as IdentityHealthRow;
+
+  return identity.unreconciledDates === 0
+    && identity.duplicateMinuteRows === 0
+    && identity.invalidProvenanceDates === 0
+    && identity.transformVersions === EXACT_IDENTITY_TRANSFORM_VERSION;
+}
+
 function queryHealth(database: Database.Database, databaseBytes: number): MarketArchiveHealth {
   if (database.pragma("journal_mode", { simple: true }) !== "delete") {
     return { available: false, coreRuleVersion: CORE_MOVER_RULE_VERSION, reason: "invalid_archive" };
@@ -72,6 +116,9 @@ function queryHealth(database: Database.Database, databaseBytes: number): Market
     .all() as TableRow[];
   const tableNames = new Set(tables.map((row) => row.name));
   if (REQUIRED_TABLES.some((table) => !tableNames.has(table))) {
+    return { available: false, coreRuleVersion: CORE_MOVER_RULE_VERSION, reason: "invalid_archive" };
+  }
+  if (!hasExactIdentity(database)) {
     return { available: false, coreRuleVersion: CORE_MOVER_RULE_VERSION, reason: "invalid_archive" };
   }
 

@@ -50,7 +50,7 @@ function readChartColors(): ChartColors {
   const token = (name: string, fallback: string) => styles.getPropertyValue(name).trim() || fallback;
 
   return {
-    background: token("--surface", "#ffffff"),
+    background: token("--review-card-bg", "#ffffff"),
     grid: token("--hairline", "rgba(0,0,0,0.08)"),
     negative: token("--red-chart", "#c4553f"),
     positive: token("--green-chart", "#2c9a63"),
