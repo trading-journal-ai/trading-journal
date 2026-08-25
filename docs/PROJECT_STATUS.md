@@ -32,6 +32,34 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-25** — Momentum Archive top-gainers rework and a data-integrity find
+  (branch `codex/momentum-archive`).
+  - Turned the session control from a display lens into a peak-session filter.
+    The lens previously swapped the headline gain for the active session's slice,
+    so a qualifying mover could render as `+6.3%` in a list titled top gainers.
+    Gain is now always the qualifying peak, tagged with the session that made it.
+  - Verified the three filters partition the Core set exactly (premarket 2,088 +
+    regular 2,322 + after-hours 1,359 = 5,769), with tie-breaking consistent
+    between the SQL predicate and the JavaScript classifier.
+  - Replaced the per-session gain columns with path legs — PM, Cont., AH — each
+    measured from where the previous ended, so none restates Gain.
+  - Added a Show more tier for 30–50% near-misses, kept disjoint from the
+    qualified set by `qualifies_mover = 0`.
+  - Added sortable headers, a grouped sticky header, pinned identity columns,
+    pagination, Min peak % / Min RVOL floors, and a full-field CSV export.
+    Aggregates now cover the whole filtered set rather than the current page.
+  - Moved Raw evidence off the Day view into a Full archive Universe filter, and
+    aligned day navigation with the Journal's Latest / Previous / Next / calendar
+    order.
+  - **Found a preferred-share ticker collision corrupting the archive.** The
+    ingest upper-cases tickers, folding `TpC` into `TPC` and `BCpC` into `BCPC`,
+    which manufactures 377 phantom Core movers (7%) — 43% of everything above
+    +400%. Root cause is `trading-server`
+    `services/market-archive/session-summary.cjs:82`; the raw minute files are
+    clean. Diagnosed and documented, not yet fixed. See
+    `docs/analytics/MOMENTUM_ARCHIVE.md`.
+  - TypeScript, ESLint and the full 206-test suite pass.
+
 - **2026-08-25** — Momentum Archive ownership migration and first browser slice
   (branch `codex/momentum-archive`).
   - Established Trading Journal AI as the archive owner, with a standard
