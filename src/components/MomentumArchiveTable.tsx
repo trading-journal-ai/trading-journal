@@ -11,6 +11,13 @@ const clock = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/New_York",
 });
 
+const archiveDate = new Intl.DateTimeFormat("en-US", {
+  day: "numeric",
+  month: "short",
+  timeZone: "UTC",
+  year: "numeric",
+});
+
 function formatPrice(value: number | null) {
   if (value === null) return "—";
   return `$${value.toLocaleString("en-US", {
@@ -36,8 +43,7 @@ function highTime(value: string | null) {
 }
 
 function dateLabel(date: string) {
-  const [, month, day] = date.split("-");
-  return `${month}/${day}`;
+  return archiveDate.format(new Date(`${date}T00:00:00Z`));
 }
 
 function gainLabel(session: ArchiveSessionLens) {
@@ -91,11 +97,13 @@ export default function MomentumArchiveTable({
 
   return (
     <div className="overflow-x-auto border-y border-[var(--hairline)]">
-      <table className="w-full min-w-[920px] border-collapse text-left text-[12px]">
+      <table className="w-full min-w-[1040px] border-collapse text-left text-[13px]">
         <thead className="text-[var(--muted)]">
           <tr className="border-b border-[var(--hairline)]">
             {view === "archive" ? <th className="px-4 py-3 font-medium">Date</th> : null}
-            <th className="px-4 py-3 font-medium">Symbol</th>
+            {view === "day" ? <th className="w-12 px-4 py-3 text-right font-medium">#</th> : null}
+            <th className="px-3 py-3 font-semibold">Symbol</th>
+            <th className="px-3 py-3 font-medium">Company</th>
             {universe === "raw" ? <th className="px-3 py-3 font-medium">Evidence</th> : null}
             <th className="px-3 py-3 text-right font-medium">Prior close</th>
             <th className="px-3 py-3 text-right font-medium">{gainLabel(session)}</th>
@@ -107,12 +115,12 @@ export default function MomentumArchiveTable({
           </tr>
         </thead>
         <tbody>
-          {movers.map((mover) => {
+          {movers.map((mover, index) => {
             const rowId = `${mover.date}:${mover.symbol}`;
             const expanded = disclosure.expandedId === rowId;
             const closing = disclosure.closingId === rowId;
             const panelId = `archive-chart-${mover.date}-${mover.symbol.replaceAll(".", "-")}`;
-            const colSpan = 8 + (view === "archive" ? 1 : 0) + (universe === "raw" ? 1 : 0);
+            const colSpan = 10 + (universe === "raw" ? 1 : 0);
             return (
               <Fragment key={rowId}>
                 <tr
@@ -122,19 +130,21 @@ export default function MomentumArchiveTable({
                   {view === "archive" ? (
                     <td className="px-4 py-3 font-mono tabular-nums text-[var(--muted)]">{dateLabel(mover.date)}</td>
                   ) : null}
-                  <td className="px-4 py-3">
+                  {view === "day" ? (
+                    <td className="px-4 py-3 text-right font-mono tabular-nums text-[var(--faint)]">{index + 1}</td>
+                  ) : null}
+                  <td className="px-3 py-3">
                     <button
                       type="button"
                       aria-controls={panelId}
                       aria-expanded={expanded && !closing}
-                      className="inline-flex items-center gap-2 text-left font-semibold text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                      className="text-left font-semibold text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
                     >
-                      <span aria-hidden="true" className={`text-[10px] text-[var(--accent)] transition-transform ${expanded && !closing ? "rotate-90" : ""}`}>›</span>
                       {mover.symbol}
                     </button>
-                    <div className="mt-0.5 max-w-52 truncate text-[10px] font-normal text-[var(--muted)]">
-                      {mover.instrumentName ?? mover.primaryExchange ?? "Name unavailable"}
-                    </div>
+                  </td>
+                  <td className="max-w-56 truncate px-3 py-3 text-[var(--muted)]" title={mover.instrumentName ?? undefined}>
+                    {mover.instrumentName ?? mover.primaryExchange ?? "Name unavailable"}
                   </td>
                   {universe === "raw" ? (
                     <td className="px-3 py-3">

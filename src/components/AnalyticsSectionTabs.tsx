@@ -5,9 +5,15 @@ const tabs = [
   { href: "/analytics/momentum-archive", label: "Momentum Archive", value: "momentum" },
 ] as const;
 
-export default function AnalyticsSectionTabs({ active }: { active: "momentum" | "performance" }) {
+export default function AnalyticsSectionTabs({
+  active,
+  className = "mb-8",
+}: {
+  active: "momentum" | "performance";
+  className?: string;
+}) {
   return (
-    <nav aria-label="Analytics sections" className="mb-8 border-b border-[var(--hairline)]">
+    <nav aria-label="Analytics sections" className={`${className} border-b border-[var(--hairline)]`}>
       <div className="flex gap-6">
         {tabs.map((tab) => (
           <Link

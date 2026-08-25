@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AnalyticsSectionTabs from "@/components/AnalyticsSectionTabs";
+import MomentumArchiveDaySelect from "@/components/MomentumArchiveDaySelect";
 import MomentumArchiveTable from "@/components/MomentumArchiveTable";
 import {
   createMarketArchiveClient,
@@ -45,6 +46,13 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
+const shortDateFormatter = new Intl.DateTimeFormat("en-US", {
+  day: "numeric",
+  month: "short",
+  timeZone: "UTC",
+  year: "numeric",
+});
+
 function validDate(value: string | undefined): string | undefined {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
 }
@@ -83,12 +91,70 @@ function archiveHref(filters: ArchiveFilters, updates: Partial<ArchiveFilters>) 
   return query ? `/analytics/momentum-archive?${query}` : "/analytics/momentum-archive";
 }
 
+function dateValue(date: string) {
+  return new Date(`${date}T00:00:00Z`);
+}
+
 function formattedDate(date: string) {
-  return dateFormatter.format(new Date(`${date}T00:00:00Z`));
+  return dateFormatter.format(dateValue(date));
+}
+
+function shortDate(date: string) {
+  return shortDateFormatter.format(dateValue(date));
 }
 
 function compact(value: number) {
   return Intl.NumberFormat("en-US", { maximumFractionDigits: 1, notation: "compact" }).format(value);
+}
+
+function formatPercent(value: number | null) {
+  if (value === null) return "—";
+  return `${value > 0 ? "+" : ""}${value.toLocaleString("en-US", { maximumFractionDigits: 1 })}%`;
+}
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = values.toSorted((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+}
+
+function ArchiveViewTabs({ filters }: { filters: ArchiveFilters }) {
+  const items = [
+    {
+      active: filters.view === "day",
+      href: archiveHref(filters, {
+        direction: "desc",
+        from: undefined,
+        query: undefined,
+        sort: "gain",
+        to: undefined,
+        view: "day",
+      }),
+      label: "Day by day",
+    },
+    { active: filters.view === "archive", href: archiveHref(filters, { view: "archive" }), label: "Full archive" },
+  ];
+  return (
+    <nav aria-label="Archive view" className="border-b border-[var(--hairline)]">
+      <div className="flex gap-1">
+        {items.map((item) => (
+          <Link
+            key={item.label}
+            href={item.href}
+            aria-current={item.active ? "page" : undefined}
+            className={`-mb-px min-h-11 border-b-2 px-4 py-3 text-[14px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
+              item.active
+                ? "border-[var(--foreground)] text-[var(--foreground)]"
+                : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
+            }`}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
+    </nav>
+  );
 }
 
 function SegmentedLinks({
@@ -118,13 +184,57 @@ function SegmentedLinks({
   );
 }
 
+function EvidenceControls({ filters }: { filters: ArchiveFilters }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--hairline)] py-4">
+      <SegmentedLinks
+        ariaLabel="Instrument universe"
+        items={[
+          { active: filters.universe === "core", href: archiveHref(filters, { universe: "core" }), label: "Core common stock" },
+          { active: filters.universe === "raw", href: archiveHref(filters, { universe: "raw" }), label: "Raw evidence" },
+        ]}
+      />
+      <SegmentedLinks
+        ariaLabel="Market session lens"
+        items={[
+          { active: filters.session === "all", href: archiveHref(filters, { session: "all" }), label: "All" },
+          { active: filters.session === "premarket", href: archiveHref(filters, { session: "premarket" }), label: "Premarket" },
+          { active: filters.session === "regular", href: archiveHref(filters, { session: "regular" }), label: "Regular" },
+          { active: filters.session === "afterHours", href: archiveHref(filters, { session: "afterHours" }), label: "After-hours" },
+        ]}
+      />
+    </div>
+  );
+}
+
+function StatStrip({ items }: { items: Array<{ label: string; value: string }> }) {
+  return (
+    <dl className="flex flex-wrap border-b border-[var(--hairline)]">
+      {items.map((item, index) => (
+        <div
+          key={item.label}
+          className={`min-w-32 py-4 pr-8 ${index === 0 ? "" : "border-l border-[var(--hairline)] pl-8"}`}
+        >
+          <dt className="text-[11px] font-medium text-[var(--muted)]">{item.label}</dt>
+          <dd className="mt-1 font-mono text-[18px] font-semibold tabular-nums text-[var(--foreground)]">{item.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function NavigationButton({ href, children }: { href?: string; children: string }) {
+  const className = "inline-flex h-10 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[12px] font-medium text-[var(--body)] transition-colors hover:border-[var(--foreground)] hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]";
+  if (!href) return <span aria-disabled="true" className={`${className} cursor-not-allowed opacity-40`}>{children}</span>;
+  return <Link href={href} className={className}>{children}</Link>;
+}
+
 function UnavailableArchive({ reason }: { reason: string }) {
   return (
     <div className="mx-auto max-w-6xl">
-      <AnalyticsSectionTabs active="momentum" />
-      <div className="max-w-2xl border-l-2 border-[var(--accent)] py-2 pl-5">
-        <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Private research data</p>
-        <h1 className="mt-3 text-4xl font-semibold tracking-[-0.035em] text-[var(--foreground)]">Momentum Archive</h1>
+      <AnalyticsSectionTabs active="momentum" className="mb-0" />
+      <div className="max-w-2xl py-10">
+        <h1 className="text-4xl font-semibold tracking-[-0.03em] text-[var(--foreground)]">Momentum Archive</h1>
         <p className="mt-4 text-[15px] leading-7 text-[var(--body)]">
           The Journal-owned archive is not available on this machine ({reason}). Run the local archive migration and verification scripts, then reload this page.
         </p>
@@ -150,140 +260,154 @@ export default async function MomentumArchivePage({
   const activeFilters = { ...filters, date: selectedDate };
   const result = client.listMovers({
     date: filters.view === "day" ? selectedDate : undefined,
-    direction: filters.direction,
+    direction: filters.view === "day" ? "desc" : filters.direction,
     from: filters.view === "archive" ? filters.from : undefined,
     limit: filters.view === "archive" ? 100 : 200,
-    query: filters.query,
+    query: filters.view === "archive" ? filters.query : undefined,
     session: filters.session,
-    sort: filters.sort,
+    sort: filters.view === "day" ? "gain" : filters.sort,
     to: filters.view === "archive" ? filters.to : undefined,
     universe: filters.universe,
   });
   const dayIndex = days.findIndex((day) => day.date === selectedDate);
   const olderDay = dayIndex >= 0 ? days[dayIndex + 1]?.date : undefined;
   const newerDay = dayIndex > 0 ? days[dayIndex - 1]?.date : undefined;
+  const dayAllMovers = filters.view === "day" && filters.session === "all"
+    ? result.movers
+    : filters.view === "day"
+      ? client.listMovers({ date: selectedDate, limit: 200, session: "all", sort: "gain", universe: filters.universe }).movers
+      : [];
+  const regularMovers = filters.view === "day" && filters.session === "regular"
+    ? result.movers
+    : filters.view === "day"
+      ? client.listMovers({ date: selectedDate, limit: 200, session: "regular", sort: "gain", universe: filters.universe }).movers
+      : [];
+  const dayGains = dayAllMovers
+    .map((mover) => mover.lens.gainPercent)
+    .filter((value): value is number => value !== null && Number.isFinite(value));
+  const largestDayGain = dayGains.length > 0 ? Math.max(...dayGains) : null;
+  const medianDayGain = median(dayGains);
+  const regularDollarVolume = regularMovers.reduce((sum, mover) => sum + mover.lens.dollarVolume, 0);
+  const shownGains = result.movers
+    .map((mover) => mover.lens.gainPercent)
+    .filter((value): value is number => value !== null && Number.isFinite(value));
+  const largestShownGain = shownGains.length > 0 ? Math.max(...shownGains) : null;
+  const medianShownGain = median(shownGains);
   const sortLabels: Record<ArchiveMoverSort, string> = {
     dollarVolume: "Dollar volume",
     gain: "Gain",
-    price: "Prior close",
+    price: "Previous close",
     rvol: "RVOL",
     symbol: "Symbol",
   };
+  const dayOptions = days.map((day) => ({
+    href: archiveHref(activeFilters, { date: day.date }),
+    label: `${shortDate(day.date)} · ${day.moverCount}`,
+    value: day.date,
+  }));
 
   return (
-    <div className="mx-auto max-w-7xl">
-      <AnalyticsSectionTabs active="momentum" />
+    <div className="mx-auto max-w-6xl">
+      <AnalyticsSectionTabs active="momentum" className="mb-0" />
+      <ArchiveViewTabs filters={activeFilters} />
 
-      <header className="flex flex-wrap items-end justify-between gap-6">
-        <div className="max-w-3xl">
-          <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--muted)]">Private research data · Massive historical archive</p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-[-0.035em] text-[var(--foreground)] sm:text-5xl">Momentum Archive</h1>
-          <p className="mt-4 max-w-2xl text-[14px] leading-6 text-[var(--body)]">
-            Point-in-time top gainers with Core common-stock normalization, session-specific evidence, and one-minute charts loaded only when you open a row.
+      {filters.view === "day" ? (
+        <section aria-label="Session review" className="pt-8">
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-5 border-b border-[var(--hairline)] pb-4">
+            <div>
+              <h1 className="text-[30px] font-semibold leading-tight tracking-[-0.03em] text-[var(--foreground)] sm:text-[36px]">
+                {formattedDate(selectedDate)}
+              </h1>
+              <p className="mt-2 text-[14px] text-[var(--muted)]">
+                {dayAllMovers.length > 0
+                  ? `${dayAllMovers.length} ${dayAllMovers.length === 1 ? "symbol" : "symbols"} cleared 50% from the prior close, largest ${formatPercent(largestDayGain)}.`
+                  : "No qualified movers on this session."}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <MomentumArchiveDaySelect options={dayOptions} value={selectedDate} />
+              <NavigationButton href={olderDay ? archiveHref(activeFilters, { date: olderDay }) : undefined}>Previous day</NavigationButton>
+              <NavigationButton href={newerDay ? archiveHref(activeFilters, { date: newerDay }) : undefined}>Next day</NavigationButton>
+            </div>
+          </div>
+
+          <StatStrip items={[
+            { label: "Movers", value: dayAllMovers.length.toLocaleString() },
+            { label: "Largest peak", value: formatPercent(largestDayGain) },
+            { label: "Median peak", value: formatPercent(medianDayGain) },
+            { label: "Regular-session $ volume", value: regularDollarVolume > 0 ? `$${compact(regularDollarVolume)}` : "—" },
+          ]} />
+          <EvidenceControls filters={activeFilters} />
+          <MomentumArchiveTable movers={result.movers} session={filters.session} universe={filters.universe} view="day" />
+          <p className="mt-3 font-mono text-[11px] tabular-nums text-[var(--faint)]">
+            Session {days.length - Math.max(dayIndex, 0)} of {days.length} · use Previous day and Next day to step through sessions
           </p>
-        </div>
-        <dl className="grid grid-cols-2 gap-x-7 gap-y-3 border-l border-[var(--hairline)] pl-6 text-right">
-          <div>
-            <dt className="text-[10px] uppercase tracking-[0.08em] text-[var(--muted)]">Core movers</dt>
-            <dd className="mt-1 font-mono text-base font-semibold tabular-nums text-[var(--foreground)]">{compact(health.counts.coreMovers)}</dd>
+        </section>
+      ) : (
+        <section aria-label="Full archive" className="pt-8">
+          <div className="pb-5">
+            <h1 className="text-[30px] font-semibold leading-tight tracking-[-0.03em] text-[var(--foreground)] sm:text-[36px]">Full archive</h1>
+            <p className="mt-2 max-w-3xl text-[14px] leading-6 text-[var(--muted)]">
+              Every captured 50%+ previous-close-to-high mover, with session price action, relative volume, liquidity, and security structure in one sortable record.
+            </p>
           </div>
-          <div>
-            <dt className="text-[10px] uppercase tracking-[0.08em] text-[var(--muted)]">Trading days</dt>
-            <dd className="mt-1 font-mono text-base font-semibold tabular-nums text-[var(--foreground)]">{health.counts.archiveDates}</dd>
-          </div>
-          <div className="col-span-2 border-t border-[var(--hairline)] pt-2">
-            <dt className="sr-only">Coverage</dt>
-            <dd className="font-mono text-[10px] tabular-nums text-[var(--muted)]">{health.coverage.from} → {health.coverage.to}</dd>
-          </div>
-        </dl>
-      </header>
+          <StatStrip items={[
+            { label: "Trading days", value: days.length.toLocaleString() },
+            { label: "Qualified moves", value: result.total.toLocaleString() },
+            { label: "Rows shown", value: result.movers.length.toLocaleString() },
+            { label: "Largest shown", value: formatPercent(largestShownGain) },
+            { label: "Median shown", value: formatPercent(medianShownGain) },
+          ]} />
+          <EvidenceControls filters={activeFilters} />
 
-      <section className="mt-10" aria-label="Archive controls">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-y border-[var(--hairline)] py-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <SegmentedLinks
-              ariaLabel="Archive view"
-              items={[
-                { active: filters.view === "day", href: archiveHref(activeFilters, { view: "day" }), label: "Day" },
-                { active: filters.view === "archive", href: archiveHref(activeFilters, { view: "archive" }), label: "Full archive" },
-              ]}
-            />
-            <SegmentedLinks
-              ariaLabel="Instrument universe"
-              items={[
-                { active: filters.universe === "core", href: archiveHref(activeFilters, { universe: "core" }), label: "Core common stock" },
-                { active: filters.universe === "raw", href: archiveHref(activeFilters, { universe: "raw" }), label: "Raw evidence" },
-              ]}
-            />
-          </div>
-          <SegmentedLinks
-            ariaLabel="Market session lens"
-            items={[
-              { active: filters.session === "all", href: archiveHref(activeFilters, { session: "all" }), label: "All" },
-              { active: filters.session === "premarket", href: archiveHref(activeFilters, { session: "premarket" }), label: "Premarket" },
-              { active: filters.session === "regular", href: archiveHref(activeFilters, { session: "regular" }), label: "Regular" },
-              { active: filters.session === "afterHours", href: archiveHref(activeFilters, { session: "afterHours" }), label: "After-hours" },
-            ]}
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-4 py-5">
-          <div className="flex min-w-[280px] items-center gap-3">
-            {filters.view === "day" ? (
-              <>
-                {olderDay ? (
-                  <Link aria-label="Older trading day" href={archiveHref(activeFilters, { date: olderDay })} className="grid h-9 w-9 place-items-center rounded-md border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)]">‹</Link>
-                ) : <span className="h-9 w-9" />}
-                <div className="min-w-0">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--muted)]">Trading day</p>
-                  <h2 className="mt-0.5 truncate text-lg font-semibold tracking-[-0.02em] text-[var(--foreground)]">{formattedDate(selectedDate)}</h2>
-                </div>
-                {newerDay ? (
-                  <Link aria-label="Newer trading day" href={archiveHref(activeFilters, { date: newerDay })} className="grid h-9 w-9 place-items-center rounded-md border border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)]">›</Link>
-                ) : <span className="h-9 w-9" />}
-              </>
-            ) : (
-              <div>
-                <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[var(--muted)]">Archive results</p>
-                <h2 className="mt-0.5 text-lg font-semibold tracking-[-0.02em] text-[var(--foreground)]">{result.total.toLocaleString()} movers</h2>
-              </div>
-            )}
-          </div>
-
-          <form className="flex flex-wrap items-center justify-end gap-2" action="/analytics/momentum-archive">
-            {filters.view === "archive" ? <input type="hidden" name="view" value="archive" /> : null}
-            {filters.view === "day" ? <input type="hidden" name="date" value={selectedDate} /> : null}
+          <form className="grid items-end gap-3 border-b border-[var(--hairline)] py-5 sm:grid-cols-2 lg:grid-cols-[minmax(180px,1fr)_150px_150px_150px_auto_auto]" action="/analytics/momentum-archive">
+            <input type="hidden" name="view" value="archive" />
             {filters.universe === "raw" ? <input type="hidden" name="universe" value="raw" /> : null}
             {filters.session !== "all" ? <input type="hidden" name="session" value={filters.session} /> : null}
-            <label className="sr-only" htmlFor="archive-search">Search symbol or name</label>
-            <input
-              id="archive-search"
-              name="q"
-              defaultValue={filters.query}
-              placeholder="Search symbol or name"
-              className="h-9 w-52 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[12px] text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:border-[var(--accent)]"
-            />
-            <label className="sr-only" htmlFor="archive-sort">Sort results</label>
-            <select id="archive-sort" name="sort" defaultValue={filters.sort} className="h-9 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[12px] text-[var(--body)] outline-none focus:border-[var(--accent)]">
-              {Object.entries(sortLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
+            <label className="grid gap-1.5 text-[12px] font-medium text-[var(--muted)]" htmlFor="archive-search">
+              Symbol or company
+              <input id="archive-search" name="q" defaultValue={filters.query} placeholder="e.g. AMIX" className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] font-normal text-[var(--foreground)] outline-none placeholder:text-[var(--faint)] focus:border-[var(--accent)]" />
+            </label>
+            <label className="grid gap-1.5 text-[12px] font-medium text-[var(--muted)]" htmlFor="archive-from">
+              From
+              <input id="archive-from" name="from" type="date" defaultValue={filters.from} className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] font-normal text-[var(--body)] outline-none focus:border-[var(--accent)]" />
+            </label>
+            <label className="grid gap-1.5 text-[12px] font-medium text-[var(--muted)]" htmlFor="archive-to">
+              To
+              <input id="archive-to" name="to" type="date" defaultValue={filters.to} className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] font-normal text-[var(--body)] outline-none focus:border-[var(--accent)]" />
+            </label>
+            <label className="grid gap-1.5 text-[12px] font-medium text-[var(--muted)]" htmlFor="archive-sort">
+              Sort by
+              <select id="archive-sort" name="sort" defaultValue={filters.sort} className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] font-normal text-[var(--body)] outline-none focus:border-[var(--accent)]">
+                {Object.entries(sortLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </label>
             <input type="hidden" name="direction" value={filters.direction} />
-            <button type="submit" className="h-9 rounded-md bg-[var(--foreground)] px-4 text-[12px] font-semibold text-[var(--background)] transition-opacity hover:opacity-85">Apply</button>
+            <Link href={archiveHref(activeFilters, { direction: "desc", from: undefined, query: undefined, sort: "gain", to: undefined })} className="inline-flex h-10 items-center justify-center px-3 text-[12px] font-medium text-[var(--muted)] hover:text-[var(--foreground)]">Reset</Link>
+            <button type="submit" className="h-10 rounded-md bg-[var(--foreground)] px-4 text-[12px] font-semibold text-[var(--background)] transition-opacity hover:opacity-85">Apply</button>
           </form>
+
+          <p role="status" className="py-3 font-mono text-[11px] tabular-nums text-[var(--muted)]">
+            {result.total.toLocaleString()} rows · {days.length.toLocaleString()} days · showing {result.movers.length.toLocaleString()}
+          </p>
+          <MomentumArchiveTable movers={result.movers} session={filters.session} universe={filters.universe} view="archive" />
+        </section>
+      )}
+
+      <footer className="grid gap-8 border-t border-[var(--hairline)] py-12 md:grid-cols-2 md:gap-12">
+        <div>
+          <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">How to read it</h2>
+          <p className="mt-2 text-[13px] leading-6 text-[var(--muted)]">
+            Peak change is measured from the prior regular-session close to the highest eligible minute bar. The active session buttons replace the matching gain, RVOL, liquidity, and high columns.
+          </p>
         </div>
-      </section>
-
-      <MomentumArchiveTable movers={result.movers} session={filters.session} universe={filters.universe} view={filters.view} />
-
-      {result.total > result.movers.length ? (
-        <p className="mt-3 text-right text-[11px] text-[var(--muted)]">Showing the first {result.movers.length.toLocaleString()} of {result.total.toLocaleString()} results.</p>
-      ) : null}
-
-      <aside className="mt-10 grid gap-5 border-t border-[var(--hairline)] pt-6 text-[12px] leading-5 text-[var(--muted)] md:grid-cols-3">
-        <p><span className="font-semibold text-[var(--foreground)]">Core</span> requires point-in-time Massive type CS, a prior regular close of at least $1, a prior-close gap of seven calendar days or less, and no known split execution date.</p>
-        <p><span className="font-semibold text-[var(--foreground)]">Raw evidence</span> retains qualifying source observations that Core excludes, with the controlling exclusion shown in the row.</p>
-        <p><span className="font-semibold text-[var(--foreground)]">Anomalies remain visible.</span> Extreme gains are not capped; split dates and instrument type are used to distinguish evidence from the Core trading universe.</p>
-      </aside>
+        <div>
+          <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">Evidence boundaries</h2>
+          <p className="mt-2 text-[13px] leading-6 text-[var(--muted)]">
+            Core excludes known split dates, non-common-stock instrument types, stale reference closes, and prior closes below $1. Raw evidence retains those observations and shows why each sits outside Core.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

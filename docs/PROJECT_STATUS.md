@@ -49,6 +49,12 @@ stopped. This is the "when did we last work on it" trail.
   - Added the Analytics Momentum Archive surface with day stepping, full-archive
     search and sorting, Core/Raw toggles, session buttons, and the preserved
     no-maximum-gain anomaly policy.
+  - Refined the browser surface against the supplied Daily Momentum HTML:
+    removed the redundant archive eyebrow/hero and stock-row chevrons, restored
+    the date-first Day heading, session jump and Previous/Next controls, stat
+    strip, separate Symbol/Company ledger columns, labeled Full Archive filters,
+    and the two-part evidence footer. Analytics navigation and the approved
+    Core/Raw plus session controls remain intentional Journal additions.
   - Extracted the Journal row-disclosure behavior into a shared component and
     reused it for one-at-a-time inline mover charts.
   - Added a candidate-only candle cache that validates mover membership,
