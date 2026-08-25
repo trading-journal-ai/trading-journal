@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-08-13 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-08-25 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -31,6 +31,26 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-08-25** — Momentum Archive ownership migration foundation
+  (branch `codex/momentum-archive`).
+  - Established Trading Journal AI as the archive owner, with a standard
+    application-data home and optional local path overrides.
+  - Created a Journal-owned, filesystem-read-only SQLite snapshot in DELETE
+    journal mode; the Trading Server source remains untouched.
+  - Copied all 410 preserved compressed minute files into the same private
+    archive home and verified every source/destination checksum.
+  - Added repeatable migration and verification commands, a private manifest
+    contract, a read-only health client, and versioned `core-common-stock-v1`
+    qualification rules with explicit exclusion reasons.
+  - Documented the ownership, normalization, Day/Archive session-lens, and
+    inline-chart contracts in `docs/analytics/MOMENTUM_ARCHIVE.md`.
+  - Focused Market Archive tests, TypeScript, ESLint, and the production build
+    passed; the copied 4.2 GB database passed full integrity and foreign-key
+    checks.
+  - **Stopped at:** ownership and local data relocation are proven. Trading
+    Server pipeline-code transfer, candidate candle-cache construction, and
+    the Analytics UI remain next; no source archive files were removed.
 
 - **2026-08-13** — Journal Today navigation correction
   (branch `codex/fix-journal-today-navigation`).

@@ -43,6 +43,7 @@ npm-debug.log*
 # Local DB snapshots (see docs/product/DATA_BACKUP.md)
 data/backups/
 data/opportunity-context/
+data/market-archive/
 
 # impeccable-ignore-start
 # Ephemeral output, runtime state, and per-developer overrides.
