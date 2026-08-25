@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import JournalReviewTabs, {
   JOURNAL_SCOPE_VIEWS,
   type JournalDataScope,
@@ -9,6 +9,7 @@ import JournalReviewTabs, {
 } from "@/components/JournalReviewTabs";
 import { useOptionalJournalDateNavigation } from "@/components/JournalDateNavigation";
 import { tradingCalendarWeeks, tradingWeekDates } from "@/lib/journalPnlViews";
+import InlineLedgerDisclosure, { useInlineLedgerDisclosure } from "@/components/ui/InlineLedgerDisclosure";
 
 export type { JournalDataScope, JournalDataView } from "@/components/JournalReviewTabs";
 
@@ -806,45 +807,7 @@ function TradeTable({
   returnTo: string;
   tradeRows: JournalDayTradeRow[];
 }) {
-  const [expandedTradeId, setExpandedTradeId] = useState<number | null>(null);
-  const [closingTradeId, setClosingTradeId] = useState<number | null>(null);
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => () => {
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-  }, []);
-
-  function clearCloseTimer() {
-    if (!closeTimerRef.current) return;
-    clearTimeout(closeTimerRef.current);
-    closeTimerRef.current = null;
-  }
-
-  function closeTrade(tradeId: number) {
-    clearCloseTimer();
-    setClosingTradeId(tradeId);
-    closeTimerRef.current = setTimeout(() => {
-      setExpandedTradeId((current) => current === tradeId ? null : current);
-      setClosingTradeId((current) => current === tradeId ? null : current);
-      closeTimerRef.current = null;
-    }, 200);
-  }
-
-  function toggleTrade(tradeId: number) {
-    if (expandedTradeId === tradeId) {
-      if (closingTradeId === tradeId) {
-        clearCloseTimer();
-        setClosingTradeId(null);
-      } else {
-        closeTrade(tradeId);
-      }
-      return;
-    }
-
-    clearCloseTimer();
-    setClosingTradeId(null);
-    setExpandedTradeId(tradeId);
-  }
+  const disclosure = useInlineLedgerDisclosure<number>();
 
   return (
     <div className="mt-3 overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface)]">
@@ -852,14 +815,14 @@ function TradeTable({
         <thead className="text-[var(--muted)]"><tr className="border-b border-[var(--hairline)]"><th className="px-4 py-3 font-medium">Time</th><th className="px-2 py-3 font-medium">Symbol</th><th className="px-2 py-3 font-medium">Side / shares</th><th className="px-2 py-3 font-medium">Held</th><th className="px-2 py-3 font-medium">Setup</th><th className="px-2 py-3 font-medium">Context</th><th className="px-4 py-3 text-right font-medium">P&L</th></tr></thead>
         <tbody>
           {tradeRows.map((trade) => {
-            const expanded = expandedTradeId === trade.id;
-            const closing = closingTradeId === trade.id;
+            const expanded = disclosure.expandedId === trade.id;
+            const closing = disclosure.closingId === trade.id;
             const panelId = `inline-trade-review-${trade.id}`;
             return (
               <Fragment key={trade.id}>
                 <tr
                   className={`cursor-pointer border-b border-[var(--hairline)] text-[var(--body)] transition-colors hover:bg-[var(--surface-2)] ${expanded && !closing ? "bg-[var(--surface-2)]" : ""}`}
-                  onClick={() => toggleTrade(trade.id)}
+                  onClick={() => disclosure.toggle(trade.id)}
                 >
                   <td className="px-4 py-3 font-mono tabular-nums">
                     <button
@@ -883,17 +846,15 @@ function TradeTable({
                 {expanded ? (
                   <tr id={panelId}>
                     <td colSpan={7} className="border-b border-[var(--border)] bg-[var(--background)] p-0">
-                      <div className={`inline-trade-disclosure ${closing ? "inline-trade-disclosure--closing" : ""}`}>
-                        <div className="inline-trade-disclosure__content">
-                          <InlineTradeReviewPanel
-                            date={date}
-                            onClose={() => closeTrade(trade.id)}
-                            returnTo={returnTo}
-                            symbol={trade.symbol}
-                            tradeId={trade.id}
-                          />
-                        </div>
-                      </div>
+                      <InlineLedgerDisclosure closing={closing}>
+                        <InlineTradeReviewPanel
+                          date={date}
+                          onClose={() => disclosure.close(trade.id)}
+                          returnTo={returnTo}
+                          symbol={trade.symbol}
+                          tradeId={trade.id}
+                        />
+                      </InlineLedgerDisclosure>
                     </td>
                   </tr>
                 ) : null}

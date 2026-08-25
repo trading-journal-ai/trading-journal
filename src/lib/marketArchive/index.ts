@@ -1,4 +1,5 @@
 export { createMarketArchiveClient, type MarketArchiveClient, type MarketArchiveHealth } from "./client";
+export { loadArchiveCandles, type ArchiveCandleResult } from "./candles";
 export { resolveMarketArchivePaths, type MarketArchivePaths } from "./config";
 export {
   CORE_MOVER_RULES,
@@ -8,3 +9,14 @@ export {
   type CoreMoverExclusionReason,
   type CoreMoverQualification,
 } from "./rules";
+export type {
+  ArchiveMoverSort,
+  ArchiveMoverSummary,
+  ArchiveSessionEvidence,
+  ArchiveSessionLens,
+  ArchiveSortDirection,
+  ArchiveUniverse,
+  ListMoversInput,
+  ListMoversResult,
+  TradingDaySummary,
+} from "./types";

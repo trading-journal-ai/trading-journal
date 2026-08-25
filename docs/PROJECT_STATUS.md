@@ -32,7 +32,7 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
-- **2026-08-25** — Momentum Archive ownership migration foundation
+- **2026-08-25** — Momentum Archive ownership migration and first browser slice
   (branch `codex/momentum-archive`).
   - Established Trading Journal AI as the archive owner, with a standard
     application-data home and optional local path overrides.
@@ -43,14 +43,29 @@ stopped. This is the "when did we last work on it" trail.
   - Added repeatable migration and verification commands, a private manifest
     contract, a read-only health client, and versioned `core-common-stock-v1`
     qualification rules with explicit exclusion reasons.
+  - Added typed Core/Raw Day and Archive queries with All, Premarket, Regular,
+    and After-hours session lenses. Raw evidence retains excluded instruments
+    and shows the controlling Core exclusion in the ledger.
+  - Added the Analytics Momentum Archive surface with day stepping, full-archive
+    search and sorting, Core/Raw toggles, session buttons, and the preserved
+    no-maximum-gain anomaly policy.
+  - Extracted the Journal row-disclosure behavior into a shared component and
+    reused it for one-at-a-time inline mover charts.
+  - Added a candidate-only candle cache that validates mover membership,
+    streams the selected ticker block from the raw Massive day file, keeps
+    04:00–20:00 ET, and invalidates derived rows when the source file changes.
   - Documented the ownership, normalization, Day/Archive session-lens, and
     inline-chart contracts in `docs/analytics/MOMENTUM_ARCHIVE.md`.
-  - Focused Market Archive tests, TypeScript, ESLint, and the production build
-    passed; the copied 4.2 GB database passed full integrity and foreign-key
-    checks.
-  - **Stopped at:** ownership and local data relocation are proven. Trading
-    Server pipeline-code transfer, candidate candle-cache construction, and
-    the Analytics UI remain next; no source archive files were removed.
+  - The archive query/cache suite (19 tests), ESLint, TypeScript, demo-schema
+    verification, and the production build pass; the copied 4.2 GB database
+    passed full integrity and foreign-key checks.
+  - Browser-verified Day, session-lens, Core/Raw, Full Archive, inline chart,
+    and 390px behavior with no feature errors. An uncached late-alphabet ticker
+    loaded 589 candles in 1.23 seconds after ticker-block optimization; its
+    cached repeat returned in 0.006 seconds.
+  - **Stopped at:** first browser slice is implemented, fully verified, and
+    ready for owner review. Journal execution overlays and entry-time
+    comparisons remain later work. No source archive files were removed.
 
 - **2026-08-13** — Journal Today navigation correction
   (branch `codex/fix-journal-today-navigation`).

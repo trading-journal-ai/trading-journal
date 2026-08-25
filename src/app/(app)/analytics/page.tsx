@@ -9,6 +9,7 @@ import { tradeDayActivities, type TradeDayActivity } from "@/lib/tradeActivity";
 import ReportRangeFilter from "@/components/ReportRangeFilter";
 import PeriodTabs from "@/components/ui/PeriodTabs";
 import Eyebrow from "@/components/ui/Eyebrow";
+import AnalyticsSectionTabs from "@/components/AnalyticsSectionTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -1095,6 +1096,7 @@ export default async function ReportsPage({
 
   return (
     <div className="mx-auto max-w-6xl">
+      <AnalyticsSectionTabs active="performance" />
       <FilterBar filters={filters} tagOptions={tagOptions} />
 
       <div className="mt-10">

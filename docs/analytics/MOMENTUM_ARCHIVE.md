@@ -1,6 +1,6 @@
 # Momentum Archive
 
-> Status: Foundation in progress · Owner: Trading Journal AI · Rule contract: `core-common-stock-v1`
+> Status: First browser slice implemented · Owner: Trading Journal AI · Rule contract: `core-common-stock-v1`
 
 Momentum Archive is a private historical-research surface for studying common-stock momentum days and, later, comparing that opportunity set with Journal trades. Trading Journal owns the archive lifecycle, domain rules, queries, UI, and candidate candle cache.
 
@@ -12,7 +12,7 @@ Market Archive data is private application data, not repository content. The def
 ~/Library/Application Support/Trading Journal AI/market-archive/
 ├── market-history.sqlite
 ├── manifest.json
-├── candles.sqlite              # planned candidate-only chart cache
+├── candles.sqlite              # writable candidate-only chart cache
 └── raw/minute-aggs/            # verified rebuildable source
 ```
 
@@ -70,19 +70,21 @@ Full-day dollar volume and completed-session RVOL are retrospective evidence. Th
 
 ## Initial product contract
 
-Momentum Archive will live under Analytics with two views:
+Momentum Archive lives under Analytics with two views:
 
 - **Day:** date navigation and a compact common-stock mover ledger.
 - **Archive:** date range, symbol search, versioned universe selection, deeper sorting, and export.
 
 Both views use **All · Premarket · Regular · After-hours** as a session lens. The active lens replaces the session-specific columns rather than displaying three extremely wide column groups.
 
-Clicking a mover row expands an inline panel beneath it, pushing later rows down. The interaction should extract the existing Journal inline-disclosure behavior and reuse `LightweightTradeChart`; it should not reuse trade-note and execution-review content. Only one row remains expanded, and minute candles load lazily.
+Clicking a mover row expands an inline panel beneath it, pushing later rows down. The interaction extracts the existing Journal inline-disclosure behavior and reuses `LightweightTradeChart`; it does not reuse trade-note and execution-review content. Only one row remains expanded, and minute candles load lazily.
+
+The first chart request for a symbol/day streams its ticker-grouped Massive flat file, stops after the requested ticker block, keeps the 04:00–20:00 ET rows, and writes only that candidate to `candles.sqlite`. The request is refused unless the symbol/day is a qualifying raw archive mover. Cache metadata includes the source size and modification time so a deliberate raw-file replacement refreshes derived candles. Cached opens do not rescan the compressed source.
 
 Journal execution overlays, entry-time comparisons, and retrospective trade outcomes follow after the archive browser and candidate candle path are trustworthy.
 
 ## Evidence boundary
 
-The aggregate database contains daily and completed-session summaries, not minute candles. It cannot reconstruct entry-time RVOL or charts by itself. The raw compressed minute files remain the rebuildable source of truth until the candidate-only candle cache is complete and verified.
+The aggregate database contains daily and completed-session summaries, not minute candles. It cannot reconstruct entry-time RVOL by itself. The raw compressed minute files remain the rebuildable source of truth; `candles.sqlite` is a disposable, candidate-only chart cache.
 
 The archive and any derived chart remain private unless the market-data license is independently confirmed to permit another deployment or redistribution model.
