@@ -59,10 +59,17 @@ stopped. This is the "when did we last work on it" trail.
   - Re-ran full installed-state integrity, foreign-key, database/raw/reference/
     split checksums, exact-symbol reconciliation, and the TPC incident contract.
     Direct live queries preserve distinct `TPC`/`TpC` and `BCPC`/`BCpC` rows.
-  - **Stopped at:** data cutover complete and verified. Reader/verification code
-    remains committed on `codex/momentum-archive`; merge it around the unrelated
-    dirty shared checkout before normal browser observation, then retain the
-    legacy quarantine until that observation succeeds.
+  - Integrated the current local `main` into `codex/momentum-archive`, preserving
+    the newer journal ledger/card behavior while sharing its disclosure control
+    with Momentum Archive. Runtime archive health now fails closed unless the
+    installed snapshot carries exact-identity v2 provenance and reconciliation.
+  - Final validation passed: 211 tests passed (6 skipped), `npm run verify:full`
+    completed, and desktop browser QA loaded the live 17-symbol session and an
+    expanded archive-backed chart without console errors. Mobile is not part of
+    this feature's release contract.
+  - **Stopped at:** integration gate complete and local `main` ready for the
+    reviewed fast-forward. Keep the legacy quarantine until a later deliberate
+    cleanup; it is no longer needed by the running app.
 
 - **2026-08-25** — Momentum Archive data-integrity remediation handoff
   (branch `codex/momentum-archive`).
