@@ -64,7 +64,7 @@ stopped. This is the "when did we last work on it" trail.
     with Momentum Archive. Runtime archive health now fails closed unless the
     installed snapshot carries exact-identity v2 provenance and reconciliation.
   - Final validation passed: 211 tests passed (6 skipped), `npm run verify:full`
-    completed, and desktop browser QA loaded the live 17-symbol session and an
+    completed, and desktop browser QA loaded a live session and an
     expanded archive-backed chart without console errors. Mobile is not part of
     this feature's release contract.
   - **Stopped at:** integration gate complete and the reviewed branch
