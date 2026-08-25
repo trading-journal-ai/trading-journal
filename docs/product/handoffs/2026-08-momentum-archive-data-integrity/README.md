@@ -2,7 +2,7 @@
 
 > Date: 2026-08-25
 >
-> Status: diagnosis complete; implementation and rebuild not started
+> Status: implementation and staged rebuild complete; atomic cutover pending
 >
 > Product repository: Trading Journal
 >
@@ -17,13 +17,52 @@ common stock (`TPC`) and AT&T Series C preferred (`TpC`). Every calculation made
 after that merge can be wrong: prior close, high/low, volume, RVOL, mover
 qualification, company metadata, split association, and chart lookup.
 
-The raw compressed minute files preserve the exact provider symbols and are
-sufficient for a clean rebuild. Do not patch displayed percentages, special-case
-TPC, or add an outlier filter. Preserve exact identity end to end, rebuild every
-derived artifact in staging, and cut over only after semantic validation passes.
+The raw compressed minute files and point-in-time reference snapshots preserve
+the exact provider symbols and are sufficient for a clean rebuild. Do not patch
+displayed percentages, special-case TPC, or add an outlier filter. Preserve exact
+identity end to end, rebuild every derived artifact in staging, and cut over only
+after semantic validation passes.
 
 Keep float and market-cap enrichment out of this fix. The first objective is to
 make the data already in the archive internally trustworthy and useful.
+
+## Staged rebuild result
+
+The bounded remediation is implemented across Trading Server and Trading
+Journal, and a fresh staged archive has passed the exact-identity contract. The
+active private archive has not been replaced.
+
+| Check | Verified result |
+| --- | ---: |
+| Trading sessions | 410 |
+| Accepted minute rows | 726,249,889 |
+| Invalid / duplicate / out-of-order minute rows | 0 / 0 / 0 |
+| Accepted exact symbol-days | 4,578,078 |
+| Derived exact symbol-days | 4,578,078 |
+| Exact-symbol reconciliation failures | 0 |
+| Corrected Core movers | 5,395 |
+| Legacy Core movers | 5,769 |
+| Core rows removed | 374 |
+
+Every removed Core row is attributable to the confirmed simultaneous common
+stock collision families: 284 `TPC` rows and 90 `BCPC` rows. No new Core rows
+appeared. Raw movers fell from 17,638 to 17,251; the remaining net reduction is
+five `HYTR/HYTr` rows and eight `SRVR/SRVr` rows. Other lower-case raw rows are
+exact-identity relabels rather than additions or removals.
+
+The full raw scan found four families present simultaneously within a session:
+`BCPC/BCpC`, `TPC/TpC`, `HYTR/HYTr`, and `SRVR/SRVr`. The rebuilt database also
+preserves the non-overlapping historical transitions `DCOMP/DCOMp` and
+`TFINP/TFINp`, yielding six folded families with more than one exact identity
+over the full archive.
+
+The split collector was also rebuilt without uppercasing. The refreshed source
+preserves `AXIAp`, which the legacy split archive had stored as `AXIAP`.
+
+The staged Journal snapshot is sidecar-free, read-only, and in DELETE journal
+mode. Manifest format 2 records the database, all 410 minute sources, 21
+point-in-time reference snapshots, split evidence, transform version, exact
+symbol reconciliation, reference coverage, and the TPC incident check.
 
 ## Confirmed TPC incident
 
@@ -81,21 +120,11 @@ Point-in-time reference snapshots contain these case-insensitive families:
 | `TFINP` | `TFINP`, `TFINp` | Likely casing/exchange transition for one preferred security |
 | `TPC` | `TPC`, `TpC` | Common stock and AT&T preferred |
 
-The Journal's initial raw-bar detector also identified `HYTR/HYTr` and several
-single-session cases. These are not contradictory inventories: reference
-coverage, raw-bar presence, and the current Core query measure different
-populations. Run a complete exact-symbol scan across all preserved raw files
-before freezing the affected set.
-
-Existing counts must retain their definitions:
-
-- The current Journal Core query attributes 377 of 5,769 movers to the detected
-  collision pattern.
-- A broader server-side audit finds 383 current rows at or above 50% among known
-  case-collision families, including transition cases that still require review.
-
-Do not combine those numbers into one headline until the staged rebuild and full
-collision inventory reconcile them.
+The completed raw scan reconciles the earlier detector inventories. The
+authoritative staged Core difference is 374 rows: 284 `TPC` and 90 `BCPC`.
+`HYTR/HYTr` and `SRVR/SRVr` affect Raw evidence but do not add to that Core
+difference. Earlier 377/383 estimates are superseded by the staged old-vs-new
+key comparison above.
 
 ## Repository boundary
 
@@ -197,6 +226,10 @@ Switch Journal consumers to the verified staged snapshot in one operation.
 Retain the old database and report as clearly labeled quarantined evidence until
 the replacement has been observed successfully. Never delete the preserved raw
 source as part of this fix.
+
+This is the only remaining remediation step. It requires an explicit owner
+cutover because it replaces the active private snapshot and invalidates the
+disposable candle cache.
 
 ## Normalized momentum view after the rebuild
 

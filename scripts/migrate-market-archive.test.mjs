@@ -16,6 +16,7 @@ afterEach(() => {
 function sourceArchive(directory) {
   const source = join(directory, "source.sqlite");
   const database = new Database(source);
+  database.pragma("journal_mode = WAL");
   database.exec(`
     create table archive_dates (session_date text primary key, source_file text not null, symbol_count integer not null);
     create table corporate_action_splits (event_id text primary key);

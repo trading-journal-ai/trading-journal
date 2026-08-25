@@ -22,6 +22,8 @@ function pathsFor(databasePath: string): MarketArchivePaths {
     databasePath,
     manifestPath: join(archiveHome, "manifest.json"),
     rawMinuteDirectory: join(archiveHome, "raw", "minute-aggs"),
+    referenceDirectory: join(archiveHome, "raw", "reference"),
+    splitFile: join(archiveHome, "raw", "reference", "splits.jsonl.gz"),
   };
 }
 

@@ -2,9 +2,9 @@
 
 > Status: Browser implemented · Owner: Trading Journal AI · Rule contract: `core-common-stock-v1`
 >
-> ⚠ **The current archive contains phantom movers.** A preferred-share ticker
-> collision in the ingest inflates 7% of Core movers and 43% of everything above
-> +400%. Diagnosed, not fixed — see
+> ⚠ **The active archive still contains phantom movers.** The exact-identity fix
+> and full staged rebuild are verified, but atomic cutover is pending. The legacy
+> snapshot contains 374 false Core rows and 113 false rows above +400%. See
 > [Known defect](#known-defect-preferred-share-ticker-collision) before trusting
 > the largest gainers. The self-contained implementation handoff is
 > [Momentum Archive data-integrity remediation](../product/handoffs/2026-08-momentum-archive-data-integrity/README.md).
@@ -20,7 +20,9 @@ Market Archive data is private application data, not repository content. The def
 ├── market-history.sqlite
 ├── manifest.json
 ├── candles.sqlite              # writable candidate-only chart cache
-└── raw/minute-aggs/            # verified rebuildable source
+└── raw/
+    ├── minute-aggs/            # verified rebuildable price/volume source
+    └── reference/              # point-in-time ticker catalogs + split evidence
 ```
 
 `market-history.sqlite` remains separate from the writable Journal database. The application opens it with SQLite read-only mode, `query_only`, DELETE journaling, and filesystem read-only permissions. This prevents archive research from mutating operational Journal data or the historical snapshot.
@@ -55,7 +57,12 @@ Verify an existing Journal-owned archive without replacing it:
 npm run market-archive:verify
 ```
 
-Pass `--quick` to use SQLite's quick check during routine diagnostics. Add `--verify-raw` to checksum every preserved minute file. Pass `--write-manifest` only when the local manifest should be refreshed after a deliberate archive or raw-source replacement.
+Pass `--quick` to use SQLite's quick check during routine diagnostics. Add
+`--require-exact-identity` to reject a legacy archive without the identity
+provenance contract, `--verify-raw` to checksum every preserved minute file,
+and `--verify-reference` to inventory point-in-time catalogs and split evidence.
+Pass `--write-manifest` only when the local manifest should be refreshed after a
+deliberate archive or source replacement.
 
 The migration never deletes its source. Retiring an older copy is a separate, explicitly authorized cleanup after the Journal-owned snapshot and raw-file relocation are proven.
 
@@ -93,8 +100,8 @@ active session's slice. Under that design a qualifying mover could render as
 gave it all back by the open, and the ledger showed the give-back. Gain is now
 always the qualifying peak.
 
-The three filters partition the Core set exactly, with no row counted twice or
-lost: premarket 2,088 + regular 2,322 + after-hours 1,359 = 5,769. Ties resolve
+The three filters partition the corrected Core set exactly, with no row counted
+twice or lost: premarket 2,051 + regular 2,025 + after-hours 1,319 = 5,395. Ties resolve
 premarket → regular → afterHours in both the SQL predicate and the JavaScript
 classifier, and a test asserts the two agree.
 
@@ -151,9 +158,9 @@ Journal execution overlays, entry-time comparisons, and retrospective trade outc
 
 ## Known defect: preferred-share ticker collision
 
-> Status: **diagnosed, not fixed.** Root cause confirmed. The archive currently in
-> use contains phantom movers. Do not treat the largest gainers as trustworthy
-> until this is rebuilt.
+> Status: **fixed in code and verified in staging; active cutover pending.** The
+> current active archive still contains phantom movers. Do not treat its largest
+> gainers as trustworthy until the staged snapshot is activated.
 
 ### Symptom
 
@@ -189,12 +196,16 @@ is `23.700000`, which is precisely the low stored against `BCPC`.
 
 | | |
 | --- | --- |
-| Phantom Core movers | 377 of 5,769 (7%) |
-| Movers ≥ +400% that are phantom | 112 of 258 (43%) |
-| Symbols responsible | TPC (264 days), BCPC (90), HYTR, plus ~22 single-day cases |
+| False Core movers removed | 374 of 5,769 (6.5%) |
+| False Core movers ≥ +400% removed | 113 of 258 (43.8%) |
+| Core symbols responsible | TPC (284 rows), BCPC (90 rows) |
+| Corrected Core total | 5,395 |
 
-Colliding pairs are stable across the archive: `TPC/TpC`, `BCPC/BCpC`, and
-`HYTR/HYTr`. Five of 410 raw files sampled; a full scan is outstanding.
+The complete 410-file scan found four simultaneous families:
+`TPC/TpC`, `BCPC/BCpC`, `HYTR/HYTr`, and `SRVR/SRVr`. It accepted 726,249,889
+minute rows with zero invalid, duplicate, out-of-order, or unreconciled rows.
+The rebuilt database also preserves non-overlapping `DCOMP/DCOMp` and
+`TFINP/TFINp` history transitions.
 
 Not every extreme mover is phantom. INHD's +6,191.5% on 2026-06-08 is real —
 $1.06 → $43.37 during regular hours on 269M shares, with premarket opening where
@@ -207,20 +218,17 @@ filter would permanently discard real data to work around a defect in our own
 pipeline, and would bake a heuristic threshold into a versioned research contract
 to do it. Filtering is the answer when the vendor data is bad; it is not.
 
-1. Scan all 410 raw files for case collisions to fix the affected set exactly.
-2. Preserve ticker case in `session-summary.cjs` and widen the validation regex to
-   accept the lowercase preferred marker.
-3. Rebuild `market-history.sqlite` from `raw/minute-aggs/`.
-4. Re-run the detector — a session whose close is below half its own open — and
-   expect zero hits; spot-check TPC, BCPC and HYTR against raw.
-5. Add a semantic check to `verify-market-archive.mjs`. Today's integrity,
-   foreign-key and SHA-256 checks all pass on the corrupted database, because it
-   is structurally valid and only semantically wrong.
+1. ~~Scan all 410 raw files for exact case collisions.~~ Complete.
+2. ~~Preserve provider case throughout ingestion, joins, splits, and queries.~~ Complete.
+3. ~~Rebuild summaries and SQLite from the preserved minute files.~~ Complete in staging.
+4. ~~Validate TPC, BCPC, full collision inventory, RVOL state, and mover changes.~~ Complete.
+5. ~~Add semantic identity verification and source lineage.~~ Complete; manifest format 2.
+6. Atomically activate the staged snapshot, quarantine the legacy database, and
+   invalidate the disposable candle cache.
 
-`src/lib/marketArchive/candles.ts:138` upper-cases the ticker the same way when
-streaming raw bars for charts. Charts are currently correct only by luck: the file
-is ASCII-sorted, `TPC` (`P` = 80) precedes `TpC` (`p` = 112), and the reader exits
-after the first matching block. Requesting `TpC` today returns Tutor Perini's bars.
+The candidate candle path now preserves exact provider casing, resolves exact
+matches first, and rejects a folded request when multiple exact instruments
+match. Focused fixtures prove that `TPC` and `TpC` load different candle streams.
 
 ## Evidence boundary
 

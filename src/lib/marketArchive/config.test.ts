@@ -19,6 +19,8 @@ describe("Market Archive paths", () => {
       databasePath: "/private/archive/market-history.sqlite",
       manifestPath: "/private/archive/manifest.json",
       rawMinuteDirectory: "/private/archive/raw/minute-aggs",
+      referenceDirectory: "/private/archive/raw/reference",
+      splitFile: "/private/archive/raw/reference/splits.jsonl.gz",
     });
   });
 

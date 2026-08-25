@@ -13,6 +13,8 @@ export type MarketArchivePaths = {
   databasePath: string;
   manifestPath: string;
   rawMinuteDirectory: string;
+  referenceDirectory: string;
+  splitFile: string;
 };
 
 function environmentPath(value: string | undefined): string | undefined {
@@ -61,5 +63,7 @@ export function resolveMarketArchivePaths(
     databasePath,
     manifestPath: join(archiveHome, MARKET_ARCHIVE_MANIFEST_FILE),
     rawMinuteDirectory: join(archiveHome, "raw", "minute-aggs"),
+    referenceDirectory: join(archiveHome, "raw", "reference"),
+    splitFile: join(archiveHome, "raw", "reference", "splits.jsonl.gz"),
   };
 }

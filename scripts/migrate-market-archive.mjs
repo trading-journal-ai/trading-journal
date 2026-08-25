@@ -50,13 +50,26 @@ export async function migrateArchive(options) {
 
   try {
     await chmod(temporaryPath, 0o600);
+    const snapshot = new Database(temporaryPath, { fileMustExist: true });
+    try {
+      snapshot.pragma("wal_checkpoint(TRUNCATE)");
+      const journalMode = snapshot.pragma("journal_mode = DELETE", { simple: true });
+      if (journalMode !== "delete") {
+        throw new Error(`Could not convert staged archive to DELETE journal mode; found ${journalMode}`);
+      }
+      snapshot.pragma("optimize");
+    } finally {
+      snapshot.close();
+    }
+    await rm(`${temporaryPath}-wal`, { force: true });
+    await rm(`${temporaryPath}-shm`, { force: true });
     const inspection = inspectArchive(temporaryPath, { fullIntegrity: true });
     await rename(temporaryPath, options.destination);
     await chmod(options.destination, 0o400);
     const manifest = await writeArchiveManifest(options.destination, options.manifest, inspection);
     return { destination: options.destination, manifest };
   } catch (error) {
-    await rm(temporaryPath, { force: true });
+    await Promise.all(["", "-wal", "-shm"].map((suffix) => rm(`${temporaryPath}${suffix}`, { force: true })));
     throw error;
   }
 }

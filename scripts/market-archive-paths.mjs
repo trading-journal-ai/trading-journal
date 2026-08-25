@@ -30,5 +30,7 @@ export function archivePaths(environment = process.env) {
     databasePath: configuredDatabase ?? join(archiveHome, "market-history.sqlite"),
     manifestPath: join(archiveHome, "manifest.json"),
     rawMinuteDirectory: join(archiveHome, "raw", "minute-aggs"),
+    referenceDirectory: join(archiveHome, "raw", "reference"),
+    splitFile: join(archiveHome, "raw", "reference", "splits.jsonl.gz"),
   };
 }

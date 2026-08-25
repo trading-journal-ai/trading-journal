@@ -7,7 +7,7 @@ import { MARKET_TZ, zonedDateTimeToUtcMs } from "@/lib/time";
 import { resolveMarketArchivePaths, type MarketArchivePaths } from "./config";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const SYMBOL_PATTERN = /^[A-Z0-9][A-Z0-9.\-]{0,31}$/;
+const SYMBOL_PATTERN = /^[A-Za-z0-9][A-Za-z0-9.\-]{0,31}$/;
 
 type CachedDayRow = {
   rowCount: number;
@@ -24,10 +24,10 @@ export type ArchiveCandleResult = {
 };
 
 function normalizedRequest(symbol: string, date: string) {
-  const normalizedSymbol = symbol.trim().toUpperCase();
-  if (!SYMBOL_PATTERN.test(normalizedSymbol)) throw new Error("Invalid archive candle symbol.");
+  const exactSymbol = symbol.trim();
+  if (!SYMBOL_PATTERN.test(exactSymbol)) throw new Error("Invalid archive candle symbol.");
   if (!DATE_PATTERN.test(date)) throw new Error("Invalid archive candle date.");
-  return { date, symbol: normalizedSymbol };
+  return { date, symbol: exactSymbol };
 }
 
 function rawFileForDate(rawDirectory: string, date: string): string {
@@ -74,16 +74,29 @@ function openCache(databasePath: string): Database.Database {
   return database;
 }
 
-function assertMover(databasePath: string, symbol: string, date: string): void {
+function resolveMoverSymbol(databasePath: string, symbol: string, date: string): string {
   const database = new Database(databasePath, { fileMustExist: true, readonly: true });
   try {
     database.pragma("query_only = ON");
-    const row = database.prepare(`
-      select 1
+    const exact = database.prepare(`
+      select symbol
       from symbol_days
       where session_date = ? and symbol = ? and qualifies_mover = 1
     `).get(date, symbol);
-    if (!row) throw new Error(`${symbol} is not an archived mover on ${date}.`);
+    if (exact) return symbol;
+    const folded = database.prepare(`
+      select distinct symbol
+      from symbol_days
+      where session_date = ? and upper(symbol) = upper(?) and qualifies_mover = 1
+      order by symbol
+    `).all(date, symbol) as Array<{ symbol: string }>;
+    if (folded.length === 1) return folded[0].symbol;
+    if (folded.length > 1) {
+      throw new Error(
+        `Ambiguous archive candle symbol ${JSON.stringify(symbol)}: ${folded.map((row) => row.symbol).join(", ")}.`,
+      );
+    }
+    throw new Error(`${symbol} is not an archived mover on ${date}.`);
   } finally {
     database.close();
   }
@@ -135,7 +148,7 @@ async function extractSymbolCandles(
       }
       return false;
     }
-    const ticker = fields[indexes.get("ticker") ?? -1]?.trim().toUpperCase();
+    const ticker = fields[indexes.get("ticker") ?? -1]?.trim();
     if (foundSymbol && ticker !== symbol) return true;
     if (ticker !== symbol) return false;
     foundSymbol = true;
@@ -200,7 +213,7 @@ export async function loadArchiveCandles(
   paths: MarketArchivePaths = resolveMarketArchivePaths(),
 ): Promise<ArchiveCandleResult> {
   const request = normalizedRequest(input.symbol, input.date);
-  assertMover(paths.databasePath, request.symbol, request.date);
+  request.symbol = resolveMoverSymbol(paths.databasePath, request.symbol, request.date);
   const sourceFile = rawFileForDate(paths.rawMinuteDirectory, request.date);
   const cache = openCache(paths.candleDatabasePath);
   try {

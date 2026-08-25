@@ -32,6 +32,29 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-08-25** — Momentum Archive exact-identity remediation and staged rebuild
+  (branches `codex/momentum-archive` and `codex/momentum-archive-identity`).
+  - Preserved the previously untracked Trading Server archive pipeline in an
+    isolated task worktree and implemented exact provider identity through
+    minute parsing, daily aggregation, reference/split joins, prior-close/RVOL
+    state, SQLite keys, CLI resolution, and Journal candle lookup.
+  - Added source/summary hashes, transform provenance, exact-symbol
+    reconciliation, collision inventories, duplicate-minute checks, reference
+    coverage, manifest format 2, and the TPC incident acceptance check.
+  - Refreshed split evidence without case folding; this recovered the exact
+    provider ticker `AXIAp`, stored as `AXIAP` in the legacy split archive.
+  - Rebuilt all 410 sessions from 726,249,889 accepted minute rows with zero
+    invalid, duplicate, out-of-order, or unreconciled rows. The full raw scan
+    found four simultaneous collision families and restored 845 symbol-days.
+  - The staged read-only snapshot passes integrity, foreign keys, source hashes,
+    exact identity, and TPC/BCPC regression checks. Core movers reconcile from
+    5,769 to 5,395: exactly 284 false TPC rows and 90 false BCPC rows removed,
+    with no new Core rows.
+  - Fixed the migration path so WAL sources are explicitly converted to a
+    sidecar-free DELETE snapshot and failed partial sidecars are cleaned up.
+  - **Stopped at:** verified staged snapshot ready; the active private database
+    and disposable candle cache remain unchanged pending explicit atomic cutover.
+
 - **2026-08-25** — Momentum Archive data-integrity remediation handoff
   (branch `codex/momentum-archive`).
   - Recorded the confirmed TPC/TpC case-sensitive identity failure, exact

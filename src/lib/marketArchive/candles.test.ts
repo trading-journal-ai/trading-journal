@@ -27,7 +27,11 @@ function fixturePaths(): MarketArchivePaths {
       qualifies_mover integer not null,
       primary key (session_date, symbol)
     );
-    insert into symbol_days values ('2026-08-24', 'CORE', 1), ('2026-08-24', 'QUIET', 0);
+    insert into symbol_days values
+      ('2026-08-24', 'CORE', 1),
+      ('2026-08-24', 'TPC', 1),
+      ('2026-08-24', 'TpC', 1),
+      ('2026-08-24', 'QUIET', 0);
   `);
   database.close();
 
@@ -40,6 +44,8 @@ function fixturePaths(): MarketArchivePaths {
     "CORE,100,2,2.2,2.3,1.9,1787562000000000000,10",
     "CORE,200,2.2,2.5,2.6,2.1,1787562060000000000,20",
     "CORE,50,2.5,2.4,2.6,2.3,1787616000000000000,5",
+    "TPC,100,96,96.2,96.4,95.8,1787562000000000000,10",
+    "TpC,200,16.8,16.82,16.85,16.73,1787562000000000000,20",
     "ZZZZ,400,9,9.5,10,8.8,1787562120000000000,30",
   ].join("\n");
   writeFileSync(join(dayDirectory, "2026-08-24.csv.gz"), gzipSync(csv));
@@ -50,6 +56,8 @@ function fixturePaths(): MarketArchivePaths {
     databasePath,
     manifestPath: join(archiveHome, "manifest.json"),
     rawMinuteDirectory,
+    referenceDirectory: join(archiveHome, "raw", "reference"),
+    splitFile: join(archiveHome, "raw", "reference", "splits.jsonl.gz"),
   };
 }
 
@@ -69,6 +77,21 @@ describe("Momentum Archive candidate candle cache", () => {
     const cache = new Database(paths.candleDatabasePath, { readonly: true });
     expect(cache.prepare("select count(*) as count from archive_candles").get()).toEqual({ count: 2 });
     cache.close();
+  });
+
+  it("loads case-collision instruments independently and rejects folded ambiguity", async () => {
+    const paths = fixturePaths();
+    const common = await loadArchiveCandles({ date: "2026-08-24", symbol: "TPC" }, paths);
+    const preferred = await loadArchiveCandles({ date: "2026-08-24", symbol: "TpC" }, paths);
+
+    expect(common.candles).toEqual([
+      { t: 1787562000, o: 96, h: 96.4, l: 95.8, c: 96.2, vol: 100 },
+    ]);
+    expect(preferred.candles).toEqual([
+      { t: 1787562000, o: 16.8, h: 16.85, l: 16.73, c: 16.82, vol: 200 },
+    ]);
+    await expect(loadArchiveCandles({ date: "2026-08-24", symbol: "tpc" }, paths))
+      .rejects.toThrow("Ambiguous archive candle symbol");
   });
 
   it("refuses non-movers and malformed identifiers", async () => {
