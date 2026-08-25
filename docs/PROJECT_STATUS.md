@@ -67,9 +67,9 @@ stopped. This is the "when did we last work on it" trail.
     completed, and desktop browser QA loaded the live 17-symbol session and an
     expanded archive-backed chart without console errors. Mobile is not part of
     this feature's release contract.
-  - **Stopped at:** integration gate complete and local `main` ready for the
-    reviewed fast-forward. Keep the legacy quarantine until a later deliberate
-    cleanup; it is no longer needed by the running app.
+  - **Stopped at:** integration gate complete and the reviewed branch
+    fast-forwarded into local `main`. Keep the legacy quarantine until a later
+    deliberate cleanup; it is no longer needed by the running app.
 
 - **2026-08-25** — Momentum Archive data-integrity remediation handoff
   (branch `codex/momentum-archive`).
