@@ -32,7 +32,7 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
-- **2026-08-25** — Momentum Archive exact-identity remediation and staged rebuild
+- **2026-08-25** — Momentum Archive exact-identity remediation, rebuild, and cutover
   (branches `codex/momentum-archive` and `codex/momentum-archive-identity`).
   - Preserved the previously untracked Trading Server archive pipeline in an
     isolated task worktree and implemented exact provider identity through
@@ -52,8 +52,17 @@ stopped. This is the "when did we last work on it" trail.
     with no new Core rows.
   - Fixed the migration path so WAL sources are explicitly converted to a
     sidecar-free DELETE snapshot and failed partial sidecars are cleaned up.
-  - **Stopped at:** verified staged snapshot ready; the active private database
-    and disposable candle cache remain unchanged pending explicit atomic cutover.
+  - After explicit owner approval, activated the verified format-2 snapshot with
+    a rollback-aware same-filesystem rename. The legacy database, manifest, and
+    invalidated candle cache remain under
+    `quarantine/2026-08-25-legacy-casefold/`; the raw minute source was untouched.
+  - Re-ran full installed-state integrity, foreign-key, database/raw/reference/
+    split checksums, exact-symbol reconciliation, and the TPC incident contract.
+    Direct live queries preserve distinct `TPC`/`TpC` and `BCPC`/`BCpC` rows.
+  - **Stopped at:** data cutover complete and verified. Reader/verification code
+    remains committed on `codex/momentum-archive`; merge it around the unrelated
+    dirty shared checkout before normal browser observation, then retain the
+    legacy quarantine until that observation succeeds.
 
 - **2026-08-25** — Momentum Archive data-integrity remediation handoff
   (branch `codex/momentum-archive`).

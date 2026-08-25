@@ -2,7 +2,7 @@
 
 > Date: 2026-08-25
 >
-> Status: implementation and staged rebuild complete; atomic cutover pending
+> Status: remediation complete; active cutover verified
 >
 > Product repository: Trading Journal
 >
@@ -26,11 +26,13 @@ after semantic validation passes.
 Keep float and market-cap enrichment out of this fix. The first objective is to
 make the data already in the archive internally trustworthy and useful.
 
-## Staged rebuild result
+## Rebuild and cutover result
 
 The bounded remediation is implemented across Trading Server and Trading
-Journal, and a fresh staged archive has passed the exact-identity contract. The
-active private archive has not been replaced.
+Journal. A fresh archive passed the exact-identity contract and replaced the
+active private snapshot on August 25, 2026. The legacy database, its manifest,
+and the invalidated candle cache remain recoverable under
+`quarantine/2026-08-25-legacy-casefold/` inside the private archive home.
 
 | Check | Verified result |
 | --- | ---: |
@@ -59,7 +61,7 @@ over the full archive.
 The split collector was also rebuilt without uppercasing. The refreshed source
 preserves `AXIAp`, which the legacy split archive had stored as `AXIAP`.
 
-The staged Journal snapshot is sidecar-free, read-only, and in DELETE journal
+The active Journal snapshot is sidecar-free, read-only, and in DELETE journal
 mode. Manifest format 2 records the database, all 410 minute sources, 21
 point-in-time reference snapshots, split evidence, transform version, exact
 symbol reconciliation, reference coverage, and the TPC incident check.
@@ -222,14 +224,18 @@ Validation must include:
 
 ### 5. Cut over atomically
 
-Switch Journal consumers to the verified staged snapshot in one operation.
-Retain the old database and report as clearly labeled quarantined evidence until
-the replacement has been observed successfully. Never delete the preserved raw
-source as part of this fix.
+Completed August 25, 2026 after explicit owner approval. A rollback-aware rename
+sequence activated the verified snapshot and point-in-time reference evidence,
+while moving the legacy database, manifest, and disposable candle cache into a
+dated quarantine directory. The preserved raw minute source was not moved or
+modified.
 
-This is the only remaining remediation step. It requires an explicit owner
-cutover because it replaces the active private snapshot and invalidates the
-disposable candle cache.
+The installed database then passed full SQLite integrity, foreign-key,
+exact-identity, source-hash, reference-hash, split-hash, and TPC incident checks.
+Direct live queries returned distinct `TPC`/`TpC` and `BCPC`/`BCpC` identities.
+Keep the quarantine directory until the reader changes on
+`codex/momentum-archive` are merged and the browser has been observed in normal
+use.
 
 ## Normalized momentum view after the rebuild
 
@@ -300,7 +306,9 @@ part of the current archive contract:
 
 > Work in the Trading Journal Momentum Archive worktree. Read
 > `docs/product/handoffs/2026-08-momentum-archive-data-integrity/README.md` and
-> `docs/analytics/MOMENTUM_ARCHIVE.md`. Implement only the case-sensitive
-> identity remediation and staged validation contract. Keep float enrichment and
-> multi-day continuation classification deferred. Do not mutate or replace the
-> current private archive until the staged rebuild passes acceptance criteria.
+> `docs/analytics/MOMENTUM_ARCHIVE.md`. The exact-symbol archive is active and
+> verified. Merge the reader and verification changes from
+> `codex/momentum-archive` without disturbing other active work, then smoke-test
+> the Momentum Archive browser against the live snapshot. Keep the dated legacy
+> quarantine until that observation succeeds. Float enrichment and multi-day
+> continuation classification remain deferred.

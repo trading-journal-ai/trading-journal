@@ -2,11 +2,9 @@
 
 > Status: Browser implemented · Owner: Trading Journal AI · Rule contract: `core-common-stock-v1`
 >
-> ⚠ **The active archive still contains phantom movers.** The exact-identity fix
-> and full staged rebuild are verified, but atomic cutover is pending. The legacy
-> snapshot contains 374 false Core rows and 113 false rows above +400%. See
-> [Known defect](#known-defect-preferred-share-ticker-collision) before trusting
-> the largest gainers. The self-contained implementation handoff is
+> **Exact-symbol remediation active.** The format-2 archive was activated and
+> fully verified on August 25, 2026. The quarantined legacy snapshot contained
+> 374 false Core rows and 113 false rows above +400%. The self-contained record is
 > [Momentum Archive data-integrity remediation](../product/handoffs/2026-08-momentum-archive-data-integrity/README.md).
 
 Momentum Archive is a private historical-research surface for studying common-stock momentum days and, later, comparing that opportunity set with Journal trades. Trading Journal owns the archive lifecycle, domain rules, queries, UI, and candidate candle cache.
@@ -19,7 +17,7 @@ Market Archive data is private application data, not repository content. The def
 ~/Library/Application Support/Trading Journal AI/market-archive/
 ├── market-history.sqlite
 ├── manifest.json
-├── candles.sqlite              # writable candidate-only chart cache
+├── candles.sqlite              # writable chart cache, created lazily after invalidation
 └── raw/
     ├── minute-aggs/            # verified rebuildable price/volume source
     └── reference/              # point-in-time ticker catalogs + split evidence
@@ -158,9 +156,9 @@ Journal execution overlays, entry-time comparisons, and retrospective trade outc
 
 ## Known defect: preferred-share ticker collision
 
-> Status: **fixed in code and verified in staging; active cutover pending.** The
-> current active archive still contains phantom movers. Do not treat its largest
-> gainers as trustworthy until the staged snapshot is activated.
+> Status: **fixed and active as of August 25, 2026.** The installed format-2
+> snapshot passes the exact-identity and source-lineage contract. The legacy
+> database and invalidated candle cache remain in dated quarantine for rollback.
 
 ### Symptom
 
@@ -220,11 +218,11 @@ to do it. Filtering is the answer when the vendor data is bad; it is not.
 
 1. ~~Scan all 410 raw files for exact case collisions.~~ Complete.
 2. ~~Preserve provider case throughout ingestion, joins, splits, and queries.~~ Complete.
-3. ~~Rebuild summaries and SQLite from the preserved minute files.~~ Complete in staging.
+3. ~~Rebuild summaries and SQLite from the preserved minute files.~~ Complete.
 4. ~~Validate TPC, BCPC, full collision inventory, RVOL state, and mover changes.~~ Complete.
 5. ~~Add semantic identity verification and source lineage.~~ Complete; manifest format 2.
-6. Atomically activate the staged snapshot, quarantine the legacy database, and
-   invalidate the disposable candle cache.
+6. ~~Atomically activate the staged snapshot, quarantine the legacy database,
+   and invalidate the disposable candle cache.~~ Complete August 25, 2026.
 
 The candidate candle path now preserves exact provider casing, resolves exact
 matches first, and rejects a folded request when multiple exact instruments
