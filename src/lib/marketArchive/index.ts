@@ -10,10 +10,11 @@ export {
   type CoreMoverQualification,
 } from "./rules";
 export type {
+  ArchiveMoverAggregate,
   ArchiveMoverSort,
   ArchiveMoverSummary,
+  ArchivePeakSession,
   ArchiveSessionEvidence,
-  ArchiveSessionLens,
   ArchiveSortDirection,
   ArchiveUniverse,
   ListMoversInput,

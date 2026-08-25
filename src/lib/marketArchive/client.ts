@@ -1,9 +1,15 @@
 import { existsSync, statSync } from "node:fs";
 import Database from "better-sqlite3";
 import { resolveMarketArchivePaths, type MarketArchivePaths } from "./config";
-import { listMoversFromDatabase, listTradingDaysFromDatabase } from "./movers";
+import { listMoversFromDatabase, listTradingDaysFromDatabase, summarizeMoversFromDatabase } from "./movers";
 import { CORE_MOVER_RULE_VERSION } from "./rules";
-import type { ArchiveUniverse, ListMoversInput, ListMoversResult, TradingDaySummary } from "./types";
+import type {
+  ArchiveMoverAggregate,
+  ArchiveUniverse,
+  ListMoversInput,
+  ListMoversResult,
+  TradingDaySummary,
+} from "./types";
 
 const REQUIRED_TABLES = [
   "archive_dates",
@@ -43,6 +49,7 @@ export type MarketArchiveClient = {
   listMovers(input?: ListMoversInput): ListMoversResult;
   listTradingDays(universe?: ArchiveUniverse): TradingDaySummary[];
   paths: MarketArchivePaths;
+  summarizeMovers(input?: ListMoversInput): ArchiveMoverAggregate;
   verifyIntegrity(): { foreignKeyErrors: number; integrity: string };
 };
 
@@ -149,6 +156,14 @@ export function createMarketArchiveClient(
       const database = openReadOnly(paths.databasePath);
       try {
         return listTradingDaysFromDatabase(database, universe);
+      } finally {
+        database.close();
+      }
+    },
+    summarizeMovers(input) {
+      const database = openReadOnly(paths.databasePath);
+      try {
+        return summarizeMoversFromDatabase(database, input);
       } finally {
         database.close();
       }

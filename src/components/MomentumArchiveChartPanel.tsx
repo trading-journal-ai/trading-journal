@@ -60,7 +60,7 @@ export default function MomentumArchiveChartPanel({
     return () => controller.abort();
   }, [mover.date, mover.symbol]);
 
-  const focusTime = mover.lens.highAt ? Math.floor(new Date(mover.lens.highAt).getTime() / 1000) : undefined;
+  const focusTime = mover.evidence.highAt ? Math.floor(new Date(mover.evidence.highAt).getTime() / 1000) : undefined;
 
   return (
     <section className="px-5 py-6 sm:px-7" aria-label={`${mover.symbol} chart for ${mover.date}`}>

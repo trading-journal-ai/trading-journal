@@ -1,10 +1,11 @@
 import type Database from "better-sqlite3";
 import { qualifyCoreMover } from "./rules";
 import type {
+  ArchiveMoverAggregate,
   ArchiveMoverSort,
   ArchiveMoverSummary,
+  ArchivePeakSession,
   ArchiveSessionEvidence,
-  ArchiveSessionLens,
   ArchiveUniverse,
   ListMoversInput,
   ListMoversResult,
@@ -12,14 +13,20 @@ import type {
 } from "./types";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const CORE_FILTER = `
-  d.qualifies_mover = 1
-  and d.split_event = 0
+/** Instrument-quality rules, independent of the 50% threshold. */
+const CORE_QUALITY = `
+  d.split_event = 0
   and d.instrument_type = 'CS'
   and d.previous_regular_close >= 1
   and julianday(d.session_date) - julianday(d.previous_close_date) between 1 and 7
 `;
-const RAW_FILTER = "d.qualifies_mover = 1";
+const MOVER_SOURCE = `
+  from symbol_days d
+  left join session_stats p on p.session_date = d.session_date and p.symbol = d.symbol and p.session = 'premarket'
+  left join session_stats r on r.session_date = d.session_date and r.symbol = d.symbol and r.session = 'regular'
+  left join session_stats a on a.session_date = d.session_date and a.symbol = d.symbol and a.session = 'afterHours'
+`;
+const BARE_SOURCE = "from symbol_days d";
 
 type SessionRow = {
   activeMinutes: number | null;
@@ -87,32 +94,55 @@ function validDate(value: string | undefined, label: string): string | undefined
   return value;
 }
 
-function universeFilter(universe: ArchiveUniverse): string {
-  return universe === "raw" ? RAW_FILTER : CORE_FILTER;
+function universeFilter(universe: ArchiveUniverse, belowThreshold = false): string {
+  const threshold = belowThreshold ? "d.qualifies_mover = 0" : "d.qualifies_mover = 1";
+  return universe === "raw" ? threshold : `${threshold} and ${CORE_QUALITY}`;
 }
 
-function sortExpression(sort: ArchiveMoverSort, session: ArchiveSessionLens): string {
+/**
+ * Every measure is all-session. The peak-session control filters which rows appear;
+ * it never changes what a column means.
+ */
+const GAIN_EXPRESSION = "d.max_gain_pct";
+const HIGH_EXPRESSION = "d.max_high";
+const VOLUME_EXPRESSION = "coalesce(p.volume, 0) + coalesce(r.volume, 0) + coalesce(a.volume, 0)";
+const DOLLAR_VOLUME_EXPRESSION =
+  "coalesce(p.estimated_dollar_volume, 0) + coalesce(r.estimated_dollar_volume, 0) + coalesce(a.estimated_dollar_volume, 0)";
+/** A missing RVOL ranks below every real reading, so a floor never admits an unmeasured row. */
+const RVOL_FLOOR_EXPRESSION =
+  "max(coalesce(p.rvol20_mean, -1), coalesce(r.rvol20_mean, -1), coalesce(a.rvol20_mean, -1))";
+const RVOL_SORT_EXPRESSION =
+  "max(coalesce(p.rvol20_mean, 0), coalesce(r.rvol20_mean, 0), coalesce(a.rvol20_mean, 0))";
+
+/**
+ * Which session held the day's high. Ties resolve premarket → regular → afterHours to
+ * match peakSession() below, so the three filters partition the set exactly.
+ */
+const PEAK_SESSION_CONDITIONS = {
+  premarket: `d.premarket_high_gain_pct is not null
+    and d.premarket_high_gain_pct >= coalesce(d.regular_high_gain_pct, -1e9)
+    and d.premarket_high_gain_pct >= coalesce(d.after_hours_high_gain_pct, -1e9)`,
+  regular: `d.regular_high_gain_pct is not null
+    and d.regular_high_gain_pct > coalesce(d.premarket_high_gain_pct, -1e9)
+    and d.regular_high_gain_pct >= coalesce(d.after_hours_high_gain_pct, -1e9)`,
+  afterHours: `d.after_hours_high_gain_pct is not null
+    and d.after_hours_high_gain_pct > coalesce(d.premarket_high_gain_pct, -1e9)
+    and d.after_hours_high_gain_pct > coalesce(d.regular_high_gain_pct, -1e9)`,
+} as const;
+
+function sortExpression(sort: ArchiveMoverSort): string {
+  if (sort === "date") return "d.session_date";
+  if (sort === "name") return "coalesce(nullif(d.instrument_name, ''), d.symbol)";
   if (sort === "symbol") return "d.symbol";
   if (sort === "price") return "d.previous_regular_close";
-  if (sort === "gain") {
-    if (session === "premarket") return "d.premarket_high_gain_pct";
-    if (session === "regular") return "d.regular_high_gain_pct";
-    if (session === "afterHours") return "d.after_hours_gain_from_regular_close_pct";
-    return "d.max_gain_pct";
-  }
-  if (sort === "rvol") {
-    if (session === "premarket") return "p.rvol20_mean";
-    if (session === "regular") return "r.rvol20_mean";
-    if (session === "afterHours") return "a.rvol20_mean";
-    return "max(coalesce(p.rvol20_mean, 0), coalesce(r.rvol20_mean, 0), coalesce(a.rvol20_mean, 0))";
-  }
-  if (session === "premarket") return "p.estimated_dollar_volume";
-  if (session === "regular") return "r.estimated_dollar_volume";
-  if (session === "afterHours") return "a.estimated_dollar_volume";
-  return "coalesce(p.estimated_dollar_volume, 0) + coalesce(r.estimated_dollar_volume, 0) + coalesce(a.estimated_dollar_volume, 0)";
+  if (sort === "gain") return GAIN_EXPRESSION;
+  if (sort === "high") return HIGH_EXPRESSION;
+  if (sort === "volume") return VOLUME_EXPRESSION;
+  if (sort === "rvol") return RVOL_SORT_EXPRESSION;
+  return DOLLAR_VOLUME_EXPRESSION;
 }
 
-function sessionRow(row: MoverRow, session: Exclude<ArchiveSessionLens, "all">): SessionRow {
+function sessionRow(row: MoverRow, session: Exclude<ArchivePeakSession, "all">): SessionRow {
   if (session === "premarket") {
     return {
       activeMinutes: row.premarketActiveMinutes,
@@ -155,13 +185,7 @@ function sessionRow(row: MoverRow, session: Exclude<ArchiveSessionLens, "all">):
   };
 }
 
-function gainFor(row: MoverRow, session: Exclude<ArchiveSessionLens, "all">): number | null {
-  if (session === "premarket") return row.premarketGainPercent;
-  if (session === "regular") return row.regularGainPercent;
-  return row.afterHoursGainFromRegularClosePercent;
-}
-
-function peakSession(row: MoverRow): Exclude<ArchiveSessionLens, "all"> | null {
+function peakSession(row: MoverRow): Exclude<ArchivePeakSession, "all"> | null {
   const values = [
     ["premarket", row.premarketGainPercent],
     ["regular", row.regularGainPercent],
@@ -175,24 +199,7 @@ function peakSession(row: MoverRow): Exclude<ArchiveSessionLens, "all"> | null {
   return peak?.[0] ?? null;
 }
 
-function evidenceFor(row: MoverRow, session: ArchiveSessionLens): ArchiveSessionEvidence {
-  if (session !== "all") {
-    const source = sessionRow(row, session);
-    return {
-      activeMinutes: source.activeMinutes ?? 0,
-      close: source.close,
-      closeDistanceFromHighPercent: source.closeDistanceFromHighPercent,
-      dollarVolume: source.dollarVolume ?? 0,
-      gainPercent: gainFor(row, session),
-      high: source.high,
-      highAt: source.highAt,
-      rvol: source.rvol,
-      transactions: source.transactions ?? 0,
-      transactionsPerActiveMinute: source.transactionsPerActiveMinute,
-      volume: source.volume ?? 0,
-    };
-  }
-
+function evidenceFor(row: MoverRow): ArchiveSessionEvidence {
   const sessions = (["premarket", "regular", "afterHours"] as const).map((value) => sessionRow(row, value));
   const peak = peakSession(row);
   const peakEvidence = peak ? sessionRow(row, peak) : null;
@@ -217,7 +224,15 @@ function evidenceFor(row: MoverRow, session: ArchiveSessionLens): ArchiveSession
   };
 }
 
-function moverSummary(row: MoverRow, session: ArchiveSessionLens): ArchiveMoverSummary {
+/** The regular-session leg of the day's path, based on wherever premarket ended. */
+function continuationPercent(row: MoverRow): number | null {
+  const base = row.premarketHigh ?? row.previousRegularClose;
+  if (!base || !Number.isFinite(base) || base <= 0) return null;
+  if (row.regularHigh === null || !Number.isFinite(row.regularHigh)) return null;
+  return ((row.regularHigh / base) - 1) * 100;
+}
+
+function moverSummary(row: MoverRow): ArchiveMoverSummary {
   const qualification = qualifyCoreMover({
     instrumentType: row.instrumentType,
     maxGainPercent: row.maxGainPercent,
@@ -227,15 +242,20 @@ function moverSummary(row: MoverRow, session: ArchiveSessionLens): ArchiveMoverS
     splitEvent: Boolean(row.splitEvent),
   });
   return {
+    afterHoursGainFromRegularClosePercent: row.afterHoursGainFromRegularClosePercent,
+    afterHoursGainPercent: row.afterHoursGainPercent,
+    continuationPercent: continuationPercent(row),
     coreExclusionReasons: qualification.excludedBy,
     date: row.date,
+    evidence: evidenceFor(row),
     instrumentName: row.instrumentName,
     instrumentType: row.instrumentType,
-    lens: evidenceFor(row, session),
     peakSession: peakSession(row),
+    premarketGainPercent: row.premarketGainPercent,
     previousRegularClose: row.previousRegularClose,
     primaryExchange: row.primaryExchange,
     qualifiesCore: qualification.qualifies,
+    regularGainPercent: row.regularGainPercent,
     splitEvent: Boolean(row.splitEvent),
     symbol: row.symbol,
   };
@@ -254,22 +274,21 @@ export function listTradingDaysFromDatabase(
   `).all() as TradingDaySummary[];
 }
 
-export function listMoversFromDatabase(
-  database: Database.Database,
-  input: ListMoversInput = {},
-): ListMoversResult {
+type MoverQueryPlan = {
+  needsJoins: boolean;
+  parameters: Record<string, string | number>;
+  where: string;
+};
+
+function planMoverQuery(input: ListMoversInput): MoverQueryPlan {
   const universe = input.universe ?? "core";
-  const session = input.session ?? "all";
-  const sort = input.sort ?? "gain";
-  const direction = input.direction === "asc" ? "asc" : "desc";
-  const limit = Math.min(200, Math.max(1, Math.trunc(input.limit ?? 100)));
-  const offset = Math.max(0, Math.trunc(input.offset ?? 0));
+  const peak = input.peakSession ?? "all";
   const date = validDate(input.date, "date");
   const from = validDate(input.from, "from");
   const to = validDate(input.to, "to");
   if (from && to && from > to) throw new Error("from must not be after to");
 
-  const conditions = [universeFilter(universe)];
+  const conditions = [universeFilter(universe, input.belowThreshold === true)];
   const parameters: Record<string, string | number> = {};
   if (date) {
     conditions.push("d.session_date = @date");
@@ -289,8 +308,39 @@ export function listMoversFromDatabase(
     conditions.push("(upper(d.symbol) like @query or upper(coalesce(d.instrument_name, '')) like @query)");
     parameters.query = `%${query}%`;
   }
-  const where = conditions.join(" and ");
-  const total = database.prepare(`select count(*) as count from symbol_days d where ${where}`).get(parameters) as { count: number };
+  if (peak !== "all") conditions.push(`(${PEAK_SESSION_CONDITIONS[peak]})`);
+  if (input.minGain !== undefined && Number.isFinite(input.minGain)) {
+    conditions.push(`${GAIN_EXPRESSION} >= @minGain`);
+    parameters.minGain = input.minGain;
+  }
+  if (input.maxGain !== undefined && Number.isFinite(input.maxGain)) {
+    conditions.push(`${GAIN_EXPRESSION} < @maxGain`);
+    parameters.maxGain = input.maxGain;
+  }
+  let needsJoins = false;
+  if (input.minRvol !== undefined && Number.isFinite(input.minRvol)) {
+    conditions.push(`${RVOL_FLOOR_EXPRESSION} >= @minRvol`);
+    parameters.minRvol = input.minRvol;
+    needsJoins = true;
+  }
+
+  return { needsJoins, parameters, where: conditions.join(" and ") };
+}
+
+export function listMoversFromDatabase(
+  database: Database.Database,
+  input: ListMoversInput = {},
+): ListMoversResult {
+  const sort = input.sort ?? "gain";
+  const direction = input.direction === "asc" ? "asc" : "desc";
+  const limit = Math.min(200, Math.max(1, Math.trunc(input.limit ?? 100)));
+  const offset = Math.max(0, Math.trunc(input.offset ?? 0));
+  const plan = planMoverQuery(input);
+  const countSource = plan.needsJoins ? MOVER_SOURCE : BARE_SOURCE;
+
+  const total = database
+    .prepare(`select count(*) as count ${countSource} where ${plan.where}`)
+    .get(plan.parameters) as { count: number };
   const rows = database.prepare(`
     select
       d.session_date as date,
@@ -337,14 +387,71 @@ export function listMoversFromDatabase(
       a.transactions_per_active_minute as afterHoursTransactionsPerActiveMinute,
       a.close_distance_from_high_pct as afterHoursCloseDistanceFromHighPercent,
       a.rvol20_mean as afterHoursRvol
-    from symbol_days d
-    left join session_stats p on p.session_date = d.session_date and p.symbol = d.symbol and p.session = 'premarket'
-    left join session_stats r on r.session_date = d.session_date and r.symbol = d.symbol and r.session = 'regular'
-    left join session_stats a on a.session_date = d.session_date and a.symbol = d.symbol and a.session = 'afterHours'
-    where ${where}
-    order by ${sortExpression(sort, session)} ${direction}, d.session_date desc, d.symbol asc
+    ${MOVER_SOURCE}
+    where ${plan.where}
+    order by ${sortExpression(sort)} ${direction}, d.session_date desc, d.symbol asc
     limit @limit offset @offset
-  `).all({ ...parameters, limit, offset }) as MoverRow[];
+  `).all({ ...plan.parameters, limit, offset }) as MoverRow[];
 
-  return { movers: rows.map((row) => moverSummary(row, session)), total: total.count };
+  return { movers: rows.map((row) => moverSummary(row)), total: total.count };
+}
+
+/**
+ * Aggregates the whole filtered set rather than the current page, so the stat
+ * strip keeps reporting the archive rather than the slice on screen.
+ */
+export function summarizeMoversFromDatabase(
+  database: Database.Database,
+  input: ListMoversInput = {},
+): ArchiveMoverAggregate {
+  const plan = planMoverQuery(input);
+  const gain = GAIN_EXPRESSION;
+  const source = MOVER_SOURCE;
+
+  const totals = database.prepare(`
+    select
+      count(*) as total,
+      count(distinct d.symbol) as symbols,
+      count(distinct d.session_date) as days,
+      max(${gain}) as largestGain,
+      coalesce(sum(${DOLLAR_VOLUME_EXPRESSION}), 0) as dollarVolume,
+      sum(case when ${gain} is null then 0 else 1 end) as gainCount
+    ${source}
+    where ${plan.where}
+  `).get(plan.parameters) as {
+    days: number;
+    dollarVolume: number;
+    gainCount: number | null;
+    largestGain: number | null;
+    symbols: number;
+    total: number;
+  };
+
+  const gainCount = totals.gainCount ?? 0;
+  let medianGain: number | null = null;
+  if (gainCount > 0) {
+    const middle = database.prepare(`
+      select ${gain} as value
+      ${source}
+      where ${plan.where} and ${gain} is not null
+      order by value asc
+      limit @take offset @skip
+    `).all({
+      ...plan.parameters,
+      skip: Math.floor((gainCount - 1) / 2),
+      take: gainCount % 2 === 0 ? 2 : 1,
+    }) as Array<{ value: number }>;
+    if (middle.length > 0) {
+      medianGain = middle.reduce((sum, row) => sum + row.value, 0) / middle.length;
+    }
+  }
+
+  return {
+    days: totals.days,
+    dollarVolume: totals.dollarVolume,
+    largestGain: totals.largestGain,
+    medianGain,
+    symbols: totals.symbols,
+    total: totals.total,
+  };
 }

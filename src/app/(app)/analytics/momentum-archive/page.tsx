@@ -1,11 +1,12 @@
 import Link from "next/link";
 import AnalyticsSectionTabs from "@/components/AnalyticsSectionTabs";
-import MomentumArchiveDaySelect from "@/components/MomentumArchiveDaySelect";
+import MomentumArchiveKeyboardNav from "@/components/MomentumArchiveKeyboardNav";
+import MomentumArchiveLinkSelect from "@/components/MomentumArchiveLinkSelect";
 import MomentumArchiveTable from "@/components/MomentumArchiveTable";
 import {
   createMarketArchiveClient,
   type ArchiveMoverSort,
-  type ArchiveSessionLens,
+  type ArchivePeakSession,
   type ArchiveSortDirection,
   type ArchiveUniverse,
 } from "@/lib/marketArchive";
@@ -14,12 +15,30 @@ export const dynamic = "force-dynamic";
 
 type ArchiveView = "archive" | "day";
 
+const PAGE_SIZES = [25, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 25;
+/** "Show more" reaches down to here — near-misses worth a glance, without a data dump. */
+const CONTEXT_FLOOR = 30;
+const ARCHIVE_THRESHOLD = 50;
+
+/** Columns whose first click should show the biggest values, not the smallest. */
+const DESC_FIRST = new Set<ArchiveMoverSort>(["date", "dollarVolume", "gain", "high", "rvol", "volume"]);
+
+const SORTS = new Set<ArchiveMoverSort>([
+  "date", "dollarVolume", "gain", "high", "name", "price", "rvol", "symbol", "volume",
+]);
+
 type SearchParameters = {
   date?: string;
   direction?: string;
   from?: string;
+  minGain?: string;
+  minRvol?: string;
+  page?: string;
+  more?: string;
   q?: string;
   session?: string;
+  size?: string;
   sort?: string;
   to?: string;
   universe?: string;
@@ -30,8 +49,13 @@ type ArchiveFilters = {
   date?: string;
   direction: ArchiveSortDirection;
   from?: string;
+  minGain?: number;
+  minRvol?: number;
+  page: number;
+  pageSize: number;
+  showContext: boolean;
   query?: string;
-  session: ArchiveSessionLens;
+  peakSession: ArchivePeakSession;
   sort: ArchiveMoverSort;
   to?: string;
   universe: ArchiveUniverse;
@@ -57,38 +81,70 @@ function validDate(value: string | undefined): string | undefined {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
 }
 
+function positiveNumber(value: string | undefined): number | undefined {
+  if (value === undefined || value.trim() === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
 function parseFilters(parameters: SearchParameters): ArchiveFilters {
-  const sessions = new Set<ArchiveSessionLens>(["all", "premarket", "regular", "afterHours"]);
-  const sorts = new Set<ArchiveMoverSort>(["dollarVolume", "gain", "price", "rvol", "symbol"]);
+  const sessions = new Set<ArchivePeakSession>(["all", "premarket", "regular", "afterHours"]);
+  const size = Number(parameters.size);
+  const page = Number(parameters.page);
   return {
     date: validDate(parameters.date),
     direction: parameters.direction === "asc" ? "asc" : "desc",
     from: validDate(parameters.from),
+    minGain: positiveNumber(parameters.minGain),
+    minRvol: positiveNumber(parameters.minRvol),
+    page: Number.isInteger(page) && page > 0 ? page : 1,
+    pageSize: (PAGE_SIZES as readonly number[]).includes(size) ? size : DEFAULT_PAGE_SIZE,
     query: parameters.q?.trim() || undefined,
-    session: sessions.has(parameters.session as ArchiveSessionLens)
-      ? parameters.session as ArchiveSessionLens
+    showContext: parameters.more === "1",
+    peakSession: sessions.has(parameters.session as ArchivePeakSession)
+      ? parameters.session as ArchivePeakSession
       : "all",
-    sort: sorts.has(parameters.sort as ArchiveMoverSort) ? parameters.sort as ArchiveMoverSort : "gain",
+    sort: SORTS.has(parameters.sort as ArchiveMoverSort) ? parameters.sort as ArchiveMoverSort : "gain",
     to: validDate(parameters.to),
     universe: parameters.universe === "raw" ? "raw" : "core",
     view: parameters.view === "archive" ? "archive" : "day",
   };
 }
 
-function archiveHref(filters: ArchiveFilters, updates: Partial<ArchiveFilters>) {
+function archiveQuery(filters: ArchiveFilters, updates: Partial<ArchiveFilters>) {
   const next = { ...filters, ...updates };
   const parameters = new URLSearchParams();
   if (next.view !== "day") parameters.set("view", next.view);
   if (next.date) parameters.set("date", next.date);
   if (next.universe !== "core") parameters.set("universe", next.universe);
-  if (next.session !== "all") parameters.set("session", next.session);
+  if (next.peakSession !== "all") parameters.set("session", next.peakSession);
   if (next.sort !== "gain") parameters.set("sort", next.sort);
   if (next.direction !== "desc") parameters.set("direction", next.direction);
   if (next.query) parameters.set("q", next.query);
   if (next.from) parameters.set("from", next.from);
   if (next.to) parameters.set("to", next.to);
-  const query = parameters.toString();
+  if (next.minGain !== undefined) parameters.set("minGain", String(next.minGain));
+  if (next.minRvol !== undefined) parameters.set("minRvol", String(next.minRvol));
+  if (next.pageSize !== DEFAULT_PAGE_SIZE) parameters.set("size", String(next.pageSize));
+  if (next.page > 1) parameters.set("page", String(next.page));
+  if (next.showContext) parameters.set("more", "1");
+  return parameters.toString();
+}
+
+function archiveHref(filters: ArchiveFilters, updates: Partial<ArchiveFilters>) {
+  const query = archiveQuery(filters, updates);
   return query ? `/analytics/momentum-archive?${query}` : "/analytics/momentum-archive";
+}
+
+/** Every sortable column's link: toggle when active, sensible default when not. */
+function sortHrefs(filters: ArchiveFilters) {
+  const entries = [...SORTS].map((sort) => {
+    const direction: ArchiveSortDirection = filters.sort === sort
+      ? (filters.direction === "asc" ? "desc" : "asc")
+      : (DESC_FIRST.has(sort) ? "desc" : "asc");
+    return [sort, archiveHref(filters, { direction, page: 1, sort })] as const;
+  });
+  return Object.fromEntries(entries) as Partial<Record<ArchiveMoverSort, string>>;
 }
 
 function dateValue(date: string) {
@@ -103,29 +159,25 @@ function shortDate(date: string) {
   return shortDateFormatter.format(dateValue(date));
 }
 
-function compact(value: number) {
-  return Intl.NumberFormat("en-US", { maximumFractionDigits: 1, notation: "compact" }).format(value);
-}
-
 function formatPercent(value: number | null) {
   if (value === null) return "—";
   return `${value > 0 ? "+" : ""}${value.toLocaleString("en-US", { maximumFractionDigits: 1 })}%`;
 }
 
-function median(values: number[]): number | null {
-  if (values.length === 0) return null;
-  const sorted = values.toSorted((left, right) => left - right);
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
-}
+const controlClass = "h-10 w-full min-w-0 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] font-normal text-[var(--body)] outline-none transition-colors focus:border-[var(--accent)]";
+const fieldClass = "grid min-w-0 gap-1.5 text-[12px] font-medium text-[var(--muted)]";
+const quietButtonClass = "inline-flex h-10 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[12px] font-medium text-[var(--body)] transition-colors hover:border-[var(--foreground)] hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]";
 
-function ArchiveViewTabs({ filters }: { filters: ArchiveFilters }) {
+function ArchiveViewButtons({ filters }: { filters: ArchiveFilters }) {
   const items = [
     {
       active: filters.view === "day",
       href: archiveHref(filters, {
         direction: "desc",
         from: undefined,
+        minGain: undefined,
+        minRvol: undefined,
+        page: 1,
         query: undefined,
         sort: "gain",
         to: undefined,
@@ -133,27 +185,29 @@ function ArchiveViewTabs({ filters }: { filters: ArchiveFilters }) {
       }),
       label: "Day by day",
     },
-    { active: filters.view === "archive", href: archiveHref(filters, { view: "archive" }), label: "Full archive" },
+    {
+      active: filters.view === "archive",
+      href: archiveHref(filters, { page: 1, view: "archive" }),
+      label: "Full archive",
+    },
   ];
   return (
-    <nav aria-label="Archive view" className="border-b border-[var(--hairline)]">
-      <div className="flex gap-1">
-        {items.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            aria-current={item.active ? "page" : undefined}
-            className={`-mb-px min-h-11 border-b-2 px-4 py-3 text-[14px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
-              item.active
-                ? "border-[var(--foreground)] text-[var(--foreground)]"
-                : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </div>
-    </nav>
+    <div className="flex flex-wrap gap-2 pt-7 pb-2">
+      {items.map((item) => (
+        <Link
+          key={item.label}
+          href={item.href}
+          aria-current={item.active ? "page" : undefined}
+          className={`inline-flex h-10 items-center rounded-md border px-4 text-[13px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
+            item.active
+              ? "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)]"
+              : "border-[var(--border)] bg-[var(--surface)] text-[var(--body)] hover:border-[var(--foreground)] hover:text-[var(--foreground)]"
+          }`}
+        >
+          {item.label}
+        </Link>
+      ))}
+    </div>
   );
 }
 
@@ -184,26 +238,18 @@ function SegmentedLinks({
   );
 }
 
-function EvidenceControls({ filters }: { filters: ArchiveFilters }) {
+/** Filters which movers appear by where the day's high happened. */
+function PeakSessionControl({ filters }: { filters: ArchiveFilters }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--hairline)] py-4">
-      <SegmentedLinks
-        ariaLabel="Instrument universe"
-        items={[
-          { active: filters.universe === "core", href: archiveHref(filters, { universe: "core" }), label: "Core common stock" },
-          { active: filters.universe === "raw", href: archiveHref(filters, { universe: "raw" }), label: "Raw evidence" },
-        ]}
-      />
-      <SegmentedLinks
-        ariaLabel="Market session lens"
-        items={[
-          { active: filters.session === "all", href: archiveHref(filters, { session: "all" }), label: "All" },
-          { active: filters.session === "premarket", href: archiveHref(filters, { session: "premarket" }), label: "Premarket" },
-          { active: filters.session === "regular", href: archiveHref(filters, { session: "regular" }), label: "Regular" },
-          { active: filters.session === "afterHours", href: archiveHref(filters, { session: "afterHours" }), label: "After-hours" },
-        ]}
-      />
-    </div>
+    <SegmentedLinks
+      ariaLabel="Peak session"
+      items={[
+        { active: filters.peakSession === "all", href: archiveHref(filters, { page: 1, peakSession: "all" }), label: "All" },
+        { active: filters.peakSession === "premarket", href: archiveHref(filters, { page: 1, peakSession: "premarket" }), label: "Premarket" },
+        { active: filters.peakSession === "regular", href: archiveHref(filters, { page: 1, peakSession: "regular" }), label: "Regular" },
+        { active: filters.peakSession === "afterHours", href: archiveHref(filters, { page: 1, peakSession: "afterHours" }), label: "After-hours" },
+      ]}
+    />
   );
 }
 
@@ -224,9 +270,8 @@ function StatStrip({ items }: { items: Array<{ label: string; value: string }> }
 }
 
 function NavigationButton({ href, children }: { href?: string; children: string }) {
-  const className = "inline-flex h-10 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[12px] font-medium text-[var(--body)] transition-colors hover:border-[var(--foreground)] hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]";
-  if (!href) return <span aria-disabled="true" className={`${className} cursor-not-allowed opacity-40`}>{children}</span>;
-  return <Link href={href} className={className}>{children}</Link>;
+  if (!href) return <span aria-disabled="true" className={`${quietButtonClass} cursor-not-allowed opacity-40`}>{children}</span>;
+  return <Link href={href} className={quietButtonClass}>{children}</Link>;
 }
 
 function UnavailableArchive({ reason }: { reason: string }) {
@@ -258,93 +303,152 @@ export default async function MomentumArchivePage({
   const days = client.listTradingDays(filters.universe);
   const selectedDate = filters.date ?? days[0]?.date ?? health.coverage.to;
   const activeFilters = { ...filters, date: selectedDate };
+  const isDay = filters.view === "day";
+
+  // Day by day is always the Core universe; Raw evidence is a Full archive diagnostic.
+  const scope = isDay
+    ? { date: selectedDate, peakSession: filters.peakSession, universe: "core" as ArchiveUniverse }
+    : {
+      from: filters.from,
+      minGain: filters.minGain,
+      minRvol: filters.minRvol,
+      peakSession: filters.peakSession,
+      query: filters.query,
+      to: filters.to,
+      universe: filters.universe,
+    };
+
+  const summary = client.summarizeMovers(scope);
+  const pageCount = Math.max(1, Math.ceil(summary.total / filters.pageSize));
+  const page = Math.min(filters.page, pageCount);
   const result = client.listMovers({
-    date: filters.view === "day" ? selectedDate : undefined,
-    direction: filters.view === "day" ? "desc" : filters.direction,
-    from: filters.view === "archive" ? filters.from : undefined,
-    limit: filters.view === "archive" ? 100 : 200,
-    query: filters.view === "archive" ? filters.query : undefined,
-    session: filters.session,
-    sort: filters.view === "day" ? "gain" : filters.sort,
-    to: filters.view === "archive" ? filters.to : undefined,
-    universe: filters.universe,
+    ...scope,
+    direction: filters.direction,
+    limit: isDay ? 200 : filters.pageSize,
+    offset: isDay ? 0 : (page - 1) * filters.pageSize,
+    sort: filters.sort,
   });
+
   const dayIndex = days.findIndex((day) => day.date === selectedDate);
   const olderDay = dayIndex >= 0 ? days[dayIndex + 1]?.date : undefined;
   const newerDay = dayIndex > 0 ? days[dayIndex - 1]?.date : undefined;
-  const dayAllMovers = filters.view === "day" && filters.session === "all"
-    ? result.movers
-    : filters.view === "day"
-      ? client.listMovers({ date: selectedDate, limit: 200, session: "all", sort: "gain", universe: filters.universe }).movers
-      : [];
-  const regularMovers = filters.view === "day" && filters.session === "regular"
-    ? result.movers
-    : filters.view === "day"
-      ? client.listMovers({ date: selectedDate, limit: 200, session: "regular", sort: "gain", universe: filters.universe }).movers
-      : [];
-  const dayGains = dayAllMovers
-    .map((mover) => mover.lens.gainPercent)
-    .filter((value): value is number => value !== null && Number.isFinite(value));
-  const largestDayGain = dayGains.length > 0 ? Math.max(...dayGains) : null;
-  const medianDayGain = median(dayGains);
-  const regularDollarVolume = regularMovers.reduce((sum, mover) => sum + mover.lens.dollarVolume, 0);
-  const shownGains = result.movers
-    .map((mover) => mover.lens.gainPercent)
-    .filter((value): value is number => value !== null && Number.isFinite(value));
-  const largestShownGain = shownGains.length > 0 ? Math.max(...shownGains) : null;
-  const medianShownGain = median(shownGains);
-  const sortLabels: Record<ArchiveMoverSort, string> = {
-    dollarVolume: "Dollar volume",
-    gain: "Gain",
-    price: "Previous close",
-    rvol: "RVOL",
-    symbol: "Symbol",
-  };
+  const olderHref = olderDay ? archiveHref(activeFilters, { date: olderDay, page: 1 }) : undefined;
+  const newerHref = newerDay ? archiveHref(activeFilters, { date: newerDay, page: 1 }) : undefined;
+  const latestDay = days[0]?.date;
+  const latestHref = latestDay && latestDay !== selectedDate
+    ? archiveHref(activeFilters, { date: latestDay, page: 1 })
+    : undefined;
+
+  // The header sentence describes the whole session, not the active peak-session filter.
+  const daySummary = isDay
+    ? client.summarizeMovers({ date: selectedDate, universe: "core" })
+    : null;
+
+  const contextMovers = isDay && filters.showContext
+    ? client.listMovers({
+      belowThreshold: true,
+      date: selectedDate,
+      direction: "desc",
+      limit: 100,
+      maxGain: ARCHIVE_THRESHOLD,
+      minGain: CONTEXT_FLOOR,
+      peakSession: filters.peakSession,
+      sort: "gain",
+      universe: "core",
+    })
+    : null;
+  const contextAvailable = isDay && !filters.showContext
+    ? client.summarizeMovers({
+      belowThreshold: true,
+      date: selectedDate,
+      maxGain: ARCHIVE_THRESHOLD,
+      minGain: CONTEXT_FLOOR,
+      peakSession: filters.peakSession,
+      universe: "core",
+    }).total
+    : 0;
+
   const dayOptions = days.map((day) => ({
-    href: archiveHref(activeFilters, { date: day.date }),
+    href: archiveHref(activeFilters, { date: day.date, page: 1 }),
     label: `${shortDate(day.date)} · ${day.moverCount}`,
     value: day.date,
   }));
+  const resetHref = archiveHref(activeFilters, {
+    direction: "desc",
+    from: undefined,
+    universe: "core",
+    minGain: undefined,
+    minRvol: undefined,
+    page: 1,
+    query: undefined,
+    sort: "gain",
+    to: undefined,
+  });
+  const exportHref = `/api/analytics/momentum-archive/export?${archiveQuery(activeFilters, { page: 1 })}`;
+  const firstRow = summary.total === 0 ? 0 : (page - 1) * filters.pageSize + 1;
+  const lastRow = (page - 1) * filters.pageSize + result.movers.length;
 
   return (
     <div className="mx-auto max-w-6xl">
       <AnalyticsSectionTabs active="momentum" className="mb-0" />
-      <ArchiveViewTabs filters={activeFilters} />
+      <ArchiveViewButtons filters={activeFilters} />
 
-      {filters.view === "day" ? (
-        <section aria-label="Session review" className="pt-8">
-          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-5 border-b border-[var(--hairline)] pb-4">
+      {isDay ? (
+        <section aria-label="Session review" className="pt-4">
+          <MomentumArchiveKeyboardNav newerHref={newerHref} olderHref={olderHref} />
+          <div className="pb-1">
             <div>
               <h1 className="text-[30px] font-semibold leading-tight tracking-[-0.03em] text-[var(--foreground)] sm:text-[36px]">
                 {formattedDate(selectedDate)}
               </h1>
               <p className="mt-2 text-[14px] text-[var(--muted)]">
-                {dayAllMovers.length > 0
-                  ? `${dayAllMovers.length} ${dayAllMovers.length === 1 ? "symbol" : "symbols"} cleared 50% from the prior close, largest ${formatPercent(largestDayGain)}.`
+                {daySummary && daySummary.total > 0
+                  ? `${daySummary.total} ${daySummary.total === 1 ? "symbol" : "symbols"} cleared 50% from the prior close, largest ${formatPercent(daySummary.largestGain)}.`
                   : "No qualified movers on this session."}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <MomentumArchiveDaySelect options={dayOptions} value={selectedDate} />
-              <NavigationButton href={olderDay ? archiveHref(activeFilters, { date: olderDay }) : undefined}>Previous day</NavigationButton>
-              <NavigationButton href={newerDay ? archiveHref(activeFilters, { date: newerDay }) : undefined}>Next day</NavigationButton>
-            </div>
           </div>
 
-          <StatStrip items={[
-            { label: "Movers", value: dayAllMovers.length.toLocaleString() },
-            { label: "Largest peak", value: formatPercent(largestDayGain) },
-            { label: "Median peak", value: formatPercent(medianDayGain) },
-            { label: "Regular-session $ volume", value: regularDollarVolume > 0 ? `$${compact(regularDollarVolume)}` : "—" },
-          ]} />
-          <EvidenceControls filters={activeFilters} />
-          <MomentumArchiveTable movers={result.movers} session={filters.session} universe={filters.universe} view="day" />
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--hairline)] py-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <NavigationButton href={latestHref}>Latest</NavigationButton>
+              <NavigationButton href={olderHref}>Previous day</NavigationButton>
+              <NavigationButton href={newerHref}>Next day</NavigationButton>
+              <MomentumArchiveLinkSelect ariaLabel="Jump to session" options={dayOptions} value={selectedDate} />
+            </div>
+            <PeakSessionControl filters={activeFilters} />
+          </div>
+
+          <MomentumArchiveTable
+            contextLabel={`Below the ${ARCHIVE_THRESHOLD}% threshold · ${CONTEXT_FLOOR}–${ARCHIVE_THRESHOLD}%`}
+            contextMovers={contextMovers?.movers}
+            direction={filters.direction}
+            movers={result.movers}
+            sort={filters.sort}
+            sortHrefs={sortHrefs(activeFilters)}
+            universe="core"
+            view="day"
+          />
+          {contextAvailable > 0 ? (
+            <div className="pt-3">
+              <Link href={archiveHref(activeFilters, { showContext: true })} className={quietButtonClass}>
+                {`Show ${contextAvailable.toLocaleString()} more between ${CONTEXT_FLOOR}% and ${ARCHIVE_THRESHOLD}%`}
+              </Link>
+            </div>
+          ) : null}
+          {filters.showContext ? (
+            <div className="pt-3">
+              <Link href={archiveHref(activeFilters, { showContext: false })} className={quietButtonClass}>
+                Show qualified movers only
+              </Link>
+            </div>
+          ) : null}
           <p className="mt-3 font-mono text-[11px] tabular-nums text-[var(--faint)]">
-            Session {days.length - Math.max(dayIndex, 0)} of {days.length} · use Previous day and Next day to step through sessions
+            Session {days.length - Math.max(dayIndex, 0)} of {days.length} · use ← and → to step through sessions
           </p>
         </section>
       ) : (
-        <section aria-label="Full archive" className="pt-8">
+        <section aria-label="Full archive" className="pt-4">
           <div className="pb-5">
             <h1 className="text-[30px] font-semibold leading-tight tracking-[-0.03em] text-[var(--foreground)] sm:text-[36px]">Full archive</h1>
             <p className="mt-2 max-w-3xl text-[14px] leading-6 text-[var(--muted)]">
@@ -352,59 +456,104 @@ export default async function MomentumArchivePage({
             </p>
           </div>
           <StatStrip items={[
-            { label: "Trading days", value: days.length.toLocaleString() },
-            { label: "Qualified moves", value: result.total.toLocaleString() },
-            { label: "Rows shown", value: result.movers.length.toLocaleString() },
-            { label: "Largest shown", value: formatPercent(largestShownGain) },
-            { label: "Median shown", value: formatPercent(medianShownGain) },
+            { label: "Trading days", value: summary.days.toLocaleString() },
+            { label: "Qualified moves", value: summary.total.toLocaleString() },
+            { label: "Unique symbols", value: summary.symbols.toLocaleString() },
+            { label: "Largest peak", value: formatPercent(summary.largestGain) },
+            { label: "Median peak", value: formatPercent(summary.medianGain) },
           ]} />
-          <EvidenceControls filters={activeFilters} />
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--hairline)] py-4">
+            <PeakSessionControl filters={activeFilters} />
+          </div>
 
-          <form className="grid items-end gap-3 border-b border-[var(--hairline)] py-5 sm:grid-cols-2 lg:grid-cols-[minmax(180px,1fr)_150px_150px_150px_auto_auto]" action="/analytics/momentum-archive">
+          <form className="grid items-end gap-3 border-b border-[var(--hairline)] py-5 sm:grid-cols-2 lg:grid-cols-[minmax(170px,1fr)_repeat(5,140px)_auto_auto]" action="/analytics/momentum-archive">
             <input type="hidden" name="view" value="archive" />
-            {filters.universe === "raw" ? <input type="hidden" name="universe" value="raw" /> : null}
-            {filters.session !== "all" ? <input type="hidden" name="session" value={filters.session} /> : null}
-            <label className="grid gap-1.5 text-[12px] font-medium text-[var(--muted)]" htmlFor="archive-search">
+            {filters.peakSession !== "all" ? <input type="hidden" name="session" value={filters.peakSession} /> : null}
+            {filters.sort !== "gain" ? <input type="hidden" name="sort" value={filters.sort} /> : null}
+            {filters.direction !== "desc" ? <input type="hidden" name="direction" value={filters.direction} /> : null}
+            {filters.pageSize !== DEFAULT_PAGE_SIZE ? <input type="hidden" name="size" value={filters.pageSize} /> : null}
+            <label className={fieldClass} htmlFor="archive-search">
               Symbol or company
-              <input id="archive-search" name="q" defaultValue={filters.query} placeholder="e.g. AMIX" className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] font-normal text-[var(--foreground)] outline-none placeholder:text-[var(--faint)] focus:border-[var(--accent)]" />
+              <input id="archive-search" name="q" defaultValue={filters.query} placeholder="e.g. AMIX" className={`${controlClass} text-[var(--foreground)] placeholder:text-[var(--faint)]`} />
             </label>
-            <label className="grid gap-1.5 text-[12px] font-medium text-[var(--muted)]" htmlFor="archive-from">
+            <label className={fieldClass} htmlFor="archive-from">
               From
-              <input id="archive-from" name="from" type="date" defaultValue={filters.from} className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] font-normal text-[var(--body)] outline-none focus:border-[var(--accent)]" />
+              <input id="archive-from" name="from" type="date" defaultValue={filters.from} className={controlClass} />
             </label>
-            <label className="grid gap-1.5 text-[12px] font-medium text-[var(--muted)]" htmlFor="archive-to">
+            <label className={fieldClass} htmlFor="archive-to">
               To
-              <input id="archive-to" name="to" type="date" defaultValue={filters.to} className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] font-normal text-[var(--body)] outline-none focus:border-[var(--accent)]" />
+              <input id="archive-to" name="to" type="date" defaultValue={filters.to} className={controlClass} />
             </label>
-            <label className="grid gap-1.5 text-[12px] font-medium text-[var(--muted)]" htmlFor="archive-sort">
-              Sort by
-              <select id="archive-sort" name="sort" defaultValue={filters.sort} className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] font-normal text-[var(--body)] outline-none focus:border-[var(--accent)]">
-                {Object.entries(sortLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            <label className={fieldClass} htmlFor="archive-min-gain">
+              Min peak %
+              <input id="archive-min-gain" name="minGain" type="number" min="0" step="10" placeholder="50" defaultValue={filters.minGain} className={controlClass} />
+            </label>
+            <label className={fieldClass} htmlFor="archive-min-rvol">
+              Min RVOL
+              <input id="archive-min-rvol" name="minRvol" type="number" min="0" step="0.5" placeholder="Any" defaultValue={filters.minRvol} className={controlClass} />
+            </label>
+            <label className={fieldClass} htmlFor="archive-universe">
+              Universe
+              <select id="archive-universe" name="universe" defaultValue={filters.universe} className={controlClass}>
+                <option value="core">Core</option>
+                <option value="raw">Raw evidence</option>
               </select>
             </label>
-            <input type="hidden" name="direction" value={filters.direction} />
-            <Link href={archiveHref(activeFilters, { direction: "desc", from: undefined, query: undefined, sort: "gain", to: undefined })} className="inline-flex h-10 items-center justify-center px-3 text-[12px] font-medium text-[var(--muted)] hover:text-[var(--foreground)]">Reset</Link>
+            <Link href={resetHref} className="inline-flex h-10 items-center justify-center px-3 text-[12px] font-medium text-[var(--muted)] hover:text-[var(--foreground)]">Reset</Link>
             <button type="submit" className="h-10 rounded-md bg-[var(--foreground)] px-4 text-[12px] font-semibold text-[var(--background)] transition-opacity hover:opacity-85">Apply</button>
           </form>
 
-          <p role="status" className="py-3 font-mono text-[11px] tabular-nums text-[var(--muted)]">
-            {result.total.toLocaleString()} rows · {days.length.toLocaleString()} days · showing {result.movers.length.toLocaleString()}
-          </p>
-          <MomentumArchiveTable movers={result.movers} session={filters.session} universe={filters.universe} view="archive" />
+          <div className="flex flex-wrap items-center justify-between gap-3 py-3">
+            <p role="status" className="font-mono text-[11px] tabular-nums text-[var(--muted)]">
+              {summary.total.toLocaleString()} rows · {summary.days.toLocaleString()} days · {summary.symbols.toLocaleString()} symbols
+              {summary.total > 0 ? ` · showing ${firstRow.toLocaleString()}–${lastRow.toLocaleString()}` : ""}
+            </p>
+            <a href={exportHref} className={quietButtonClass} download>Export filtered CSV</a>
+          </div>
+
+          <MomentumArchiveTable
+            direction={filters.direction}
+            movers={result.movers}
+            sort={filters.sort}
+            sortHrefs={sortHrefs(activeFilters)}
+            universe={filters.universe}
+            view="archive"
+          />
+
+          <nav aria-label="Archive pagination" className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--hairline)] py-3">
+            <span className="font-mono text-[11px] tabular-nums text-[var(--muted)]">
+              Page {page.toLocaleString()} of {pageCount.toLocaleString()}
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] text-[var(--muted)]">Rows per page</span>
+              <MomentumArchiveLinkSelect
+                ariaLabel="Rows per page"
+                className="h-9 w-[84px]"
+                options={PAGE_SIZES.map((size) => ({
+                  href: archiveHref(activeFilters, { page: 1, pageSize: size }),
+                  label: String(size),
+                  value: String(size),
+                }))}
+                value={String(filters.pageSize)}
+              />
+              <NavigationButton href={page > 1 ? archiveHref(activeFilters, { page: page - 1 }) : undefined}>Previous</NavigationButton>
+              <NavigationButton href={page < pageCount ? archiveHref(activeFilters, { page: page + 1 }) : undefined}>Next</NavigationButton>
+            </div>
+          </nav>
         </section>
       )}
 
       <footer className="grid gap-8 border-t border-[var(--hairline)] py-12 md:grid-cols-2 md:gap-12">
         <div>
-          <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">How to read it</h2>
+          <h2 className="text-[19px] font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]">How to read it</h2>
           <p className="mt-2 text-[13px] leading-6 text-[var(--muted)]">
-            Peak change is measured from the prior regular-session close to the highest eligible minute bar. The active session buttons replace the matching gain, RVOL, liquidity, and high columns.
+            Peak % is measured from the prior regular-session close to the highest eligible minute bar of the day, so it is always the qualifying move. The Premarket, Regular and After-hours columns split that same peak by session — exactly one of them equals it. The session buttons filter which movers appear, by where the high landed. RVOL compares a completed session with the prior 20 same-session volumes; an em dash means the baseline was not yet sufficient.
           </p>
         </div>
         <div>
-          <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[var(--foreground)]">Evidence boundaries</h2>
+          <h2 className="text-[19px] font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]">Evidence boundaries</h2>
           <p className="mt-2 text-[13px] leading-6 text-[var(--muted)]">
-            Core excludes known split dates, non-common-stock instrument types, stale reference closes, and prior closes below $1. Raw evidence retains those observations and shows why each sits outside Core.
+            Core excludes known split dates, non-common-stock instrument types, stale reference closes, and prior closes below $1 — mostly reverse-split arithmetic rather than tradable moves. Raw evidence, available as a Universe filter here, retains those observations and shows why each sits outside Core. Dollar volume is estimated from minute OHLC4 because the flat-file minute bars carry no VWAP.
           </p>
         </div>
       </footer>
