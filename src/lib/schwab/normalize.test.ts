@@ -10,6 +10,117 @@ const JAN_15_2026 = {
 };
 
 describe("normalizeSchwabHistory", () => {
+  it("preserves gateway identities without receiving the OAuth secret", () => {
+    const orderKey = "a".repeat(64);
+    const executionKey = "b".repeat(64);
+    const result = normalizeSchwabHistory([{
+      orderId: 42,
+      _schwabGatewayOrderKey: orderKey,
+      orderLegCollection: [{
+        legId: 7,
+        instruction: "BUY",
+        positionEffect: "OPENING",
+        instrument: { assetType: "EQUITY", symbol: "SYNTH" },
+      }],
+      orderActivityCollection: [{
+        activityId: 9,
+        executionType: "FILL",
+        executionLegs: [{
+          legId: 7,
+          quantity: 10,
+          price: 4.25,
+          time: "2026-01-15T15:00:00Z",
+          _schwabGatewayExecutionKey: executionKey,
+        }],
+      }],
+    }], [], {
+      identityMode: "gateway",
+      startEpoch: JAN_15_2026.startEpoch,
+      endEpochExclusive: JAN_15_2026.endEpochExclusive,
+    });
+
+    expect(result.executions[0]).toMatchObject({
+      brokerOrderKey: orderKey,
+      brokerExecutionKey: executionKey,
+    });
+  });
+
+  it("keeps legacy broker identities stable across the gateway boundary", () => {
+    const order = {
+      orderId: 42,
+      orderLegCollection: [{
+        legId: 7,
+        instruction: "BUY",
+        positionEffect: "OPENING",
+        instrument: { assetType: "EQUITY", symbol: "SYNTH" },
+      }],
+      orderActivityCollection: [{
+        activityId: 9,
+        executionType: "FILL",
+        executionLegs: [{
+          legId: 7,
+          quantity: 10,
+          price: 4.25,
+          time: "2026-01-15T15:00:00Z",
+        }],
+      }],
+    };
+    const legacy = normalizeSchwabHistory([order], [], JAN_15_2026);
+    const legacyExecution = legacy.executions[0];
+    const decoratedOrder = {
+      ...order,
+      _schwabGatewayOrderKey: legacyExecution.brokerOrderKey,
+      orderActivityCollection: [{
+        ...order.orderActivityCollection[0],
+        executionLegs: [{
+          ...order.orderActivityCollection[0].executionLegs[0],
+          _schwabGatewayExecutionKey: legacyExecution.brokerExecutionKey,
+        }],
+      }],
+    };
+    const gateway = normalizeSchwabHistory([decoratedOrder], [], {
+      identityMode: "gateway",
+      startEpoch: JAN_15_2026.startEpoch,
+      endEpochExclusive: JAN_15_2026.endEpochExclusive,
+    });
+
+    expect(gateway.executions[0]).toMatchObject({
+      brokerOrderKey: legacyExecution.brokerOrderKey,
+      brokerExecutionKey: legacyExecution.brokerExecutionKey,
+      sourceRowHash: legacyExecution.sourceRowHash,
+    });
+  });
+
+  it("fails closed when gateway execution identities are missing or malformed", () => {
+    const history = [{
+      orderId: 42,
+      _schwabGatewayOrderKey: "a".repeat(64),
+      orderLegCollection: [{
+        legId: 7,
+        instruction: "BUY",
+        positionEffect: "OPENING",
+        instrument: { assetType: "EQUITY", symbol: "SYNTH" },
+      }],
+      orderActivityCollection: [{
+        activityId: 9,
+        executionType: "FILL",
+        executionLegs: [{
+          legId: 7,
+          quantity: 10,
+          price: 4.25,
+          time: "2026-01-15T15:00:00Z",
+          _schwabGatewayExecutionKey: "not-an-identity",
+        }],
+      }],
+    }];
+
+    expect(() => normalizeSchwabHistory(history, [], {
+      identityMode: "gateway",
+      startEpoch: JAN_15_2026.startEpoch,
+      endEpochExclusive: JAN_15_2026.endEpochExclusive,
+    })).toThrow("missing or invalid execution identities");
+  });
+
   it("keeps partial fills separate and reconciles transaction fees", () => {
     const result = normalizeSchwabHistory(
       syntheticHistory.orders,

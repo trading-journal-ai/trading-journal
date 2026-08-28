@@ -28,12 +28,28 @@ export type SchwabNormalizationResult = {
   warnings: string[];
 };
 
-type NormalizeOptions = {
-  accountHash: string;
-  identitySecret: string;
+type CommonNormalizeOptions = {
   startEpoch: number;
   endEpochExclusive: number;
 };
+
+type NormalizeOptions = CommonNormalizeOptions & (
+  | {
+      identityMode?: "standalone";
+      accountHash: string;
+      identitySecret: string;
+    }
+  | {
+      identityMode: "gateway";
+    }
+);
+
+export class SchwabIdentityResponseError extends Error {
+  constructor() {
+    super("The Schwab Broker Gateway returned missing or invalid execution identities.");
+    this.name = "SchwabIdentityResponseError";
+  }
+}
 
 function isRecord(value: unknown): value is RecordValue {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -63,6 +79,54 @@ function epochSeconds(value: unknown) {
 
 function hmac(secret: string, parts: Array<string | number>) {
   return createHmac("sha256", secret).update(parts.join("|")).digest("hex");
+}
+
+function gatewayIdentity(value: unknown) {
+  return typeof value === "string" && /^[a-f0-9]{64}$/.test(value)
+    ? value
+    : null;
+}
+
+function executionIdentities(
+  order: RecordValue,
+  executionLeg: RecordValue,
+  options: NormalizeOptions,
+  legacy: {
+    orderId: string;
+    activityId: string;
+    legId: string;
+    executedAt: number;
+    quantity: number;
+    price: number;
+  },
+) {
+  if (options.identityMode === "gateway") {
+    const brokerOrderKey = gatewayIdentity(order._schwabGatewayOrderKey);
+    const brokerExecutionKey = gatewayIdentity(
+      executionLeg._schwabGatewayExecutionKey,
+    );
+    if (!brokerOrderKey || !brokerExecutionKey) {
+      throw new SchwabIdentityResponseError();
+    }
+    return { brokerOrderKey, brokerExecutionKey };
+  }
+  return {
+    brokerOrderKey: hmac(options.identitySecret, [
+      "schwab-order",
+      options.accountHash,
+      legacy.orderId,
+    ]),
+    brokerExecutionKey: hmac(options.identitySecret, [
+      "schwab-execution",
+      options.accountHash,
+      legacy.orderId,
+      legacy.activityId,
+      legacy.legId,
+      legacy.executedAt,
+      legacy.quantity,
+      legacy.price,
+    ]),
+  };
 }
 
 function sha1(parts: Array<string | number>) {
@@ -262,6 +326,15 @@ export function normalizeSchwabHistory(
         );
         if (!posEffect) unknownPositionEffects += 1;
 
+        const identities = executionIdentities(order, executionLeg, options, {
+          orderId,
+          activityId,
+          legId,
+          executedAt,
+          quantity,
+          price,
+        });
+
         executions.push({
           symbol: normalizedSymbol.symbol,
           brokerSymbol: normalizedSymbol.resolution ? rawSymbol : undefined,
@@ -271,21 +344,7 @@ export function normalizeSchwabHistory(
           executedAt,
           posEffect,
           fees: 0,
-          brokerOrderKey: hmac(options.identitySecret, [
-            "schwab-order",
-            options.accountHash,
-            orderId,
-          ]),
-          brokerExecutionKey: hmac(options.identitySecret, [
-            "schwab-execution",
-            options.accountHash,
-            orderId,
-            activityId,
-            legId,
-            executedAt,
-            quantity,
-            price,
-          ]),
+          ...identities,
           rawOrderId: orderId,
           sourceRowHash: "",
         });

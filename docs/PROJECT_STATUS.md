@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-08-25 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-08-28 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -31,6 +31,22 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-08-28** — Schwab Broker Gateway history/load slice
+  (branch `codex/schwab-gateway-journal`).
+  - Added an explicit `gateway` versus `standalone` provider boundary with no
+    automatic fallback; existing installations keep standalone behavior when
+    the setting is absent.
+  - Added a private Unix-socket gateway client for masked accounts, bounded
+    order history, and trade transactions using the gateway's read capability.
+  - Kept ET date chunking, payload normalization, cross-source dedupe,
+    reconciliation, and transactional persistence in the Journal.
+  - Gateway-decorated order/execution identities are validated and fail closed;
+    synthetic compatibility coverage proves they preserve the legacy Journal
+    HMAC and canonical-fill identity contracts without exposing OAuth secrets.
+  - **Stopped at:** history and account discovery can use the gateway. OAuth
+    initiation remains Journal-owned until the shared gateway authorization
+    route lands; gateway mode is not yet the documented setup default.
 
 - **2026-08-25** — Momentum Archive exact-identity remediation, rebuild, and cutover
   (branches `codex/momentum-archive` and `codex/momentum-archive-identity`).

@@ -106,6 +106,23 @@ publishing because portal labels and approval steps may change.
 
 ## System Boundaries
 
+### Local Schwab Broker Gateway migration (in progress)
+
+The Journal now has an explicit `SCHWAB_IMPORT_PROVIDER` boundary. Existing
+installations remain on `standalone` when the setting is omitted. Selecting
+`gateway` routes masked account discovery and bounded order/transaction history
+through the local Schwab Broker Gateway's private Unix socket; gateway failures
+never fall back to a Journal-owned Schwab client.
+
+Gateway history carries the same opaque order and execution HMAC identities as
+the standalone adapter, so normalization, cross-source dedupe, reconciliation,
+and append-only persistence remain Journal-owned and unchanged. The Journal
+validates those decorated identities before accepting any execution.
+
+This is an incremental migration. OAuth initiation still uses the standalone
+Journal helper until the gateway exposes its shared authorization contract, so
+gateway mode is not the documented end-user setup path yet.
+
 Keep the three products independent:
 
 | Product | Owns | Does not own |
