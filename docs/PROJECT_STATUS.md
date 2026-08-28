@@ -44,6 +44,9 @@ stopped. This is the "when did we last work on it" trail.
   - Gateway-decorated order/execution identities are validated and fail closed;
     synthetic compatibility coverage proves they preserve the legacy Journal
     HMAC and canonical-fill identity contracts without exposing OAuth secrets.
+  - Gateway mode explicitly refuses to spawn the standalone OAuth helper and
+    directs authorization recovery through Trading Monitor, preserving the
+    gateway's single token-owner boundary.
   - **Stopped at:** history and account discovery can use the gateway. OAuth
     initiation remains Journal-owned until the shared gateway authorization
     route lands; gateway mode is not yet the documented setup default.

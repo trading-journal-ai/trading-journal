@@ -120,8 +120,10 @@ and append-only persistence remain Journal-owned and unchanged. The Journal
 validates those decorated identities before accepting any execution.
 
 This is an incremental migration. OAuth initiation still uses the standalone
-Journal helper until the gateway exposes its shared authorization contract, so
-gateway mode is not the documented end-user setup path yet.
+Journal helper only in standalone mode. Gateway mode never starts that helper;
+it directs recovery through Trading Monitor until the gateway exposes its
+shared Journal authorization contract. Gateway mode is not the documented
+end-user setup path yet.
 
 Keep the three products independent:
 
