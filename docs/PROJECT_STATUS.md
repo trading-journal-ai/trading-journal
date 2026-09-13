@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-08-13 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-09-13 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -31,6 +31,24 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-09-13** — Small-cap trade review questionnaire and integration handoff
+  (branch `codex/trade-review-master-handoff`).
+  - Added [the master questionnaire](product/TRADE_REVIEW_MASTER.md), combining
+    the supplied Lance framework, Justin's Good Trade Checklist, and the agreed
+    question-based day-to-trade review flow.
+  - Captured core/optional questions, initial-burst and second-opportunity
+    classification, trade thesis, opportunity and execution quality, repeated
+    attempts, and an embedded handoff for integration on another computer.
+  - **Stopped at:** content ready; UI integration and answer/custom-question
+    persistence are not implemented. Integration starting points and open
+    behavior decisions are recorded in the master file.
+  - **Validation:** `npm run verify:full` passed (lint, bundled demo schema,
+    TypeScript, and production build) after enabling network access for font
+    downloads. The existing broad NFT trace warning remains. No browser tests
+    were needed for this docs-only change.
+  - Prepared on a clean checkout of current remote `main`; unrelated local
+    edits and the older chart-handoff branch are outside this commit.
 
 - **2026-08-13** — Trade-chart execution-time integrity
   (branch `codex/chart-time-integrity`).
