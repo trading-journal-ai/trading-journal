@@ -1,7 +1,7 @@
 # Trade Import and Reconciliation Behavior
 
 > Status: current-state audit and target contract
-> Last reviewed: 2026-08-13
+> Last reviewed: 2026-09-10
 > Scope: stock and ETF executions imported through Schwab REST, ThinkorSwim
 > statements, and DAS/TraderVue summaries
 
@@ -17,8 +17,9 @@ The durable model is correct:
 1. A broker **execution** (fill) is the factual source record.
 2. A Journal **trade** is a derived, account-scoped, flat-to-flat grouping of
    one or more executions in the same symbol.
-3. Normal sync is append-only. It must never silently replace a closed trade or
-   discard notes.
+3. Normal sync is fill-preserving. It must never replace a broker fill or
+   discard notes, but it may enrich a matched fill with fee details that the
+   broker published after the execution.
 4. A later fill may update the same open trade in place. Its trade ID and
    journal relationships must remain stable.
 5. If the system cannot prove how a fill belongs, it should skip it for review
@@ -78,15 +79,17 @@ One filled broker leg with:
 - price
 - execution timestamp
 - opening/closing position effect when supplied
-- fees when available
+- total fees and queryable broker fee categories when available
 - source and dedupe identities
 
 An order is not an execution. An unfilled or canceled order does not become a
 trade. A partially filled then canceled order contributes only its actual fill
 executions.
 
-Broker facts should remain immutable. Database linkage such as `tradeId` may be
-assigned when a new execution is reconciled into an open trade.
+Fill facts should remain immutable. Database linkage such as `tradeId` may be
+assigned when a new execution is reconciled into an open trade. Fee facts are
+allowed to become more complete because Schwab reports them through a separate
+transaction feed that may arrive after the order fill.
 
 ### Trade
 
@@ -105,8 +108,10 @@ a new trade by default.
 
 ### Import batch
 
-An audit record for one confirmed ingest. Preview creates no batch and performs
-no writes. A duplicate-only or review-only Schwab result also creates no batch.
+An audit record for one confirmed fill ingest. Preview creates no batch and
+performs no writes. A duplicate-only or review-only Schwab result also creates
+no batch. Fee-only enrichment records its source on `execution_fees` without
+creating a synthetic fill batch.
 
 ## Default policy
 
@@ -135,12 +140,14 @@ The implementation is split across:
 - [`history.ts`](../../src/lib/schwab/history.ts): order/transaction retrieval
 - [`normalize.ts`](../../src/lib/schwab/normalize.ts): Schwab payload to fills
 - [`duplicates.ts`](../../src/lib/schwab/duplicates.ts): cross-source comparison
+- [`feeEnrichment.ts`](../../src/lib/schwab/feeEnrichment.ts): late fee precedence
+  and update planning
 - [`reconcile.ts`](../../src/lib/schwab/reconcile.ts): trade planning and safety
 - [`persist.ts`](../../src/lib/schwab/persist.ts): atomic confirmed writes
 
 The focused Journal also exposes a fast path for the current ET date. When
 today has no trades, **Import today's trades** performs the same server-verified,
-append-only import for that single date. The click is the confirmation; it does
+fill-preserving import for that single date. The click is the confirmation; it does
 not add a separate preview step. Multiple Schwab accounts still require an
 explicit masked-account choice, and ambiguous fills remain excluded for review.
 The full importer continues to own historical ranges, detailed previews, and
@@ -173,7 +180,9 @@ chunk cannot leave a partial database import.
   `COLLECTIVE_INVESTMENT` are also accepted when Schwab identifies the
   instrument subtype as `EXCHANGE_TRADED_FUND`; other collective investments,
   non-equity legs, and malformed fills remain excluded with warnings.
-- Fee records are attached to the closest execution from the same order.
+- Fee records are attached to the closest execution from the same order. Raw
+  Schwab categories such as commission, SEC, TAF, and option-registration fees
+  are preserved in `execution_fees`; `executions.fees` remains the cached total.
 - Raw Schwab account and order identifiers are not persisted. HMAC identities
   are stored instead.
 
@@ -194,6 +203,39 @@ when two existing occurrences are present.
 
 Fees and position effect are intentionally not required for cross-source
 matching because statement and API representations can differ.
+
+A matched duplicate is still useful evidence. If it carries a newly available
+fee total or a more specific fee breakdown, the confirmed sync updates only the
+fee rows and cached trade fee total. Schwab API categories outrank the broader
+ThinkorSwim statement buckets. A zero-fee API response never erases previously
+observed fees.
+
+### Fee reporting and presentation
+
+- Journal owns the fee ledger; Gateway supplies broker history and Trading Server
+  owns market history. This change does not transfer personal records to Server.
+- `execution_fees` stores category, amount and source per execution. Current
+  `executions.fees` and `trades.fees` remain the cached totals used by P&L.
+  Shared P&L math already subtracts fees; reconciliation never subtracts them a second time.
+- An explicit numeric zero is retained as a zero-valued detail row. Missing or
+  blank fee evidence creates no detail row. A zero total with no details means
+  unknown; a zero total with reported details means observed zero, not a promise
+  that broker reporting has finished. Later positive evidence can still arrive.
+- Existing positive totals migrate as `REPORTED_TOTAL` with source `legacy`.
+  This preserves observed charges without inventing historical categories or
+  asserting that legacy zero totals were reported by the broker.
+- Schwab categories take precedence over statement buckets. Positive statement
+  evidence may replace an earlier API observation of zero. A zero response never
+  clears already observed positive charges. A later positive broker snapshot may
+  correct the total. Missing detail, repeated imports and lower-priority evidence
+  do not double-charge or replace accepted typed charges with broad buckets.
+- Preview is read-only. Fee-only changes are offered through the existing import
+  confirmation and reported as concise status text; the write reloads broker
+  history and recomputes changes in the account-scoped database transaction.
+  Conflicting fill identity or reconciliation failure rolls back fee changes too.
+- Daily Journal retains its existing net P&L, without new fee columns or metric
+  tiles. Future analytics can aggregate the stored totals/categories and report
+  unknown coverage explicitly. No analytics presentation is added in this release.
 
 ### 4. Classify historical fills
 
@@ -243,10 +285,13 @@ calculates realized P&L on each reduction using the running average entry price.
 This produces the correct total P&L for the flat-to-flat Journal trade, but it
 is not Schwab tax-lot accounting.
 
-Fees are accumulated across the trade. When Schwab reports one fee record for
-an order with several fills, the current adapter assigns the full fee to the
-closest fill. The trade-level total remains useful, but per-fill fee attribution
-is best effort.
+Fees are accumulated across the trade. Category rows are stored separately from
+the cached execution and trade totals so future analysis can group commission,
+SEC, TAF, option-registration, statement-miscellaneous, and new broker fee
+types without another schema change. When Schwab reports one fee record for an
+order with several fills, the current adapter assigns the full fee to the
+closest fill. The trade-level and daily totals remain useful, but per-fill fee
+attribution is best effort.
 
 ## Trades that span days or imports
 
@@ -361,7 +406,8 @@ trades in the same symbol are already stored.
    corporate-action feed; transfers, symbol changes, unregistered splits, and
    zero-price expirations still require explicit review.
 6. Improve per-fill fee allocation and compare imported net P&L against a
-   statement or broker summary.
+   statement or broker summary. Typed fee capture and late fee enrichment are
+   complete; cash-posting rounding remains a separate reconciliation metric.
 
 ## Acceptance contract
 
@@ -370,6 +416,8 @@ Before considering import a finished core feature, automated tests should prove:
 - repeated and overlapping API/file imports insert zero duplicate executions;
 - API-after-file and file-after-API overlap are symmetric;
 - partial fills preserve their quantity, price, time, and total fees;
+- a repeated sync can enrich a duplicate execution with late broker fee
+  categories without adding a fill or changing its journal relationships;
 - an open trade can scale in, scale out, and close across several days/imports;
 - the trade ID and all notes/tags/attachments remain unchanged;
 - a close-first fill never creates an opposite position;
@@ -387,7 +435,8 @@ These should remain the defaults:
 
 - **Flat-to-flat grouping**, not a time-window guess.
 - **Execution-level source of truth**, not order summaries.
-- **Append-only normal sync**, with no automatic closed-trade overwrite.
+- **Fill-preserving normal sync**, with no automatic closed-trade overwrite;
+  matched fills may receive later broker fee details.
 - **Stable trade IDs** across later fills.
 - **Account-scoped reconciliation**.
 - **Needs review over guessing**.

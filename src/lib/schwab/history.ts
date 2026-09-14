@@ -1,9 +1,22 @@
-import type { TradingApiClient } from "schwab-client-js";
 import type { ValidatedSchwabDateRange } from "./dates";
 
 const SCHWAB_ORDER_MAX_RESULTS = 3000;
 
-type HistoryClient = Pick<TradingApiClient, "ordersByAccount" | "transactByAcct">;
+export type SchwabHistoryClient = {
+  ordersByAccount(
+    account: string,
+    from: string,
+    to: string,
+    status: string | null,
+    maxResults: number,
+  ): Promise<unknown>;
+  transactByAcct(
+    account: string,
+    transactionTypes: string,
+    from: string,
+    to: string,
+  ): Promise<unknown>;
+};
 
 export type SchwabHistoryResult = {
   orders: unknown[];
@@ -49,8 +62,8 @@ function dedupeRecords(values: unknown[], fields: string[]) {
 }
 
 export async function fetchSchwabHistory(
-  client: HistoryClient,
-  accountHash: string,
+  client: SchwabHistoryClient,
+  account: string,
   range: ValidatedSchwabDateRange,
 ): Promise<SchwabHistoryResult> {
   const orders: unknown[] = [];
@@ -59,7 +72,7 @@ export async function fetchSchwabHistory(
   for (const chunk of range.orderChunks) {
     const response = requireArray(
       await client.ordersByAccount(
-        accountHash,
+        account,
         chunk.fromIso,
         chunk.toIso,
         null,
@@ -78,7 +91,7 @@ export async function fetchSchwabHistory(
   for (const chunk of range.transactionChunks) {
     const response = requireArray(
       await client.transactByAcct(
-        accountHash,
+        account,
         "TRADE",
         chunk.fromIso,
         chunk.toIso,

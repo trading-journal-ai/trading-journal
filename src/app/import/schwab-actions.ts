@@ -13,6 +13,7 @@ import {
   SchwabLocalAuthorizationError,
 } from "@/lib/schwab/localAuthorization";
 import { SchwabAppendSafetyError } from "@/lib/schwab/persist";
+import { readSchwabImportProvider } from "@/lib/schwab/provider";
 import { TradeReconciliationError } from "@/lib/schwab/reconcile";
 import {
   buildSchwabImportPreview,
@@ -50,6 +51,13 @@ export async function authorizeSchwabAction(): Promise<SchwabConnectionState> {
     return {
       status: "unavailable",
       error: "Schwab authorization is unavailable in the read-only hosted demo.",
+    };
+  }
+
+  if (readSchwabImportProvider() === "gateway") {
+    return {
+      status: "unavailable",
+      error: "Schwab authorization is owned by the Schwab Broker Gateway. Authorize Schwab from Trading Monitor, then return here and check the connection again.",
     };
   }
 

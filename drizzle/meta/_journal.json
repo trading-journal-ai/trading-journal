@@ -85,6 +85,13 @@
       "when": 1784997578237,
       "tag": "0011_schwab_execution_provenance",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1786706691459,
+      "tag": "0012_open_overlord",
+      "breakpoints": true
     }
   ]
 }

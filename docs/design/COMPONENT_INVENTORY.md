@@ -1,7 +1,13 @@
 # Component inventory & extraction plan
 
-> Status: Living · Last updated: 2026-07-22 · Companion to
-> [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md)
+> Status: Living · Last updated: 2026-08-19 · Companion to
+> [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) · [`DESIGN_PROCESS.md`](DESIGN_PROCESS.md)
+
+> **Historical checklist warning (noted 2026-08-19; preserved 2026-09-10).** `Eyebrow`, `Money`,
+> `Dot`, `StatBlock`, `Button` and `Tag` are all built and shipping in
+> `src/components/ui/`, but still show as `- [ ]`. Verify against the directory
+> before trusting a checkbox. Per `DESIGN_PROCESS.md` §5, tick the box in the
+> same commit as the extraction — that is the only version that stays true.
 
 A census of the UI across the four site areas (Journal, Calendar, Trades,
 Analytics/Reports), and the plan to turn recurring patterns into real shared
@@ -83,7 +89,9 @@ Already extracted and reusable (keep, don't rebuild): `CumulativePnlChart`,
 - [ ] **`OpenSection`** — eyebrow + rule + content, no box. The default wrapper.
 - [ ] **`ReportsStatsMatrix`** — from `reports/page.tsx` (1073 lines).
 - [ ] **`LedgerTable`** — from `trades/page.tsx` (661) and reports.
-- [ ] **`CalendarCell`** — from `calendar/page.tsx` (580).
+- [x] **`MonthCalendar`** — shared Calendar/Journal month grid, stats and
+  expanding day ledger; cell rendering is private to this feature component
+  (2026-09-11, selected D baseline). See `src/components/MonthCalendar.tsx`.
 - [ ] **`HBar` / `DivBar`** — count + diverging P&L bars, from `reports/page.tsx`.
 
 ### Tier 3 — Feature modules (link from the system, do not absorb)

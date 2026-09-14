@@ -126,7 +126,7 @@ describe("parseTosStatement", () => {
       "Cash Balance",
       "DATE,TIME,TYPE,REF #,DESCRIPTION,Misc Fees,Commissions & Fees,AMOUNT,BALANCE",
       "3/3/26,07:29:38,TRD,100,BOT +100 TMDE @4.52,,,-452.00,90439.83",
-      "3/3/26,07:29:58,TRD,101,SOLD -100 TMDE @4.56,-0.02,,456.00,90895.81",
+      "3/3/26,07:29:58,TRD,101,SOLD -100 TMDE @4.56,-0.02,-0.03,456.00,90895.81",
       "",
       "Profits and Losses",
       "Symbol,Description,P/L Open,P/L %,P/L Day,P/L YTD,P/L Diff,Margin Req",
@@ -137,7 +137,11 @@ describe("parseTosStatement", () => {
     expect(parsed.executionSource).toBe("cash_balance");
     expect(parsed.tradeHistoryFilter).toBeNull();
     expect(parsed.executions).toHaveLength(2);
-    expect(parsed.executions[1]?.fees).toBeCloseTo(0.02, 2);
+    expect(parsed.executions[1]?.fees).toBeCloseTo(0.05, 2);
+    expect(parsed.executions[1]?.feeBreakdown).toEqual({
+      STATEMENT_MISC_FEES: 0.02,
+      STATEMENT_COMMISSIONS_AND_FEES: 0.03,
+    });
   });
 
   it("reconciles an unlabeled one-day Trade History section with the full Cash Balance range", () => {
@@ -271,6 +275,22 @@ describe("matchTrades", () => {
       avgExitPrice: 25,
       status: "closed",
       pnl: 1500,
+    });
+  });
+});
+
+
+describe("statement fee reporting", () => {
+  it("keeps blank fee cells unknown and explicit zero cells reported", () => {
+    const statement = (fees: string) => [
+      "Cash Balance",
+      "DATE,TIME,TYPE,REF #,DESCRIPTION,Misc Fees,Commissions & Fees,AMOUNT,BALANCE",
+      `1/15/26,07:30:00,TRD,1001,BOT +10 SYNTH @10,${fees},-100,1000`,
+      "",
+    ].join("\n");
+    expect(parseTosStatement(statement(","))[0].feeBreakdown).toEqual({});
+    expect(parseTosStatement(statement("0,0"))[0].feeBreakdown).toEqual({
+      STATEMENT_MISC_FEES: 0, STATEMENT_COMMISSIONS_AND_FEES: 0,
     });
   });
 });

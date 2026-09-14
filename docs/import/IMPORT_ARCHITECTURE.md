@@ -119,6 +119,7 @@ For TOS/Schwab, useful diagnostics include:
 - Cash Balance trade rows
 - `BOT` / `SOLD` split
 - Cash Balance fee rows
+- Schwab fee categories and late fee-enrichment count
 - Account Trade History fill count
 - Cash Balance ↔ Trade History exact matches
 - Account Order History filled/canceled/rejected counts
@@ -178,7 +179,9 @@ Account Trade History
 
 Supporting sections:
 
-- Cash Balance: fees and reconciliation
+- Cash Balance: broad statement fee buckets and reconciliation
+- Schwab trade transactions: typed commission/regulatory fees and late
+  enrichment of already-imported executions
 - Account Order History: order-behavior context
 - Profits and Losses: symbol-level validation
 - Equities: open-position context
@@ -222,3 +225,7 @@ Upload CSV
 
 The local `broker:normalize` script is a preview/debug tool. The app should
 eventually do the same normalization internally during import.
+
+Execution-level fee categories and source evidence are persisted separately in
+`execution_fees`; trade totals remain scalar. See the
+[fee contract](TRADE_IMPORT_BEHAVIOR.md#fee-reporting-and-presentation).

@@ -30,14 +30,18 @@ export async function importSchwabExecutions(input: {
       ...history.warnings,
       ...normalized.warnings,
       persisted.inserted === 0
+        && persisted.feesUpdated === 0
         && persisted.reviewExecutions === 0
         && normalized.executions.length > 0
         ? "Every Schwab execution found was already represented in this Journal account."
         : null,
+      persisted.feesUpdated > 0
+        ? `${persisted.feesUpdated} existing ${persisted.feesUpdated === 1 ? "execution was" : "executions were"} enriched with broker fee details; trade fee totals were recalculated without changing fills or journal notes.`
+        : null,
       persisted.reviewExecutions > 0
         ? `${persisted.reviewExecutions} unmatched ${persisted.reviewExecutions === 1 ? "fill was" : "fills were"} skipped because ${persisted.reviewSymbols.join(", ")} appears to belong to existing trade data. Existing trades and notes were not changed.`
         : null,
-      "Append-only sync: no existing executions, trades, notes, tags, attachments, or import batches were deleted.",
+      "Fill-preserving sync: no executions, trades, notes, tags, attachments, or import batches were deleted; existing fills may receive more complete broker fee details.",
     ].filter((warning): warning is string => warning != null),
   };
 }

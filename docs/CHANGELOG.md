@@ -13,6 +13,72 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
 
 ---
 
+## 2026-09-11 (local main)
+
+### Changed
+
+- Journal Week and Month day clicks open Day → P&L, with trades accessible
+  through Day → Trades. Journal Month no longer expands a trade ledger;
+  standalone Calendar retains it. Integrated locally as `0be70d0`; no PR published.
+- Journal weekly cards align P&L on the first metric row and stats or empty-day
+  statuses on the second. Integrated locally as `f47f782`; no PR published.
+- Journal weekly cards have no drop shadow or stats-pill backgrounds. Their dot
+  and tinted cell mark the current Eastern Time day instead of the selected review
+  date. Integrated locally as `6c518a2`; no PR published.
+- Calendar day panels use Review trades to enter Trade Review directly, removing
+  the intermediate Journal stop. Starts with the first trade; individual symbols
+  remain directly selectable. Integrated locally as `6a5bc1f`; no PR published.
+- Calendar trade links open Trade Review directly for the displayed session,
+  symbol and selected trade, preserving the originating calendar return target.
+  Integrated locally as `c1383d3`; no PR published.
+- Expanded calendar-day stats use a single muted pill with dot separators and
+  P&L last. Integrated locally as `38319f5`; no PR published.
+- Expanded calendar-day stats sit beneath the day heading, left-aligned, with
+  P&L after profit factor. Both calendar consumers share the layout. Integrated
+  locally as `ae3ccfd`; no PR published.
+- Journal week headings omit the year. The compact weekday/P&L strip above the
+  heading is hidden across Journal scopes, with its implementation retained for
+  optional restoration. Integrated locally as `c98d19a`; no PR published.
+- Retired the A–E calendar inventory and older visualization-calendar experiments.
+  Calendar and Journal Month now have one maintained month component; obsolete
+  calendar CSS and fixture data were removed. Local cleanup; no PR published.
+- Calendar and Journal Month now share the selected D calendar, including the
+  flat summary stats and trade ledger expanding beneath the selected week.
+  The standard `journal` app at localhost:4317 serves the integrated version;
+  the temporary 3015 preview is stopped. Integrated from
+  `codex/shared-calendar-d` (implementation `48440f2`); no PR published.
+
+## 2026-09-10 (local main)
+
+### Decided
+
+- Momentum Archive false-positive research and qualification rules belong to
+  Trading Server. Its canonical research handoff preserves the candidate context;
+  Journal owns presentation and trade comparison. Candidate adoption remains
+  deferred. Documentation integrated locally; no PR published.
+
+### Fixed
+- Confirmed Schwab/TOS imports can reconcile later broker fees on existing
+  executions, updating net P&L without duplicating fills or changing notes.
+  The additive Journal migration preserves existing totals and records categories
+  and reported-zero evidence for future analytics. Daily views add no fee metric
+  columns. Integrated locally from `feat/schwab-fee-breakdown`; no PR published.
+
+## 2026-09-04 (local main)
+
+### Changed
+- Momentum Archive queries, exports and candles now use Trading Server's shared
+  local market-history API, preserving accepted exact-symbol calculations and
+  explicit offline behavior. Integrated in local main at `53a51a5`; no PR was
+  published. Old archive paths are retired; the four explicitly approved duplicate
+  folders were removed after fresh backup and post-deletion consumer checks.
+- Shared local Schwab imports now use Broker Gateway's read capability while
+  preserving Journal normalization, dedupe and persistence. Missing provider
+  configuration fails explicitly; independent installations must opt into
+  standalone. Integrated in local main through `1ff95db`; no PR was published.
+- Shared setup documentation now identifies Gateway as the OAuth owner and
+  records the cross-app migration/verification gates.
+
 ## 2026-08-13
 
 ### Added

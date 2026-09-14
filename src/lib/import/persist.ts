@@ -22,6 +22,7 @@ export type ImportSummary = {
   parsed: number;
   inserted: number;
   duplicates: number;
+  feesUpdated: number;
   trades: number;
   normalizedTrades: number;
   openTrades: number;
@@ -183,6 +184,7 @@ async function importNormalized(
       parsed: normalized.executions.length,
       inserted: insertedRows.length,
       duplicates: normalized.executions.length - insertedRows.length,
+      feesUpdated: 0,
       trades,
       normalizedTrades: normalized.trades.length,
       openTrades: normalized.trades.filter((trade) => trade.status === "open").length,
@@ -264,6 +266,7 @@ async function importTosNormalized(
     parsed: persisted.parsed,
     inserted: persisted.inserted,
     duplicates: persisted.duplicates,
+    feesUpdated: persisted.feesUpdated,
     trades: persisted.tradesCreated + persisted.tradesUpdated,
     normalizedTrades: normalized.trades.length,
     openTrades: normalized.trades.filter((trade) => trade.status === "open").length,

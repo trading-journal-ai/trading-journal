@@ -3,7 +3,7 @@
 > **Purpose:** the running list of things that need **Justin** specifically —
 > decisions only you can make and content only you can author. This is the
 > bottleneck-buster: if it's here, the build is (or will be) waiting on it.
-> **Updated:** 2026-07-11
+> **Updated:** 2026-09-10 (build-backlog correction; owner decisions not re-approved)
 >
 > Format: `[ ]` open · `[x]` done · **(rec: …)** = my recommendation, so where you
 > agree you can just check it off. Each item links to where it came from.
@@ -163,8 +163,10 @@ rich-export gap analysis) still require a freshness/linking review.
 
 ## E. Build backlog (our list, not yours — here so it's visible)
 
-- [ ] **Opportunity-context calculator** *(next up)* — the one net-new engine
-  piece; joins `fills`→`candles` over the 07:00–20:00 window. Data confirmed present.
+- [x] **Opportunity-context calculator v1** — implemented with a service layer
+  and coach payload wiring (`src/lib/coach/opportunityContext.ts`,
+  `opportunityContextService.ts`, `payload.ts`). Short-side support and broader
+  v2 review adoption are separate scope; do not rebuild the existing calculator.
 - [ ] Wire the v2 Coach Review schema (replace flat `CoachGeneratedReview`).
 - [ ] Session-structure relabel (mostly renaming existing `SessionFactPack` output).
 - [ ] `buildJournalDay()` view-model + one canonical template.

@@ -12,7 +12,7 @@ export const dataVizPreviewRoutes: DataVizPreviewRoute[] = [
     href: "/preview/data-viz/v1",
     version: "V1",
     title: "Chart vocabulary",
-    description: "The original sticker sheet: outcome pulse, trade tape, excursion braid, calendar cluster, hold-time views, and more.",
+    description: "The original sticker sheet: outcome pulse, trade tape, excursion braid, hold-time views, and more.",
     meta: "Vocabulary",
     phase: "foundation",
   },

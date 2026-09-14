@@ -9,6 +9,7 @@ import { tradeDayActivities, type TradeDayActivity } from "@/lib/tradeActivity";
 import ReportRangeFilter from "@/components/ReportRangeFilter";
 import PeriodTabs from "@/components/ui/PeriodTabs";
 import Eyebrow from "@/components/ui/Eyebrow";
+import AnalyticsSectionTabs from "@/components/AnalyticsSectionTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -560,8 +561,7 @@ function FilterBar({ filters, tagOptions }: { filters: ReportFilters; tagOptions
       {filters.date && <input type="hidden" name="date" value={filters.date} />}
       {filters.from && <input type="hidden" name="from" value={filters.from} />}
       {filters.to && <input type="hidden" name="to" value={filters.to} />}
-      <div className="relative mb-4 space-y-2">
-        <span className="block text-sm font-semibold text-[var(--muted)]">Date range</span>
+      <div className="relative mb-4">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           <PeriodTabs
             ariaLabel="Analytics date range"
@@ -1095,6 +1095,7 @@ export default async function ReportsPage({
 
   return (
     <div className="mx-auto max-w-6xl">
+      <AnalyticsSectionTabs active="performance" />
       <FilterBar filters={filters} tagOptions={tagOptions} />
 
       <div className="mt-10">

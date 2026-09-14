@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import Database from "better-sqlite3";
 import { beforeAll, describe, expect, it } from "vitest";
+import { netPnl } from "@/lib/pnl";
 import type { SchwabNormalizedExecution } from "./normalize";
 
 function schwabExecution(
@@ -137,6 +138,86 @@ describe("append-only Schwab persistence", () => {
       .where(eq(schema.executions.accountId, account.id))
       .get();
     expect(afterRepeat).toEqual(beforeRepeat);
+  });
+
+  it("enriches duplicate fills when Schwab fees arrive later", async () => {
+    const account = await createAccount();
+    const executions = [
+      schwabExecution("late-fee-open", {
+        symbol: "LATEFEE",
+        executedAt: 1_800_000_300,
+      }),
+      schwabExecution("late-fee-close", {
+        symbol: "LATEFEE",
+        side: "sell",
+        price: 11,
+        executedAt: 1_800_000_400,
+        posEffect: "TO CLOSE",
+      }),
+    ];
+    await persist.persistSchwabExecutions({
+      accountId: account.id,
+      from: "2027-01-15",
+      to: "2027-01-15",
+      executions,
+    });
+
+    const enrichedExecutions = executions.map((execution) =>
+      execution.side === "sell"
+        ? {
+            ...execution,
+            fees: 0.25,
+            feeBreakdown: { SEC_FEE: 0.07, TAF_FEE: 0.18 },
+          }
+        : execution
+    );
+    const result = await persist.persistSchwabExecutions({
+      accountId: account.id,
+      from: "2027-01-15",
+      to: "2027-01-15",
+      executions: enrichedExecutions,
+    });
+
+    expect(result).toMatchObject({
+      batchId: null,
+      inserted: 0,
+      duplicates: 2,
+      feesUpdated: 1,
+      tradesCreated: 0,
+      tradesUpdated: 0,
+    });
+    const closingExecution = await db
+      .select()
+      .from(schema.executions)
+      .where(and(
+        eq(schema.executions.accountId, account.id),
+        eq(schema.executions.side, "sell"),
+      ))
+      .get();
+    expect(closingExecution?.fees).toBeCloseTo(0.25, 8);
+    expect(await db
+      .select()
+      .from(schema.executionFees)
+      .where(eq(schema.executionFees.executionId, closingExecution!.id))
+      .orderBy(schema.executionFees.feeType))
+      .toEqual([
+        expect.objectContaining({ feeType: "SEC_FEE", amount: 0.07, source: "schwab_api" }),
+        expect.objectContaining({ feeType: "TAF_FEE", amount: 0.18, source: "schwab_api" }),
+      ]);
+    const trade = await db
+      .select()
+      .from(schema.trades)
+      .where(eq(schema.trades.accountId, account.id))
+      .get();
+    expect(trade?.fees).toBeCloseTo(0.25, 8);
+
+    const repeat = await persist.persistSchwabExecutions({
+      accountId: account.id,
+      from: "2027-01-15",
+      to: "2027-01-15",
+      executions: enrichedExecutions,
+    });
+    expect(repeat).toMatchObject({ inserted: 0, duplicates: 2, feesUpdated: 0 });
   });
 
   it("recognizes an API fill already imported from a file", async () => {
@@ -762,4 +843,78 @@ describe("append-only Schwab persistence", () => {
       batches: batches?.count ?? 0,
     };
   }
+  it("keeps account scope, fill identity, notes-related fields and net P&L during fee reconciliation", async () => {
+    const account = await createAccount();
+    const otherAccount = await createAccount();
+    const fills = [
+      schwabExecution("scope-open", { executedAt: 1_800_020_000 }),
+      schwabExecution("scope-close", { side: "sell", price: 11, executedAt: 1_800_020_060, posEffect: "TO CLOSE" }),
+    ];
+    const input = { accountId: account.id, from: "2027-01-15", to: "2027-01-15", executions: fills };
+    await persist.persistSchwabExecutions(input);
+    await persist.persistSchwabExecutions({ ...input, accountId: otherAccount.id });
+    const before = await db.select().from(schema.trades).where(eq(schema.trades.accountId, account.id)).get();
+    await db.update(schema.trades).set({ setup: "Synthetic plan", stopLoss: 9, target: 12 }).where(eq(schema.trades.id, before!.id));
+    const beforeFills = await db.select().from(schema.executions).where(eq(schema.executions.accountId, account.id));
+    const zeroFills = fills.map((fill) => ({ ...fill, feeBreakdown: { COMMISSION: 0 } }));
+    expect((await persist.persistSchwabExecutions({ ...input, executions: zeroFills })).feesUpdated).toBe(2);
+    expect((await persist.persistSchwabExecutions({ ...input, executions: zeroFills })).feesUpdated).toBe(0);
+    const updatedFills = [zeroFills[0], { ...fills[1], fees: 0.25, feeBreakdown: { SEC_FEE: 0.25 } }];
+    expect((await persist.persistSchwabExecutions({ ...input, executions: updatedFills })).feesUpdated).toBe(1);
+    const after = await db.select().from(schema.trades).where(eq(schema.trades.id, before!.id)).get();
+    expect(after).toMatchObject({ id: before!.id, setup: "Synthetic plan", stopLoss: 9, target: 12 });
+    expect(netPnl(after!)).toBeCloseTo(9.75, 8);
+    const afterFills = await db.select().from(schema.executions).where(eq(schema.executions.accountId, account.id));
+    expect(afterFills.map((fill) => ({ ...fill, fees: 0 }))).toEqual(beforeFills.map((fill) => ({ ...fill, fees: 0 })));
+    expect((await db.select().from(schema.trades).where(eq(schema.trades.accountId, otherAccount.id)).get())?.fees).toBe(0);
+    expect((await persist.persistSchwabExecutions({ ...input, executions: updatedFills })).feesUpdated).toBe(0);
+  });
+
+  it("enriches CSV duplicates without replacing more-specific broker details", async () => {
+    const account = await createAccount();
+    const fill = schwabExecution("statement-fee", { fees: 0.25, feeBreakdown: { STATEMENT_MISC_FEES: 0.25 } });
+    const input = { accountId: account.id, from: "2027-01-15", to: "2027-01-15" };
+    await persist.persistExecutionLedger({ ...input, executions: [
+      { ...fill, brokerExecutionKey: null },
+    ], source: "tos_csv", fileName: "synthetic-statement.csv" });
+    const apiFill = { ...fill, sourceRowHash: "api-statement-fee", feeBreakdown: { SEC_FEE: 0.1, TAF_FEE: 0.15 } };
+    expect((await persist.persistSchwabExecutions({ ...input, executions: [apiFill] })).feesUpdated).toBe(1);
+    expect((await persist.persistExecutionLedger({ ...input, executions: [
+      { ...fill, brokerExecutionKey: null },
+    ], source: "tos_csv", fileName: "synthetic-statement.csv" })).feesUpdated).toBe(0);
+    const rows = await db.select().from(schema.executions).where(eq(schema.executions.accountId, account.id));
+    expect(rows).toHaveLength(1);
+    expect(await db.select().from(schema.executionFees).where(eq(schema.executionFees.executionId, rows[0].id)))
+      .toHaveLength(2);
+  });
+
+  it("rolls back a fee update when accompanying new fills fail reconciliation", async () => {
+    const account = await createAccount();
+    const fill = schwabExecution("rollback-fee", { executedAt: 1_800_030_000 });
+    const input = { accountId: account.id, from: "2027-01-15", to: "2027-01-15" };
+    await persist.persistSchwabExecutions({ ...input, executions: [fill] });
+    await expect(persist.persistSchwabExecutions({ ...input, executions: [
+      { ...fill, fees: 0.2, feeBreakdown: { COMMISSION: 0.2 } },
+      schwabExecution("rollback-flip", { side: "sell", quantity: 20, executedAt: 1_800_030_060, posEffect: "TO CLOSE" }),
+    ] })).rejects.toThrow();
+    const rows = await db.select().from(schema.executions).where(eq(schema.executions.accountId, account.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].fees).toBe(0);
+    expect(await db.select().from(schema.executionFees).where(eq(schema.executionFees.executionId, rows[0].id))).toEqual([]);
+  });
+
+  it("rejects inconsistent totals and conflicting broker identity matches", async () => {
+    const account = await createAccount();
+    const fill = schwabExecution("conflict-fee");
+    const input = { accountId: account.id, from: "2027-01-15", to: "2027-01-15" };
+    await persist.persistSchwabExecutions({ ...input, executions: [fill] });
+    await expect(persist.persistSchwabExecutions({ ...input, executions: [
+      { ...fill, fees: 0.3, feeBreakdown: { SEC_FEE: 0.2 } },
+    ] })).rejects.toThrow("inconsistent fee totals");
+    await expect(persist.persistSchwabExecutions({ ...input, executions: [
+      { ...fill, price: 11, fees: 0.3, feeBreakdown: { SEC_FEE: 0.3 } },
+    ] })).rejects.toThrow("conflicting fill details");
+    expect((await db.select().from(schema.executions).where(eq(schema.executions.accountId, account.id)).get())?.fees).toBe(0);
+  });
+
 });

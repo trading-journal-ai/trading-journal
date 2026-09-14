@@ -24,6 +24,7 @@ type TodayImportUiState =
       phase: "message";
       kind:
         | "imported"
+        | "fees_updated"
         | "no_trades"
         | "already_imported"
         | "needs_review"

@@ -21,6 +21,7 @@ export type JournalWeekStripDay = {
 type JournalWeekStripProps = {
   days: JournalWeekStripDay[];
   basePath: string;
+  today: string;
 };
 
 type JournalDayNavigationProps = {
@@ -29,6 +30,9 @@ type JournalDayNavigationProps = {
   periodNavigation: JournalPeriodNavigation;
   calendarHref: string;
 };
+
+// Retained for optional restoration; the main Week view already summarizes these days.
+const SHOW_COMPACT_WEEK_STATS = false;
 
 const weekdayFmt = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
@@ -103,7 +107,7 @@ export function JournalDayNavigation({
       aria-label="Journal day navigation"
       className={pendingDate ? "journal-week-strip--navigating" : undefined}
     >
-      <nav aria-label="Trading week" className="mb-9 overflow-x-auto [scrollbar-width:thin]">
+      {SHOW_COMPACT_WEEK_STATS ? <nav aria-label="Trading week" className="mb-9 overflow-x-auto [scrollbar-width:thin]">
         <div className="flex w-max min-w-full items-start gap-6">
           {days.map((day) => {
             const selected = day.date === selectedDate;
@@ -145,7 +149,7 @@ export function JournalDayNavigation({
             );
           })}
         </div>
-      </nav>
+      </nav> : null}
 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <JournalDateHeading
@@ -172,13 +176,11 @@ export function JournalDayNavigation({
 function EmptyDayValue({ state }: { state: JournalWeekStripDay["state"] }) {
   const label = state === "no_trade" ? "No-trade" : state === "future" ? "Upcoming" : "No session";
   return (
-    <span className="mt-4 flex min-h-12 items-center">
-      <span className="text-[12px] leading-4 text-[var(--muted)]">{label}</span>
-    </span>
+    <span className="text-[11px] leading-4 text-[var(--muted)]">{label}</span>
   );
 }
 
-function MetricPill({
+function WeekMetrics({
   trades,
   accuracy,
   profitFactor,
@@ -189,7 +191,7 @@ function MetricPill({
 }) {
   return (
     <span
-      className="journal-week-day__metrics mt-[6px] inline-flex w-fit max-w-full items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--surface-2)] px-[11px] py-1 font-sans text-[11px] font-normal leading-4 text-[var(--muted)] tabular-nums"
+      className="journal-week-day__metrics inline-flex w-fit max-w-full items-center gap-1.5 whitespace-nowrap font-sans text-[11px] font-normal leading-4 text-[var(--muted)] tabular-nums"
       aria-label={`${trades} ${trades === 1 ? "trade" : "trades"}${accuracy == null ? "" : `, ${accuracy}% win rate`}${profitFactor == null ? "" : `, ${profitFactor.toFixed(2)} profit factor`}`}
     >
       <span>{trades} {trades === 1 ? "Trade" : "Trades"}</span>
@@ -202,54 +204,46 @@ function MetricPill({
 export default function JournalWeekStrip({
   days,
   basePath,
+  today,
 }: JournalWeekStripProps) {
-  const { pendingDate, selectedDate, setPendingDate } = useJournalDateNavigation();
+  const { pendingDate, focusDay } = useJournalDateNavigation();
 
   return (
     <nav
       aria-label="Week at a glance"
       className={pendingDate ? "journal-week-strip--navigating" : undefined}
     >
-      <div className="overflow-x-auto rounded-[4px] border border-[var(--hairline)] [scrollbar-width:thin]">
-        <div className="grid min-w-[900px] grid-cols-5">
+      <div className="overflow-x-auto rounded-lg border border-[var(--review-card-border)] bg-[var(--review-card-divider)] [scrollbar-width:thin]">
+        <div className="grid min-w-[900px] grid-cols-5 gap-px">
           {days.map((day) => {
-            const selected = day.date === selectedDate;
-            const visuallySelected = pendingDate ? day.date === pendingDate : selected;
+            const isToday = day.date === today;
             const date = utcDate(day.date);
             return (
               <Link
                 key={day.date}
                 href={dayHref(basePath, day.date)}
-                aria-current={selected ? "date" : undefined}
-                onPointerDown={(event) => {
-                  if (event.button === 0) setPendingDate(day.date);
-                }}
-                onClick={(event) => {
-                  // Pointer activation is handled on pointer-down for immediate
-                  // feedback. A zero-detail click covers keyboard/programmatic use
-                  // without replaying the pending state after navigation resolves.
-                  if (event.detail === 0) setPendingDate(day.date);
-                }}
-                className={`journal-week-day relative flex flex-col border-r border-[var(--hairline)] px-3.5 py-4 font-sans last:border-r-0 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] ${
-                  visuallySelected ? "journal-week-day--selected z-[1]" : ""
+                aria-current={isToday ? "date" : undefined}
+                onNavigate={() => focusDay(day.date)}
+                className={`journal-week-day relative flex flex-col px-3.5 py-4 font-sans focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] ${
+                  isToday ? "journal-week-day--today z-[1]" : ""
                 }`}
               >
                 <span className="flex items-baseline gap-1.5 text-[16px] font-semibold leading-5 text-[var(--foreground)]">
                   {weekdayFmt.format(date)}
                   <span>{date.getUTCDate()}</span>
                 </span>
-                {day.state === "trades" ? (
-                  <span className="mt-4 flex flex-col items-start">
+                <span className="mt-6 grid grid-rows-[20px_16px] justify-items-start gap-1">
+                  {day.state === "trades" ? (
                     <Money value={day.pnl} fontFamily="sans" className="text-[14px] font-semibold leading-5" />
-                    <MetricPill
+                  ) : <span aria-hidden="true" />}
+                  {day.state === "trades" ? (
+                    <WeekMetrics
                       trades={day.trades}
                       accuracy={day.accuracy}
                       profitFactor={day.profitFactor}
                     />
-                  </span>
-                ) : (
-                  <EmptyDayValue state={day.state} />
-                )}
+                  ) : <EmptyDayValue state={day.state} />}
+                </span>
               </Link>
             );
           })}

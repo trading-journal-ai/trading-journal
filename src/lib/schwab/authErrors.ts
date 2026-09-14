@@ -6,5 +6,13 @@ export function schwabErrorMessage(error: unknown) {
 }
 
 export function schwabRequiresReauthorization(error: unknown) {
+  if (
+    typeof error === "object"
+    && error !== null
+    && "code" in error
+    && error.code === "SCHWAB_AUTHORIZATION_REQUIRED"
+  ) {
+    return true;
+  }
   return REAUTH_PATTERN.test(schwabErrorMessage(error));
 }

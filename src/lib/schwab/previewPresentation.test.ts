@@ -7,6 +7,7 @@ describe("schwabPreviewPresentation", () => {
       executionsFound: 86,
       newExecutions: 0,
       reviewExecutions: 0,
+      feeUpdatesAvailable: 0,
     })).toBe("already_imported");
   });
 
@@ -15,6 +16,7 @@ describe("schwabPreviewPresentation", () => {
       executionsFound: 0,
       newExecutions: 0,
       reviewExecutions: 0,
+      feeUpdatesAvailable: 0,
     })).toBe("no_trades");
   });
 
@@ -23,6 +25,7 @@ describe("schwabPreviewPresentation", () => {
       executionsFound: 86,
       newExecutions: 0,
       reviewExecutions: 1,
+      feeUpdatesAvailable: 0,
     })).toBe("needs_review");
   });
 
@@ -31,6 +34,25 @@ describe("schwabPreviewPresentation", () => {
       executionsFound: 86,
       newExecutions: 12,
       reviewExecutions: 1,
+      feeUpdatesAvailable: 0,
     })).toBe("new_executions");
+  });
+
+  it("keeps a fee-only enrichment actionable", () => {
+    expect(schwabPreviewPresentation({
+      executionsFound: 86,
+      newExecutions: 0,
+      reviewExecutions: 0,
+      feeUpdatesAvailable: 3,
+    })).toBe("fee_updates");
+  });
+
+  it("keeps safe fee updates actionable when other fills need review", () => {
+    expect(schwabPreviewPresentation({
+      executionsFound: 86,
+      newExecutions: 0,
+      reviewExecutions: 1,
+      feeUpdatesAvailable: 3,
+    })).toBe("fee_updates");
   });
 });

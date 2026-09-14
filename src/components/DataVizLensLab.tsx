@@ -822,146 +822,7 @@ function MirrorHistogram({ trades, scope, monthTrades }: { trades: LensTrade[]; 
   );
 }
 
-/* ---------- lens 5: calendar rollup with inspector ---------- */
-
-function CalendarRollup({
-  scope,
-  setScope,
-}: {
-  scope: Scope;
-  setScope: (s: Scope) => void;
-}) {
-  const byDay = useMemo(() => {
-    const map = new Map<number, LensTrade[]>();
-    for (const t of lensTrades) {
-      const list = map.get(t.day) ?? [];
-      list.push(t);
-      map.set(t.day, list);
-    }
-    return map;
-  }, []);
-
-  const [inspected, setInspected] = useState<number>(9);
-  const maxAbs = Math.max(...[...byDay.values()].map((list) => Math.abs(list.reduce((a, t) => a + t.pnl, 0))));
-
-  const monthNet = lensTrades.reduce((a, t) => a + t.pnl, 0);
-  const greenDays = [...byDay.values()].filter((l) => l.reduce((a, t) => a + t.pnl, 0) > 0).length;
-
-  const inspectedTrades = byDay.get(inspected) ?? [];
-  const iNet = inspectedTrades.reduce((a, t) => a + t.pnl, 0);
-  const iWins = inspectedTrades.filter((t) => t.pnl > 0);
-  const iBest = inspectedTrades.reduce((m, t) => (t.pnl > m.pnl ? t : m), inspectedTrades[0]);
-  const iWorst = inspectedTrades.reduce((m, t) => (t.pnl < m.pnl ? t : m), inspectedTrades[0]);
-
-  return (
-    <LensCard
-      eyebrow="Lens 05 · day → week → month"
-      title="One month, three altitudes: days as heat, weeks as subtotals, the month as the sum."
-      aside={<span className="text-[11px] text-[var(--muted)]">Click a day to scope every lens to it</span>}
-    >
-      <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <div>
-          <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_78px] gap-1.5 text-center text-[11px] text-[var(--muted)]">
-            {["Mon", "Tue", "Wed", "Thu", "Fri"].map((d) => (
-              <div key={d} className="pb-1">{d}</div>
-            ))}
-            <div className="pb-1">Week</div>
-            {lensWeekRanges.map((week) => {
-              const weekTrades = week.days.flatMap((d) => byDay.get(d) ?? []);
-              const weekNet = weekTrades.reduce((a, t) => a + t.pnl, 0);
-              // pad the first week (starts Wednesday)
-              const pad = week === lensWeekRanges[0] ? 2 : 0;
-              return (
-                <div key={week.label} className="contents">
-                  {Array.from({ length: pad }, (_, i) => (
-                    <div key={`pad${i}`} />
-                  ))}
-                  {week.days.map((day) => {
-                    const list = byDay.get(day) ?? [];
-                    const net = list.reduce((a, t) => a + t.pnl, 0);
-                    const alpha = 0.1 + 0.4 * (Math.abs(net) / maxAbs);
-                    const isScoped = scope.kind === "day" && scope.day === day;
-                    return (
-                      <button
-                        key={day}
-                        type="button"
-                        onPointerEnter={() => setInspected(day)}
-                        onFocus={() => setInspected(day)}
-                        onClick={() => setScope(isScoped ? { kind: "month" } : { kind: "day", day })}
-                        aria-label={`July ${day}: ${money(net)} across ${list.length} trades`}
-                        className={`rounded-lg border px-1 py-2.5 text-center transition-colors ${
-                          isScoped ? "border-[var(--accent)]" : inspected === day ? "border-[var(--muted)]" : "border-[var(--hairline)]"
-                        }`}
-                        style={{
-                          backgroundColor:
-                            net > 0
-                              ? `color-mix(in srgb, var(--green) ${Math.round(alpha * 100)}%, transparent)`
-                              : `color-mix(in srgb, var(--red) ${Math.round(alpha * 100)}%, transparent)`,
-                        }}
-                      >
-                        <div className="text-[11px] font-semibold text-[var(--foreground)]">{day}</div>
-                        <div className="mt-0.5 font-mono text-[11px] tabular-nums text-[var(--body)]">{money(net, true)}</div>
-                      </button>
-                    );
-                  })}
-                  <div className="flex flex-col items-end justify-center rounded-lg border border-[var(--hairline)] bg-[var(--surface-2)] px-2 py-2.5">
-                    <div className="font-mono text-[12px] font-semibold tabular-nums" style={{ color: pnlColor(weekNet) }}>
-                      {money(weekNet, true)}
-                    </div>
-                    <div className="text-[10px] text-[var(--muted)]">{weekTrades.length} trades</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-3 flex items-baseline justify-between border-t border-[var(--hairline)] pt-3 text-[12px]">
-            <span className="text-[var(--muted)]">
-              July · {greenDays} green / {byDay.size - greenDays} red days
-            </span>
-            <span className="font-mono text-[14px] font-semibold tabular-nums" style={{ color: pnlColor(monthNet) }}>
-              {money(monthNet)}
-            </span>
-          </div>
-        </div>
-
-        {/* inspector — a fixed home for hover detail, nothing jumps */}
-        <div className="rounded-lg border border-[var(--hairline)] bg-[var(--surface-2)] p-4">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--muted)]">
-            {inspectedTrades[0] ? `${inspectedTrades[0].weekday} · Jul ${inspected}` : `Jul ${inspected}`}
-          </div>
-          <div className="mt-1 text-[26px] font-semibold" style={{ color: pnlColor(iNet) }}>
-            {money(iNet)}
-          </div>
-          <div className="mt-3 grid gap-1.5 text-[12px]">
-            <TipRow label="Trades" value={`${inspectedTrades.length} (${iWins.length}W / ${inspectedTrades.length - iWins.length}L)`} />
-            <TipRow
-              label="Win rate"
-              value={inspectedTrades.length ? `${Math.round((iWins.length / inspectedTrades.length) * 100)}%` : "—"}
-            />
-            {iBest ? <TipRow label="Best trade" value={`${iBest.symbol} ${money(iBest.pnl)}`} tone={GREEN} /> : null}
-            {iWorst && iWorst.pnl < 0 ? <TipRow label="Worst trade" value={`${iWorst.symbol} ${money(iWorst.pnl)}`} tone={RED} /> : null}
-            <TipRow
-              label="Most traded"
-              value={
-                inspectedTrades.length
-                  ? [...inspectedTrades.reduce((m, t) => m.set(t.symbol, (m.get(t.symbol) ?? 0) + 1), new Map<string, number>())].sort(
-                      (a, b) => b[1] - a[1],
-                    )[0][0]
-                  : "—"
-              }
-            />
-            <TipRow
-              label="First / last entry"
-              value={inspectedTrades.length ? `${inspectedTrades[0].time} – ${inspectedTrades[inspectedTrades.length - 1].time}` : "—"}
-            />
-          </div>
-        </div>
-      </div>
-    </LensCard>
-  );
-}
-
-/* ---------- lens 6: relative volume vs outcome ---------- */
+/* ---------- lens 5: relative volume vs outcome ---------- */
 
 const VOL_BINS = [
   { min: 0, max: 1, label: "< 1×" },
@@ -987,7 +848,7 @@ function VolumeLens({ trades }: { trades: LensTrade[] }) {
 
   return (
     <LensCard
-      eyebrow="Lens 06 · volume at entry"
+      eyebrow="Lens 05 · volume at entry"
       title="Does the tape have to be moving for you to get paid?"
     >
       <div className="mt-4 grid gap-2.5">
@@ -1030,7 +891,7 @@ function VolumeLens({ trades }: { trades: LensTrade[] }) {
   );
 }
 
-/* ---------- lens 7: tape silhouette (candle range × volume, trades overlaid) ---------- */
+/* ---------- lens 6: tape silhouette (candle range × volume, trades overlaid) ---------- */
 
 function TapeSilhouette() {
   const [tip, setTip] = useState<TipState>(null);
@@ -1090,7 +951,7 @@ function TapeSilhouette() {
 
   return (
     <LensCard
-      eyebrow="Lens 07 · tape silhouette · specimen: RXT 2026-05-08"
+      eyebrow="Lens 06 · tape silhouette · specimen: RXT 2026-05-08"
       title="The day's candles reduced to their essence — range as height, volume as ink, your entries on top."
       aside={
         <div className="flex flex-wrap items-center gap-3">
@@ -1252,7 +1113,7 @@ export default function DataVizLensLab() {
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">Preview · Data lenses v2</div>
           <h1 className="mt-1 text-[22px] font-semibold text-[var(--foreground)]">The Lens Lab</h1>
           <p className="mt-1 max-w-[640px] text-[13px] leading-6 text-[var(--body)]">
-            One synthetic July of trading, viewed through seven interactive lenses. Hover anything to reveal detail; the scatter and the
+            One synthetic July of trading, viewed through six interactive lenses. Hover anything to reveal detail; the scatter and the
             sequence highlight each other.
           </p>
         </div>
@@ -1292,7 +1153,7 @@ export default function DataVizLensLab() {
               {chip.label}
             </button>
           ))}
-          <span className="ml-auto hidden text-[11px] text-[var(--muted)] sm:block">Filters scope every lens · calendar stays full-month</span>
+          <span className="ml-auto hidden text-[11px] text-[var(--muted)] sm:block">Filters scope the trade lenses</span>
         </div>
       </div>
 
@@ -1301,7 +1162,6 @@ export default function DataVizLensLab() {
       <Constellation trades={filtered} hoveredId={hoveredId} setHoveredId={setHoveredId} />
       <SequenceStrip trades={filtered} hoveredId={hoveredId} setHoveredId={setHoveredId} />
       <MirrorHistogram trades={filtered} scope={scope} monthTrades={lensTrades} />
-      <CalendarRollup scope={scope} setScope={setScope} />
       <VolumeLens trades={filtered} />
       <TapeSilhouette />
       <TradeTableView trades={filtered} />

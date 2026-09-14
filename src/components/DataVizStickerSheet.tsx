@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import DataVizLensBuilder from "@/components/DataVizLensBuilder";
 import {
   activityPoints,
-  calendarSessions,
   cohortMetrics,
   contributionTrades,
   edgeRows,
@@ -521,54 +520,6 @@ function ActivityScatter() {
   );
 }
 
-function CalendarHeatmap() {
-  const lookup = new Map(calendarSessions.map((session) => [session.day, session.pnl]));
-  const weekdays = ["MON", "TUE", "WED", "THU", "FRI"];
-  const days = Array.from({ length: 23 }, (_, index) => index + 1);
-  const firstWeekOffset = 2;
-  const maxAbs = Math.max(...calendarSessions.map((session) => Math.abs(session.pnl)));
-  const totalPnl = calendarSessions.reduce((total, session) => total + session.pnl, 0);
-  const greenSessions = calendarSessions.filter((session) => session.pnl > 0).length;
-  const longestGreenRun = calendarSessions.reduce(
-    (state, session) => session.pnl > 0
-      ? { current: state.current + 1, longest: Math.max(state.longest, state.current + 1) }
-      : { current: 0, longest: state.longest },
-    { current: 0, longest: 0 },
-  ).longest;
-
-  return (
-    <figure>
-      <div className="mb-5 flex flex-wrap gap-x-7 gap-y-3 border-b border-[var(--hairline)] pb-5">
-        <Metric label="Month" value={money(totalPnl)} tone={toneColor(totalPnl)} />
-        <Metric label="Green sessions" value={`${greenSessions}/${calendarSessions.length}`} tone="var(--green)" />
-        <Metric label="Longest green run" value={`${longestGreenRun} days`} />
-        <Metric label="Avg session" value={money(Math.round(totalPnl / calendarSessions.length))} tone={toneColor(totalPnl)} />
-      </div>
-      <div className="grid grid-cols-5 gap-2 border-b border-[var(--hairline)] pb-2 font-mono text-[9.5px] font-semibold tracking-[0.13em] text-[var(--muted)]">
-        {weekdays.map((weekday) => <span key={weekday} className="text-center">{weekday}</span>)}
-      </div>
-      <div className="mt-2 grid grid-cols-5 gap-2">
-        {Array.from({ length: firstWeekOffset }, (_, index) => <span key={`empty-${index}`} />)}
-        {days.map((day) => {
-          const pnl = lookup.get(day);
-          const intensity = pnl == null ? 0 : 0.08 + (Math.abs(pnl) / maxAbs) * 0.2;
-          const background = pnl == null
-            ? "var(--background)"
-            : pnl >= 0
-              ? `color-mix(in srgb, var(--green) ${Math.round(intensity * 100)}%, var(--background))`
-              : `color-mix(in srgb, var(--red) ${Math.round(intensity * 100)}%, var(--background))`;
-          return (
-            <div key={day} className="min-h-14 border border-[var(--hairline)] px-2 py-2 sm:min-h-16" style={{ background }} aria-label={pnl == null ? `July ${day}, no session` : `July ${day}, ${money(pnl)}`}>
-              <div className="font-mono text-[10px] text-[var(--muted)]">{String(day).padStart(2, "0")}</div>
-              {pnl != null ? <div className="mt-2 truncate font-mono text-[10px] font-semibold tabular-nums sm:text-[11px]" style={{ color: toneColor(pnl) }}>{money(pnl, true)}</div> : null}
-            </div>
-          );
-        })}
-      </div>
-    </figure>
-  );
-}
-
 function TradeTapePlot() {
   const width = 980;
   const height = 350;
@@ -1022,11 +973,11 @@ export default function DataVizStickerSheet() {
             <div>
               <h1 className="max-w-4xl text-[38px] font-semibold leading-[1.02] tracking-[-0.035em] sm:text-[52px]">A chart vocabulary for reviewing edge.</h1>
               <p className="mt-5 max-w-3xl text-[15px] leading-7 text-[var(--body)]">
-                One illustrative trading dataset, thirteen chart families. The point is to compare reading patterns before choosing what graduates into Reports.
+                One illustrative trading dataset, twelve chart families. The point is to compare reading patterns before choosing what graduates into Reports.
               </p>
             </div>
             <dl className="grid grid-cols-3 gap-4 border-t border-[var(--hairline)] pt-4 lg:border-t-0 lg:pt-0">
-              <div><dt className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--muted)]">Families</dt><dd className="mt-1 font-mono text-lg font-semibold">13</dd></div>
+              <div><dt className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--muted)]">Families</dt><dd className="mt-1 font-mono text-lg font-semibold">12</dd></div>
               <div><dt className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--muted)]">Renderer</dt><dd className="mt-1 font-mono text-lg font-semibold">SVG</dd></div>
               <div><dt className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[var(--muted)]">Data</dt><dd className="mt-1 font-mono text-lg font-semibold">Mock</dd></div>
             </dl>
@@ -1108,17 +1059,6 @@ export default function DataVizStickerSheet() {
             mobile="Keep tap targets larger than the marks and offer a selected-point summary below the plot."
           >
             <ActivityScatter />
-          </Sticker>
-
-          <Sticker
-            index="07"
-            family="Calendar heatmap"
-            title="Profitable sessions cluster midweek, but Tuesday carries the deepest loss."
-            description="A familiar calendar substrate answers consistency and streak questions. Summary metrics add month context while cell intensity preserves daily magnitude."
-            useWhen="Date position matters: streaks, review coverage, no-trade days, or process adherence over a month."
-            mobile="Keep five trading-day columns and abbreviate values; open details after tap."
-          >
-            <CalendarHeatmap />
           </Sticker>
 
           <Sticker
