@@ -78,7 +78,8 @@ Important fields:
 Current import result:
 
 - Creates execution rows.
-- Joins best-effort fees from `Cash Balance` when possible.
+- Joins best-effort fees from `Cash Balance` when possible and preserves
+  `Misc Fees` and `Commissions & Fees` as separate statement-level buckets.
 - Dedupe key is a stable hash of symbol, timestamp, side, quantity, price,
   position effect, and occurrence index.
 - Reconstructs trades from executions with `matchTrades`.
@@ -99,7 +100,11 @@ execution, the detailed row replaces the Cash Balance representation and keeps
 its matched fees/reference. Identical fills are reconciled by occurrence so
 they are neither collapsed nor double-counted. Unmatched `BOT` or `SOLD` rows
 remain executions and `REF #` groups broker fills without storing the raw
-reference.
+reference. If a later Schwab API sync reports more specific fee categories for
+the same fill, those broker categories replace the broad statement buckets
+without replacing the execution. Explicit numeric zero fees are retained; blank
+fee cells remain unreported. Positive statement fees can fill a previously
+zero-valued API observation.
 
 ### Account Order History
 

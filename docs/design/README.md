@@ -28,6 +28,9 @@ One index for the product's design material. If a doc isn't listed here as
 
 ## Reference (explorations, not specs)
 
+- [`DESIGN_PROCESS.md`](DESIGN_PROCESS.md) and [`UI_TURN_AUDIT.md`](UI_TURN_AUDIT.md)
+  — preserved August 2026 proposal and audit; historical findings, not current
+  acceptance or a verified bug list.
 - [`themes/daylight-theme-v1.html`](themes/daylight-theme-v1.html) ·
   [`themes/evening-theme-v1.html`](themes/evening-theme-v1.html) — prototypes the
   shipped warm themes were derived from (cited in `globals.css`).

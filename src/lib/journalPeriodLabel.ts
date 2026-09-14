@@ -39,18 +39,11 @@ function weekRangeLabel(date: Date): string {
   const mondayOffset = (date.getUTCDay() + 6) % 7;
   const start = addUtcDays(date, -mondayOffset);
   const end = addUtcDays(start, 4);
-  const startYear = start.getUTCFullYear();
-  const endYear = end.getUTCFullYear();
-
-  if (startYear === endYear && start.getUTCMonth() === end.getUTCMonth()) {
-    return `${monthNameFmt.format(start)} ${start.getUTCDate()} - ${end.getUTCDate()} ${endYear}`;
+  if (start.getUTCMonth() === end.getUTCMonth()) {
+    return `${monthNameFmt.format(start)} ${start.getUTCDate()} - ${end.getUTCDate()}`;
   }
 
-  if (startYear === endYear) {
-    return `${monthDayFmt.format(start)} - ${monthDayFmt.format(end)} ${endYear}`;
-  }
-
-  return `${monthDayFmt.format(start)} ${startYear} - ${monthDayFmt.format(end)} ${endYear}`;
+  return `${monthDayFmt.format(start)} - ${monthDayFmt.format(end)}`;
 }
 
 export function journalPeriodLabel(scope: JournalPeriodScope, date: string): string {

@@ -43,8 +43,8 @@ describe("journal period navigation", () => {
     expect(navigation.day.previous.date).toBe("2026-08-12");
     expect(navigation.week.next.date).toBe("2026-08-20");
     expect(navigation.month.previous.date).toBe("2026-07-13");
-    expect(navigation.month.today.href).toBe(
-      "/journal?date=2026-08-18&scope=month",
-    );
+    expect(navigation.day.today.href).toBe("/journal?date=2026-08-18");
+    expect(navigation.week.today.href).toBe("/journal?date=2026-08-18");
+    expect(navigation.month.today.href).toBe("/journal?date=2026-08-18");
   });
 });

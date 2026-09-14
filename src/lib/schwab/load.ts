@@ -3,8 +3,13 @@ import "server-only";
 import { parseSchwabAccountOptions, resolveSchwabAccountHash } from "./accounts";
 import { getSchwabTradingClient } from "./client";
 import { validateSchwabDateRange } from "./dates";
+import {
+  getSchwabGatewayClient,
+  type SchwabGatewayClient,
+} from "./gatewayClient";
 import { fetchSchwabHistory } from "./history";
 import { normalizeSchwabHistory } from "./normalize";
+import { readSchwabImportProvider } from "./provider";
 
 export class SchwabAccountSelectionError extends Error {
   constructor() {
@@ -13,12 +18,38 @@ export class SchwabAccountSelectionError extends Error {
   }
 }
 
+type LoadDependencies = {
+  environment?: Readonly<Record<string, string | undefined>>;
+  gatewayClient?: SchwabGatewayClient;
+};
+
 export async function loadSchwabNormalizedHistory(input: {
   accountSelection: string;
   from: string;
   to: string;
-}) {
+}, dependencies: LoadDependencies = {}) {
   const range = validateSchwabDateRange(input.from, input.to);
+  const environment = dependencies.environment ?? process.env;
+  if (readSchwabImportProvider(environment) === "gateway") {
+    const client = dependencies.gatewayClient ?? getSchwabGatewayClient(environment);
+    const accounts = await client.accounts();
+    const accountOption = accounts.find(
+      (option) => option.value === input.accountSelection,
+    );
+    if (!accountOption) throw new SchwabAccountSelectionError();
+    const history = await fetchSchwabHistory(client, accountOption.value, range);
+    const normalized = normalizeSchwabHistory(
+      history.orders,
+      history.transactions,
+      {
+        identityMode: "gateway",
+        startEpoch: range.startEpoch,
+        endEpochExclusive: range.endEpochExclusive,
+      },
+    );
+    return { range, accountOption, history, normalized };
+  }
+
   const { client, credentials } = await getSchwabTradingClient();
   const rawAccounts: unknown = await client.accountsNumbers();
   const accountHash = resolveSchwabAccountHash(

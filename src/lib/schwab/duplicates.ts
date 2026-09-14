@@ -19,30 +19,43 @@ export function executionComparisonKey(execution: ComparableExecution) {
   ].join("|");
 }
 
-export function compareExecutions<T extends ParsedExecution>(
+export function compareExecutions<
+  T extends ParsedExecution,
+  E extends ComparableExecution,
+>(
   incoming: T[],
-  existing: ComparableExecution[],
+  existing: E[],
 ) {
-  const existingCounts = new Map<string, number>();
+  const existingByKey = new Map<string, E[]>();
   for (const execution of existing) {
     const key = executionComparisonKey(execution);
-    existingCounts.set(key, (existingCounts.get(key) ?? 0) + 1);
+    existingByKey.set(key, [...(existingByKey.get(key) ?? []), execution]);
   }
 
   const newExecutions: T[] = [];
   const duplicateExecutionRows: T[] = [];
+  const duplicateMatches: Array<{
+    incoming: T;
+    existing: E;
+  }> = [];
   let duplicateExecutions = 0;
   for (const execution of incoming) {
     const key = executionComparisonKey(execution);
-    const available = existingCounts.get(key) ?? 0;
-    if (available > 0) {
+    const available = existingByKey.get(key);
+    const matched = available?.shift();
+    if (matched) {
       duplicateExecutions += 1;
       duplicateExecutionRows.push(execution);
-      existingCounts.set(key, available - 1);
+      duplicateMatches.push({ incoming: execution, existing: matched });
     } else {
       newExecutions.push(execution);
     }
   }
 
-  return { newExecutions, duplicateExecutions, duplicateExecutionRows };
+  return {
+    newExecutions,
+    duplicateExecutions,
+    duplicateExecutionRows,
+    duplicateMatches,
+  };
 }

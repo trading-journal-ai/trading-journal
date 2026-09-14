@@ -14,4 +14,15 @@ describe("schwabRequiresReauthorization", () => {
     expect(schwabRequiresReauthorization(new Error("fetch failed"))).toBe(false);
     expect(schwabRequiresReauthorization(new Error("invalid account response"))).toBe(false);
   });
+
+  it("recognizes typed gateway authorization errors", () => {
+    expect(schwabRequiresReauthorization({
+      code: "SCHWAB_AUTHORIZATION_REQUIRED",
+      message: "safe gateway message",
+    })).toBe(true);
+    expect(schwabRequiresReauthorization({
+      code: "SCHWAB_GATEWAY_UNAVAILABLE",
+      message: "gateway unavailable",
+    })).toBe(false);
+  });
 });

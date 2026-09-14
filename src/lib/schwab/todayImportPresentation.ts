@@ -3,6 +3,7 @@ import type { SchwabImportActionResult } from "./types";
 export type SchwabTodayImportPresentation = {
   kind:
     | "imported"
+    | "fees_updated"
     | "no_trades"
     | "already_imported"
     | "needs_review"
@@ -53,6 +54,15 @@ export function schwabTodayImportPresentation(
       kind: "imported",
       title: `${executionCount(summary.inserted)} imported`,
       detail: `Added to ${summary.journalAccountLabel}.${created}${review}`,
+      refreshJournal: true,
+    };
+  }
+
+  if (summary.feesUpdated > 0) {
+    return {
+      kind: "fees_updated",
+      title: "Fee details updated",
+      detail: `${summary.feesUpdated.toLocaleString("en-US")} existing ${summary.feesUpdated === 1 ? "execution was" : "executions were"} enriched from Schwab. Fills and journal notes were preserved.`,
       refreshJournal: true,
     };
   }

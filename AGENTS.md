@@ -38,6 +38,11 @@ Default priorities:
 
 ## Fast Working Loop
 
+- The canonical local app is the primary checkout on `main`, opened by the
+  `journal` command at `http://localhost:4317`. Isolated worktree previews are
+  temporary review surfaces, not a replacement source of truth. When an accepted
+  change is authorized for integration, verify it in the canonical app and retire
+  its temporary server; keep account/provider configuration with the primary setup.
 - Prefer narrow `rg` / `rg --files` searches over broad repo scans.
 - Generated and reference-heavy paths are excluded in `.rgignore`. Only search
   them when the task explicitly needs them.
@@ -172,6 +177,9 @@ Before pushing to `main` or deploying, run `npm run verify:full`.
 
 ## Design Rules
 
+- Calendar and Journal Month must use `src/components/MonthCalendar.tsx`. Update
+  this shared component instead of creating calendar variants or snapshot copies.
+  Calendar Year and the small day/week navigation controls serve separate purposes.
 - Prioritize typography, spacing, hierarchy, rhythm, and scanability.
 - Trading screens should be dense but not cluttered.
 - Use clear visual hierarchy for session verdicts, trade metrics,
@@ -186,3 +194,18 @@ Before pushing to `main` or deploying, run `npm run verify:full`.
 - Avoid long explanations unless asked.
 - Summarize changed files and verification at the end.
 - Call out anything intentionally not tested.
+
+## Shared trading-system boundary
+
+For Justin's shared local installation, Schwab Broker Gateway is the only
+OAuth/refresh/REST/stream owner. Journal explicitly uses
+`SCHWAB_IMPORT_PROVIDER=gateway` and the read capability; it keeps import
+normalization, dedupe, preview and persistence. Do not restore standalone OAuth
+to fix gateway unavailability. Independent installations must explicitly choose
+standalone. See `docs/setup/SCHWAB_SETUP.md` and Trading Server
+`docs/SYSTEM_STATUS.md` before changing this boundary or installing a release.
+
+Shared Massive/DTS market history is moving to Trading Server. Keep Journal's
+personal-trade database distinct. Never delete duplicate market data until
+verified cutover and a tested rollback copy exist. Record staged, merged,
+installed and verified states separately in the worklog.

@@ -11,6 +11,12 @@ import { tosWallClockToEpochSeconds } from "@/lib/time";
 import { parseCsvLine } from "./csv";
 import { shareSplitMultiplierBetween } from "./corporateActions";
 import {
+  addFeeAmount,
+  feeBreakdownTotal,
+  scaledFeeBreakdown,
+  type FeeBreakdown,
+} from "./fees";
+import {
   normalizeBrokerSymbol,
   resolveSecurityIdentifier,
   type SecurityIdentifierResolution,
@@ -25,6 +31,7 @@ export type ParsedExecution = {
   executedAt: number; // epoch seconds (UTC)
   posEffect: string | null; // "TO OPEN" | "TO CLOSE"
   fees: number;
+  feeBreakdown?: FeeBreakdown;
   brokerOrderKey: string | null; // hashed Cash Balance REF #; raw broker value is not persisted
   sourceRowHash: string;
 };
@@ -58,6 +65,10 @@ function parseNumber(value: string | undefined): number | null {
   if (value == null) return null;
   const n = Number(String(value).replace(/[,+$]/g, "").trim());
   return Number.isFinite(n) ? n : null;
+}
+
+function reportedFeeNumber(value: string | undefined): number | null {
+  return value?.trim() ? parseNumber(value) : null;
 }
 
 type StatementSection = {
@@ -98,12 +109,22 @@ function sliceSection(lines: string[], header: string): StatementSection | null 
  */
 function buildCashBalanceIndex(
   lines: string[],
-): Map<string, { feeSum: number; count: number; brokerOrderKeys: Set<string> }> {
+): Map<string, {
+  feeSum: number;
+  feeBreakdown: FeeBreakdown;
+  count: number;
+  brokerOrderKeys: Set<string>;
+}> {
   // sum + count per key, so identical fills split the fee instead of each
   // claiming the full summed amount (which double-counts duplicates).
   const entries = new Map<
     string,
-    { feeSum: number; count: number; brokerOrderKeys: Set<string> }
+    {
+      feeSum: number;
+      feeBreakdown: FeeBreakdown;
+      count: number;
+      brokerOrderKeys: Set<string>;
+    }
   >();
   const idx = lines.findIndex((l) => l.trim() === "Cash Balance");
   if (idx === -1) return entries;
@@ -138,6 +159,7 @@ function buildCashBalanceIndex(
     const key = `${symbol.toUpperCase()}|${epoch}|${qty}|${price}`;
     const prev = entries.get(key) ?? {
       feeSum: 0,
+      feeBreakdown: {},
       count: 0,
       brokerOrderKeys: new Set<string>(),
     };
@@ -145,6 +167,12 @@ function buildCashBalanceIndex(
       ? (c[iRef] ?? "").trim().replace(/^="(.*)"$/, "$1")
       : "";
     if (rawRef) prev.brokerOrderKeys.add(hashRow(["tos-order", rawRef]));
+    addFeeAmount(prev.feeBreakdown, "STATEMENT_MISC_FEES", reportedFeeNumber(c[iMisc]));
+    addFeeAmount(
+      prev.feeBreakdown,
+      "STATEMENT_COMMISSIONS_AND_FEES",
+      reportedFeeNumber(c[iCommissions]),
+    );
     prev.feeSum += misc + commissions;
     prev.count += 1;
     entries.set(key, prev);
@@ -268,6 +296,17 @@ function parseCashBalanceExecutions(lines: string[]): ParsedExecution[] {
 
     const rawBrokerSymbol = rawSymbol.toUpperCase();
     const normalizedSymbol = normalizeBrokerSymbol(rawBrokerSymbol);
+    const feeBreakdown: FeeBreakdown = {};
+    addFeeAmount(
+      feeBreakdown,
+      "STATEMENT_MISC_FEES",
+      reportedFeeNumber(row[iMisc]),
+    );
+    addFeeAmount(
+      feeBreakdown,
+      "STATEMENT_COMMISSIONS_AND_FEES",
+      reportedFeeNumber(row[iCommissions]),
+    );
     executions.push({
       symbol: normalizedSymbol.symbol,
       brokerSymbol: normalizedSymbol.resolution ? rawBrokerSymbol : undefined,
@@ -276,9 +315,8 @@ function parseCashBalanceExecutions(lines: string[]): ParsedExecution[] {
       price,
       executedAt: tosWallClockToEpochSeconds(date, timeValue),
       posEffect: null,
-      fees:
-        Math.abs(parseNumber(row[iMisc]) ?? 0) +
-        Math.abs(parseNumber(row[iCommissions]) ?? 0),
+      fees: feeBreakdownTotal(feeBreakdown),
+      feeBreakdown,
       brokerOrderKey: rawRef ? hashRow(["tos-order", rawRef]) : null,
       sourceRowHash: "",
     });
@@ -321,6 +359,9 @@ function parseTradeHistoryExecutions(lines: string[], section: StatementSection)
     const fees = cashBalanceEntry
       ? cashBalanceEntry.feeSum / cashBalanceEntry.count
       : 0;
+    const feeBreakdown = cashBalanceEntry
+      ? scaledFeeBreakdown(cashBalanceEntry.feeBreakdown, cashBalanceEntry.count)
+      : {};
     let brokerOrderKey: string | null = null;
     if (cashBalanceEntry?.brokerOrderKeys.size === 1) {
       brokerOrderKey = [...cashBalanceEntry.brokerOrderKeys][0];
@@ -342,6 +383,7 @@ function parseTradeHistoryExecutions(lines: string[], section: StatementSection)
       executedAt,
       posEffect,
       fees,
+      feeBreakdown,
       brokerOrderKey,
       sourceRowHash: "", // assigned below (per-occurrence)
     });

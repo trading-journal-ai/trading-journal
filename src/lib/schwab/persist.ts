@@ -1,8 +1,14 @@
 import { and, asc, eq, gte, inArray, lte, max } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { executionFeeEntries, feeBreakdownEntries, FEE_EPSILON } from "@/lib/import/fees";
 import type { ParsedExecution } from "@/lib/import/tos";
 import { etDateString } from "@/lib/time";
-import { compareExecutions } from "./duplicates";
+import { compareExecutions, executionComparisonKey } from "./duplicates";
+import {
+  planFeeEnrichment,
+  type FeeDetailSource,
+  type StoredFeeDetail,
+} from "./feeEnrichment";
 import type { SchwabNormalizedExecution } from "./normalize";
 import {
   classifyHistoricalTradeExecutions,
@@ -17,6 +23,7 @@ export type ExecutionPersistenceSummary = {
   parsed: number;
   inserted: number;
   duplicates: number;
+  feesUpdated: number;
   reviewExecutions: number;
   reviewSymbols: string[];
   reviewDates: string[];
@@ -37,7 +44,7 @@ type PersistExecutionLedgerInput = {
   from: string;
   to: string;
   executions: PersistableExecution[];
-  source: "schwab_api" | "tos_csv";
+  source: FeeDetailSource;
   fileName: string;
   requireBrokerExecutionKeys?: boolean;
   symbolAliases?: Array<{ brokerSymbol: string; canonicalSymbol: string }>;
@@ -48,6 +55,121 @@ export class SchwabAppendSafetyError extends Error {
     super(message);
     this.name = "SchwabAppendSafetyError";
   }
+}
+
+type PersistenceTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type ExistingExecution = typeof schema.executions.$inferSelect;
+type DuplicateMatch = {
+  incoming: PersistableExecution;
+  existing: ExistingExecution;
+};
+
+async function insertExecutionFeeDetails(
+  tx: PersistenceTransaction,
+  executions: PersistableExecution[],
+  idByHash: Map<string | null, number>,
+  source: FeeDetailSource,
+) {
+  const values = executions.flatMap((execution) => {
+    const executionId = idByHash.get(execution.sourceRowHash);
+    if (executionId == null) return [];
+    return executionFeeEntries(execution.fees, execution.feeBreakdown).map(([feeType, amount]) => ({
+      executionId,
+      feeType,
+      amount,
+      source,
+    }));
+  });
+  for (let index = 0; index < values.length; index += INSERT_CHUNK_SIZE) {
+    await tx
+      .insert(schema.executionFees)
+      .values(values.slice(index, index + INSERT_CHUNK_SIZE))
+      .run();
+  }
+}
+
+async function applyDuplicateFeeEnrichments(
+  tx: PersistenceTransaction,
+  matches: DuplicateMatch[],
+  source: FeeDetailSource,
+): Promise<number> {
+  if (matches.length === 0) return 0;
+  const executionIds = [...new Set(matches.map((match) => match.existing.id))];
+  const storedDetails = await tx
+    .select()
+    .from(schema.executionFees)
+    .where(inArray(schema.executionFees.executionId, executionIds));
+  const detailsByExecutionId = new Map<number, StoredFeeDetail[]>();
+  for (const detail of storedDetails) {
+    detailsByExecutionId.set(detail.executionId, [
+      ...(detailsByExecutionId.get(detail.executionId) ?? []),
+      detail,
+    ]);
+  }
+
+  const affectedTradeIds = new Set<number>();
+  let feesUpdated = 0;
+  for (const match of matches) {
+    if (executionComparisonKey(match.incoming) !== executionComparisonKey(match.existing)) {
+      throw new SchwabAppendSafetyError("A broker identity matched conflicting fill details. No data was changed.");
+    }
+    const plan = planFeeEnrichment({
+      incomingFees: match.incoming.fees,
+      incomingBreakdown: match.incoming.feeBreakdown,
+      incomingSource: source,
+      existingFees: match.existing.fees,
+      existingDetails: detailsByExecutionId.get(match.existing.id) ?? [],
+    });
+    if (!plan) continue;
+
+    await tx
+      .update(schema.executions)
+      .set({ fees: plan.totalFees })
+      .where(eq(schema.executions.id, match.existing.id))
+      .run();
+    if (plan.replaceDetails) {
+      await tx
+        .delete(schema.executionFees)
+        .where(eq(schema.executionFees.executionId, match.existing.id))
+        .run();
+      if (plan.details.length > 0) {
+        await tx.insert(schema.executionFees).values(
+          plan.details.map((detail) => ({
+            executionId: match.existing.id,
+            feeType: detail.feeType,
+            amount: detail.amount,
+            source,
+          })),
+        ).run();
+      }
+    }
+    if (match.existing.tradeId != null) affectedTradeIds.add(match.existing.tradeId);
+    feesUpdated += 1;
+  }
+
+  if (affectedTradeIds.size > 0) {
+    const tradeExecutions = await tx
+      .select({ tradeId: schema.executions.tradeId, fees: schema.executions.fees })
+      .from(schema.executions)
+      .where(inArray(schema.executions.tradeId, [...affectedTradeIds]));
+    const totals = new Map<number, number>();
+    for (const execution of tradeExecutions) {
+      if (execution.tradeId == null) continue;
+      totals.set(
+        execution.tradeId,
+        (totals.get(execution.tradeId) ?? 0) + execution.fees,
+      );
+    }
+    for (const [tradeId, fees] of totals) {
+      await tx
+        .update(schema.trades)
+        .set({ fees, updatedAt: new Date() })
+        .where(eq(schema.trades.id, tradeId))
+        .run();
+    }
+  }
+
+  return feesUpdated;
 }
 
 function dateRange(executions: Array<{ executedAt: number }>) {
@@ -89,6 +211,13 @@ function validateIncomingIdentities(
   const brokerKeys = new Set<string>();
   const canonicalKeys = new Set<string>();
   for (const execution of executions) {
+    const details = feeBreakdownEntries(execution.feeBreakdown);
+    if (!Number.isFinite(execution.fees) || execution.fees < 0
+      || (details.length > 0 && Math.abs(
+        details.reduce((sum, [, amount]) => sum + amount, 0) - execution.fees,
+      ) > FEE_EPSILON)) {
+      throw new SchwabAppendSafetyError("The import contains inconsistent fee totals. No data was changed.");
+    }
     const brokerExecutionKey = execution.brokerExecutionKey ?? null;
     if (
       (requireBrokerExecutionKeys && !brokerExecutionKey)
@@ -132,6 +261,7 @@ export async function persistExecutionLedger(
       parsed: 0,
       inserted: 0,
       duplicates: 0,
+      feesUpdated: 0,
       reviewExecutions: 0,
       reviewSymbols: [],
       reviewDates: [],
@@ -197,6 +327,20 @@ export async function persistExecutionLedger(
         execution.brokerExecutionKey != null
         && duplicateBrokerKeys.has(execution.brokerExecutionKey),
     );
+    const existingByBrokerKey = new Map(
+      existingInRange.flatMap((execution) =>
+        execution.brokerExecutionKey
+          ? [[execution.brokerExecutionKey, execution] as const]
+          : [],
+      ),
+    );
+    const brokerDuplicateMatches: DuplicateMatch[] = brokerDuplicateExecutions
+      .flatMap((execution) => {
+        const existing = execution.brokerExecutionKey
+          ? existingByBrokerKey.get(execution.brokerExecutionKey)
+          : null;
+        return existing ? [{ incoming: execution, existing }] : [];
+      });
     const withoutBrokerDuplicates = input.executions.filter(
       (execution) =>
         execution.brokerExecutionKey == null
@@ -215,6 +359,15 @@ export async function persistExecutionLedger(
     ];
     const duplicates =
       duplicateBrokerKeys.size + compared.duplicateExecutions;
+    const duplicateMatches: DuplicateMatch[] = [
+      ...brokerDuplicateMatches,
+      ...compared.duplicateMatches,
+    ];
+    const feesUpdated = await applyDuplicateFeeEnrichments(
+      tx,
+      duplicateMatches,
+      input.source,
+    );
 
     if (newExecutions.length === 0) {
       return {
@@ -222,6 +375,7 @@ export async function persistExecutionLedger(
         parsed: input.executions.length,
         inserted: 0,
         duplicates,
+        feesUpdated,
         reviewExecutions: 0,
         reviewSymbols: [],
         reviewDates: [],
@@ -320,6 +474,7 @@ export async function persistExecutionLedger(
         parsed: input.executions.length,
         inserted: 0,
         duplicates,
+        feesUpdated,
         reviewExecutions: historicalClassification.reviewExecutions.length,
         reviewSymbols: historicalClassification.reviewSymbols,
         reviewDates: executionDates(historicalClassification.reviewExecutions),
@@ -377,6 +532,12 @@ export async function persistExecutionLedger(
         "Another import saved one of these executions first. Nothing from this attempt was saved; refresh the preview and retry.",
       );
     }
+    await insertExecutionFeeDetails(
+      tx,
+      importableExecutions,
+      new Map(insertedRows.map((row) => [row.hash, row.id])),
+      input.source,
+    );
 
     const newExecutionIds = new Set(insertedRows.map((row) => row.id));
     const forwardOpenTrades = openTrades.filter((trade) => forwardSymbols.includes(trade.symbol));
@@ -482,6 +643,7 @@ export async function persistExecutionLedger(
       parsed: input.executions.length,
       inserted: insertedRows.length,
       duplicates,
+      feesUpdated,
       reviewExecutions: historicalClassification.reviewExecutions.length,
       reviewSymbols: historicalClassification.reviewSymbols,
       reviewDates: executionDates(historicalClassification.reviewExecutions),

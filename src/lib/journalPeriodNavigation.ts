@@ -81,7 +81,10 @@ export function buildJournalPeriodNavigation(
     return {
       today: {
         date: todayDate,
-        href: journalPeriodHref(basePath, todayDate, scope),
+        // "Today" is an absolute return to the current day, not a shortcut to
+        // the current week or month. Omitting the scope resets the review UI to
+        // its Day view after navigation.
+        href: journalPeriodHref(basePath, todayDate, "day"),
       },
       previous: {
         date: previousDate,

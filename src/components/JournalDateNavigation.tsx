@@ -20,6 +20,7 @@ type JournalDateNavigationValue = {
   pendingDate: string | null;
   selectedDate: string;
   setPendingDate: (date: string) => void;
+  focusDay: (date: string) => void;
   visualDate: string;
   scope: JournalScope;
   setScope: (scope: JournalScope) => void;
@@ -57,14 +58,20 @@ export function JournalDateNavigationProvider({
     else url.searchParams.set("scope", nextScope);
     window.history.replaceState(window.history.state, "", url);
   }, [syncScopeToUrl]);
+  const focusDay = useCallback((date: string) => {
+    setPendingDate(date);
+    // The day link owns URL navigation; keep the previous scope in history.
+    setScopeState("day");
+  }, [setPendingDate]);
   const value = useMemo(() => ({
     pendingDate,
     selectedDate,
     setPendingDate,
     visualDate,
+    focusDay,
     scope,
     setScope,
-  }), [pendingDate, selectedDate, setPendingDate, visualDate, scope, setScope]);
+  }), [pendingDate, selectedDate, setPendingDate, visualDate, focusDay, scope, setScope]);
 
   return (
     <JournalDateNavigationContext.Provider value={value}>

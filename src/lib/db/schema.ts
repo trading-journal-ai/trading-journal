@@ -113,6 +113,23 @@ export const executions = sqliteTable(
   ],
 );
 
+/** Queryable broker-reported fee categories; `executions.fees` remains the cached total. */
+export const executionFees = sqliteTable(
+  "execution_fees",
+  {
+    executionId: integer("execution_id")
+      .notNull()
+      .references(() => executions.id, { onDelete: "cascade" }),
+    feeType: text("fee_type").notNull(),
+    amount: real("amount").notNull(),
+    source: text("source").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.executionId, t.feeType] }),
+    index("execution_fees_type_idx").on(t.feeType),
+  ],
+);
+
 /** Cached OHLCV candles (fetched once on import). */
 export const candles = sqliteTable(
   "candles",

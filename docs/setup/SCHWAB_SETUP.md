@@ -1,11 +1,43 @@
 # Schwab Import Setup
 
+## Shared Trading Server / Monitor installation
+
+Justin's shared setup uses **Schwab Broker Gateway** as the only OAuth, refresh,
+Trader REST and activity-stream owner. Journal is a read-only client:
+
+```text
+SCHWAB_IMPORT_PROVIDER=gateway
+```
+
+Set this in the local Journal environment. The default private socket and read
+capability live under `~/Library/Application Support/Schwab Broker Gateway`.
+Do not copy the Schwab app secret or refresh token into Journal. Gateway owns
+authorization; use Trading Monitor's **Authorize Schwab** action, then retry
+Journal account discovery or the import preview. A missing/unavailable Gateway
+does not activate standalone OAuth. Missing provider configuration now reports
+a configuration error instead of silently selecting standalone.
+
+Journal still owns date scoping, preview, normalization, dedupe, reconciliation
+and the explicit import write. Gateway-derived identity keys preserve existing
+imports across this provider switch. A Server restart leaves Gateway running
+so Journal access is independent of the Stock Info/DTS process.
+
+Current rollout: [PROJECT_STATUS.md](../PROJECT_STATUS.md). Cross-app ownership
+and the release ledger are in Trading Server `docs/SYSTEM_STATUS.md`.
+
+## Independent Journal installation (explicit standalone provider)
+
+The remaining instructions apply only when Journal is installed independently.
+Set `SCHWAB_IMPORT_PROVIDER=standalone` before following them. Do not use this
+mode alongside the shared Gateway for the same Schwab grant.
+
+
 Trading Journal supports a local, read-only connection to the Schwab Individual
-Trader API. Every installation uses the installer's own Schwab Developer
+Trader API. An independent installation uses the installer's own Schwab Developer
 credentials and authorization grant.
 
-The Journal does not ship shared credentials, place orders, start an account
-activity stream, or depend on another application.
+The independent Journal installation does not ship credentials, place orders,
+start an account activity stream, or require another application.
 
 ## 1. Create a Schwab Developer Configuration
 
@@ -35,6 +67,7 @@ cp .env.example .env
 Set these values in `.env`:
 
 ```text
+SCHWAB_IMPORT_PROVIDER=standalone
 SCHWAB_APP_KEY=your_app_key
 SCHWAB_SECRET=your_app_secret
 SCHWAB_REFRESH_TOKEN=
@@ -75,10 +108,11 @@ Choose a date range and select **Preview trades**. The preview is read-only.
 Review the new and duplicate execution counts, then use the separate
 **Import new executions** button to confirm the write.
 
-Confirmed syncs are append-only:
+Confirmed syncs preserve fills and journal content:
 
 - existing execution rows and import batches are never deleted;
-- API fills already represented by a file import are skipped;
+- API fills already represented by a file import are not duplicated; matched
+  executions may receive later fee details and updated cached fee totals;
 - later fills can update an existing open trade in place without changing its
   trade ID;
 - notes, tags, attachments, setup, stop, and target data stay attached;
@@ -86,15 +120,17 @@ Confirmed syncs are append-only:
   existing closed trade;
 - unsafe forward reconciliation errors still roll back the attempted import.
 
-Overlapping ranges are expected. Dates already in the Journal are skipped and
-left unchanged while missing dates are appended. A historical gap is accepted
+Overlapping ranges are expected. Existing fills stay intact while missing
+fills are appended; newly reported fees can update existing net P&L. A historical gap is accepted
 when its opening and closing fills form complete closed trades. An incomplete
 historical position is not imported; the preview identifies the symbol and
 links back to the Journal. If that trade is incomplete, upload a statement that
 contains its full opening and closing fills.
 
-Direct sync never re-imports or overwrites an existing closed trade. A future
-repair workflow may offer that behavior only as a separate, explicit action.
+Direct sync never replaces a closed trade or its notes. Matched broker fees
+may update its fee total and net P&L through the confirmed import. Other repairs
+remain a separate, explicit workflow. See
+[fee reporting](../import/TRADE_IMPORT_BEHAVIOR.md#fee-reporting-and-presentation).
 
 ## Reauthorization
 

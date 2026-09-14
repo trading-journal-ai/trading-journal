@@ -12,6 +12,7 @@ function summary(overrides: Partial<SchwabImportSummary> = {}): SchwabImportSumm
     parsed: 0,
     inserted: 0,
     duplicates: 0,
+    feesUpdated: 0,
     reviewExecutions: 0,
     reviewSymbols: [],
     reviewDates: [],
@@ -35,6 +36,17 @@ describe("schwabTodayImportPresentation", () => {
 
     expect(presentation.kind).toBe("imported");
     expect(presentation.title).toBe("3 executions imported");
+    expect(presentation.refreshJournal).toBe(true);
+  });
+
+  it("presents a fee-only enrichment as a successful refresh", () => {
+    const presentation = schwabTodayImportPresentation({
+      ok: true,
+      summary: summary({ parsed: 2, duplicates: 2, feesUpdated: 1 }),
+    });
+
+    expect(presentation.kind).toBe("fees_updated");
+    expect(presentation.title).toBe("Fee details updated");
     expect(presentation.refreshJournal).toBe(true);
   });
 

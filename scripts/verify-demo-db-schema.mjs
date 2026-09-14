@@ -9,6 +9,7 @@ const DEFAULT_DEMO_DB = "samples/demo/tradingjournaldemo.db";
 const MIGRATION_JOURNAL = "drizzle/meta/_journal.json";
 
 const REQUIRED_SCHEMA = [
+  { table: "execution_fees" },
   { table: "executions", column: "broker_order_key" },
   { table: "market_context_days" },
   { table: "journal_day_statuses" },

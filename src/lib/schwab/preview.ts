@@ -7,6 +7,7 @@ import { matchTrades } from "@/lib/import/match";
 import type { ParsedExecution } from "@/lib/import/tos";
 import { etDateString } from "@/lib/time";
 import { compareExecutions } from "./duplicates";
+import { planFeeEnrichment, type StoredFeeDetail } from "./feeEnrichment";
 import { loadSchwabNormalizedHistory } from "./load";
 import { classifyHistoricalTradeExecutions } from "./reconcile";
 import type { SchwabImportPreview } from "./types";
@@ -50,6 +51,31 @@ export async function buildSchwabImportPreview(input: {
     normalized.executions,
     existingExecutions,
   );
+  const duplicateExecutionIds = compared.duplicateMatches.map(
+    (match) => match.existing.id,
+  );
+  const storedFeeDetails = duplicateExecutionIds.length > 0
+    ? await db
+        .select()
+        .from(schema.executionFees)
+        .where(inArray(schema.executionFees.executionId, duplicateExecutionIds))
+    : [];
+  const feeDetailsByExecutionId = new Map<number, StoredFeeDetail[]>();
+  for (const detail of storedFeeDetails) {
+    feeDetailsByExecutionId.set(detail.executionId, [
+      ...(feeDetailsByExecutionId.get(detail.executionId) ?? []),
+      detail,
+    ]);
+  }
+  const feeUpdatesAvailable = compared.duplicateMatches.filter((match) =>
+    planFeeEnrichment({
+      incomingFees: match.incoming.fees,
+      incomingBreakdown: match.incoming.feeBreakdown,
+      incomingSource: "schwab_api",
+      existingFees: match.existing.fees,
+      existingDetails: feeDetailsByExecutionId.get(match.existing.id) ?? [],
+    }) != null
+  ).length;
   const candidateSymbols = [
     ...new Set(compared.newExecutions.map((execution) => execution.symbol)),
   ];
@@ -128,7 +154,11 @@ export async function buildSchwabImportPreview(input: {
     normalized.executions.length > 0
       && importableExecutions.length === 0
       && historicalClassification.reviewExecutions.length === 0
+      && feeUpdatesAvailable === 0
       ? "Every execution found is already represented in the active Journal account."
+      : null,
+    feeUpdatesAvailable > 0
+      ? `${feeUpdatesAvailable} existing ${feeUpdatesAvailable === 1 ? "execution has" : "executions have"} new or more specific broker fee details available.`
       : null,
     affectedOpenTrades.length > 0
       ? `${affectedOpenTrades.length} existing open ${affectedOpenTrades.length === 1 ? "trade may be" : "trades may be"} updated by a future confirmed import.`
@@ -149,6 +179,7 @@ export async function buildSchwabImportPreview(input: {
     executionsFound: normalized.executions.length,
     newExecutions: importableExecutions.length,
     duplicateExecutions: compared.duplicateExecutions,
+    feeUpdatesAvailable,
     reviewExecutions: historicalClassification.reviewExecutions.length,
     reviewSymbols: historicalClassification.reviewSymbols,
     reviewDates: [

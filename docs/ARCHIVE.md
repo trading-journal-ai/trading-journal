@@ -19,6 +19,7 @@ git show <commit>^:<full/path/from/this/table>             # print the last vers
 
 | Deleted | Path | Why | Superseded by |
 | --- | --- | --- | --- |
+| 2026-09-11 | `src/components/preview/calendar-inventory/README.md` and A–E preview assets (isolated inventory checkout) | Retired after baseline acceptance; server stopped and clean worktree removed. Original files remain recoverable at `8babdd5` on the historical inventory branch. | `docs/design/CALENDAR_DESIGN.md` · `src/components/MonthCalendar.tsx` |
 | 2026-07-25 | `docs/deployment/DEMO_RUNTIME.md` | Described the Turso-based hosted-demo runtime removed from `main`; carried a STALE banner since 2026-07-11. | `docs/ARCHITECTURE.md` Part 2 (current demo ops) |
 | 2026-07-25 | `docs/coach/NEXT_BUILD.md` | 2026-07-02 pickup handoff; its durable content (two-layer coach stance, product flow, output contract, eval list) was absorbed into the coach architecture doc. | `docs/coach/COACH_ARCHITECTURE.md` · `docs/coach/PRIVATE_EVALS.md` |
 | 2026-07-25 | `docs/import/TOS_TO_TRADERVUE_RECONSTRUCTION.md` | Feasibility study that shipped as the broker normalizer; statement catalog duplicated the adapter doc. | `docs/import/THINKORSWIM_ADAPTER.md` · `docs/import/BROKER_NORMALIZER.md` |

@@ -37,11 +37,6 @@ export type ActivityPoint = {
   pnl: number;
 };
 
-export type CalendarSession = {
-  day: number;
-  pnl: number;
-};
-
 export type ExcursionPoint = {
   label: string;
   mae: number;
@@ -159,22 +154,6 @@ export const activityPoints: ActivityPoint[] = [
   { label: "Jul 14", trades: 7, avgTrade: -18, pnl: -126 },
   { label: "Jul 15", trades: 9, avgTrade: -35, pnl: -315 },
   { label: "Jul 16", trades: 4, avgTrade: 173, pnl: 692 },
-];
-
-export const calendarSessions: CalendarSession[] = [
-  { day: 1, pnl: 420 },
-  { day: 2, pnl: -180 },
-  { day: 3, pnl: 760 },
-  { day: 6, pnl: 140 },
-  { day: 7, pnl: -520 },
-  { day: 8, pnl: 315 },
-  { day: 9, pnl: 980 },
-  { day: 10, pnl: -240 },
-  { day: 13, pnl: 175 },
-  { day: 14, pnl: 560 },
-  { day: 15, pnl: -310 },
-  { day: 16, pnl: 690 },
-  { day: 17, pnl: 85 },
 ];
 
 export const excursionPoints: ExcursionPoint[] = [

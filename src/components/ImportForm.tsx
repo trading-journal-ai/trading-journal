@@ -306,7 +306,10 @@ function SchwabImportReadyState({
       || !selectedAccountValue
       || dateError
       || !previewResult?.ok
-      || previewResult.preview.newExecutions === 0
+      || (
+        previewResult.preview.newExecutions === 0
+        && previewResult.preview.feeUpdatesAvailable === 0
+      )
     ) {
       return;
     }
@@ -491,7 +494,10 @@ function SchwabImportReadyState({
                   : "Connect Schwab to preview"}
             </button>
             {previewResult?.ok
-            && previewResult.preview.newExecutions > 0
+            && (
+              previewResult.preview.newExecutions > 0
+              || previewResult.preview.feeUpdatesAvailable > 0
+            )
             && importResult == null ? (
               <button
                 type="button"
@@ -501,15 +507,20 @@ function SchwabImportReadyState({
               >
                 {importing
                   ? "Importing…"
-                  : `Import ${previewResult.preview.newExecutions.toLocaleString("en-US")} new ${previewResult.preview.newExecutions === 1 ? "execution" : "executions"}`}
+                  : previewResult.preview.newExecutions > 0
+                    ? `Import ${previewResult.preview.newExecutions.toLocaleString("en-US")} new ${previewResult.preview.newExecutions === 1 ? "execution" : "executions"}`
+                    : `Update fees for ${previewResult.preview.feeUpdatesAvailable.toLocaleString("en-US")} ${previewResult.preview.feeUpdatesAvailable === 1 ? "execution" : "executions"}`}
               </button>
             ) : null}
           </div>
           {previewResult?.ok
-          && previewResult.preview.newExecutions > 0
+          && (
+            previewResult.preview.newExecutions > 0
+            || previewResult.preview.feeUpdatesAvailable > 0
+          )
           && importResult == null ? (
             <p className="text-right text-[11px] leading-5 text-[var(--muted)]">
-              Append only. Existing journal data will not be deleted.
+              Fills are preserved. Existing fee details may be enriched; journal data will not be deleted.
             </p>
           ) : null}
         </div>
@@ -566,6 +577,10 @@ function SchwabPreviewResult({
         kind="already_imported"
       />
     );
+  }
+
+  if (presentation === "fee_updates") {
+    return <SchwabPreviewSummary preview={result.preview} />;
   }
 
   if (presentation === "needs_review") {
@@ -819,6 +834,8 @@ function SchwabImportResult({
           <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--green)]">
             {summary.inserted > 0
               ? "Schwab import complete"
+              : summary.feesUpdated > 0
+                ? "Schwab fee update complete"
               : summary.reviewExecutions > 0
                 ? "Import review complete"
                 : "Already up to date"}
@@ -829,7 +846,7 @@ function SchwabImportResult({
           </h3>
         </div>
         <span className="rounded-md border border-[var(--green)]/45 px-2 py-1 text-[11px] font-semibold text-[var(--green)]">
-          {summary.reviewExecutions > 0 ? "No overwrite" : "Append only"}
+          {summary.reviewExecutions > 0 ? "No overwrite" : "Fills preserved"}
         </span>
       </div>
 
@@ -1109,7 +1126,11 @@ function ImportSuccessSummary({
     { label: "Confidence", value: confidenceLabel ?? "unknown" },
     { label: "Open", value: summary.openTrades.toLocaleString("en-US") },
   ];
-  const importTitle = summary.inserted > 0 ? "Import complete" : "No new executions";
+  const importTitle = summary.inserted > 0
+    ? "Import complete"
+    : summary.feesUpdated > 0
+      ? "Fee details updated"
+      : "No new executions";
   const dateHeadline = importDateHeadline(summary.parsedFrom, summary.parsedTo);
   const coverage = importCoverageCopy(summary.normalizedTrades, summary.parsedFrom, summary.parsedTo);
   const insertedCoverage = importInsertedCopy(summary.inserted, summary.insertedFrom, summary.insertedTo);
@@ -1131,6 +1152,7 @@ function ImportSuccessSummary({
           {sourceLabel}
           {insertedCoverage ? ` · ${insertedCoverage}` : ""}
           {summary.duplicates > 0 ? ` · ${summary.duplicates} dupes skipped` : ""}
+          {summary.feesUpdated > 0 ? ` · ${summary.feesUpdated} fee records enriched` : ""}
         </div>
       </div>
 

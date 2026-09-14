@@ -32,6 +32,7 @@ export type SchwabImportPreview = {
   executionsFound: number;
   newExecutions: number;
   duplicateExecutions: number;
+  feeUpdatesAvailable: number;
   reviewExecutions: number;
   reviewSymbols: string[];
   reviewDates: string[];
@@ -64,6 +65,7 @@ export type SchwabImportSummary = {
   parsed: number;
   inserted: number;
   duplicates: number;
+  feesUpdated: number;
   reviewExecutions: number;
   reviewSymbols: string[];
   reviewDates: string[];

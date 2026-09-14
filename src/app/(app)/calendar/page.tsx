@@ -1,32 +1,20 @@
 import Link from "next/link";
 import { eq } from "drizzle-orm";
-import { Fragment } from "react";
 import { db, schema } from "@/lib/db";
 import { getActiveAccount } from "@/lib/accountScope";
 import { etDateString } from "@/lib/time";
 import { tradeDayActivities } from "@/lib/tradeActivity";
 import { fmtMoney } from "@/lib/format";
 import { isDemoReadOnly } from "@/lib/demoMode";
-import { journalDayState } from "@/lib/journalDayStatus";
-import {
-  formatCalendarAccuracy,
-  formatCalendarProfitFactor,
-} from "@/lib/calendarMetrics";
 import CalendarRangeFilter from "@/components/CalendarRangeFilter";
-import PendingSubmitButton from "@/components/PendingSubmitButton";
 import PeriodTabs from "@/components/ui/PeriodTabs";
-import { setNoTradeDayAction } from "@/app/journal/actions";
+
+import MonthCalendar from "@/components/MonthCalendar";
+import type { CalendarTotals } from "@/lib/monthCalendar";
 
 export const dynamic = "force-dynamic";
 
-type DayAgg = {
-  pnl: number;
-  trades: number;
-  wins: number;
-  losses: number;
-  grossProfit: number;
-  grossLoss: number;
-};
+type DayAgg = CalendarTotals;
 type CalendarSearch = {
   m?: string;
   y?: string;
@@ -71,14 +59,6 @@ function monthMatrix(year: number, month: number): (number | null)[] {
   return cells;
 }
 
-function isoDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function addUtcDays(date: Date, days: number): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + days));
-}
-
 function validDate(value: string | undefined): string | undefined {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
 }
@@ -111,56 +91,6 @@ function filterDatesByRange(dates: Set<string>, from: string | undefined, to: st
   return new Set(
     [...dates].filter((date) => (!from || date >= from) && (!to || date <= to)),
   );
-}
-
-type WorkweekDay = {
-  date: string;
-  day: number;
-  inMonth: boolean;
-  agg: DayAgg | undefined;
-};
-
-type Workweek = {
-  days: WorkweekDay[];
-  pnl: number;
-  trades: number;
-  wins: number;
-  losses: number;
-};
-
-function workweeksForMonth(year: number, month: number, byDate: Map<string, DayAgg>): Workweek[] {
-  const first = new Date(Date.UTC(year, month - 1, 1));
-  const last = new Date(Date.UTC(year, month, 0));
-  const mondayOffset = (first.getUTCDay() + 6) % 7;
-  let cursor = addUtcDays(first, -mondayOffset);
-  const weeks: Workweek[] = [];
-
-  while (cursor <= last) {
-    const days: WorkweekDay[] = [];
-    let pnl = 0;
-    let trades = 0;
-    let wins = 0;
-    let losses = 0;
-
-    for (let i = 0; i < 5; i += 1) {
-      const dayDate = addUtcDays(cursor, i);
-      const date = isoDate(dayDate);
-      const inMonth = dayDate.getUTCFullYear() === year && dayDate.getUTCMonth() === month - 1;
-      const agg = inMonth ? byDate.get(date) : undefined;
-      if (agg) {
-        pnl += agg.pnl;
-        trades += agg.trades;
-        wins += agg.wins;
-        losses += agg.losses;
-      }
-      days.push({ date, day: dayDate.getUTCDate(), inMonth, agg });
-    }
-
-    if (days.some((d) => d.inMonth)) weeks.push({ days, pnl, trades, wins, losses });
-    cursor = addUtcDays(cursor, 7);
-  }
-
-  return weeks;
 }
 
 async function dailyAgg(accountId: number): Promise<{
@@ -301,6 +231,7 @@ function NavButton({
 }
 
 function MonthView({
+  accountId,
   ym,
   byDate,
   noTradeDates,
@@ -308,6 +239,7 @@ function MonthView({
   today,
   params,
 }: {
+  accountId: number;
   ym: string;
   byDate: Map<string, DayAgg>;
   noTradeDates: Set<string>;
@@ -316,35 +248,7 @@ function MonthView({
   params: CalendarSearch;
 }) {
   const [year, month] = ym.split("-").map(Number);
-  const weeks = workweeksForMonth(year, month, byDate);
-  const currentCalendarHref = calendarHref(params);
-  let monthPnl = 0;
-  let monthTrades = 0;
-  let monthWins = 0;
-  let monthLosses = 0;
-  let monthGrossProfit = 0;
-  let monthGrossLoss = 0;
-  let monthSessions = 0;
-  for (const week of weeks) {
-    for (const day of week.days) {
-      if (!day.inMonth || !day.agg) continue;
-      monthSessions += 1;
-      monthPnl += day.agg.pnl;
-      monthTrades += day.agg.trades;
-      monthWins += day.agg.wins;
-      monthLosses += day.agg.losses;
-      monthGrossProfit += day.agg.grossProfit;
-      monthGrossLoss += day.agg.grossLoss;
-    }
-  }
   const monthLabel = monthFmt.format(new Date(Date.UTC(year, month - 1, 1)));
-  const summaryMetrics = [
-    { label: "Sessions", value: monthSessions.toLocaleString("en-US") },
-    { label: "Trades", value: monthTrades.toLocaleString("en-US") },
-    { label: "Accuracy", value: formatCalendarAccuracy(monthWins, monthLosses) },
-    { label: "Profit factor", value: formatCalendarProfitFactor(monthGrossProfit, monthGrossLoss) },
-  ];
-
   return (
     <div className="mx-auto max-w-6xl space-y-7 pt-3">
       <section aria-labelledby="calendar-month-heading">
@@ -386,158 +290,10 @@ function MonthView({
         />
       </section>
 
-      <section
-        aria-label={`${monthLabel} summary`}
-        className="flex flex-wrap items-end justify-between gap-x-12 gap-y-5"
-      >
-        <dl className="flex flex-wrap gap-x-10 gap-y-4">
-          {summaryMetrics.map((metric) => (
-            <div key={metric.label} className="grid gap-0.5">
-              <dt className="text-[13px] font-medium text-[var(--muted)]">
-                {metric.label}
-              </dt>
-              <dd className="text-xl font-semibold leading-[1.2] tabular-nums text-[var(--foreground)]">
-                {metric.value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-        <div className="grid gap-0.5 sm:justify-items-end">
-          <span className="text-[13px] font-medium text-[var(--muted)]">P&amp;L</span>
-          <span
-            className="text-xl font-semibold leading-[1.2] tabular-nums"
-            style={{ color: monthPnl >= 0 ? "var(--green)" : "var(--red)" }}
-          >
-            {fmtMoney(monthPnl)}
-          </span>
-        </div>
-      </section>
-
-      <section aria-label={`${monthLabel} trading calendar`} className="space-y-2.5">
-        <div className="overflow-x-auto pb-2">
-          <div className="min-w-[940px]">
-            <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_205px] gap-px pb-2 text-[12.5px] font-semibold text-[var(--muted)]">
-              {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", ""].map((day, index) => (
-                <span key={`${day}-${index}`} className="px-[15px]">
-                  {day}
-                </span>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_205px] gap-px overflow-hidden rounded-lg bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)]">
-              {weeks.map((week, weekIndex) => (
-                <Fragment key={weekIndex}>
-                  {week.days.map((day) => {
-                    const positive = day.agg ? day.agg.pnl >= 0 : false;
-                    const isToday = day.date === today;
-                    const state = journalDayState(
-                      day.agg?.trades ?? 0,
-                      noTradeDates.has(day.date) ? "no_trade" : null,
-                    );
-                    const canConfirmNoTrade = day.inMonth
-                      && day.date <= today
-                      && state === "unconfirmed_empty"
-                      && !readOnly;
-                    const content = (
-                      <div
-                        data-calendar-date={day.date}
-                        className={`grid min-h-24 content-start gap-1 px-3.5 py-3 transition-colors ${
-                          day.inMonth
-                            ? state === "unconfirmed_empty" && !isToday
-                              ? "bg-[color-mix(in_srgb,var(--background)_55%,var(--surface))]"
-                              : "bg-[var(--background)]"
-                            : "bg-[color-mix(in_srgb,var(--background)_55%,var(--surface))] opacity-35"
-                        }`}
-                      >
-                        <span className="flex min-h-7 items-baseline gap-1.5 pb-1 text-[12.5px] font-medium leading-[1.3] tabular-nums">
-                          <span className={isToday ? "text-[var(--accent)]" : "text-[var(--foreground)]"}>
-                            {day.day}
-                          </span>
-                          {isToday ? (
-                            <span className="text-[11px] font-medium text-[var(--accent)]">Today</span>
-                          ) : null}
-                        </span>
-                        {state === "trades" ? (
-                          <span>
-                            <span
-                              className="block text-[17px] font-medium leading-[1.25] tabular-nums"
-                              style={{ color: positive ? "var(--green)" : "var(--red)" }}
-                            >
-                              {fmtMoney(day.agg!.pnl)}
-                            </span>
-                            <span className="block truncate text-[11.5px] leading-5 text-[var(--faint)] tabular-nums">
-                              {day.agg!.trades.toLocaleString("en-US")} {day.agg!.trades === 1 ? "trade" : "trades"} · {formatCalendarAccuracy(day.agg!.wins, day.agg!.losses)}
-                            </span>
-                          </span>
-                        ) : state === "no_trade" && day.inMonth ? (
-                          <span className="space-y-1 text-[11.5px] leading-5 text-[var(--faint)]">
-                            <span className="block">No-trade day</span>
-                            {!readOnly ? (
-                              <form action={setNoTradeDayAction}>
-                                <input type="hidden" name="date" value={day.date} />
-                                <input type="hidden" name="selected" value="false" />
-                                <PendingSubmitButton
-                                  label="Undo"
-                                  pendingLabel="Undoing…"
-                                  className="text-[11.5px] font-semibold text-[var(--accent)] transition-colors hover:text-[var(--accent-strong)]"
-                                />
-                              </form>
-                            ) : null}
-                          </span>
-                        ) : isToday && day.inMonth ? (
-                          <span className="text-[12.5px] leading-5 text-[var(--faint)]">Not imported yet</span>
-                        ) : canConfirmNoTrade ? (
-                          <form action={setNoTradeDayAction}>
-                            <input type="hidden" name="date" value={day.date} />
-                            <input type="hidden" name="selected" value="true" />
-                            <PendingSubmitButton
-                              label="Mark no-trade"
-                              pendingLabel="Marking…"
-                              className="text-left text-[11.5px] font-medium text-[var(--faint)] transition-colors hover:text-[var(--accent)]"
-                            />
-                          </form>
-                        ) : null}
-                      </div>
-                    );
-                    return state === "trades" ? (
-                      <Link
-                        key={day.date}
-                        href={`/journal?date=${day.date}&returnTo=${encodeURIComponent(currentCalendarHref)}`}
-                        aria-label={`${day.date}: ${fmtMoney(day.agg!.pnl)}, ${day.agg!.trades} ${day.agg!.trades === 1 ? "trade" : "trades"}, ${formatCalendarAccuracy(day.agg!.wins, day.agg!.losses)} accuracy`}
-                        className="block bg-[var(--background)] transition-colors hover:bg-[var(--surface)] focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]"
-                      >
-                        {content}
-                      </Link>
-                    ) : (
-                      <div key={day.date}>{content}</div>
-                    );
-                  })}
-
-                  <div className="grid min-h-24 place-items-center bg-[var(--background)] px-3.5 py-3 text-center">
-                    {week.trades > 0 ? (
-                      <span className="flex items-baseline justify-center gap-2">
-                        <span
-                          className="text-[17px] font-medium leading-[1.25] tabular-nums"
-                          style={{ color: week.pnl >= 0 ? "var(--green)" : "var(--red)" }}
-                          aria-label={`Week ${weekIndex + 1} total P&L ${fmtMoney(week.pnl)}`}
-                        >
-                          {fmtMoney(week.pnl)}
-                        </span>
-                        <span className="whitespace-nowrap text-[11.5px] leading-5 text-[var(--faint)] tabular-nums">
-                          {week.trades.toLocaleString("en-US")} trades · {formatCalendarAccuracy(week.wins, week.losses)}
-                        </span>
-                      </span>
-                    ) : null}
-                  </div>
-                </Fragment>
-              ))}
-            </div>
-          </div>
-        </div>
-        <p className="text-[12.5px] leading-5 text-[var(--faint)]">
-          Select a traded day to open its Journal review.
-        </p>
-      </section>
+      <MonthCalendar
+        data={{ accountId, month: ym, today, sessions: [...byDate].filter(([date]) => date.startsWith(`${ym}-`)).map(([date, totals]) => ({ date, ...totals })), noTradeDates: [...noTradeDates].filter((date) => date.startsWith(`${ym}-`)), readOnly, range: { from: params.from, to: params.to } }}
+        returnTo={calendarHref(params)}
+      />
     </div>
   );
 }
@@ -693,5 +449,5 @@ export default async function CalendarPage({
   }
 
   const ym = /^\d{4}-\d{2}$/.test(m ?? "") ? (m as string) : latest;
-  return <MonthView ym={ym} byDate={filteredByDate} noTradeDates={filteredNoTradeDates} readOnly={readOnly} today={today} params={{ ...params, m: ym, view: undefined, y: undefined }} />;
+  return <MonthView accountId={activeAccount.id} ym={ym} byDate={byDate} noTradeDates={noTradeDates} readOnly={readOnly} today={today} params={{ ...params, m: ym, view: undefined, y: undefined }} />;
 }

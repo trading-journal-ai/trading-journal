@@ -268,6 +268,10 @@ Build once, reuse everywhere.
   The trader's own annotations use amber `--accent` instead.
 - **StatBlock** (`src/components/ui/StatBlock.tsx`) — stacked label above mono
   value for dashboard summary metrics.
+- **PillStatsBar** (`src/components/ui/PillStatsBar.tsx`) — compact range
+  summary with one shared label capsule and centered, tabular values. Calendar
+  Month and Journal Month reuse it for sessions, trades, accuracy, profit
+  factor, and optional outcome-colored P&L.
 - **ReportsStatsMatrix** — diagnostic stats table for Reports (default when
   comparing many metrics). Compact summary strip first, then grouped rows
   (Performance, Accuracy, Sizing, Timing); label-left/value-right per cell;
@@ -297,46 +301,71 @@ Build once, reuse everywhere.
 - **Charts** — titles use Eyebrow with a rule beneath; generous space before
   chart groups; two-column grids need enough gutter to avoid merging; cumulative
   P&L usually spans full width before smaller distribution charts.
-- **Calendar** — month view earns its grid. It opens with the month title and
-  textual Today / Previous / Next controls, underline Month / Year tabs, then a
-  compact performance strip for sessions, trades, accuracy, profit factor, and
-  P&L. The month grid uses five weekday columns plus a fixed 205px weekly-summary
-  rail; each cell is at least 96px tall. Cells use `--hairline` rules, an 8px
-  outer radius, and no dots. Traded, today, and weekly-summary cells remain on
-  the open page surface; unused days get only a quiet `--background` / `--surface`
-  mix. Day number, P&L, and `trades · accuracy` form the scan hierarchy. Today
-  uses the accent day number and a compact label; weekly totals stay flat rather
-  than becoming separate cards. Selecting a traded day opens its full Journal
-  review with a Calendar return target. At narrow widths the dense grid keeps
-  its desktop geometry inside a local horizontal scroller rather than shrinking
-  the financial labels or overflowing the page. Year mini-months may use subtle
+- **Calendar** — Calendar Month and Journal → Month → P&L render the same
+  `MonthCalendar` feature component. The selected baseline is inventory **D**
+  (confirmed 2026-09-11), including its open stats lockup: centered label/value
+  pairs for sessions, trades, accuracy and profit factor grouped on the left;
+  signed P&L aligned at the far right. No pill or metric-card containers. Both
+  consumers use the same typography and five-weekday grid with weekly totals.
+  Page titles, date controls and scope tabs remain with the parent pages.
+  Cells use flat theme surfaces and hairlines; only hover/selection adds a fill.
+  Today has an accent date and label. In Journal Month, in-month weekdays are
+  links to Day → P&L; empty, no-trade and future days also open their day.
+  Journal Month has no expanded trade ledger; trades are reached through Day →
+  Trades. In standalone Calendar, a traded-day button opens one full-width
+  panel immediately beneath its week, pushing the following weeks down. The
+  panel shows exact day stats, then a lightweight time (ET), symbol, context and
+  P&L ledger. Show six rows initially, with Show all / Show fewer and Open in
+  journal. Selecting another day replaces the panel; reselecting, Close or Escape
+  collapses it. Keyboard close returns focus to the originating day button.
+  Expansion uses the existing disclosure motion and reduced-motion treatment.
+  Trade rows load on demand, scoped to the active account and exact ET date.
+  Both consumers retain intentional no-trade states; standalone Calendar retains
+  no-trade editing and its existing mutation guards.
+  Calendar date filters scope totals while retaining/dimming excluded days;
+  filtered trading days must never become empty/no-trade candidates. Narrow
+  layouts keep the grid in a local horizontal scroller rather than shrinking
+  financial labels. See [CALENDAR_DESIGN.md](CALENDAR_DESIGN.md) for boundaries.
+  Year mini-months may use subtle
   green/red heatmap fills. The Journal week strip uses a fixed Geist Sans lockup:
   weekday/date is
   semibold 16px, P&L is semibold 14px, and the grouped
-  trades/win-rate/profit-factor pill is regular 11px. Hover and keyboard focus
-  ease in a small semantic-accent corner dot and change the pill text to the
-  semantic accent while its quiet surface remains unchanged. Selection keeps
-  the dot and switches the pill fill immediately to the semantic accent with
-  action-foreground text. Selection is optimistic, so it moves on press and
-  remains stable while the new journal date loads; it never fades out while
-  waiting for navigation. The page background remains flat with no added border,
+  trades/win-rate/profit-factor row is regular 11px, with no pill fill or
+  inset. Beneath each weekday heading, shared rows align P&L on the first line
+  and either stats or the empty-day status on the second. Empty days reserve the
+  first line; their status uses the same 11px type and line height as the stats. The weekly card group has no drop shadow. Today's date in Eastern Time
+  receives the tinted day cell, semantic-accent corner dot and accent stats text;
+  the stats background stays transparent in every state. This indicator follows
+  the actual current date, not the selected review date or a pending click.
+  Historical weeks show no current-day indicator. Date navigation still updates
+  the heading optimistically. The page background remains flat with no added border,
   radius, elevation, or bottom edge. The five-day strip uses a complete hairline
   outline with a 4px radius. It leads Week → P&L as the at-a-glance summary and
-  does not remain above the Day / Week / Month review tabs. Focused Day uses a
-  separate borderless five-day micro rail above its date heading: abbreviated
-  weekday/date over outcome-colored P&L, with the selected date promoted by
-  foreground weight. The heading follows the Day / Week / Month selection:
-  full weekday and date for Day, the Monday–Friday range for Week, and month plus
+  does not remain above the Day / Week / Month review tabs. Clicking a week-strip
+  day opens that date in Day → P&L, including the already-selected date. Focused Day uses a
+  separate borderless five-day micro rail implementation, currently hidden across
+  Journal scopes via `SHOW_COMPACT_WEEK_STATS` in `JournalWeekStrip.tsx`. Keep it
+  available for possible restoration; the full Week P&L strip remains visible.
+  The heading follows the Day / Week / Month selection:
+  full weekday and date for Day, the Monday–Friday range without a year for Week, and month plus
   year for Month. Empty and future days keep their position but show no
   invented value. Today / Previous / Next / Calendar remain textual controls in
-  the same page-level header. Today preserves the active scope; Previous and
-  Next step across trading weekdays in Day, seven calendar days in Week, and one
-  calendar month in Month (clamping the selected day for shorter months).
+  the same page-level header. Today always returns to the current Day view;
+  Previous and Next step across trading weekdays in Day, seven calendar days in
+  Week, and one calendar month in Month (clamping the selected day for shorter
+  months).
   Both Journal tab groups use the semantic accent underline in this surface.
 - **Journal** — prose-first. Headers use Display/Page title; recap text uses Body
   large; metrics sit under the header as quiet mono metadata; ticker rail compact
   and sorted best-to-worst; pills secondary; reading mode hides edit controls
-  until interaction. When the selected day changes, only the daily P&L chart
+  until interaction. The Month P&L view consumes the same `MonthCalendar`
+  described above; it does not own a second grid or summary treatment. When the
+  Day Trades view is active, reuse `PillStatsBar` for trades, accuracy, profit
+  factor, and P&L; pair it with a compact win/loss distribution. The trade ledger
+  shows shares, execution count, entry, exit, per-share result, hold time, context,
+  and P&L. Saved tags/setups appear as compact context pills; missing annotations
+  remain explicit as “Needs context.” Rows retain the inline review disclosure.
+  When the selected day changes, only the daily P&L chart
   surface fades in briefly; its card, heading, and surrounding review structure
   remain fixed so the transition reads as updated data rather than a page reload.
   During slower date navigation, fade the outgoing chart completely, then reveal

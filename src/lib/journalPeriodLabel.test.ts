@@ -7,9 +7,9 @@ describe("journalPeriodLabel", () => {
   });
 
   it("labels the selected trading week", () => {
-    expect(journalPeriodLabel("week", "2026-08-13")).toBe("August 10 - 14 2026");
-    expect(journalPeriodLabel("week", "2026-09-01")).toBe("August 31 - September 4 2026");
-    expect(journalPeriodLabel("week", "2027-01-01")).toBe("December 28 2026 - January 1 2027");
+    expect(journalPeriodLabel("week", "2026-08-13")).toBe("August 10 - 14");
+    expect(journalPeriodLabel("week", "2026-09-01")).toBe("August 31 - September 4");
+    expect(journalPeriodLabel("week", "2027-01-01")).toBe("December 28 - January 1");
   });
 
   it("labels the selected trading month", () => {
