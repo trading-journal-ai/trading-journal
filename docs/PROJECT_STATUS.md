@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 19444)
-Total output lines: 1143
-
 # Project Status — where we are, what's next
 
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
@@ -547,7 +544,94 @@ stopped. This is the "when did we last work on it" trail.
     application-data home and optional local path overrides.
   - Created a Journal-owned, filesystem-read-only SQLite snapshot in DELETE
     journal mode; the Trading Server source remains untouched.
-  - Copied all…1444 tokens truncated…g
+  - Copied all 410 preserved compressed minute files into the same private
+    archive home and verified every source/destination checksum.
+  - Added repeatable migration and verification commands, a private manifest
+    contract, a read-only health client, and versioned `core-common-stock-v1`
+    qualification rules with explicit exclusion reasons.
+  - Added typed Core/Raw Day and Archive queries with All, Premarket, Regular,
+    and After-hours session lenses. Raw evidence retains excluded instruments
+    and shows the controlling Core exclusion in the ledger.
+  - Added the Analytics Momentum Archive surface with day stepping, full-archive
+    search and sorting, Core/Raw toggles, session buttons, and the preserved
+    no-maximum-gain anomaly policy.
+  - Refined the browser surface against the supplied Daily Momentum HTML:
+    removed the redundant archive eyebrow/hero and stock-row chevrons, restored
+    the date-first Day heading, session jump and Previous/Next controls, stat
+    strip, separate Symbol/Company ledger columns, labeled Full Archive filters,
+    and the two-part evidence footer. Analytics navigation and the approved
+    Core/Raw plus session controls remain intentional Journal additions.
+  - Extracted the Journal row-disclosure behavior into a shared component and
+    reused it for one-at-a-time inline mover charts.
+  - Added a candidate-only candle cache that validates mover membership,
+    streams the selected ticker block from the raw Massive day file, keeps
+    04:00–20:00 ET, and invalidates derived rows when the source file changes.
+  - Documented the ownership, normalization, Day/Archive session-lens, and
+    inline-chart contracts in `docs/analytics/MOMENTUM_ARCHIVE.md`.
+  - The archive query/cache suite (19 tests), ESLint, TypeScript, demo-schema
+    verification, and the production build pass; the copied 4.2 GB database
+    passed full integrity and foreign-key checks.
+  - Browser-verified Day, session-lens, Core/Raw, Full Archive, inline chart,
+    and 390px behavior with no feature errors. An uncached late-alphabet ticker
+    loaded 589 candles in 1.23 seconds after ticker-block optimization; its
+    cached repeat returned in 0.006 seconds.
+  - **Stopped at:** first browser slice is implemented, fully verified, and
+    ready for owner review. Journal execution overlays and entry-time
+    comparisons remain later work. No source archive files were removed.
+
+- **2026-08-13** — Journal Today navigation correction
+  (branch `codex/fix-journal-today-navigation`).
+  - Changed Today from scope-relative navigation to an absolute return to the
+    current ET day, so it clears Week or Month and opens Day.
+  - Updated the Journal navigation contract and regression coverage for Day,
+    Week, and Month Today destinations.
+  - Browser-verified Week → Today from August 6 to August 13: the URL dropped
+    `scope=week`, Day became selected, August 13 became the current date, and
+    the console remained clean.
+  - Five focused navigation tests and `npm run verify:full` passed under Node
+    22.13.0; the existing broad NFT trace warning remains.
+  - **Stopped at:** fix complete and ready for review.
+- **2026-08-14** — Calendar and journal card-state styling
+  (branch `codex/review-card-states`).
+  - Matched the design-review handoff's soft 1px edge, two-layer shadow, 8px
+    radius, neutral hover lift, and 6% accent-selected surface across the month
+    calendar and Week at a glance.
+  - Kept the accepted month stats strip, calendar spacing, and all existing
+    content unchanged.
+  - Combined the existing Daily P&L chart and ticker rail into one shared card
+    with a continuous hairline divider; no reference-only sidebar content was
+    copied.
+  - Follow-up: moved the chart canvas from the quiet `--surface` fill to the
+    shared card background, making it white in the light theme without
+    hard-coding a theme-specific color.
+  - Extracted the centered capsule summary into a reusable `PillStatsBar` and
+    replaced Journal Month's four boxed summary metrics with it. Month calendar
+    cells now stay neutral while signed P&L figures carry the outcome color.
+  - Rebuilt Day → Trades from the richer design handoff: the shared stats bar,
+    win/loss distribution, expanded execution/price ledger columns, real tag or
+    setup context pills, functional show-all behavior, and the existing inline
+    trade-review disclosure now share one soft card surface.
+  - Browser-verified the day card, week selected/hover states, month
+    selected/hover states, and the 390px day layout with a clean console.
+    Side-by-side design QA passed after correcting two P2 details.
+  - Rechecked the shared stats bar on Calendar Month at 1440px and Journal
+    Month at 1440px/390px; the capsule alignment, local overflow, and neutral
+    month cells render as intended.
+  - Impeccable's detector reported no new actionable findings; its output was
+    limited to the existing typography/radius advisories in the touched files,
+    including the preserved 22px value size moved into `PillStatsBar`.
+  - `npm run verify:types` and a production Webpack build passed under Node
+    22.13.0. The default Turbopack build cannot resolve this worktree's shared
+    `node_modules` symlink, so the equivalent build was run with `--webpack`.
+  - **Stopped at:** implementation, design QA, and project verification
+    complete on the task branch.
+
+- **2026-08-14** — Calendar summary and weekly-total alignment
+  (branch `codex/calendar-stats-layout`).
+  - Reworked the month summary into one shared label band with five centered
+    metric columns, including P&L, while preserving the existing semantic
+    labels and theme tokens.
+  - Aligned weekly P&L and its trade/accuracy metadata with the corresponding
     daily value lanes by reusing the calendar cell's empty date slot.
   - Browser-verified desktop and 390px layouts with the committed synthetic
     demo database. Label/value center axes and daily/weekly P&L coordinates
