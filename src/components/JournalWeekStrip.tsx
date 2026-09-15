@@ -65,17 +65,22 @@ function NavigationLink({
   href,
   quiet = false,
   targetDate,
+  resetToDay = false,
 }: {
   children: string;
   href: string;
   quiet?: boolean;
   targetDate?: string;
+  resetToDay?: boolean;
 }) {
-  const { setPendingDate } = useJournalDateNavigation();
+  const { setPendingDate, focusDay } = useJournalDateNavigation();
 
   return (
     <Link
       href={href}
+      onNavigate={() => {
+        if (resetToDay && targetDate) focusDay(targetDate);
+      }}
       onPointerDown={(event) => {
         if (event.button === 0 && targetDate) setPendingDate(targetDate);
       }}
@@ -157,7 +162,7 @@ export function JournalDayNavigation({
           className="text-3xl font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]"
         />
         <nav aria-label="Journal date controls" className="flex max-w-full items-center gap-2 overflow-x-auto">
-          <NavigationLink href={navigation.today.href} targetDate={navigation.today.date} quiet>
+          <NavigationLink href={navigation.today.href} targetDate={navigation.today.date} quiet resetToDay>
             Today
           </NavigationLink>
           <NavigationLink href={navigation.previous.href} targetDate={navigation.previous.date}>

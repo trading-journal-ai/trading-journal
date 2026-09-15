@@ -44,7 +44,9 @@ export type TradeChartSummary = {
   shares: string;
 };
 
-type LightweightTradeChartProps = {
+export type LightweightTradeChartProps = {
+  indicatorsEnabled?: boolean;
+  volumeEnabled?: boolean;
   candles: ChartCandle[];
   markers: ChartMarker[];
   enableFullscreen?: boolean;
@@ -396,6 +398,8 @@ function candlePriceFormat(candles: ChartCandle[]) {
 
 function InteractiveLightweightTradeChart({
   candles,
+  indicatorsEnabled = true,
+  volumeEnabled = true,
   focusMinutesAfter = 70,
   focusMinutesBefore = 20,
   initialActiveTradeNumber,
@@ -484,7 +488,7 @@ function InteractiveLightweightTradeChart({
     [candles],
   );
   const indicatorData = useMemo(() => {
-    const series = marketIndicatorSeries(candles);
+    const series = marketIndicatorSeries(indicatorsEnabled ? candles : []);
     const toLineData = (points: typeof series.ema9): LineData[] => points.map((point) => ({
       time: timeValue(point.t),
       value: point.value,
@@ -494,14 +498,14 @@ function InteractiveLightweightTradeChart({
       ema20: toLineData(series.ema20),
       vwap: toLineData(series.vwap),
     };
-  }, [candles]);
+  }, [candles, indicatorsEnabled]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return undefined;
 
     const colors = readChartColors();
-    const volumeData: HistogramData[] = candles.map((candle) => ({
+    const volumeData: HistogramData[] = (volumeEnabled ? candles : []).map((candle) => ({
       time: timeValue(candle.t),
       value: candle.vol,
       color: candle.c >= candle.o ? colors.volumeUp : colors.volumeDown,
@@ -766,7 +770,7 @@ function InteractiveLightweightTradeChart({
       setMarkerPoints([]);
       setTradeOverlay(null);
     };
-  }, [candleData, candles, focusMinutesAfter, focusMinutesBefore, indicatorData, initialFocusTime, markers, themeKey]);
+  }, [candleData, candles, focusMinutesAfter, focusMinutesBefore, indicatorData, initialFocusTime, markers, themeKey, volumeEnabled]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -913,7 +917,7 @@ function InteractiveLightweightTradeChart({
         }}
       >
         <div ref={containerRef} className="relative z-0 h-full w-full" />
-        {candles.length > 0 ? (
+        {candles.length > 0 && indicatorsEnabled ? (
           <div className="pointer-events-none absolute left-3 top-2 z-10 flex gap-3 font-mono text-[10px] font-semibold">
             <span style={{ color: OVERLAY_COLORS.ema9 }}>9 EMA</span>
             <span style={{ color: OVERLAY_COLORS.ema20 }}>20 EMA</span>

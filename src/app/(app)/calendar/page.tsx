@@ -262,12 +262,7 @@ function MonthView({
           <div className="flex flex-wrap items-center justify-end gap-2">
             <NavButton
               quiet
-              href={calendarHref({
-                ...params,
-                m: today.slice(0, 7),
-                view: undefined,
-                y: undefined,
-              })}
+              href={`/journal?date=${today}`}
             >
               Today
             </NavButton>

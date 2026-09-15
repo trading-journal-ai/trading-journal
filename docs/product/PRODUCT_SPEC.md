@@ -97,6 +97,31 @@ There are **two distinct data inputs**, both currently **manual CSV exports**:
 **C. Manual entry** — a form to add/edit an execution or trade by hand
 (corrections, missing fills, non-broker trades).
 
+**Temporary chart CSVs (trade review).** When provider candles are missing,
+incomplete or unavailable, full and inline review offer **Upload Chart Data**.
+TradingView one-minute exports require Time, Open, High, Low, Close and Volume;
+extra indicator columns are ignored. Unix seconds/milliseconds and ISO timestamps
+with an explicit timezone are supported. Rows are filtered to the selected Eastern
+Time date; invalid OHLCV, conflicting duplicate minutes, wrong explicit tickers,
+and exports without consecutive one-minute bars are rejected. The user confirms
+the ticker and regular one-minute candlestick chart before applying the upload.
+Files are limited to 5 MB and 50,000 rows.
+
+Uploads are chart-only, scoped by account/ticker/date in browser session storage.
+They survive reloads within that tab, do not enter the provider cache or change
+trade records, and are unavailable in the hosted read-only demo. Uploaded bars
+replace the displayed series as a whole; provider and uploaded bars are not mixed.
+Indicators use uploaded bars only when all in-session execution minutes are
+covered; indicator values depend on the exported history. Market-structure
+coaching and excursion analysis continue to require complete provider data.
+Execution estimates show neither indicators nor fabricated volume.
+
+While provider data is missing or incomplete, a visible review checks it every
+five minutes, with or without an upload. There is no manual check button.
+Complete provider coverage always wins on the next response and clears the temporary upload. Partial/error responses
+retain it. A failed provider refresh preserves the current chart and explains
+that the next check is automatic. **Remove upload** returns to the existing provider/fallback state.
+
 **D. Candle fetch is already automated** (see §9): the app pulls candles for the
 parsed symbols from **Massive**. Automating *execution* ingestion (vs. the manual
 TOS export) is a possible later nicety, behind the same importer interface — not
@@ -133,6 +158,11 @@ a v1 deliverable.
 - Summary dashboard: total P&L, win rate, avg win / avg loss, profit factor,
   expectancy, average R.
 - **Equity curve** over time.
+- Analytics cumulative and total P&L use the same fee-inclusive, execution-based
+  realized activity as Calendar and Journal, assigned to Eastern Time dates.
+  Include the complete active-account history before date filtering; retain
+  pre-range fills for cost basis and realized partial exits from open positions.
+  All-time and bounded reports use the same P&L calculation.
 - Breakdowns by tag, setup, symbol, day-of-week, time period.
 - Date-range and tag filters.
 

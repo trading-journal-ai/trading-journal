@@ -1586,7 +1586,7 @@ function JournalReviewModuleForDay({
           confidence: coachRead.confidence.label,
         }}
         pnlContent={day.trades > 0 ? (
-          <div className="grid overflow-hidden rounded-lg border border-[var(--review-card-border)] bg-[var(--review-card-bg)] shadow-[var(--review-card-shadow)] lg:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="grid overflow-hidden rounded-lg border border-[var(--review-card-border)] bg-[var(--review-card-bg)] shadow-[var(--review-card-shadow)] lg:grid-cols-[minmax(0,1fr)_220px]">
             <RunningPnlChart
               day={day}
               pnlPoints={pnlPoints}
@@ -1596,7 +1596,7 @@ function JournalReviewModuleForDay({
               className="border-b border-[var(--hairline)] lg:border-b-0 lg:border-r"
             />
             <TickerReviewRail
-              className="journal-day-rail-enter h-[420px] bg-[var(--review-card-bg)] px-4 py-3"
+              className="journal-day-rail-enter h-[420px] bg-[var(--review-card-bg)] px-3 py-3"
               rows={tickerRows.map((row) => ({
                 symbol: row.symbol,
                 pnl: row.pnl,
