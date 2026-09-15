@@ -1,18 +1,22 @@
 import "server-only";
 
+import { requireImportDestination } from "@/lib/import/destination";
 import { getActiveAccount } from "@/lib/accountScope";
 import { loadSchwabNormalizedHistory } from "./load";
 import { persistSchwabExecutions } from "./persist";
 import type { SchwabImportSummary } from "./types";
 
 export async function importSchwabExecutions(input: {
+  journalAccountId?: number;
   accountSelection: string;
   from: string;
   to: string;
 }): Promise<SchwabImportSummary> {
+  const journalAccount = input.journalAccountId === undefined
+    ? await getActiveAccount()
+    : await requireImportDestination(input.journalAccountId);
   const { range, accountOption, history, normalized } =
     await loadSchwabNormalizedHistory(input);
-  const journalAccount = await getActiveAccount();
   const persisted = await persistSchwabExecutions({
     accountId: journalAccount.id,
     from: range.from,

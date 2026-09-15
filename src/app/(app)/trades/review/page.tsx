@@ -4,8 +4,7 @@ import { getActiveAccount } from "@/lib/accountScope";
 import { getCandles } from "@/lib/candles";
 import { fallbackCandlesFromExecutions } from "@/lib/candles/fallback";
 import Breadcrumbs, { originCrumbFromHref } from "@/components/Breadcrumbs";
-import CandleDataNotice from "@/components/CandleDataNotice";
-import LightweightTradeChart from "@/components/LightweightTradeChart";
+import ReviewChart from "@/components/ReviewChart";
 import ReviewHeader from "@/components/ReviewHeader";
 import TickerReviewWorkspace from "@/components/TickerReviewWorkspace";
 import { fmtDate, fmtMoney } from "@/lib/format";
@@ -338,54 +337,50 @@ export default async function TickerDayReviewPage({
       <section className="mb-8 pt-5">
         <div className={dayTickers.length > 1 ? "min-w-0 2xl:grid 2xl:grid-cols-[minmax(0,1fr)_170px] 2xl:gap-x-10" : "min-w-0"}>
           <div className={dayTickers.length > 1 ? "min-w-0 2xl:col-start-1 2xl:row-start-1" : "min-w-0"}>
-            {candleResult.status !== "market" ? (
-              <CandleDataNotice
-                detail={candleResult.error}
-                hasFallback={candles.length === 0 && chartCandles.length > 0}
-                status={candleResult.status}
-              />
-            ) : null}
-            {chartCandles.length > 0 ? (
-              <LightweightTradeChart
-                candles={chartCandles}
-                enableFullscreen
-                enableTradeScopeToggle
-                excursionsEnabled={candleResult.status === "market"}
-                initialActiveTradeNumber={initialChartTradeNumber}
-                initialFocusTime={
-                  (initialChartTrade
-                    ? activityByTradeId.get(initialChartTrade.id)?.firstExecutionAt
-                    : undefined)
-                  ?? activityByTradeId.get(trades[0]?.id ?? -1)?.firstExecutionAt
-                  ?? undefined
-                }
-                markers={trades.flatMap((trade) => (
-                  (executionAnalysisByTradeId.get(trade.id)?.executions ?? []).map((execution) => ({
-                    id: execution.id,
-                    t: execution.executedAt,
-                    price: execution.price,
-                    side: execution.side,
-                    quantity: execution.quantity,
-                    tradeNumber: tradeNumberById.get(trade.id),
-                    executionLifecycle: execution.lifecycle,
-                    addedAgainstPosition: execution.addedAgainstPosition,
-                  }))
-                ))}
-                tradeSummaries={workspaceTrades.flatMap((trade) => trade.executionAnalysis ? [{
-                  tradeNumber: trade.number,
-                  side: trade.side,
-                  entryAt: trade.entryAt,
-                  exitAt: trade.exitAt,
-                  entryPrice: trade.avgEntryPrice,
-                  exitPrice: trade.avgExitPrice,
-                  executionAnalysis: trade.executionAnalysis,
-                  holdDuration: trade.holdDuration,
-                  shares: trade.shares,
-                }] : [])}
-              />
-            ) : (
-              <LightweightTradeChart candles={[]} markers={[]} />
-            )}
+            <ReviewChart
+              accountId={activeAccount.id}
+              date={date}
+              symbol={symbol}
+              status={candleResult.status}
+              detail={candleResult.error}
+              hasFallback={candles.length === 0 && chartCandles.length > 0}
+              readOnly={readOnly}
+              candles={chartCandles}
+              enableFullscreen
+              enableTradeScopeToggle
+              excursionsEnabled={candleResult.status === "market"}
+              initialActiveTradeNumber={initialChartTradeNumber}
+              initialFocusTime={
+                (initialChartTrade
+                  ? activityByTradeId.get(initialChartTrade.id)?.firstExecutionAt
+                  : undefined)
+                ?? activityByTradeId.get(trades[0]?.id ?? -1)?.firstExecutionAt
+                ?? undefined
+              }
+              markers={trades.flatMap((trade) => (
+                (executionAnalysisByTradeId.get(trade.id)?.executions ?? []).map((execution) => ({
+                  id: execution.id,
+                  t: execution.executedAt,
+                  price: execution.price,
+                  side: execution.side,
+                  quantity: execution.quantity,
+                  tradeNumber: tradeNumberById.get(trade.id),
+                  executionLifecycle: execution.lifecycle,
+                  addedAgainstPosition: execution.addedAgainstPosition,
+                }))
+              ))}
+              tradeSummaries={workspaceTrades.flatMap((trade) => trade.executionAnalysis ? [{
+                tradeNumber: trade.number,
+                side: trade.side,
+                entryAt: trade.entryAt,
+                exitAt: trade.exitAt,
+                entryPrice: trade.avgEntryPrice,
+                exitPrice: trade.avgExitPrice,
+                executionAnalysis: trade.executionAnalysis,
+                holdDuration: trade.holdDuration,
+                shares: trade.shares,
+              }] : [])}
+            />
           </div>
           {dayTickers.length > 1 ? (
             <nav aria-label="Tickers traded this day" className="mt-6 2xl:col-start-2 2xl:row-start-1 2xl:mt-0 2xl:pt-1">

@@ -23,6 +23,7 @@ const timeFormatter = new Intl.DateTimeFormat("en-US", {
 });
 
 export type InlineTradeReviewData = {
+  accountId: number;
   availableTags: ReviewTagOption[];
   candleError?: string;
   candles: ChartCandle[];
@@ -259,6 +260,7 @@ export async function loadInlineTradeReview({
   }
 
   return {
+    accountId,
     availableTags: [...availableTags.values()],
     candleError: candleResult.error,
     candles,

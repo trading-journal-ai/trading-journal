@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import CandleDataNotice from "@/components/CandleDataNotice";
-import LightweightTradeChart from "@/components/LightweightTradeChart";
+import ReviewChart from "@/components/ReviewChart";
 import TickerReviewWorkspace from "@/components/TickerReviewWorkspace";
 import type { InlineTradeReviewData } from "@/lib/inlineTradeReview";
 
@@ -12,7 +11,8 @@ const LOAD_ERROR_MESSAGE = "Could not load this trade review.";
 function isInlineTradeReviewData(value: unknown): value is InlineTradeReviewData {
   if (!value || typeof value !== "object") return false;
   const payload = value as Record<string, unknown>;
-  return Array.isArray(payload.availableTags)
+  return typeof payload.accountId === "number"
+    && Array.isArray(payload.availableTags)
     && Array.isArray(payload.candles)
     && (payload.candleSource === "market" || payload.candleSource === "execution_fallback")
     && (payload.candleStatus === "market" || payload.candleStatus === "incomplete" || payload.candleStatus === "missing" || payload.candleStatus === "provider_error")
@@ -28,6 +28,19 @@ function errorMessageFromPayload(value: unknown): string {
   if (!value || typeof value !== "object") return LOAD_ERROR_MESSAGE;
   const error = (value as Record<string, unknown>).error;
   return typeof error === "string" && error.trim() ? error : LOAD_ERROR_MESSAGE;
+}
+
+async function fetchReview(url: string, signal?: AbortSignal): Promise<InlineTradeReviewData> {
+  const response = await fetch(url, { cache: "no-store", signal });
+  const responseText = await response.text();
+  let payload: unknown = null;
+  if (responseText) {
+    try { payload = JSON.parse(responseText); }
+    catch { throw new Error(LOAD_ERROR_MESSAGE); }
+  }
+  if (!response.ok) throw new Error(errorMessageFromPayload(payload));
+  if (!isInlineTradeReviewData(payload)) throw new Error(LOAD_ERROR_MESSAGE);
+  return payload;
 }
 
 export default function InlineTradeReviewPanel({
@@ -47,35 +60,20 @@ export default function InlineTradeReviewPanel({
   const [data, setData] = useState<InlineTradeReviewData | null>(null);
   const [error, setError] = useState("");
 
+  const requestUrl = `/api/trades/inline-review?date=${encodeURIComponent(date)}&symbol=${encodeURIComponent(symbol)}&trade=${tradeId}`;
+
   useEffect(() => {
     const controller = new AbortController();
 
-    fetch(`/api/trades/inline-review?date=${encodeURIComponent(date)}&symbol=${encodeURIComponent(symbol)}&trade=${tradeId}`, {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        const responseText = await response.text();
-        let payload: unknown = null;
-        if (responseText) {
-          try {
-            payload = JSON.parse(responseText);
-          } catch {
-            throw new Error(LOAD_ERROR_MESSAGE);
-          }
-        }
-
-        if (!response.ok) throw new Error(errorMessageFromPayload(payload));
-        if (!isInlineTradeReviewData(payload)) throw new Error(LOAD_ERROR_MESSAGE);
-        setData(payload);
-      })
+    fetchReview(requestUrl, controller.signal)
+      .then(setData)
       .catch((requestError: unknown) => {
         if (controller.signal.aborted) return;
         setError(requestError instanceof Error ? requestError.message : LOAD_ERROR_MESSAGE);
       });
 
     return () => controller.abort();
-  }, [attempt, date, symbol, tradeId]);
+  }, [attempt, requestUrl]);
 
   const fullReviewHref = `/trades/review?date=${date}&symbol=${symbol}&trade=${tradeId}&returnTo=${encodeURIComponent(returnTo)}`;
 
@@ -125,40 +123,36 @@ export default function InlineTradeReviewPanel({
       </div>
 
       <div className="min-w-0">
-        {data.candleStatus !== "market" ? (
-          <CandleDataNotice
-            detail={data.candleError}
-            hasFallback={data.candleSource === "execution_fallback"}
-            status={data.candleStatus}
-          />
-        ) : null}
-        {data.candles.length > 0 ? (
-          <LightweightTradeChart
-            candles={data.candles}
-            chartHeightClass="h-[400px]"
-            excursionsEnabled={data.candleSource === "market" && data.candleStatus === "market"}
-            focusMinutesAfter={43}
-            focusMinutesBefore={12}
-            initialActiveTradeNumber={selectedTrade?.number}
-            initialFocusTime={data.initialFocusTime}
-            markers={data.markers}
-            tradeSummaries={data.trades.flatMap((trade) => trade.executionAnalysis ? [{
-              tradeNumber: trade.number,
-              side: trade.side,
-              entryAt: trade.entryAt,
-              exitAt: trade.exitAt,
-              entryPrice: trade.avgEntryPrice,
-              exitPrice: trade.avgExitPrice,
-              executionAnalysis: trade.executionAnalysis,
-              holdDuration: trade.holdDuration,
-              shares: trade.shares,
-            }] : [])}
-          />
-        ) : (
-          <div className="grid h-[400px] place-items-center border-y border-[var(--hairline)] px-6 text-center text-sm text-[var(--muted)]">
-            {data.candleError ?? "No candle data is available for this trade yet."}
-          </div>
-        )}
+        <ReviewChart
+          accountId={data.accountId}
+          date={date}
+          symbol={symbol}
+          status={data.candleStatus}
+          detail={data.candleError}
+          hasFallback={data.candleSource === "execution_fallback"}
+          readOnly={data.readOnly}
+          onRefresh={async () => { setData(await fetchReview(requestUrl)); }}
+          candles={data.candles}
+          chartHeightClass="h-[400px]"
+          excursionsEnabled={data.candleSource === "market" && data.candleStatus === "market"}
+          focusMinutesAfter={43}
+          focusMinutesBefore={12}
+          initialActiveTradeNumber={selectedTrade?.number}
+          initialFocusTime={data.initialFocusTime}
+          markers={data.markers}
+          tradeSummaries={data.trades.flatMap((trade) => trade.executionAnalysis ? [{
+            tradeNumber: trade.number,
+            side: trade.side,
+            entryAt: trade.entryAt,
+            exitAt: trade.exitAt,
+            entryPrice: trade.avgEntryPrice,
+            exitPrice: trade.avgExitPrice,
+            executionAnalysis: trade.executionAnalysis,
+            holdDuration: trade.holdDuration,
+            shares: trade.shares,
+          }] : [])}
+        />
+
       </div>
 
       <div className="mt-4 min-w-0">

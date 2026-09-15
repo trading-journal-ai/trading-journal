@@ -8,7 +8,6 @@ import JournalReviewTabs, {
   type JournalDataView,
 } from "@/components/JournalReviewTabs";
 import { useOptionalJournalDateNavigation } from "@/components/JournalDateNavigation";
-import PillStatsBar, { type PillStatMetric } from "@/components/ui/PillStatsBar";
 import { tradingWeekDates } from "@/lib/journalPnlViews";
 import InlineLedgerDisclosure, { useInlineLedgerDisclosure } from "@/components/ui/InlineLedgerDisclosure";
 
@@ -172,12 +171,6 @@ function price(value: number | null) {
   return value == null ? "—" : `$${value.toFixed(2)}`;
 }
 
-function outcomeTone(value: number): PillStatMetric["tone"] {
-  if (value > 0) return "positive";
-  if (value < 0) return "negative";
-  return "muted";
-}
-
 function factClass(tone: JournalDayProcessFact["tone"] | JournalHorizonRow["tone"]) {
   if (tone === "positive") return "text-[var(--green)]";
   if (tone === "negative") return "text-[var(--red)]";
@@ -222,7 +215,11 @@ export default function JournalReviewModule({
   const [localScope, setLocalScope] = useState<JournalDataScope>("day");
   const scope = navigation?.scope ?? localScope;
   const setScope = navigation?.setScope ?? setLocalScope;
-  const [view, setView] = useState<JournalDataView>("pnl");
+  const [selectedView, setView] = useState<JournalDataView>("pnl");
+  // Date controls can switch scope independently of the period tabs.
+  const view = JOURNAL_SCOPE_VIEWS[scope].some((item) => item.key === selectedView)
+    ? selectedView
+    : "pnl";
 
   function selectScope(nextScope: JournalDataScope) {
     setScope(nextScope);
@@ -293,20 +290,42 @@ function DayViews({
   date: string;
   returnTo: string;
 }) {
-  if (view === "pnl") return <div role="tabpanel">{pnlContent}</div>;
+  if (view === "pnl") return <div role="tabpanel">
+    {summary.trades > 0 ? <dl aria-label="Daily trading summary" className="mb-4 flex flex-wrap items-start gap-x-7 gap-y-3 font-sans sm:gap-x-9">
+      {[
+        { label: "Trades", value: String(summary.trades) },
+        { label: "Accuracy", value: percent(summary.accuracy) },
+        { label: "Profit factor", value: ratio(summary.profitFactor) },
+        { label: "P&L", value: money(summary.pnl), tone: pnlClass(summary.pnl) },
+      ].map((metric) => <div key={metric.label}>
+        <dt className="text-xs leading-5 text-[var(--muted)]">{metric.label}</dt>
+        <dd className={`text-lg font-semibold leading-6 tabular-nums ${metric.tone ?? "text-[var(--foreground)]"}`}>{metric.value}</dd>
+      </div>)}
+    </dl> : null}
+    {pnlContent}
+  </div>;
 
   if (view === "trades") {
-    const summaryMetrics: PillStatMetric[] = [
-      { label: "Trades", value: String(summary.trades), width: 61 },
-      { label: "Accuracy", value: percent(summary.accuracy), width: 76 },
-      { label: "Profit factor", value: ratio(summary.profitFactor), width: 93 },
-      { label: "P&L", value: money(summary.pnl), width: 110, tone: outcomeTone(summary.pnl) },
+    const summaryMetrics = [
+      { label: "Trades", value: String(summary.trades) },
+      { label: "Accuracy", value: percent(summary.accuracy) },
+      { label: "Profit factor", value: ratio(summary.profitFactor) },
+      { label: "P&L", value: money(summary.pnl), className: pnlClass(summary.pnl) },
     ];
 
     return (
       <div role="tabpanel">
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
-          <PillStatsBar ariaLabel="Trade summary" metrics={summaryMetrics} />
+          <dl aria-label="Trade summary" className="flex flex-wrap items-start gap-x-8 gap-y-5 sm:gap-x-10">
+            {summaryMetrics.map((metric) => (
+              <div key={metric.label} className="text-center">
+                <dt className="text-[12.5px] font-medium leading-5 text-[var(--muted)]">{metric.label}</dt>
+                <dd className={`mt-1 text-[22px] font-semibold leading-[1.2] tabular-nums ${metric.className ?? "text-[var(--foreground)]"}`}>
+                  {metric.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
           <WinLossBar tradeRows={tradeRows} />
         </div>
         <TradeTable date={date} returnTo={returnTo} tradeRows={tradeRows} />

@@ -47,7 +47,7 @@ export default function TickerReviewRail({
   return (
     <aside className={className}>
       <section className={`flex ${heightClassName} flex-col px-1 py-1`}>
-        <div className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1 pt-1">
+        <div className="-mx-2 min-h-0 flex-1 space-y-1 overflow-y-auto px-2 pt-1">
           {rows.length > 0 ? (
             rows.map((row) => (
               <Link
@@ -55,27 +55,29 @@ export default function TickerReviewRail({
                 href={row.href}
                 aria-label={`${row.noted ? "Edit" : "Add"} ${row.symbol} note, ${formatMoney(row.pnl)}`}
                 aria-current={row.active ? "page" : undefined}
-                className={`group relative block rounded-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] before:absolute before:inset-x-0 before:inset-y-0 before:rounded-sm before:bg-[var(--surface)] before:opacity-0 before:transition-opacity hover:before:opacity-100 focus:before:opacity-100 ${
+                className={`group relative block rounded-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] before:absolute before:-inset-x-2 before:inset-y-0 before:rounded-sm before:bg-[var(--surface)] before:opacity-0 before:transition-opacity hover:before:opacity-100 focus:before:opacity-100 ${
                   row.active ? "text-[var(--foreground)]" : ""
                 }`}
               >
-                <span className="relative z-10 grid grid-cols-[42px_1fr_auto] items-baseline gap-2 px-3 py-1.5 font-mono text-[13px]">
-                  <span className={row.active ? "font-semibold text-[var(--foreground)]" : "text-[var(--foreground)]"}>
+                <span className="relative z-10 grid grid-cols-[minmax(0,1fr)_auto_20px] items-center gap-2 py-1.5 font-sans text-[13px]">
+                  <span className={row.active ? "font-semibold text-[var(--foreground)]" : "font-medium text-[var(--foreground)]"}>
                     {row.symbol}
                   </span>
                   <span className={`text-right tabular-nums ${pnlClass(row.pnl)}`}>{formatMoney(row.pnl)}</span>
-                  <span className="font-sans text-[11px] font-semibold text-[var(--accent)] opacity-80 transition-opacity group-hover:opacity-100">
-                    {row.noted ? "Edit note" : "Add note"}
+                  <span aria-hidden="true" title={row.noted ? "Edit note" : "Add note"} className="flex h-5 w-5 items-center justify-center rounded-full border border-[var(--hairline)] text-[var(--accent)] transition-colors group-hover:border-[var(--accent)] group-hover:bg-[var(--surface-2)]">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                      {row.noted ? <><path d="m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15z" /></> : <path d="M12 5v14M5 12h14" />}
+                    </svg>
                   </span>
                 </span>
               </Link>
             ))
           ) : (
-            <div className="py-1 font-mono text-[13px] text-[var(--muted)]">No tickers</div>
+            <div className="py-1 font-sans text-[13px] text-[var(--muted)]">No tickers</div>
           )}
         </div>
         <div className="mt-4 border-t border-[var(--hairline)] pt-3">
-          <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 font-mono text-[13px] leading-5">
+          <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 font-sans text-[13px] leading-5">
             <span className="whitespace-nowrap text-[var(--muted)]">Accuracy</span>
             <span className="justify-self-end text-right tabular-nums text-[var(--foreground)]">
               {accuracy == null ? "-" : `${accuracy}%`}

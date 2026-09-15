@@ -519,7 +519,7 @@ function buildTrendHistory(
     },
     {
       key: "expectancy",
-      label: current.expectancyR != null && baseline.expectancyR != null ? "E[R]" : "E[$]",
+      label: current.expectancyR != null && baseline.expectancyR != null ? "E[R]" : "Avg P&L / trade",
       current: currentExpectancy,
       baseline: baselineExpectancy,
       delta: currentExpectancy == null || baselineExpectancy == null ? null : currentExpectancy - baselineExpectancy,

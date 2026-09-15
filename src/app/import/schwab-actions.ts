@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { ImportDestinationError, requireImportDestination } from "@/lib/import/destination";
 import { canImportData } from "@/lib/demoMode";
 import { schwabRequiresReauthorization } from "@/lib/schwab/authErrors";
 import { getSchwabConnectionState } from "@/lib/schwab/connection";
@@ -142,7 +143,8 @@ export async function previewSchwabImportAction(
     };
   } catch (error) {
     if (
-      error instanceof SchwabDateRangeError
+      error instanceof ImportDestinationError
+      || error instanceof SchwabDateRangeError
       || error instanceof SchwabAccountSelectionError
       || error instanceof SchwabHistoryResponseError
       || error instanceof TradeReconciliationError
@@ -189,7 +191,14 @@ export async function importSchwabExecutionsAction(
   }
 
   try {
-    const summary = await importSchwabExecutions(input);
+    const raw = value as Record<string, unknown>;
+    const destination = raw.journalAccountId === undefined
+      ? undefined
+      : await requireImportDestination(raw.journalAccountId);
+    const summary = await importSchwabExecutions({
+      ...input,
+      ...(destination ? { journalAccountId: destination.id } : {}),
+    });
     revalidatePath("/");
     revalidatePath("/trades");
     revalidatePath("/calendar");
@@ -198,7 +207,8 @@ export async function importSchwabExecutionsAction(
     return { ok: true, summary };
   } catch (error) {
     if (
-      error instanceof SchwabDateRangeError
+      error instanceof ImportDestinationError
+      || error instanceof SchwabDateRangeError
       || error instanceof SchwabAccountSelectionError
       || error instanceof SchwabHistoryResponseError
       || error instanceof SchwabAppendSafetyError

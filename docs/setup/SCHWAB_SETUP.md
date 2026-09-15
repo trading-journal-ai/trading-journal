@@ -12,8 +12,10 @@ SCHWAB_IMPORT_PROVIDER=gateway
 Set this in the local Journal environment. The default private socket and read
 capability live under `~/Library/Application Support/Schwab Broker Gateway`.
 Do not copy the Schwab app secret or refresh token into Journal. Gateway owns
-authorization; use Trading Monitor's **Authorize Schwab** action, then retry
-Journal account discovery or the import preview. A missing/unavailable Gateway
+authorization; use Trading Monitor's **Authorize Schwab** action, then select
+**Check connection** in Journal’s import modal. The modal also prompts when
+authorization expires during Sync; rechecking restores Sync without starting an
+import automatically. A missing/unavailable Gateway
 does not activate standalone OAuth. Missing provider configuration now reports
 a configuration error instead of silently selecting standalone.
 
@@ -100,15 +102,42 @@ npm run schwab:authorize
 
 ## 4. Verify
 
-Open the Journal's Import modal and select **Sync from Schwab**. A successful
-connection shows masked authorized accounts. Full account numbers, tokens, and
-raw Schwab identifiers are never sent to the browser.
+Select the journal account in the **app header**, then open Import. The modal
+has no account selector and never substitutes another journal destination.
+For an established Schwab account it shows **Schwab · Connected**. Paper and
+unconfigured accounts show an unavailable state with no live import controls;
+no broker connection request is made for those accounts. Full account numbers,
+tokens, and raw Schwab identifiers are never sent to the browser.
 
-Choose a date range and select **Preview trades**. The preview is read-only.
-Review the new and duplicate execution counts, then use the separate
-**Import new executions** button to confirm the write.
+**Today** is selected initially. Choose **Last 7 days**, **Last 30 days**, or
+**Custom** for side-by-side From / To controls. All dates use Eastern Time.
+**Sync** immediately fetches and imports the selected range. There is no routine
+read-only preview or second confirmation button. **Upload file** opens the CSV
+picker directly and imports the selected file's own date range.
 
-Confirmed syncs preserve fills and journal content:
+Progress and results replace the setup form. Results show executions added and
+duplicates skipped, with fee updates and material import notices when relevant.
+No-trade and already-imported ranges have distinct empty results. **Open journal**
+selects the destination journal account and opens the imported date; closing the
+modal leaves the current account/view alone.
+
+The compact modal captures the active header account and checks whether that
+account has recorded `schwab_api` import batches. That evidence identifies an
+established Schwab journal; it does not select a different destination or act as
+a permanent account-type/broker-identity mapping. Names are never used to infer
+capabilities. New accounts without that evidence remain unconfigured in this modal;
+first-use capability setup and Paper import mechanics are deferred.
+
+Both Sync and Upload file send the captured destination. The server rejects a
+stale request if the header account changed before submission, then holds the
+validated account throughout history loading/parsing/persistence. Open journal
+returns to that imported account and date. Existing callers that omit an explicit
+destination retain active-account behavior, including the unchanged inline
+**Import today's trades** UI. With multiple authorized broker accounts, Sync
+requires a future explicit broker mapping rather than silently choosing a source;
+file upload remains available for an established Schwab journal.
+
+Direct syncs preserve fills and journal content:
 
 - existing execution rows and import batches are never deleted;
 - API fills already represented by a file import are not duplicated; matched
@@ -123,12 +152,12 @@ Confirmed syncs preserve fills and journal content:
 Overlapping ranges are expected. Existing fills stay intact while missing
 fills are appended; newly reported fees can update existing net P&L. A historical gap is accepted
 when its opening and closing fills form complete closed trades. An incomplete
-historical position is not imported; the preview identifies the symbol and
-links back to the Journal. If that trade is incomplete, upload a statement that
+historical position is not imported; the result identifies the symbol and
+keeps the review notice visible. If that trade is incomplete, upload a statement that
 contains its full opening and closing fills.
 
 Direct sync never replaces a closed trade or its notes. Matched broker fees
-may update its fee total and net P&L through the confirmed import. Other repairs
+may update its fee total and net P&L through Sync. Other repairs
 remain a separate, explicit workflow. See
 [fee reporting](../import/TRADE_IMPORT_BEHAVIOR.md#fee-reporting-and-presentation).
 

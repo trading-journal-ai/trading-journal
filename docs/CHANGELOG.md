@@ -13,6 +13,29 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
 
 ---
 
+## 2026-09-15
+
+### Changed
+
+- Main Import uses the header account, direct Sync, a single file picker,
+  compact results, and a custom date calendar. Expired authorization directs
+  users to Trading Monitor; the inline daily import stays unchanged.
+- Daily P&L adds compact stats, elapsed-time clock labels, sparse round-dollar
+  grid levels, and aligned ticker rows with circular note actions.
+- Day trade stats use plain labels; dollar expectancy reads “Avg P&L / trade.”
+
+### Fixed
+
+- Today opens the current ET day in Journal from Journal and Calendar.
+- Analytics includes complete account history and execution-derived realized
+  P&L, including partial exits, consistent with Journal and Calendar.
+
+### Added
+
+- Temporary one-minute chart CSV uploads in trade review when provider data
+  is unavailable, with automatic replacement by complete provider candles.
+
+
 ## 2026-09-11 (local main)
 
 ### Changed

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { formatPnlAxisTime, pnlTimeline } from "@/lib/pnlAxisTime";
+import { formatPnlPriceTick, pnlPriceTicks } from "@/lib/pnlPriceScale";
 import {
   BaselineSeries,
   ColorType,
@@ -9,6 +11,7 @@ import {
   createChart,
   type BaselineData,
   type UTCTimestamp,
+  type WhitespaceData,
 } from "lightweight-charts";
 
 export type JournalPnlPoint = {
@@ -66,10 +69,10 @@ function withAlpha(color: string, alpha: number): string {
   return `rgba(${Number.parseInt(match[1], 16)}, ${Number.parseInt(match[2], 16)}, ${Number.parseInt(match[3], 16)}, ${alpha})`;
 }
 
-function chartData(points: JournalPnlPoint[]): BaselineData[] {
+function chartData(points: JournalPnlPoint[]): (BaselineData | WhitespaceData)[] {
   let previousTimestamp = Number.NEGATIVE_INFINITY;
 
-  return points.map((point) => {
+  const values = points.map((point) => {
     const timestamp = Math.max(point.timestamp, previousTimestamp + 1);
     previousTimestamp = timestamp;
     return {
@@ -77,6 +80,7 @@ function chartData(points: JournalPnlPoint[]): BaselineData[] {
       value: point.value,
     };
   });
+  return pnlTimeline(values).map((point) => ({ ...point, time: point.time as UTCTimestamp }));
 }
 
 export default function JournalPnlChart({ points }: { points: JournalPnlPoint[] }) {
@@ -105,6 +109,8 @@ export default function JournalPnlChart({ points }: { points: JournalPnlPoint[] 
     if (!container || data.length === 0) return undefined;
 
     const colors = readChartColors();
+    const values = data.flatMap((point) => "value" in point ? [point.value] : []);
+    let priceTicks = pnlPriceTicks(values, container.clientHeight || 320);
     const chart = createChart(container, {
       autoSize: true,
       height: 320,
@@ -116,7 +122,7 @@ export default function JournalPnlChart({ points }: { points: JournalPnlPoint[] 
         fontSize: 12,
       },
       grid: {
-        horzLines: { color: colors.grid, style: LineStyle.Dotted },
+        horzLines: { visible: false },
         vertLines: { visible: false },
       },
       crosshair: {
@@ -144,14 +150,18 @@ export default function JournalPnlChart({ points }: { points: JournalPnlPoint[] 
         fixLeftEdge: true,
         fixRightEdge: true,
         rightOffset: 0,
+        minBarSpacing: 0.001,
+        uniformDistribution: true,
+        allowBoldLabels: false,
         secondsVisible: false,
-        tickMarkFormatter: formatChartTime,
+        tickMarkFormatter: formatPnlAxisTime,
         timeVisible: true,
       },
       handleScroll: false,
       handleScale: false,
       localization: {
         priceFormatter: formatMoney,
+        tickmarksPriceFormatter: (prices: number[]) => prices.map(() => ""),
         timeFormatter: formatChartTime,
       },
     });
@@ -171,6 +181,9 @@ export default function JournalPnlChart({ points }: { points: JournalPnlPoint[] 
         minMove: 0.01,
         formatter: formatMoney,
       },
+      autoscaleInfoProvider: () => ({
+        priceRange: { minValue: priceTicks[0], maxValue: priceTicks[priceTicks.length - 1] },
+      }),
       priceLineVisible: false,
       priceScaleId: "right",
       topFillColor1: withAlpha(colors.positive, 0.28),
@@ -178,10 +191,39 @@ export default function JournalPnlChart({ points }: { points: JournalPnlPoint[] 
       topLineColor: colors.positive,
     });
 
+    const makeAxisViews = () => priceTicks.map((price) => ({
+      coordinate: () => series.priceToCoordinate(price) ?? -1000,
+      text: () => formatPnlPriceTick(price, priceTicks[1] - priceTicks[0]),
+      textColor: () => colors.text,
+      backColor: () => colors.background,
+      tickVisible: () => false,
+    }));
+    const makeGridLines = () => priceTicks.map((price) => series.createPriceLine({
+      price,
+      color: colors.grid,
+      lineStyle: LineStyle.Dotted,
+      lineWidth: 1,
+      axisLabelVisible: false,
+    }));
+    let axisViews = makeAxisViews();
+    let gridLines = makeGridLines();
+    series.attachPrimitive({ priceAxisViews: () => axisViews });
     series.setData(data);
     chart.timeScale().fitContent();
 
-    return () => chart.remove();
+    const observer = new ResizeObserver(() => {
+      const nextTicks = pnlPriceTicks(values, container.clientHeight || 320);
+      if (nextTicks.join() === priceTicks.join()) return;
+      priceTicks = nextTicks;
+      axisViews = makeAxisViews();
+      gridLines.forEach((line) => series.removePriceLine(line));
+      gridLines = makeGridLines();
+      series.applyOptions({ autoscaleInfoProvider: () => ({
+        priceRange: { minValue: priceTicks[0], maxValue: priceTicks[priceTicks.length - 1] },
+      }) });
+    });
+    observer.observe(container);
+    return () => { observer.disconnect(); chart.remove(); };
   }, [data, themeKey]);
 
   if (data.length === 0) {

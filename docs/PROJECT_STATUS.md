@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-09-14 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-09-15 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -40,6 +40,16 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-09-15** — Prepared the accepted Journal updates for publication from
+  refreshed remote main: compact importer, daily P&L presentation and axes,
+  Today navigation, ticker alignment, analytics parity, temporary chart uploads,
+  and trade-stat labels. Source matches accepted local main, except trailing
+  whitespace cleanup. Full lint/production build and all 308 runnable tests
+  pass; six existing tests remain skipped and the existing NFT trace warning
+  remains. Prior canonical browser checks cover the importer and Journal UI.
+  Publication uses a clean final-tree snapshot; private historical commits,
+  databases, exports, and deferred experiments are excluded.
 
 - **2026-09-14** — Prepared remote synchronization of the accepted local baseline.
   - Publication branch `codex/publish-local-baseline-sept14` starts at refreshed
