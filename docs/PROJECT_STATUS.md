@@ -50,6 +50,7 @@ stopped. This is the "when did we last work on it" trail.
   remains. Prior canonical browser checks cover the importer and Journal UI.
   Publication uses a clean final-tree snapshot; private historical commits,
   databases, exports, and deferred experiments are excluded.
+  Published for merge in [PR #78](https://github.com/trading-journal-ai/trading-journal/pull/78).
 
 - **2026-09-14** — Prepared remote synchronization of the accepted local baseline.
   - Publication branch `codex/publish-local-baseline-sept14` starts at refreshed

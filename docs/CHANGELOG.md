@@ -15,6 +15,8 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
 
 ## 2026-09-15
 
+[PR #78](https://github.com/trading-journal-ai/trading-journal/pull/78).
+
 ### Changed
 
 - Main Import uses the header account, direct Sync, a single file picker,
