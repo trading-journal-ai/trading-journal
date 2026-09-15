@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireImportDestination } from "@/lib/import/destination";
 import { getActiveAccount } from "@/lib/accountScope";
 import { canImportData } from "@/lib/demoMode";
 import { inspectBrokerCsv, type BrokerCsvInspection } from "@/lib/import/inspect";
@@ -24,6 +25,10 @@ export async function importCsvAction(
     return { ok: false, error: "Choose a supported CSV file." };
   }
   try {
+    const destination = formData.get("journalAccountId");
+    const account = destination === null
+      ? await getActiveAccount()
+      : await requireImportDestination(Number(destination));
     const csv = await file.text();
     const inspection = inspectBrokerCsv(csv);
     if (!inspection.importable) {
@@ -33,7 +38,6 @@ export async function importCsvAction(
         inspection,
       };
     }
-    const account = await getActiveAccount();
     const summary = await importBrokerCsv(csv, file.name, account.id);
     revalidatePath("/trades");
     revalidatePath("/calendar");

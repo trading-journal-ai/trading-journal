@@ -445,3 +445,26 @@ These should remain the defaults:
 
 This gives the low-friction normal path the user wants while keeping ambiguous
 history visible and recoverable instead of silently corrupting the Journal.
+
+## Compact modal (September 2026)
+
+The main Import modal uses one-step Schwab Sync and direct CSV selection. It shows
+progress, result, or actionable error in place of the preceding state. The result
+keeps executions added and duplicates skipped visible; fee updates and material
+reconciliation/coverage notices remain explicit. A read-only preview is no longer
+a user-visible prerequisite, but backend normalization, dedupe, fee enrichment,
+reconciliation, and transactional persistence remain authoritative.
+
+The modal follows the account selected in the app header and has no independent
+account selector. Existing Schwab API import batches are capability evidence for
+that selected account only; they never redirect an unsupported/Paper account into
+another live journal. Unconfigured accounts and Paper show no import controls or
+broker connection request. First-use capability setup remains deferred; account
+names are not used as type metadata.
+
+The modal sends its captured destination for API and CSV requests. Server validation
+rejects unsupported destinations and any header-account mismatch before import
+work begins. The selected account is held through history loading, file parsing,
+and persistence. Open journal selects the saved destination before navigation.
+Other callers retain existing active-account behavior; the inline daily import UI
+remains unchanged. No account schema or Paper connector/parser was introduced.
