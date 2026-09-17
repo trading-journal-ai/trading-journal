@@ -106,25 +106,25 @@ base; branch existence and old tests do not imply product acceptance.
 Related design/spec branches and other retained historical refs are mapped in
 [the branch inventory](REPOSITORY_CONSOLIDATION.md).
 
-## 4. GitHub publication — September 17 synchronization
+## 4. GitHub publication — September 17 alignment
 
-Accepted source through local `0c4e824` is published in
-[PR #79](https://github.com/trading-journal-ai/trading-journal/pull/79) on
-`codex/publish-journal-updates-sept17`, based on refreshed remote main `1e372e5`.
-The PR is open; remote main is not merged. This publishes the Analytics workspace, Top Gainers updates, shared control
-polish and offline research tooling already integrated locally. See the latest
-[worklog](PROJECT_STATUS.md#worklog) for validation and publication status.
-Private research outputs and the separate `codex/analytics-research-refresh`
-audit/prototype branch remain local; their presence is not permission to publish
-screenshots or account observations.
+The accepted Journal changes merged in
+[PR #79](https://github.com/trading-journal-ai/trading-journal/pull/79) as
+`6a19385`. Canonical local `main` now tracks the same clean remote history; its
+application source is unchanged from the verified local release. Start future
+Journal branches from this `main`.
 
-**Important publication boundary:** older local checkpoint history retains private
-design examples. Publish a reviewed final-tree snapshot from a fresh branch based
-on refreshed GitHub main, rather than pushing the existing local history. Do not
-upload private originals, recovery bundles, live databases or broker exports.
-Future synchronization must preserve remote-only work. Local main must not be
-pushed wholesale, even after a release is reconciled locally. Trading Server
-publication and installed services are outside this Journal release.
+The older local ancestry is preserved under
+`codex/private-main-pre-clean-alignment-sept17` and in a verified private Git
+bundle. It includes a historical design checkpoint with real trading examples.
+Do not merge, rebase onto, or push that preserved branch or other older refs
+without reviewing their ancestry. Existing local personal databases, screenshots,
+broker exports, and research outputs remain outside Git. The separate
+`codex/analytics-research-refresh` audit/prototype branch is not part of PR #79.
+Trading Server publication and installed services are separate.
+
+See the latest [worklog](PROJECT_STATUS.md#worklog) for validation and the
+[Analytics contract](analytics/ANALYTICS_REVIEW.md) for implemented scope.
 
 ## Completed today / keep out of the Journal backlog
 

@@ -13,9 +13,9 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
 
 ---
 
-## 2026-09-17 — published for review
+## 2026-09-17
 
-[PR #79](https://github.com/trading-journal-ai/trading-journal/pull/79) · not yet merged.
+Merged [PR #79](https://github.com/trading-journal-ai/trading-journal/pull/79).
 
 - Replace legacy Analytics with completed-trade Overview, editable Compare,
   Sizing Up, Recovery and Review studies. Add grouped statistics, cumulative
