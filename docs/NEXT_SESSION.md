@@ -108,9 +108,10 @@ Related design/spec branches and other retained historical refs are mapped in
 
 ## 4. GitHub publication — September 17 synchronization
 
-Accepted source through local `0c4e824` is prepared on
+Accepted source through local `0c4e824` is published in
+[PR #79](https://github.com/trading-journal-ai/trading-journal/pull/79) on
 `codex/publish-journal-updates-sept17`, based on refreshed remote main `1e372e5`.
-This publishes the Analytics workspace, Top Gainers updates, shared control
+The PR is open; remote main is not merged. This publishes the Analytics workspace, Top Gainers updates, shared control
 polish and offline research tooling already integrated locally. See the latest
 [worklog](PROJECT_STATUS.md#worklog) for validation and publication status.
 Private research outputs and the separate `codex/analytics-research-refresh`

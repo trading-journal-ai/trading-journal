@@ -62,6 +62,9 @@ stopped. This is the "when did we last work on it" trail.
   passed after permitting temporary mock Unix sockets. Targeted config lint and
   whitespace checks passed. No browser rerun: application source is unchanged
   from the accepted, previously verified canonical UI.
+  Published in [PR #79](https://github.com/trading-journal-ai/trading-journal/pull/79)
+  on `codex/publish-journal-updates-sept17`. Remote main is not merged; the
+  canonical app already runs the accepted implementation. No deployment.
 
 - **2026-09-15** — Prepared the accepted Journal updates for publication from
   refreshed remote main: compact importer, daily P&L presentation and axes,
