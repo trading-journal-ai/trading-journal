@@ -41,6 +41,19 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-09-17** — Triaged `codex/analytics-research-refresh` into a working
+  [Analytics evidence archive](analytics/ANALYTICS_EVIDENCE_ARCHIVE.md) on a fresh
+  clean-history branch. Published the complete accessible Tradervue UI inventory
+  and attributed public visual evidence in
+  [PR #81](https://github.com/trading-journal-ai/trading-journal/pull/81), repaired
+  the implementation contract's missing research links, corrected the five-view
+  architecture description and marked the older research plan historical. The
+  proposal and HTML sketch remain only on the preserved local research branch;
+  no application code or private screenshots/trading values were copied. Relative
+  links, privacy-pattern scan and whitespace checks passed; no runtime tests were
+  needed for documentation-only changes. Original branch and worktree are clean
+  and retained for recovery.
+
 - **2026-09-17** — Merged the clean Analytics/Top Gainers publication in
   [PR #79](https://github.com/trading-journal-ai/trading-journal/pull/79) as
   remote `6a19385`. Verified `src/`, `scripts/`, package files and Vitest config

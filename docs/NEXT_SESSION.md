@@ -121,6 +121,11 @@ Do not merge, rebase onto, or push that preserved branch or other older refs
 without reviewing their ancestry. Existing local personal databases, screenshots,
 broker exports, and research outputs remain outside Git. The separate
 `codex/analytics-research-refresh` audit/prototype branch is not part of PR #79.
+Selected, source-qualified evidence from that branch is now indexed in the
+[Analytics evidence archive](analytics/ANALYTICS_EVIDENCE_ARCHIVE.md) via
+[PR #81](https://github.com/trading-journal-ai/trading-journal/pull/81). The
+original prototype and pre-implementation plans remain historical local
+references, not a branch to merge wholesale.
 Trading Server publication and installed services are separate.
 
 See the latest [worklog](PROJECT_STATUS.md#worklog) for validation and the

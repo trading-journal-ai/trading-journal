@@ -31,6 +31,10 @@ Merged [PR #79](https://github.com/trading-journal-ai/trading-journal/pull/79).
   Core policy includes common-stock ADRs and positive sub-dollar prior closes.
 - Simplify empty calendar labels. Add offline Market Context research tools and
   planning contracts; production market scoring remains unimplemented.
+- Curate the historical Tradervue inventory and attributed visual evidence into
+  an [Analytics evidence archive](analytics/ANALYTICS_EVIDENCE_ARCHIVE.md), with
+  current implementation and unverified previews clearly separated
+  ([PR #81](https://github.com/trading-journal-ai/trading-journal/pull/81)).
 
 ## 2026-09-15
 
