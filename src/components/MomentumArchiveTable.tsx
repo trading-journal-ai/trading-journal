@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { Fragment, useCallback, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import MomentumArchiveNews from "@/components/MomentumArchiveNews";
+import MomentumArchiveSymbol from "@/components/MomentumArchiveSymbol";
 import MomentumArchiveChartPanel from "@/components/MomentumArchiveChartPanel";
 import InlineLedgerDisclosure, { useInlineLedgerDisclosure } from "@/components/ui/InlineLedgerDisclosure";
 import type {
@@ -60,11 +62,10 @@ function dateLabel(date: string) {
 
 function reasonLabel(reason: ArchiveMoverSummary["coreExclusionReasons"][number]) {
   const labels = {
-    instrument_not_common_stock: "Not common stock",
+    instrument_not_common_stock: "Not common shares or ADR",
     invalid_session_date: "Invalid session date",
     known_split_execution_date: "Split date",
-    missing_previous_close: "Missing prior close",
-    previous_close_below_one_dollar: "Prior close < $1",
+    missing_previous_close: "Missing or invalid prior close",
     previous_close_too_old: "Stale prior close",
     move_below_fifty_percent: "Move < 50%",
   } as const;
@@ -117,7 +118,7 @@ function useFirstColumnWidth() {
   const [width, setWidth] = useState<number | null>(null);
 
   const measure = useCallback(() => {
-    const first = tableRef.current?.querySelector("thead tr:nth-child(2) th");
+    const first = tableRef.current?.querySelector('thead th[scope="col"]');
     if (first) setWidth(first.getBoundingClientRect().width);
   }, []);
 
@@ -161,7 +162,7 @@ function buildColumns(view: "archive" | "day", universe: ArchiveUniverse): Archi
     ]
     : [{ align: "left", group: "Identity", key: "symbol", label: "Symbol", sort: "symbol", sticky: 0, width: SYMBOL_WIDTH }];
 
-  identity.push({ align: "left", group: "Identity", key: "name", label: "Company", sort: "name" });
+  identity.push({ align: "left", group: "Identity", key: "news", label: "News" });
   if (universe === "raw") {
     identity.push({ align: "left", group: "Identity", key: "evidence", label: "Evidence" });
   }
@@ -195,20 +196,6 @@ function buildColumns(view: "archive" | "day", universe: ArchiveUniverse): Archi
   return [...identity, ...pricePath, ...sessions, ...liquidity];
 }
 
-/** Collapses the column list into contiguous group spans for the upper header row. */
-function buildGroups(columns: ArchiveColumn[]) {
-  const groups: Array<{ label: string; span: number; sticky?: number }> = [];
-  for (const column of columns) {
-    const last = groups.at(-1);
-    if (last && last.label === column.group) {
-      last.span += 1;
-      continue;
-    }
-    groups.push({ label: column.group, span: 1, sticky: column.sticky });
-  }
-  return groups;
-}
-
 function stickyStyle(offset: number | undefined): CSSProperties | undefined {
   return offset === undefined ? undefined : { backgroundColor: "inherit", left: offset };
 }
@@ -217,6 +204,7 @@ export default function MomentumArchiveTable({
   contextLabel,
   contextMovers = [],
   direction,
+  emptyHint,
   movers,
   sort,
   sortHrefs,
@@ -226,6 +214,7 @@ export default function MomentumArchiveTable({
   contextLabel?: string;
   contextMovers?: ArchiveMoverSummary[];
   direction: ArchiveSortDirection;
+  emptyHint?: string;
   movers: ArchiveMoverSummary[];
   sort: ArchiveMoverSort;
   sortHrefs: Partial<Record<ArchiveMoverSort, string>>;
@@ -235,7 +224,6 @@ export default function MomentumArchiveTable({
   const disclosure = useInlineLedgerDisclosure<string>();
   const { tableRef, width: firstColumnWidth } = useFirstColumnWidth();
   const columns = buildColumns(view, universe);
-  const groups = buildGroups(columns);
   const symbolLeft = firstColumnWidth ?? DATE_WIDTH;
   const offsetFor = (column: ArchiveColumn) => column.pinned ? symbolLeft : column.sticky;
 
@@ -252,9 +240,9 @@ export default function MomentumArchiveTable({
           No movers match this view
         </p>
         <p className="mx-auto mt-2 max-w-md text-[13px] leading-6 text-[var(--muted)]">
-          {view === "day"
-            ? "Try another session lens, step to a neighbouring day, or switch to Raw evidence to see observations Core filters out."
-            : "Widen the date range, lower the minimum peak, clear the RVOL floor, or switch to Raw evidence."}
+          {emptyHint ?? (view === "day"
+            ? "Try another date or session, or clear the symbol search."
+            : "Widen the date range, lower the minimum peak, clear the RVOL floor, or switch to Raw evidence.")}
         </p>
       </div>
     );
@@ -264,27 +252,9 @@ export default function MomentumArchiveTable({
     <div className="border-y border-[var(--hairline)]">
       <div className="max-h-[76vh] overflow-auto">
         <table ref={tableRef} className={`w-full border-collapse text-left text-[13px] ${universe === "raw" ? "min-w-[1220px]" : "min-w-[1060px]"}`}>
-          <thead className="font-mono text-xs uppercase tracking-[0.24em] text-[var(--muted)]">
+          <thead className="font-sans text-xs tracking-normal text-[var(--muted)]">
             <tr>
-              {groups.map((group, index) => (
-                <th
-                  key={`${group.label}-${index}`}
-                  colSpan={group.span}
-                  scope="colgroup"
-                  style={{
-                    ...stickyStyle(group.sticky),
-                    ...(group.sticky === undefined ? {} : { backgroundColor: "var(--background)" }),
-                  }}
-                  className={`sticky top-0 h-7 whitespace-nowrap bg-[var(--background)] px-3 text-[10px] font-medium tracking-[0.2em] text-[var(--faint)] ${
-                    index === 0 ? "" : "border-l border-[var(--hairline)]"
-                  } ${group.sticky === undefined ? "z-20" : "z-40"}`}
-                >
-                  {group.label}
-                </th>
-              ))}
-            </tr>
-            <tr>
-              {columns.map((column) => {
+              {columns.map((column, index) => {
                 const active = column.sort !== undefined && sort === column.sort;
                 const offset = offsetFor(column);
                 const href = column.sort === undefined ? undefined : sortHrefs[column.sort];
@@ -308,7 +278,7 @@ export default function MomentumArchiveTable({
                       ...(offset === undefined ? {} : { backgroundColor: "var(--background)" }),
                       ...(column.width === undefined ? {} : { minWidth: column.width }),
                     }}
-                    className={`sticky top-7 whitespace-nowrap border-b border-[var(--hairline)] bg-[var(--background)] px-3 py-3 font-semibold ${
+                    className={`sticky top-0 whitespace-nowrap border-b border-[var(--hairline)] bg-[var(--background)] px-3 py-3 font-semibold ${index > 0 && columns[index - 1].group !== column.group ? "border-l" : ""} ${
                       column.align === "right" ? "text-right" : "text-left"
                     } ${active ? "text-[var(--foreground)]" : ""} ${
                       offset === undefined ? "z-20" : "z-40"
@@ -324,7 +294,7 @@ export default function MomentumArchiveTable({
               })}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="[&>tr:last-child]:border-b-0 [&>tr:last-child>td]:border-b-0">
             {rows.map(({ mover, subdued }) => {
               const rowId = `${mover.date}:${mover.symbol}`;
               const expanded = disclosure.expandedId === rowId;
@@ -357,20 +327,11 @@ export default function MomentumArchiveTable({
                       style={{ ...stickyStyle(view === "archive" ? symbolLeft : 0), minWidth: SYMBOL_WIDTH }}
                       className="sticky z-10 px-3 py-3"
                     >
-                      <button
-                        type="button"
-                        aria-controls={panelId}
-                        aria-expanded={open}
-                        className={`text-left font-semibold ${subdued ? "text-[var(--muted)]" : "text-[var(--foreground)]"} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]`}
-                      >
-                        {mover.symbol}
-                      </button>
+                      <MomentumArchiveSymbol symbol={mover.symbol} name={mover.instrumentName}
+                        panelId={panelId} open={open} subdued={subdued} />
                     </td>
-                    <td
-                      className={`truncate px-3 py-3 ${view === "day" ? "max-w-[180px]" : "max-w-56"} ${MUTED}`}
-                      title={mover.instrumentName ?? undefined}
-                    >
-                      {mover.instrumentName ?? mover.primaryExchange ?? "Name unavailable"}
+                    <td className="px-3 py-3 align-top">
+                      <MomentumArchiveNews key={rowId} symbol={mover.symbol} date={mover.date} />
                     </td>
                     {universe === "raw" ? (
                       <td className="px-3 py-3">
@@ -426,7 +387,7 @@ export default function MomentumArchiveTable({
                   </tr>
                   {expanded ? (
                     <tr id={panelId}>
-                      <td colSpan={columns.length} className="border-b border-[var(--border)] bg-[var(--background)] p-0">
+                      <td colSpan={columns.length} className="border-b border-[var(--hairline)] bg-[var(--background)] p-0">
                         <InlineLedgerDisclosure closing={closing}>
                           <MomentumArchiveChartPanel mover={mover} onClose={() => disclosure.close(rowId)} />
                         </InlineLedgerDisclosure>
@@ -439,8 +400,9 @@ export default function MomentumArchiveTable({
           </tbody>
         </table>
       </div>
-      <div className={`border-t border-[var(--hairline)] px-3 py-2.5 text-[11px] ${MUTED}`}>
-        Click any row to load its private one-minute chart.
+      <div className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-[var(--hairline)] px-3 py-2.5 text-[11px] ${MUTED}`}>
+        <span>Click any row to load its private one-minute chart.</span>
+        {view === "day" ? <span>Use arrow keys ← and → to step through weekdays.</span> : null}
       </div>
     </div>
   );

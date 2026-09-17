@@ -1,6 +1,6 @@
-# Momentum Archive
+# Top Gainers
 
-> Status: Browser implemented · Presentation: Trading Journal · Data/rules: Trading Server · Rule contract: `core-common-stock-v1`
+> Status: Browser implemented · Presentation: Trading Journal · Data/rules: Trading Server · Rule contract: `core-equity-v2`
 >
 > **Exact-symbol remediation active.** The format-2 archive was activated and
 > fully verified on August 25, 2026. The quarantined legacy snapshot contained
@@ -15,8 +15,11 @@ investigation and unadopted normalized candidate are a Server task. Start with
 `docs/handoffs/momentum-archive-research.md` on maintained Trading Server `main`
 (the primary Server checkout may be on a separate WIP branch).
 
-Momentum Archive is a private historical-research surface for studying common-stock
+Top Gainers is a private historical-research surface for studying common-stock
 momentum days and comparing that opportunity set with Journal trades.
+
+The user-facing name is **Top Gainers** (formerly Momentum Archive). Existing
+`/analytics/momentum-archive` URLs and internal identifiers remain unchanged.
 
 ## Data ownership and location
 
@@ -86,17 +89,17 @@ deliberate archive or source replacement.
 
 The migration never deletes its source. Retiring an older copy is a separate, explicitly authorized cleanup after the Journal-owned snapshot and raw-file relocation are proven.
 
-## Core common-stock universe
+## Core equity universe
 
-The first versioned research universe is `core-common-stock-v1`:
+The current universe is `core-equity-v2`:
 
-- point-in-time Massive instrument type is `CS`;
+- point-in-time Massive instrument type is `CS` or common-stock ADR `ADRC`;
 - known split execution dates are excluded;
-- previous regular-session close is at least $1;
+- previous regular-session close is finite and strictly positive;
 - the previous-close observation is one to seven calendar days old; and
 - the maximum eligible 04:00–20:00 ET high is at least 50% above that close.
 
-ETF, ADR certificate, warrant, right, unit, and other non-common structures remain in raw evidence but do not enter Core. An ETF Journal trade should be labeled **Outside Momentum Archive Core · ETF**, not treated as missing data.
+ETFs, preferred shares/ADRs, warrants, rights, units, and other non-common structures remain in raw evidence but do not enter Core. Common-stock ADRs and sub-dollar prior closes are included. Full archive offers an optional **Min prior close $** filter (`minPreviousClose`), carried into sorting, pagination, summaries and CSV export; main review views use no price floor. An ETF Journal trade should be labeled **Outside Momentum Archive Core · ETF**, not treated as missing data.
 
 The adapter returns explicit exclusion reasons. It does not delete unusual observations or impose a maximum percentage gain. A future high-confirmation pass will flag isolated prints, weak transaction support, and corporate-action risk using the preserved minute bars.
 
@@ -104,10 +107,30 @@ Full-day dollar volume and completed-session RVOL are retrospective evidence. Th
 
 ## Initial product contract
 
-Momentum Archive lives under Analytics with two views:
+Top Gainers lives under Analytics with Day / Week / Month period tabs
+and a separate Full archive link beside the page heading:
 
-- **Day by day:** session navigation and a top-gainers ledger for one date.
+- **Day:** a top-gainers ledger for one Eastern Time date; defaults to the latest published session.
+- **Week:** the selected date's Monday–Friday range, matching Journal.
+- **Month:** the full calendar month containing the selected date.
 - **Full archive:** date range, symbol search, universe selection, filters, sorting, pagination, and export.
+
+Week and Month reuse the aggregate ledger, with bounds derived from the anchor
+date. Day, Week, Month and Custom range use Core with a compact Symbol search;
+minimum peak, RVOL and universe selection are available only in Full archive.
+Main views ignore advanced URL parameters so hidden filters cannot affect results.
+Symbol search retains dates, session and sorting, and applies to both qualified
+rows and the optional near-miss tier. Pagination, sorting and CSV export use the same period. Charts
+remain on demand; changing periods does not preload minute candles or download
+the database. Empty ranges do not establish complete source coverage.
+
+The summary strip uses the active Core date range, peak-session filter, and
+Symbol search. Day shows **Number of movers**, largest peak, and median peak;
+the one-day count and repeated symbol count are omitted. Week and Month show
+days with movers, qualified moves, unique symbols, largest peak, and median
+peak. The Day introduction still describes the whole selected session. The
+strip uses spacing without dividers between metrics. A single horizontal rule separates the stats
+from the date toolbar below.
 
 ### Session is a filter, not a display lens
 
@@ -130,7 +153,7 @@ the filter.
 
 ### Day by day columns
 
-`Symbol · Company · Prior close · High of day · Gain · PM · Cont. · AH · RVOL · $ volume`
+`Symbol · News · Prior close · High of day · Gain · PM · Cont. · AH · RVOL · $ volume`
 
 **Gain** is the qualifying peak, tagged with the session that made it (`+490% RTH`).
 There is no separate per-session gain column, because gain *is*
@@ -152,18 +175,50 @@ Day by day is always the Core universe. **Show more** appends near-misses in the
 30–50% band beneath a labeled rule, in muted styling; the tier is kept disjoint
 from the qualified set by `qualifies_mover = 0`, so no row can appear twice.
 
-Day navigation is **Latest · Previous day · Next day · session select**, matching
-the day-nav order `DESIGN_SYSTEM.md` specifies for the Journal. Left and right
-arrows step sessions unless focus is in a control. `Latest` is named for what it
-does: archive coverage trails the calendar, so a "Today" control would land on a
-day that is not today.
+The period tabs and **Previous · Next · Calendar** controls sit on the left of
+one toolbar; Symbol search sits on the right in Day, Week, Month, and Custom
+range. **All · Pre-Market · Regular · After Hours** sits beside the summary
+stats above that toolbar. The controls use the page background (white in the
+light theme) and wrap on narrow screens. Date navigation follows Journal.
+The Today shortcut is omitted. The default Day view opens the newest published
+snapshot/candidate-context date from source health, usually the prior trading
+session while today's data is pending. This handles weekends, holidays, delayed
+collection and published zero-mover sessions without loading all archive dates.
+Once today's evidence is published it may become the default. Partial publication
+still carries its coverage warning; latest does not imply complete.
+Explicit date URLs and historical period anchors remain intact. The Day tab
+clamps an anchor newer than the latest publication to that published date; direct
+Full archive's Back to day view follows the same rule. Previous/Next move
+by weekdays in Day (weekends skipped, exchange holidays retained), seven calendar
+days in Week, and one calendar month in Month, clamping shorter months. Calendar
+opens Start date and End date fields, initialized from the current period.
+Apply range selects both endpoints inclusively and opens a labeled Custom range;
+Cancel leaves the current selection unchanged. The range retains session and
+other filters, and its bounds persist through filtering, sorting, pagination and
+CSV export. In Custom, Previous/Next step by the range's inclusive calendar-day
+length. Choosing Day/Week/Month returns to that preset. Navigation resets the
+page and expanded-row tiers. Left/right arrows step periods unless a field or
+calendar is handling keyboard input. Missing and future dates remain selectable
+and disclose unpublished evidence instead of silently jumping to a stored date.
+The old full-history session dropdown request is no longer needed.
 
 ### Full archive
 
-`Date · Symbol · Company · Prior close · High · Gain · High at · RVOL · $ volume · Volume`
+The heading includes **Back to previous view** when entered from a period view.
+It restores the originating dates, range, session/search filters, sorting,
+pagination and expanded tiers, even after changing archive filters or refreshing.
+The destination is encoded in the URL and restricted to this Archive page's
+non-archive views. Direct visits instead offer **Back to day view**.
 
-Sortable column headers, a grouped sticky header, pinned Date and Symbol columns,
-pagination with a page-size control, Symbol/company search, From/To, Min peak %,
+`Date · Symbol · News · Prior close · High · Gain · High at · RVOL · $ volume · Volume`
+
+Sortable column headers use the app's Geist Sans UI font in sentence case.
+The extra Identity / Price path / Day shape / Liquidity label row is omitted.
+One sticky column-header row retains continuous 1px rules and section dividers;
+all table rules use the same hairline color, without stacked outer borders.
+Day’s arrow-key hint shares the row-click hint line and typography. The aggregate
+footer aligns the page count with the Date column and places Export filtered CSV
+below the pagination controls at the right. The redundant row-count summary is omitted. Pinned Date and Symbol columns, pagination with a page-size control, Symbol/company search, From/To, Min peak %,
 Min RVOL, a **Universe** filter carrying Core and Raw evidence, and CSV export of
 every field for the current filter.
 
@@ -275,3 +330,76 @@ verified rollback; it is not the shared installation's active writer.
 The cross-app contract and rollback procedure live in Trading Server
 `docs/shared-market-history.md`. Its SYSTEM_STATUS ledger distinguishes source,
 local main, installed runtime, verification and cleanup states.
+
+### Selected-candidate recovery coverage
+
+Trading Server can add bounded candidate recovery without changing the accepted
+`core-equity-v2` query policy. Original v1 publications remain immutable; Server re-evaluates their stored evidence on read. Its health response advertises the recovered
+date range, day count and partial-day count under `candidateContext`, and its day
+endpoint publishes source coverage and generated/published timestamps for one ET
+session. Recovered dates remain in day navigation even when they contain zero
+qualifying movers. Before the first publication, health reports unavailable
+candidate context with null date bounds and zero counts; Journal keeps market
+history available and labels an unpublished requested day explicitly.
+
+Journal labels this evidence as **selected-candidate minute evidence** across
+premarket, regular and after-hours. `complete` means the published candidates have
+the required minute evidence; it does not claim exhaustive extended-hours discovery
+for the whole market. `partial` means candidate or session evidence is missing, so
+an empty result must not be read as a verified no-mover session. Mover provenance
+remains visible as the historical Massive minute archive or bounded Massive REST
+candidate recovery. Full Archive, Raw evidence, Core rules, and personal-trade
+storage retain their existing semantics.
+
+Day shows a plain-language coverage summary, followed by expandable answers
+about prices checked, missing evidence, what it means for an empty list, and
+the latest publication time. A partial state stays visible when the details
+are closed. The text follows Trading Server's published state and does not
+claim the entire market was searched. Technical source and limitation fields
+remain in Trading Server's day endpoint rather than crowding the review UI.
+Week and Month use the same plain-language caution about incomplete dates and
+link that concern to the individual Day view.
+
+Day review initially shows the top 10 qualified movers. An explicit expansion
+reveals the remaining qualified rows returned for the session; it does not change
+qualification or discard them from the underlying result.
+
+### Archive reading guide
+
+The footer uses a native, keyboard-accessible **About this archive** disclosure,
+collapsed by default. It contains Reading the numbers, Which stocks appear, and
+Data sources and coverage. It states current Core exclusions explicitly, including non-common structures and
+invalid prior closes, and describes the optional prior-close price filter, and distinguishes stored-but-filtered records from
+undiscovered or missing evidence. Session filtering means the time of the day's
+high; RVOL displays the highest of the available same-session volume ratios.
+The review prompt asks for a symbol, date, session, expected value, and comparison
+source. This guide does not change qualification or promise complete discovery.
+
+
+The v2 policy changes eligibility only. Known splits, invalid/stale prior closes,
+50% qualification, session-of-high filtering, and incomplete-discovery warnings
+remain. Health and Day metadata distinguish active query policy from the original
+source calculation version. This does not adopt normalized-close research.
+
+### Company names and saved news
+
+Company names appear on symbol hover/focus (and focus after tapping); the symbol
+still opens the chart. Saved news loads automatically for every displayed row. There is no manual check or refresh action.
+Journal reads Trading Server's existing `/api/news-events` archive, without
+starting collection or fetching from a provider directly. The lookup covers the
+row's ET date and seven preceding calendar days. Later publications are excluded.
+Completed lookups display one of three states, without headlines or details:
+
+- Fresh news: at least one saved publication on the row's ET trading date.
+- Earlier news: saved publications only within the preceding seven calendar days.
+- No news: a successful, uncapped saved-data lookup returned no match.
+
+Every displayed row is checked on mount, with one automatic retry on failure.
+A dash indicates loading; an error icon indicates an unsuccessful or capped empty
+lookup. These transient/error indicators are not news classifications.
+
+These are publication-timing and availability states, not verified causation.
+No news does not establish that no news existed; saved coverage may be
+incomplete. A short tooltip explains each status. News does not affect mover
+eligibility, sorting or exports; company names remain in the CSV. Broad
+collection and historical news backfill are separate work.

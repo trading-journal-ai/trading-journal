@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-09-15 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-09-17 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -40,6 +40,28 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-09-17** — Prepared all accepted Journal updates through local source
+  `0c4e824` for remote publication on `codex/publish-journal-updates-sept17`,
+  based on refreshed remote main `1e372e5`. Includes completed-trade Analytics
+  (Overview, Compare, Sizing Up, Recovery and Review studies), exact money and
+  fee qualification, shared date controls, compact chart/stat typography,
+  consistent select spacing, Top Gainers navigation/filter/news improvements,
+  calendar empty-state copy, and the offline Market Context research toolkit.
+  Application and research-tool source match the accepted canonical checkout.
+  Publication retains the remote worklog and adds this release receipt; the
+  complete local session history stays local. Private historical commits,
+  screenshots, databases, broker exports and research outputs are excluded.
+  The separate Analytics research branch is not merged by this publication.
+  Canonical app remains localhost:4317; no provider, storage, or service changes.
+  Validation: `npm run verify:full` passed with the existing NFT tracing warning;
+  all 365 runnable Vitest tests passed (six existing skips), plus 18 standalone
+  Node research tests and four Python extraction tests. Initial Vitest discovery
+  incorrectly included Node-runner research files; `vitest.config.ts` now excludes
+  those files, which remain verified with their documented runner. Socket tests
+  passed after permitting temporary mock Unix sockets. Targeted config lint and
+  whitespace checks passed. No browser rerun: application source is unchanged
+  from the accepted, previously verified canonical UI.
 
 - **2026-09-15** — Prepared the accepted Journal updates for publication from
   refreshed remote main: compact importer, daily P&L presentation and axes,

@@ -441,3 +441,10 @@ Production surfaces live under the `(app)` route group.
 | Trades list / detail | [`src/app/(app)/trades/page.tsx`](../../src/app/(app)/trades/page.tsx) · [`src/app/(app)/trades/[id]/page.tsx`](../../src/app/(app)/trades/[id]/page.tsx) |
 | Trade review | [`src/app/(app)/trades/review/page.tsx`](../../src/app/(app)/trades/review/page.tsx) |
 | Superseded material | deleted — tombstones in [`../ARCHIVE.md`](../ARCHIVE.md) |
+
+## Select caret spacing
+
+Single-line native selects use a theme-aware caret inset 8px from the right
+edge, with 32px end padding to separate it from text. The global rule excludes
+multiple/listbox selects; forced-colors mode restores the native indicator.
+Native menus and keyboard selection remain unchanged.

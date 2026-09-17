@@ -43,6 +43,22 @@ Read: [Owner shortlist and decisions](OWNER_TODO.md),
 
 ## 2. Forward market context — Server data, Journal review
 
+**September 16 planning update:** start with the
+[Market Context master plan](analytics/MARKET_CONTEXT_MASTER_PLAN.md). It records
+the agreed post-mortem red/yellow/green direction, five-pillar and mover inputs,
+1–5-minute tradeability research, DTS cross-reference, coverage gaps and phased
+acceptance. Confirmed absence of +50% movers defines Cold for this strategy;
+systematic +10–49% capture is not required. A bounded coverage audit, local
+processing benchmark and raw-feature prototype are now available in the
+[research toolkit](../scripts/market-context-research/README.md). Real outputs and
+independent verification remain under gitignored `data/evals/market-context-pilot-2026-09-16/`.
+The first verbal review is recorded privately in `feedback-verbal-v1.json`:
+it distinguishes highlighted windows from surrounding moves, structure from
+price fit, and frontside advances from backside sell-offs. Some mappings/scope
+and the meaning of price concerns remain uncertain. Next: refine the review
+packet/rubric before calibration; do not train on these as clean binary labels.
+Weights, quality/yellow-green cutoffs and production scoring remain uncalibrated.
+
 **Remaining:** reconcile the after-hours opportunity-capture plan and preserved
 research tooling with Trading Server's current implementation. Determine what
 capture, session coverage, daily summaries and historical queries already support
@@ -90,29 +106,24 @@ base; branch existence and old tests do not imply product acceptance.
 Related design/spec branches and other retained historical refs are mapped in
 [the branch inventory](REPOSITORY_CONSOLIDATION.md).
 
-## 4. GitHub publication — September 14 synchronization
+## 4. GitHub publication — September 17 synchronization
 
-A refreshed, sanitized publication snapshot is ready on
-`codex/publish-local-baseline-sept14`, based on remote `1fda333` and accepted
-local source `8a64a84`. It preserves the September 13 trade-review master.
-Justin authorized remote synchronization. Node 22 full verification and all
-266 runnable tests pass (six existing skips); no live runtime is changed.
-
-Local artifact directory:
-`/Users/justin/.codex/visualizations/2026/09/10/01a08d0c-a106-72f0-adbb-95ed2c4d7ed0/journal-consolidation/`.
-Its September 10 patch/manifest are historical and predate accepted calendar
-and day-navigation work. Do not apply that old patch over the refreshed snapshot.
+Accepted source through local `0c4e824` is prepared on
+`codex/publish-journal-updates-sept17`, based on refreshed remote main `1e372e5`.
+This publishes the Analytics workspace, Top Gainers updates, shared control
+polish and offline research tooling already integrated locally. See the latest
+[worklog](PROJECT_STATUS.md#worklog) for validation and publication status.
+Private research outputs and the separate `codex/analytics-research-refresh`
+audit/prototype branch remain local; their presence is not permission to publish
+screenshots or account observations.
 
 **Important publication boundary:** older local checkpoint history retains private
 design examples. Publish a reviewed final-tree snapshot from a fresh branch based
 on refreshed GitHub main, rather than pushing the existing local history. Do not
-upload private originals, recovery bundles, live databases or broker exports. The
-tracked demo database is synthetic and is the only expected binary in the patch.
-
-Future synchronization must compare current remote and local files and preserve
-remote-only work. The original local main remains a private-history branch and
-must not be pushed wholesale. The separate Server release/inventory is outside
-this Journal snapshot. Recheck remote refs for the final publication receipt.
+upload private originals, recovery bundles, live databases or broker exports.
+Future synchronization must preserve remote-only work. Local main must not be
+pushed wholesale, even after a release is reconciled locally. Trading Server
+publication and installed services are outside this Journal release.
 
 ## Completed today / keep out of the Journal backlog
 

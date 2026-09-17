@@ -3,7 +3,7 @@
 > **Purpose:** the running list of things that need **Justin** specifically —
 > decisions only you can make and content only you can author. This is the
 > bottleneck-buster: if it's here, the build is (or will be) waiting on it.
-> **Updated:** 2026-09-10 (build-backlog correction; owner decisions not re-approved)
+> **Updated:** 2026-09-16 (market-context research review added; prior decisions not re-approved)
 >
 > Format: `[ ]` open · `[x]` done · **(rec: …)** = my recommendation, so where you
 > agree you can just check it off. Each item links to where it came from.
@@ -71,6 +71,14 @@ with the setups/rules work in §C and directly shape the rule-identity gap.
   **(rec: local by default; opt-in only, never automatic)**
 
 ## B. Recap-flow product questions (your call)
+
+- [ ] **Market-context calibration review** — the first private chart worksheet
+  is available at `data/evals/market-context-pilot-2026-09-16/review.html`.
+  Label the studied windows and download the answers; selection details are
+  collapsed for review before seeing the computed measures. This diagnostic
+  sample starts the rubric, not final calibration. Next review a broader sample
+  of session blocks and a held-out evaluation before adopting thresholds.
+  See [master plan](analytics/MARKET_CONTEXT_MASTER_PLAN.md).
 
 From [DAILY_RECAP_FLOW.md](product/DAILY_RECAP_FLOW.md) and
 [NOTE_MODEL.md](product/NOTE_MODEL.md) open questions:

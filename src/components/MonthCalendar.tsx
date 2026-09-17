@@ -71,6 +71,9 @@ function CalendarBody({ data, returnTo, onNavigateDay }: Props) {
                 {week.days.map((day) => {
                   const state = journalDayState(day.session?.trades ?? 0, noTradeDates.has(day.date) ? "no_trade" : null);
                   const isToday = day.date === data.today;
+                  const emptyLabel = !day.inMonth || !day.inRange || day.date > data.today
+                    ? null
+                    : state === "no_trade" || !isToday ? "No trades" : "Not imported yet";
                   const open = expandedId === day.date && closingId !== day.date;
                   const panelId = `${instanceId}-${day.date}`;
                   const cellClass = `grid min-h-24 content-start gap-1 border-r border-[var(--hairline)] px-3.5 py-3 text-left ${!day.inMonth || !day.inRange ? "opacity-40" : ""} ${open ? "bg-[var(--review-card-selected)]" : "bg-[var(--background)]"}`;
@@ -85,7 +88,7 @@ function CalendarBody({ data, returnTo, onNavigateDay }: Props) {
                     {day.session ? <>
                       <span className={`block text-[17px] font-medium leading-[1.25] tabular-nums ${tone(day.session.pnl)}`}>{money(day.session.pnl)}</span>
                       <span className="truncate text-[11.5px] leading-5 text-[var(--faint)] tabular-nums">{day.session.trades} {day.session.trades === 1 ? "trade" : "trades"} · {formatCalendarAccuracy(day.session.wins, day.session.losses)}</span>
-                    </> : <span className="text-[11.5px] leading-5 text-[var(--faint)]">{state === "no_trade" ? "No-trade day" : day.date > data.today ? "Upcoming" : isToday ? "Not imported yet" : "No session"}</span>}
+                    </> : emptyLabel ? <span className="text-[11.5px] leading-5 text-[var(--faint)]">{emptyLabel}</span> : null}
                   </Link>;
                   if (day.session) return <button key={day.date} type="button"
                     ref={(node) => { if (node) buttons.current.set(day.date, node); else buttons.current.delete(day.date); }}
@@ -100,7 +103,7 @@ function CalendarBody({ data, returnTo, onNavigateDay }: Props) {
                   const canManage = !data.readOnly && day.inMonth && day.inRange && day.date <= data.today && (!isToday || state === "no_trade");
                   return <div key={day.date} className={cellClass}>
                     {heading}
-                    {state === "no_trade" && day.inMonth ? <span className="text-[11.5px] leading-5 text-[var(--faint)]">No-trade day</span> : isToday && day.inMonth ? <span className="text-[12.5px] leading-5 text-[var(--faint)]">Not imported yet</span> : null}
+                    {emptyLabel ? <span className="text-[11.5px] leading-5 text-[var(--faint)]">{emptyLabel}</span> : null}
                     {canManage ? <form action={setNoTradeDayAction}>
                       <input type="hidden" name="date" value={day.date} /><input type="hidden" name="selected" value={state === "no_trade" ? "false" : "true"} />
                       <PendingSubmitButton label={state === "no_trade" ? "Undo" : "Mark no-trade"} pendingLabel="Saving…" className="text-left text-[11.5px] leading-5 text-[var(--muted)] hover:text-[var(--accent)]" />

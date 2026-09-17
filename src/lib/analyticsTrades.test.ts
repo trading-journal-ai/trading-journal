@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 const epoch = (value: string) => Date.parse(value) / 1000;
 let load: typeof import("./analyticsTrades").loadAnalyticsTrades;
 let daily: typeof import("./analyticsTrades").buildDailyPnl;
+let review: typeof import("./loadAnalyticsReview").loadAnalyticsReview;
 let calendar: typeof import("./calendarDayTrades").loadCalendarDayTrades;
 
 beforeAll(async () => {
@@ -49,6 +50,7 @@ beforeAll(async () => {
   })();
   raw.exec("INSERT INTO tags (id, name) VALUES (1, 'Test tag'); INSERT INTO trade_tags (trade_id, tag_id) VALUES (6000, 1)");
   raw.close();
+  ({ loadAnalyticsReview: review } = await import("./loadAnalyticsReview"));
   ({ loadAnalyticsTrades: load, buildDailyPnl: daily } = await import("./analyticsTrades"));
   ({ loadCalendarDayTrades: calendar } = await import("./calendarDayTrades"));
 });
@@ -96,5 +98,25 @@ describe("Analytics P&L parity", () => {
     expect(opening.every((row) => row.pnl === null)).toBe(true);
     expect(daily(opening)[0].cumulative).toBe(0);
     expect(daily(await load({ range: { from: "2026-08-01", to: "2026-08-31" } }, 101))).toEqual([]);
+  });
+});
+
+
+describe("completed-trade review loader", () => {
+  it("loads full history and excludes partial-open trades without changing the activity ledger", async () => {
+    const result = await review(101);
+    expect(result.rows).toHaveLength(5002);
+    expect(result.rows.find(t => t.id === 6000)?.net).toBe(14);
+    expect(result.rows.find(t => t.id === 6000)?.date).toBe("2026-07-03");
+    expect(result.rows.find(t => t.id === 6000)?.tags).toEqual(["Test tag"]);
+    expect(result.open).toBe(1); expect(result.excluded).toBe(0);
+    expect(result.rows.some(t => t.id === 7000)).toBe(false);
+  });
+  it("scopes executions and fee evidence to the active account", async () => {
+    const result = await review(102);
+    expect(result.rows.map(t => t.id)).toEqual([7000]);
+    expect(result.rows[0].net).toBe(20);
+    expect(result.rows[0].unknownFees).toBe(2);
+    expect(result.rows[0].tags).toEqual([]);
   });
 });

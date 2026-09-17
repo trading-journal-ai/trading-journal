@@ -1,5 +1,9 @@
 # Opportunity Set Capture Plan
 
+> September 16 follow-up: the [Market Context master plan](MARKET_CONTEXT_MASTER_PLAN.md)
+> owns the new post-mortem classification research. The capture concepts below
+> are historical planning context; current Server source and coverage take precedence.
+
 > Status: V5 Study 05 approved as a vocabulary direction · retrospective
 > Massive market context is integrated · scanner-owned alert capture and the
 > full candidate ledger are not yet implemented
