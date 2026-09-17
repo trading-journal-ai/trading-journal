@@ -41,6 +41,18 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-09-17** — Merged the clean Analytics/Top Gainers publication in
+  [PR #79](https://github.com/trading-journal-ai/trading-journal/pull/79) as
+  remote `6a19385`. Verified `src/`, `scripts/`, package files and Vitest config
+  matched the accepted canonical implementation before alignment. Preserved the
+  former local `main` at `b3d35fa` on
+  `codex/private-main-pre-clean-alignment-sept17` and in the verified private
+  Git bundle; then recreated canonical local `main` tracking remote `main` at
+  `6a19385`. Both checkouts are clean. The historical private design checkpoint
+  is not an ancestor of the new local or remote `main`. No database, provider,
+  installed service or application code changes. The old branch and bundle remain
+  private for recovery; future work starts on clean `main`.
+
 - **2026-09-17** — Prepared all accepted Journal updates through local source
   `0c4e824` for remote publication on `codex/publish-journal-updates-sept17`,
   based on refreshed remote main `1e372e5`. Includes completed-trade Analytics
