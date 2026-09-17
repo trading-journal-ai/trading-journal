@@ -49,7 +49,13 @@ link out to Analytics rather than expanding the Journal into a terminal.
 
 ### Analytics
 
-The evidence workspace. Its stable review modes are:
+The evidence workspace. The current implementation uses six question-led views
+within a shared account/date scope. See [Completed-trade Analytics](ANALYTICS_REVIEW.md)
+for implemented behavior and [Analytics design](../design/ANALYTICS_DESIGN.md)
+for its presentation contract.
+
+The broader direction below describes analytical capabilities, rather than the
+current navigation:
 
 - **Overview:** period orientation and recent direction.
 - **Stats:** auditable performance metrics.
@@ -145,6 +151,8 @@ Specialized sources remain isolated behind their own adapters:
 
 ### Opportunity and market context
 
+- [Market Context master plan](MARKET_CONTEXT_MASTER_PLAN.md): current planning
+  home for post-mortem red/yellow/green conditions and chart tradeability research.
 - Scanner-owned candidate snapshots and explicit coverage.
 - Opportunity participation, missed names, and correct passes.
 - Market heat and regime segmentation.
@@ -172,4 +180,3 @@ Specialized sources remain isolated behind their own adapters:
   evidence, hindsight outcomes, and candidate/trade joins.
 - [Price Action Quality Model](PRICE_ACTION_QUALITY_MODEL.md) — chart-evidence
   vocabulary and interpretation boundaries.
-

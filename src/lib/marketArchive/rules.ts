@@ -1,10 +1,9 @@
-export const CORE_MOVER_RULE_VERSION = "core-common-stock-v1" as const;
+export const CORE_MOVER_RULE_VERSION = "core-equity-v2" as const;
 
 export const CORE_MOVER_RULES = {
-  instrumentType: "CS",
+  instrumentTypes: ["CS", "ADRC"],
   maxPreviousCloseGapDays: 7,
   minMovePercent: 50,
-  minPreviousRegularClose: 1,
   splitExecutionDatesIncluded: false,
 } as const;
 
@@ -22,7 +21,6 @@ export type CoreMoverExclusionReason =
   | "invalid_session_date"
   | "known_split_execution_date"
   | "missing_previous_close"
-  | "previous_close_below_one_dollar"
   | "previous_close_too_old"
   | "move_below_fifty_percent";
 
@@ -52,15 +50,13 @@ export function qualifyCoreMover(candidate: CoreMoverCandidate): CoreMoverQualif
   const sessionDate = utcDateNumber(candidate.sessionDateEt);
   const closeGap = calendarDayGap(candidate.previousCloseDate, candidate.sessionDateEt);
 
-  if (candidate.instrumentType !== CORE_MOVER_RULES.instrumentType) {
+  if (!CORE_MOVER_RULES.instrumentTypes.some(type => type === candidate.instrumentType)) {
     excludedBy.push("instrument_not_common_stock");
   }
   if (sessionDate === null) excludedBy.push("invalid_session_date");
   if (candidate.splitEvent) excludedBy.push("known_split_execution_date");
-  if (candidate.previousRegularClose === null || !Number.isFinite(candidate.previousRegularClose)) {
+  if (candidate.previousRegularClose === null || !Number.isFinite(candidate.previousRegularClose) || candidate.previousRegularClose <= 0) {
     excludedBy.push("missing_previous_close");
-  } else if (candidate.previousRegularClose < CORE_MOVER_RULES.minPreviousRegularClose) {
-    excludedBy.push("previous_close_below_one_dollar");
   }
   if (closeGap === null || closeGap < 1 || closeGap > CORE_MOVER_RULES.maxPreviousCloseGapDays) {
     excludedBy.push("previous_close_too_old");

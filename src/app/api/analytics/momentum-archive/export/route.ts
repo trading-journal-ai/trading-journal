@@ -70,6 +70,7 @@ export async function GET(request: Request) {
     direction: (parameters.get("direction") === "asc" ? "asc" : "desc") as ArchiveSortDirection,
     from: validDate(parameters.get("from")),
     minGain: numberOrUndefined(parameters.get("minGain")),
+    minPreviousClose: numberOrUndefined(parameters.get("minPreviousClose")),
     minRvol: numberOrUndefined(parameters.get("minRvol")),
     query: parameters.get("q")?.trim() || undefined,
     peakSession: session && sessions.has(session) ? session : ("all" as ArchivePeakSession),
@@ -82,7 +83,7 @@ export async function GET(request: Request) {
     const client = createMarketArchiveClient();
     const health = await client.health();
     if (!health.available) {
-      return new Response("The Momentum Archive is not available on this machine.", {
+      return new Response("The Top Gainers archive is not available on this machine.", {
         headers: { "Cache-Control": "no-store" },
         status: 503,
       });

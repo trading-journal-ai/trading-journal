@@ -10,13 +10,28 @@ const candidate = {
   splitEvent: false,
 };
 
-describe("Core common-stock mover rules", () => {
-  it("admits a non-split common stock with a recent $1+ close and 50%+ move", () => {
+describe("Core common-equity mover rules", () => {
+  it("admits a non-split common stock with a recent positive close and 50%+ move", () => {
     expect(qualifyCoreMover(candidate)).toEqual({
       excludedBy: [],
       qualifies: true,
       ruleVersion: CORE_MOVER_RULE_VERSION,
     });
+  });
+
+  it("includes common-stock ADRs and sub-dollar common shares", () => {
+    for (const instrumentType of ["CS", "ADRC"]) {
+      expect(qualifyCoreMover({ ...candidate, instrumentType, previousRegularClose: 0.25 }).qualifies).toBe(true);
+    }
+  });
+
+  it("rejects unusable closing prices and non-equity structures", () => {
+    for (const previousRegularClose of [0, -1, NaN, Infinity, null]) {
+      expect(qualifyCoreMover({ ...candidate, previousRegularClose }).excludedBy).toContain("missing_previous_close");
+    }
+    for (const instrumentType of ["ETF", "WARRANT", "RIGHT", "UNIT", "PFD", "ADRP", null]) {
+      expect(qualifyCoreMover({ ...candidate, instrumentType }).qualifies).toBe(false);
+    }
   });
 
   it("excludes non-common structures without inferring type from the ticker", () => {
@@ -36,7 +51,6 @@ describe("Core common-stock mover rules", () => {
     }).excludedBy).toEqual([
       "instrument_not_common_stock",
       "known_split_execution_date",
-      "previous_close_below_one_dollar",
       "previous_close_too_old",
       "move_below_fifty_percent",
     ]);

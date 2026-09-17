@@ -307,6 +307,11 @@ proved was off-plan.
 
 ## Market Context Model
 
+**September 16 planning follow-up:** the
+[Market Context master plan](../analytics/MARKET_CONTEXT_MASTER_PLAN.md) owns the
+post-mortem red/yellow/green research direction and validation sequence. The
+five-level vocabulary below remains prior design context, not calibrated logic.
+
 Market context answers:
 
 > What opportunity did the small-cap market provide, and did the trader's

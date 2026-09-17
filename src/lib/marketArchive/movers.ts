@@ -16,8 +16,8 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 /** Instrument-quality rules, independent of the 50% threshold. */
 const CORE_QUALITY = `
   d.split_event = 0
-  and d.instrument_type = 'CS'
-  and d.previous_regular_close >= 1
+  and d.instrument_type in ('CS', 'ADRC')
+  and d.previous_regular_close > 0
   and julianday(d.session_date) - julianday(d.previous_close_date) between 1 and 7
 `;
 const MOVER_SOURCE = `
@@ -318,6 +318,11 @@ function planMoverQuery(input: ListMoversInput): MoverQueryPlan {
     parameters.maxGain = input.maxGain;
   }
   let needsJoins = false;
+  if (input.minPreviousClose !== undefined) {
+    if (!Number.isFinite(input.minPreviousClose) || input.minPreviousClose < 0) throw new Error("Invalid minimum previous close");
+    conditions.push("d.previous_regular_close >= @minPreviousClose");
+    parameters.minPreviousClose = input.minPreviousClose;
+  }
   if (input.minRvol !== undefined && Number.isFinite(input.minRvol)) {
     conditions.push(`${RVOL_FLOOR_EXPRESSION} >= @minRvol`);
     parameters.minRvol = input.minRvol;

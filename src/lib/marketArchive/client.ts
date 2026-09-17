@@ -6,6 +6,7 @@ import { CORE_MOVER_RULE_VERSION } from "./rules";
 import type {
   ArchiveMoverAggregate,
   ArchiveUniverse,
+  CandidateContextHealth,
   ListMoversInput,
   ListMoversResult,
   TradingDaySummary,
@@ -36,6 +37,7 @@ const EXACT_IDENTITY_COLUMNS = [
 export type MarketArchiveHealth = {
   available: boolean;
   coreRuleVersion: typeof CORE_MOVER_RULE_VERSION;
+  candidateContext?: CandidateContextHealth;
   counts?: {
     archiveDates: number;
     coreMovers: number;
@@ -143,8 +145,8 @@ function queryHealth(database: Database.Database, databaseBytes: number): Market
     from symbol_days
     where qualifies_mover = 1
       and split_event = 0
-      and instrument_type = 'CS'
-      and previous_regular_close >= 1
+      and instrument_type in ('CS', 'ADRC')
+      and previous_regular_close > 0
       and julianday(session_date) - julianday(previous_close_date) between 1 and 7
   `).get() as CountRow;
 

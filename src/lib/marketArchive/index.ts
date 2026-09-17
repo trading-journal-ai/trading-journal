@@ -12,13 +12,18 @@ export {
 } from "./rules";
 export type {
   ArchiveMoverAggregate,
+  ArchiveDataSource,
   ArchiveMoverSort,
   ArchiveMoverSummary,
   ArchivePeakSession,
   ArchiveSessionEvidence,
   ArchiveSortDirection,
   ArchiveUniverse,
+  CandidateContextHealth,
+  CandidateDayContext,
+  CandidateSourceCoverage,
   ListMoversInput,
   ListMoversResult,
+  MarketHistoryDay,
   TradingDaySummary,
 } from "./types";

@@ -42,10 +42,13 @@ type Props = {
   max: string;
   invalid?: boolean;
   describedBy?: string;
+  /** Text-only navigation trigger; field mode remains the import default. */
+  triggerLabel?: string;
+  today?: string;
   onChange: (value: string) => void;
 };
 
-export default function ImportDatePicker({ label, value, min, max, invalid, describedBy, onChange }: Props) {
+export default function ImportDatePicker({ label, value, min, max, invalid, describedBy, triggerLabel, today = max, onChange }: Props) {
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -109,8 +112,8 @@ export default function ImportDatePicker({ label, value, min, max, invalid, desc
     setCursor(clamp(next));
   }
 
-  return <div className="min-w-0 space-y-1">
-    <span id={`${id}-label`} className="block text-xs text-[var(--muted)]">{label}</span>
+  return <div className={triggerLabel ? "min-w-0" : "min-w-0 space-y-1"}>
+    <span id={`${id}-label`} className={triggerLabel ? "sr-only" : "block text-xs text-[var(--muted)]"}>{label}</span>
     <button ref={trigger} type="button" aria-labelledby={`${id}-label ${id}-value`} aria-haspopup="dialog" aria-expanded={open} aria-controls={id}
       aria-describedby={describedBy}
       onClick={() => {
@@ -121,11 +124,13 @@ export default function ImportDatePicker({ label, value, min, max, invalid, desc
           panel.current?.showPopover();
         }
       }}
-      className={`flex h-11 w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-lg border bg-[var(--background)] px-3 text-sm text-[var(--foreground)] ${invalid ? "border-[var(--red)]" : "border-[var(--hairline)]"} ${focusClass}`}>
-      <span id={`${id}-value`} className="truncate">{fieldLabel.format(date(value))}</span>
-      <svg aria-hidden="true" className="shrink-0 text-[var(--muted)]" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M16 3v4M8 3v4M3 11h18" /></svg>
+      className={triggerLabel
+        ? `inline-flex h-10 cursor-pointer items-center justify-center rounded-md border border-[var(--border)] px-4 text-sm font-semibold text-[var(--body)] transition-colors hover:border-[var(--accent)] hover:text-[var(--foreground)] ${focusClass}`
+        : `flex h-11 w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-lg border bg-[var(--background)] px-3 text-sm text-[var(--foreground)] ${invalid ? "border-[var(--red)]" : "border-[var(--hairline)]"} ${focusClass}`}>
+      <span id={`${id}-value`} className="truncate">{triggerLabel ?? fieldLabel.format(date(value))}</span>
+      {!triggerLabel ? <svg aria-hidden="true" className="shrink-0 text-[var(--muted)]" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M16 3v4M8 3v4M3 11h18" /></svg> : null}
     </button>
-    <div ref={panel} id={id} popover="auto" role="dialog" aria-label={`Choose ${label.toLowerCase()} date`}
+    <div ref={panel} id={id} popover="auto" role="dialog" aria-label={`Choose ${label.toLowerCase()}${label.toLowerCase().endsWith("date") ? "" : " date"}`}
       onToggle={(event) => setOpen(event.newState === "open")}
       onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); close(); } }}
       onBlur={(event) => { if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget) && event.relatedTarget !== trigger.current) close(false); }}
@@ -147,9 +152,9 @@ export default function ImportDatePicker({ label, value, min, max, invalid, desc
         </div>
         {Array.from({ length: days.length / 7 }, (_, week) => <div key={week} role="row" className="grid grid-cols-7">
           {days.slice(week * 7, week * 7 + 7).map((day) => <div key={day} role="gridcell" aria-selected={day === value} className="flex justify-center py-0.5">
-            <button type="button" data-date={day} tabIndex={day === cursor ? 0 : -1} aria-label={dayLabel.format(date(day))} aria-current={day === max ? "date" : undefined}
+            <button type="button" data-date={day} tabIndex={day === cursor ? 0 : -1} aria-label={dayLabel.format(date(day))} aria-current={day === today ? "date" : undefined}
               disabled={day < min || day > max} onClick={() => select(day)} onKeyDown={(event) => navigate(event, day)}
-              className={`h-9 w-9 cursor-pointer rounded-full text-sm tabular-nums disabled:cursor-default disabled:opacity-25 ${focusClass} ${day === value ? "bg-[var(--action)] font-semibold text-[var(--action-foreground)]" : "hover:bg-[var(--surface-2)]"} ${day !== value && day.slice(0, 7) !== cursor.slice(0, 7) ? "text-[var(--muted)]" : ""} ${day === max && day !== value ? "ring-1 ring-inset ring-[var(--border)]" : ""}`}>
+              className={`h-9 w-9 cursor-pointer rounded-full text-sm tabular-nums disabled:cursor-default disabled:opacity-25 ${focusClass} ${day === value ? "bg-[var(--action)] font-semibold text-[var(--action-foreground)]" : "hover:bg-[var(--surface-2)]"} ${day !== value && day.slice(0, 7) !== cursor.slice(0, 7) ? "text-[var(--muted)]" : ""} ${day === today && day !== value ? "ring-1 ring-inset ring-[var(--border)]" : ""}`}>
               {date(day).getUTCDate()}
             </button>
           </div>)}

@@ -13,6 +13,25 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
 
 ---
 
+## 2026-09-17 — published for review
+
+[PR #79](https://github.com/trading-journal-ai/trading-journal/pull/79) · not yet merged.
+
+- Replace legacy Analytics with completed-trade Overview, editable Compare,
+  Sizing Up, Recovery and Review studies. Add grouped statistics, cumulative
+  P&L, a trade-result histogram, exact trade drilldowns and inline filters.
+- Default to net results with explicit missing-fee qualification. Attribute
+  flat-to-flat trades to final exit in Eastern Time; use exact-decimal cash
+  flows and split-aware entry prices. Journal/Calendar activity math is unchanged.
+- Reuse the date-range picker across Analytics and Top Gainers. Compact summary
+  metrics, fixed-size chart labels and inset select carets improve scanability.
+- Rename Momentum Archive to Top Gainers; add period navigation, range/filter
+  export parity, latest-published-day defaults and concise coverage disclosures.
+  Saved-news states distinguish fresh, earlier and absent news from failed reads.
+  Core policy includes common-stock ADRs and positive sub-dollar prior closes.
+- Simplify empty calendar labels. Add offline Market Context research tools and
+  planning contracts; production market scoring remains unimplemented.
+
 ## 2026-09-15
 
 [PR #78](https://github.com/trading-journal-ai/trading-journal/pull/78).

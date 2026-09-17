@@ -269,3 +269,21 @@ describe("Momentum Archive mover queries", () => {
       .toThrow("date must use YYYY-MM-DD");
   });
 });
+
+describe("Core equity universe and optional price filter", () => {
+  it("includes ADR and penny movers consistently across rows, totals and days", () => {
+    const db = fixtureDatabase();
+    db.exec(`update symbol_days set instrument_type='ADRC',previous_regular_close=0.5 where symbol='CORE';`);
+    expect(listMoversFromDatabase(db, {peakSession:"afterHours"}).movers[0]).toMatchObject({symbol:"CORE",qualifiesCore:true,coreExclusionReasons:[]});
+    expect(summarizeMoversFromDatabase(db, {peakSession:"afterHours"}).total).toBe(1);
+    expect(listTradingDaysFromDatabase(db)[0].moverCount).toBe(1);
+    expect(listMoversFromDatabase(db, {minPreviousClose:1}).total).toBe(0);
+    expect(summarizeMoversFromDatabase(db, {minPreviousClose:1}).total).toBe(0);
+    expect(listMoversFromDatabase(db, {minPreviousClose:0.5}).total).toBe(1);
+    for (const minPreviousClose of [-1, Infinity, NaN]) {
+      expect(()=>listMoversFromDatabase(db,{minPreviousClose})).toThrow("Invalid minimum previous close");
+    }
+    db.exec(`update symbol_days set previous_regular_close=0 where symbol='CORE';`);
+    expect(listMoversFromDatabase(db).total).toBe(0);
+  });
+});

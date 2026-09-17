@@ -17,6 +17,52 @@ export type ArchiveMoverSort =
   | "symbol"
   | "volume";
 export type ArchiveSortDirection = "asc" | "desc";
+export type ArchiveDataSource = "massive-minute" | "massive-rest-candidates";
+
+export type CandidateContextHealth = {
+  available: boolean;
+  scope: "selected-candidates";
+  firstDate: string | null;
+  lastDate: string | null;
+  days: number;
+  partialDays: number;
+};
+
+export type CandidateSourceCoverage = {
+  scope: string;
+  completeness: string;
+  limitations: string[];
+};
+
+export type CandidateDayContext = {
+  date: string;
+  state: "complete" | "partial";
+  scope: "selected-candidates";
+  publishedAt: string;
+  generatedAt: string;
+  sourceCoverage: {
+    discovery: CandidateSourceCoverage;
+    groupedDaily: CandidateSourceCoverage;
+    candidateMinutes: CandidateSourceCoverage;
+    candidateReference: CandidateSourceCoverage;
+  };
+  discovery: Record<string, unknown>;
+  calculationVersion: string;
+};
+
+export type MarketHistoryDay = {
+  date: string;
+  massive: { available: boolean; datasetId: string | null };
+  candidateContext?: CandidateDayContext | null;
+  dts: {
+    available: boolean;
+    observations: unknown;
+    heartbeat: unknown;
+    coverage: unknown;
+    snapshot: unknown;
+  };
+  research: unknown[];
+};
 
 /** All-session evidence for a mover. Never varies with the peak-session filter. */
 export type ArchiveSessionEvidence = {
@@ -45,6 +91,7 @@ export type ArchiveMoverSummary = {
    */
   continuationPercent: number | null;
   coreExclusionReasons: CoreMoverExclusionReason[];
+  dataSource?: ArchiveDataSource;
   date: string;
   evidence: ArchiveSessionEvidence;
   instrumentName: string | null;
@@ -77,6 +124,7 @@ export type ListMoversInput = {
   maxGain?: number;
   minGain?: number;
   minRvol?: number;
+  minPreviousClose?: number;
   offset?: number;
   peakSession?: ArchivePeakSession;
   query?: string;

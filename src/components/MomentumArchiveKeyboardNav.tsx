@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 /**
- * Left/right arrows step through archived sessions, matching the day-by-day
- * prototype. Typing in a control always wins over stepping.
+ * Left/right arrows step through the selected period. Calendar and field
+ * keyboard interactions always win over page navigation.
  */
 export default function MomentumArchiveKeyboardNav({
   newerHref,
@@ -18,11 +18,14 @@ export default function MomentumArchiveKeyboardNav({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
       const active = document.activeElement;
       const tag = active?.tagName ?? "";
       if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
       if (active instanceof HTMLElement && active.isContentEditable) return;
+      if (active?.closest('[role="dialog"]')) return;
+      // Native popovers become visible before their toggle event moves focus.
+      if (document.querySelector('[role="dialog"]:popover-open')) return;
 
       if (event.key === "ArrowLeft" && olderHref) {
         event.preventDefault();
