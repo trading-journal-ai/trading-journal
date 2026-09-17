@@ -1,5 +1,10 @@
 # Analytics Research Plan
 
+> Historical research and design exploration. For the implemented Analytics
+> behavior, use [Completed-trade Analytics](ANALYTICS_REVIEW.md). The inspected
+> competitor evidence and its limits are indexed in the
+> [Analytics evidence archive](ANALYTICS_EVIDENCE_ARCHIVE.md).
+
 > Status: draft research plan
 > Last updated: 2026-06-20
 > Inputs: current `/reports` implementation, existing coach/statistics docs, and

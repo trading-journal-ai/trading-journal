@@ -19,11 +19,12 @@ Select the desired live account in the existing header.
 
 ## Research alignment
 
-The implementation was reconciled against research commit `92b93a2`,
-`docs/analytics/TRADERVUE_FULL_INVENTORY.md` §10 and
-`docs/analytics/ANALYTICS_DELIVERY_PLAN.md` §1. Those documents remain on
-`codex/analytics-research-refresh`. The first slice omitted core comparison and
-recovery work; the current exploratory revision now implements those capabilities.
+The implementation was reconciled against the
+[Tradervue inventory](TRADERVUE_FULL_INVENTORY.md#10-what-changes-in-our-recommendation)
+and the [research evidence archive](ANALYTICS_EVIDENCE_ARCHIVE.md). The first
+slice omitted core comparison and recovery work; the current implementation
+includes those capabilities. The earlier delivery proposal and sketch remain
+historical research, not the implementation contract.
 
 | Audit recommendation | Current implementation | Remaining boundary |
 | --- | --- | --- |

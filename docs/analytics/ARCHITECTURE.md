@@ -49,8 +49,9 @@ link out to Analytics rather than expanding the Journal into a terminal.
 
 ### Analytics
 
-The evidence workspace. The current implementation uses six question-led views
-within a shared account/date scope. See [Completed-trade Analytics](ANALYTICS_REVIEW.md)
+The evidence workspace. The current implementation has five views: Overview,
+Compare, Sizing Up, Risk & recovery, and Review studies. See
+[Completed-trade Analytics](ANALYTICS_REVIEW.md)
 for implemented behavior and [Analytics design](../design/ANALYTICS_DESIGN.md)
 for its presentation contract.
 
