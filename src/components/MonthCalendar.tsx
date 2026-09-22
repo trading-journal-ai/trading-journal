@@ -7,6 +7,8 @@ import { formatCalendarAccuracy, formatCalendarProfitFactor } from "@/lib/calend
 import { fmtMoney } from "@/lib/format";
 import { journalDayState } from "@/lib/journalDayStatus";
 import { calendarWeeks, isCalendarDayDetail, sumCalendarSessions, type CalendarDayDetail, type CalendarMonthData, type CalendarSession, type CalendarTotals } from "@/lib/monthCalendar";
+import { averagePnlPerShare, formatPerShareMoney, AVERAGE_PNL_PER_SHARE_DESCRIPTION } from "@/lib/averagePnlPerShare";
+import TradingStatsBar from "@/components/ui/TradingStatsBar";
 import PendingSubmitButton from "@/components/PendingSubmitButton";
 import InlineLedgerDisclosure, { useInlineLedgerDisclosure } from "@/components/ui/InlineLedgerDisclosure";
 
@@ -24,22 +26,15 @@ export default function MonthCalendar(props: Props) {
   return <CalendarBody key={JSON.stringify(props.data)} {...props} />;
 }
 
-function CalendarSummary({ totals, sessions, label }: { totals: CalendarTotals; sessions: number; label: string }) {
-  const metrics = [
-    ["Sessions", sessions.toLocaleString("en-US")], ["Trades", totals.trades.toLocaleString("en-US")],
-    ["Accuracy", formatCalendarAccuracy(totals.wins, totals.losses)],
-    ["Profit factor", formatCalendarProfitFactor(totals.grossProfit, totals.grossLoss)],
-  ];
-  return <dl aria-label={`${label} summary`} className="mb-8 flex flex-wrap items-start gap-x-8 gap-y-5 sm:gap-x-10">
-    {metrics.map(([name, value]) => <div key={name} className="text-center">
-      <dt className="text-[12.5px] font-medium leading-5 text-[var(--muted)]">{name}</dt>
-      <dd className="mt-1 text-[22px] font-semibold leading-[1.2] tabular-nums">{value}</dd>
-    </div>)}
-    <div className="ml-auto text-right">
-      <dt className="text-[12.5px] font-medium leading-5 text-[var(--muted)]">P&amp;L</dt>
-      <dd className={`mt-1 text-[22px] font-semibold leading-[1.2] tabular-nums ${tone(totals.pnl)}`}>{money(totals.pnl)}</dd>
-    </div>
-  </dl>;
+function CalendarSummary({ totals, label }: { totals: CalendarTotals; label: string }) {
+  const perShare = averagePnlPerShare(totals.perShareTrades ?? []);
+  return <TradingStatsBar ariaLabel={`${label} summary`} className="mb-8" metrics={[
+    { label: "Trades", value: totals.trades.toLocaleString("en-US") },
+    { label: "Accuracy", value: formatCalendarAccuracy(totals.wins, totals.losses) },
+    { label: "Profit factor", value: formatCalendarProfitFactor(totals.grossProfit, totals.grossLoss) },
+    { label: "Per share", value: formatPerShareMoney(perShare), tone: perShare == null || perShare === 0 ? "muted" : perShare > 0 ? "positive" : "negative", description: AVERAGE_PNL_PER_SHARE_DESCRIPTION },
+    { label: "P&L", value: money(totals.pnl), tone: totals.pnl > 0 ? "positive" : totals.pnl < 0 ? "negative" : "muted" },
+  ]} />;
 }
 
 function CalendarBody({ data, returnTo, onNavigateDay }: Props) {
@@ -57,7 +52,7 @@ function CalendarBody({ data, returnTo, onNavigateDay }: Props) {
   return <section aria-label={`${monthLabel} trading calendar`} onKeyDown={(event) => {
     if (event.key === "Escape" && expandedId) { event.preventDefault(); closeDay(expandedId); }
   }}>
-    <CalendarSummary totals={sumCalendarSessions(includedSessions)} sessions={includedSessions.length} label={monthLabel} />
+    <CalendarSummary totals={sumCalendarSessions(includedSessions)} label={monthLabel} />
     <div className="overflow-x-auto pb-2">
       <div className="min-w-[940px]">
         <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_205px] pb-2 text-[12.5px] font-medium text-[var(--muted)]">

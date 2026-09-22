@@ -18,6 +18,8 @@ export type CoachReviewTradeContext = {
   setup: string | null;
   primaryLabel: string | null;
   note: string | null;
+  /** Session-level ticker reflection, retained separately from a trade-specific note. */
+  tickerNote?: string | null;
   processTags: string[];
   emotionTags: string[];
   executionAnalysis: CoachTradeExecutionFacts | null;
@@ -31,6 +33,14 @@ export type CoachReviewHumanContext = {
   didWell: string;
   standardsDrift: string;
   emotionalState: string;
+  dailyReflections?: Array<{
+    date: string;
+    recap: string;
+    intent: string;
+    didWell: string;
+    standardsDrift: string;
+    emotionalState: string;
+  }>;
 };
 
 export type CoachReviewPlaybookContext = {

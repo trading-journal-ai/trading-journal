@@ -1,9 +1,10 @@
 # Shared month calendar
 
 Selected 2026-09-11 after reviewing the A–E inventory. Justin chose D, the
-original expanded-ledger reference, and specifically accepted its summary
-layout: centered label/value pairs at the left and P&L at the far right.
-The screenshot is visual authority for the arrangement, not a data fixture.
+original expanded-ledger reference. On 2026-09-22 Justin requested one shared,
+left-aligned summary across Day, Week and Month. `TradingStatsBar` now owns
+that typography and layout, including P&L in the left-flowing metric group;
+its size prop supports compact and regular figures.
 
 ## One implementation
 
@@ -53,6 +54,11 @@ The following disclosure behavior applies to standalone `/calendar`:
 `src/lib/monthCalendar.ts` defines the common summary model. Totals use raw
 wins/losses and gross profit/loss; never average daily percentages or ratios.
 Scratch trades count as trades but do not enter the accuracy denominator.
+Per share averages each trade's net result divided by its absolute recorded
+quantity, matching Day Trades. Session payloads carry trade IDs and per-share
+results so range totals can combine a trade's in-range activity before averaging
+unique trades. Zero results count; unavailable/non-finite results do not.
+It uses equal trade weighting, not share weighting or a mean of session means.
 Month/weekly grid totals retain the existing Monday–Friday scope and exclude
 adjacent-month padding. Calendar filters retain/dim excluded day evidence;
 they only exclude it from summary totals and no-trade editing eligibility.

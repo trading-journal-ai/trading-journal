@@ -1,6 +1,8 @@
+import type { TradePerShareResult } from "@/lib/averagePnlPerShare";
 import { tradingCalendarWeeks } from "@/lib/journalPnlViews";
 
 export type CalendarTotals = {
+  perShareTrades?: TradePerShareResult[];
   pnl: number;
   trades: number;
   wins: number;
@@ -28,7 +30,8 @@ export type CalendarTradeRow = {
 export type CalendarDayDetail = { accountId: number; date: string; rows: CalendarTradeRow[] };
 
 export function sumCalendarSessions(sessions: readonly CalendarTotals[]): CalendarTotals {
-  return sessions.reduce((total, session) => ({
+  return sessions.reduce<CalendarTotals>((total, session) => ({
+    perShareTrades: [...(total.perShareTrades ?? []), ...(session.perShareTrades ?? [])],
     pnl: total.pnl + session.pnl, trades: total.trades + session.trades,
     wins: total.wins + session.wins, losses: total.losses + session.losses,
     grossProfit: total.grossProfit + session.grossProfit, grossLoss: total.grossLoss + session.grossLoss,

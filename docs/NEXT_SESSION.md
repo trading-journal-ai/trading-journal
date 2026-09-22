@@ -14,6 +14,11 @@ Optional design experiments can wait.
 
 ## 1. Coach / recap — Journal
 
+**September 19 planning:** [Weekly Recap Plan](product/WEEKLY_RECAP_PLAN.md)
+records the competitive research, accepted weekday progression and proposed
+trade highlights/market context. Next, review concrete content examples; no
+recap implementation has been authorized by that planning conversation.
+
 **Remaining:** adopt the v2 Coach Review schema in generation, validation,
 persistence and rendering; build the canonical `buildJournalDay()` / `JournalDayVM`
 so recap views share one interpretation of a day. Preserve existing saved reviews

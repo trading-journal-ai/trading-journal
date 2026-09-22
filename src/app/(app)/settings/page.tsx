@@ -3,7 +3,7 @@ import CoachModelSettings from "@/components/CoachModelSettings";
 import CoachPlaybookSettings from "@/components/CoachPlaybookSettings";
 import DevResetImports from "@/components/DevResetImports";
 import ThemeSettings from "@/components/ThemeSettings";
-import { ensureCoachPlaybook } from "@/app/coach/actions";
+import { ensureCoachPlaybook } from "@/lib/coach/reviewService";
 import { eq, desc, sql } from "drizzle-orm";
 import { getActiveAccount, listAccounts } from "@/lib/accountScope";
 import { db, schema } from "@/lib/db";

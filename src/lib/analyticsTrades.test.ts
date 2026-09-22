@@ -119,4 +119,18 @@ describe("completed-trade review loader", () => {
     expect(result.rows[0].unknownFees).toBe(2);
     expect(result.rows[0].tags).toEqual([]);
   });
+  it("bounds eligibility by inclusive ET execution dates while preserving the full lifecycle", async () => {
+    const result = await review(101, { fromDate: "2026-07-02", toDate: "2026-07-02" });
+    expect(result.rows.map(t => t.id)).toEqual([6000]);
+    expect(result.rows[0]).toMatchObject({ entryDate: "2026-07-01", date: "2026-07-03", net: 14 });
+    expect(result.rows[0].fills).toBe(3);
+    expect(result.rows[0].tags).toEqual(["Test tag"]);
+    expect(result.open).toBe(1);
+    expect(result.excluded).toBe(0);
+    expect(await review(102, { fromDate: "2026-07-02", toDate: "2026-07-02" }))
+      .toEqual({ rows: [], excluded: 0, open: 0 });
+
+    expect(await review(101, { fromDate: "2026-07-04", toDate: "2026-07-04" }))
+      .toEqual({ rows: [], excluded: 0, open: 0 });
+  });
 });

@@ -268,10 +268,18 @@ Build once, reuse everywhere.
   The trader's own annotations use amber `--accent` instead.
 - **StatBlock** (`src/components/ui/StatBlock.tsx`) — stacked label above mono
   value for dashboard summary metrics.
-- **PillStatsBar** (`src/components/ui/PillStatsBar.tsx`) — compact range
-  summary with one shared label capsule and centered, tabular values. Calendar
-  Month and Journal Month reuse it for sessions, trades, accuracy, profit
-  factor, and optional outcome-colored P&L.
+- **TradingStatsBar** (`src/components/ui/TradingStatsBar.tsx`) — shared open,
+  left-aligned label/value summary for Journal Day, Week, Month, Day Trades,
+  and Calendar Month. All figures use Geist Sans, semibold and tabular numbers.
+  `size="compact"` (18px) is the period-summary default; `size="regular"`
+  (22px) serves Day Trades. Labels stay 12px. Every metric, including P&L,
+  stays in the left-flowing group; wrapping preserves label/value pairs.
+  Per share uses signed, outcome-colored dollars and the existing trade-table
+  precision. It is the equal-weighted mean of each trade's net P&L divided by
+  its absolute recorded quantity within the selected period. Combine a trade's
+  session results before averaging; exclude unavailable results, retain zero,
+  and display a dash when none are available. The description explains the
+  average; it is not total P&L divided by total shares or a mean of daily means.
 - **ReportsStatsMatrix** — diagnostic stats table for Reports (default when
   comparing many metrics). Compact summary strip first, then grouped rows
   (Performance, Accuracy, Sizing, Timing); label-left/value-right per cell;
@@ -303,9 +311,9 @@ Build once, reuse everywhere.
   P&L usually spans full width before smaller distribution charts.
 - **Calendar** — Calendar Month and Journal → Month → P&L render the same
   `MonthCalendar` feature component. The selected baseline is inventory **D**
-  (confirmed 2026-09-11), including its open stats lockup: centered label/value
-  pairs for sessions, trades, accuracy and profit factor grouped on the left;
-  signed P&L aligned at the far right. No pill or metric-card containers. Both
+  (confirmed 2026-09-11), with its summary updated on 2026-09-22 to the shared
+  left-aligned `TradingStatsBar`: trades, accuracy, profit factor,
+  Per share and signed P&L flow together on the left. No pill or metric-card containers. Both
   consumers use the same typography and five-weekday grid with weekly totals.
   Page titles, date controls and scope tabs remain with the parent pages.
   Cells use flat theme surfaces and hairlines; only hover/selection adds a fill.
@@ -333,15 +341,21 @@ Build once, reuse everywhere.
   trades/win-rate/profit-factor row is regular 11px, with no pill fill or
   inset. Beneath each weekday heading, shared rows align P&L on the first line
   and either stats or the empty-day status on the second. Empty days reserve the
-  first line; their status uses the same 11px type and line height as the stats. The weekly card group has no drop shadow. Today's date in Eastern Time
-  receives the tinted day cell, semantic-accent corner dot and accent stats text;
-  the stats background stays transparent in every state. This indicator follows
-  the actual current date, not the selected review date or a pending click.
-  Historical weeks show no current-day indicator. Date navigation still updates
+  first line; their status uses the same 11px type and line height as the stats.
+  The weekly card group has no drop shadow. All weekdays use a neutral cell and
+  metric treatment, including today; hover and keyboard focus remain visible.
+  There is no persistent selected-day tint or corner dot in this overview. Date navigation still updates
   the heading optimistically. The page background remains flat with no added border,
   radius, elevation, or bottom edge. The five-day strip uses a complete hairline
-  outline with a 4px radius. It leads Week → P&L as the at-a-glance summary and
-  does not remain above the Day / Week / Month review tabs. Clicking a week-strip
+  outline with a 4px radius. Week → P&L starts with the same compact label/value
+  stat bar as Day, followed by the five-day strip and a cumulative P&L area chart.
+  The curve uses the day chart's semantic colors and round-dollar scale, with
+  a dot for each imported session. Hover, keyboard focus, or tap exposes that
+  session's trade counts grouped by ticker, daily P&L, and cumulative week total.
+  Popovers omit individual trades and ET times; chart-axis labels show weekdays only. Days without imports
+  have no dot; the curve connects known session totals without inventing trades.
+  Week status and interpretation follow the chart.
+  The strip does not remain above the Day / Week / Month review tabs. Clicking a week-strip
   day opens that date in Day → P&L, including the already-selected date. Focused Day uses a
   separate borderless five-day micro rail implementation, currently hidden across
   Journal scopes via `SHOW_COMPACT_WEEK_STATS` in `JournalWeekStrip.tsx`. Keep it
@@ -355,13 +369,19 @@ Build once, reuse everywhere.
   Week, and one calendar month in Month (clamping the selected day for shorter
   months).
   Both Journal tab groups use the semantic accent underline in this surface.
+- **Top Gainers date navigation** — an outlined Today control precedes
+  Previous / Next / Calendar in every period and Full archive. Today opens the
+  current Eastern calendar day, resolving at activation for overnight-open pages.
+  It preserves symbol/session/sort filters and clears range bounds, pagination
+  and expansion. It does not fall back to the latest published day when today's
+  data is unavailable. Period tabs retain their existing scope behavior.
 - **Journal** — prose-first. Headers use Display/Page title; recap text uses Body
   large; metrics sit under the header as quiet mono metadata; ticker rail compact
   and sorted best-to-worst; pills secondary; reading mode hides edit controls
   until interaction. The Month P&L view consumes the same `MonthCalendar`
   described above; it does not own a second grid or summary treatment. When the
-  Day Trades view is active, reuse `PillStatsBar` for trades, accuracy, profit
-  factor, and P&L; pair it with a compact win/loss distribution. The trade ledger
+  Day Trades view is active, reuse `TradingStatsBar` at regular size for trades, accuracy, profit
+  factor, Per share and P&L; pair it with a compact win/loss distribution. The trade ledger
   shows shares, execution count, entry, exit, per-share result, hold time, context,
   and P&L. Saved tags/setups appear as compact context pills; missing annotations
   remain explicit as “Needs context.” Rows retain the inline review disclosure.

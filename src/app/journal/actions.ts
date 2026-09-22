@@ -10,8 +10,10 @@ import { db, schema } from "@/lib/db";
 import { isDemoReadOnly } from "@/lib/demoMode";
 import { SETUP_PATTERN_CUES } from "@/lib/journalLabels";
 import { etDateString, etDayRange } from "@/lib/time";
+import { generateAndStoreCoachReview, validCoachScopeKey } from "@/lib/coach/reviewService";
+import { isCoachRefreshIntent } from "@/lib/coach/reviewRefresh";
 
-type ScopedNoteState = { ok: boolean };
+type ScopedNoteState = { ok: boolean; error?: string; coachError?: string; coachRefreshed?: boolean };
 type TradeNoteState = { ok: boolean };
 const RECAP_SCOPES = ["day", "week", "month"] as const;
 type RecapScope = (typeof RECAP_SCOPES)[number];
@@ -83,49 +85,51 @@ export async function upsertScopedNoteAction(
   const whatWentWell = String(formData.get("whatWentWell") ?? "").trim();
   const whatWentWrong = String(formData.get("whatWentWrong") ?? "").trim();
   const emotionalState = String(formData.get("emotionalState") ?? "").trim();
+  const refreshCoach = isCoachRefreshIntent(formData.get("intent"));
 
-  if (!RECAP_SCOPES.includes(scope) || !scopeKey) return { ok: false };
+  if (!RECAP_SCOPES.includes(scope) || !validCoachScopeKey(scope, scopeKey)) return { ok: false, error: "Could not save this reflection." };
   const activeAccount = await getActiveAccount();
 
-  const existing = await db
-    .select({ id: schema.journalEntries.id })
-    .from(schema.journalEntries)
-    .where(
-      and(
-        eq(schema.journalEntries.scope, scope),
-        eq(schema.journalEntries.scopeKey, scopeKey),
-        eq(schema.journalEntries.accountId, activeAccount.id),
-      ),
-    )
-    .limit(1);
+  try {
+    const existing = await db
+      .select({ id: schema.journalEntries.id })
+      .from(schema.journalEntries)
+      .where(
+        and(
+          eq(schema.journalEntries.scope, scope),
+          eq(schema.journalEntries.scopeKey, scopeKey),
+          eq(schema.journalEntries.accountId, activeAccount.id),
+        ),
+      )
+      .limit(1);
 
-  if (existing[0]) {
-    await db
-      .update(schema.journalEntries)
-      .set({
-        lessons: body || null,
-        thesis: thesis || null,
-        whatWentWell: whatWentWell || null,
-        whatWentWrong: whatWentWrong || null,
-        emotionalState: emotionalState || null,
-      })
-      .where(eq(schema.journalEntries.id, existing[0].id));
-  } else {
-    await db
-      .insert(schema.journalEntries)
-      .values({
-        accountId: activeAccount.id,
-        scope,
-        scopeKey,
-        lessons: body || null,
-        thesis: thesis || null,
-        whatWentWell: whatWentWell || null,
-        whatWentWrong: whatWentWrong || null,
-        emotionalState: emotionalState || null,
-      });
+    if (existing[0]) {
+      await db
+        .update(schema.journalEntries)
+        .set({ lessons: body || null, thesis: thesis || null, whatWentWell: whatWentWell || null, whatWentWrong: whatWentWrong || null, emotionalState: emotionalState || null })
+        .where(eq(schema.journalEntries.id, existing[0].id));
+    } else {
+      await db.insert(schema.journalEntries).values({ accountId: activeAccount.id, scope, scopeKey, lessons: body || null, thesis: thesis || null, whatWentWell: whatWentWell || null, whatWentWrong: whatWentWrong || null, emotionalState: emotionalState || null });
+    }
+  } catch {
+    return { ok: false, error: "Could not save this reflection." };
   }
 
   revalidateJournalLoop();
+  if (refreshCoach) {
+    try {
+      const result = await generateAndStoreCoachReview(activeAccount.id, scope, scopeKey);
+      revalidatePath("/journal");
+      if (!result.ok) return { ok: true, coachError: result.coachError };
+      if (result.superseded) return { ok: true, coachError: "Another coach refresh finished first. Review the latest feedback." };
+      return { ok: true, coachRefreshed: true };
+    } catch (error) {
+      return {
+        ok: true,
+        coachError: error instanceof Error ? error.message : "Coach generation failed.",
+      };
+    }
+  }
   return { ok: true };
 }
 

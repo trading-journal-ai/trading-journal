@@ -1,6 +1,5 @@
 "use server";
 
-import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getActiveAccount } from "@/lib/accountScope";
 import {
@@ -8,56 +7,9 @@ import {
   type CoachChatMessage,
   type CoachChatReply,
 } from "@/lib/coach/chat";
-import { buildCoachReviewPayload, type CoachReviewHumanContext, type CoachReviewTradeContext } from "@/lib/coach/payload";
-import { generateCoachReview } from "@/lib/coach/openai";
-import { buildSessionFactPack } from "@/lib/coach/reviewEngine";
+import { buildCoachReviewPayloadForScope, ensureCoachPlaybook, generateAndStoreCoachReview, type CoachReviewScope, validCoachScopeKey } from "@/lib/coach/reviewService";
 import { db, schema } from "@/lib/db";
 import { isDemoReadOnly } from "@/lib/demoMode";
-import { analyzeTradeExecutions, coachTradeExecutionFacts } from "@/lib/executionAnalysis";
-import { opportunityContextsForTrades } from "@/lib/coach/opportunityContextService";
-import { decodeJournalTags } from "@/lib/journalLabels";
-import { netPnl } from "@/lib/pnl";
-import { etDateString, etDayRange } from "@/lib/time";
-
-const DEFAULT_PLAYBOOK = `Trading style:
-- Market focus:
-- Preferred setups:
-- Timeframes:
-- Typical trade duration:
-
-Approved setups:
-- Setup name:
-- Valid conditions:
-- Invalid conditions:
-- Entry trigger:
-- Stop/risk definition:
-- Exit logic:
-- Common mistakes:
-
-Risk rules:
-- Max loss per trade:
-- Max daily loss:
-- Max position size:
-- No-go conditions:
-
-Current improvement focus:
--`;
-
-const DEFAULT_RUBRIC = `Setup quality: strong / mixed / weak / unknown
-Entry quality: strong / mixed / weak / unknown
-Risk definition: strong / mixed / weak / unknown
-Size discipline: strong / mixed / weak / unknown
-Exit management: strong / mixed / weak / unknown
-Emotional discipline: strong / mixed / weak / unknown
-Journal completeness: strong / mixed / weak / unknown`;
-
-type CoachReviewScope = "day" | "week" | "month";
-
-type CoachReviewActionInput = {
-  accountId: number;
-  scope: CoachReviewScope;
-  scopeKey: string;
-};
 
 export async function sendCoachChatMessageAction(
   messages: CoachChatMessage[],
@@ -68,7 +20,7 @@ export async function sendCoachChatMessageAction(
 function coachReviewScopeFromForm(formData: FormData): { scope: CoachReviewScope; scopeKey: string } | null {
   const scope = String(formData.get("scope") ?? "");
   const scopeKey = String(formData.get("scopeKey") ?? "").trim();
-  if ((scope !== "day" && scope !== "week" && scope !== "month") || !scopeKey) return null;
+  if ((scope !== "day" && scope !== "week" && scope !== "month") || !validCoachScopeKey(scope, scopeKey)) return null;
   return { scope, scopeKey };
 }
 
@@ -101,27 +53,6 @@ export async function saveCoachPlaybookAction(formData: FormData) {
   revalidatePath("/journal");
 }
 
-export async function ensureCoachPlaybook(accountId: number) {
-  const existing = await db
-    .select()
-    .from(schema.coachPlaybooks)
-    .where(eq(schema.coachPlaybooks.accountId, accountId))
-    .limit(1)
-    .get();
-  if (existing) return existing;
-
-  return db
-    .insert(schema.coachPlaybooks)
-    .values({
-      accountId,
-      title: "Trading Playbook",
-      body: DEFAULT_PLAYBOOK,
-      rubric: DEFAULT_RUBRIC,
-    })
-    .returning()
-    .get();
-}
-
 export async function saveDraftCoachReviewAction(formData: FormData) {
   if (isDemoReadOnly()) return;
 
@@ -129,11 +60,9 @@ export async function saveDraftCoachReviewAction(formData: FormData) {
   const input = coachReviewScopeFromForm(formData);
   if (!input) return;
 
-  const payload = await buildCoachReviewPayloadForScope({
-    accountId: account.id,
-    scope: input.scope,
-    scopeKey: input.scopeKey,
-  });
+  await ensureCoachPlaybook(account.id);
+
+  const payload = await buildCoachReviewPayloadForScope(account.id, input.scope, input.scopeKey);
   const values = {
     accountId: account.id,
     scope: input.scope,
@@ -165,216 +94,8 @@ export async function generateCoachReviewAction(formData: FormData) {
   const account = await getActiveAccount();
   const input = coachReviewScopeFromForm(formData);
   if (!input) return;
-
-  const payload = await buildCoachReviewPayloadForScope({
-    accountId: account.id,
-    scope: input.scope,
-    scopeKey: input.scopeKey,
-  });
-  const generatedAt = new Date().toISOString();
-  let values:
-    | {
-        accountId: number;
-        scope: CoachReviewScope;
-        scopeKey: string;
-        status: "generated";
-        payloadJson: string;
-        reviewJson: string;
-        updatedAt: Date;
-      }
-    | {
-        accountId: number;
-        scope: CoachReviewScope;
-        scopeKey: string;
-        status: "stale";
-        payloadJson: string;
-        reviewJson: string;
-        updatedAt: Date;
-      };
-
-  try {
-    const result = await generateCoachReview(payload);
-    values = {
-      accountId: account.id,
-      scope: input.scope,
-      scopeKey: input.scopeKey,
-      status: "generated",
-      payloadJson: JSON.stringify(payload),
-      reviewJson: JSON.stringify({
-        version: 1,
-        model: result.model,
-        generatedAt,
-        review: result.review,
-      }),
-      updatedAt: new Date(),
-    };
-  } catch (error) {
-    values = {
-      accountId: account.id,
-      scope: input.scope,
-      scopeKey: input.scopeKey,
-      status: "stale",
-      payloadJson: JSON.stringify(payload),
-      reviewJson: JSON.stringify({
-        version: 1,
-        generatedAt,
-        error: error instanceof Error ? error.message : "Coach generation failed.",
-      }),
-      updatedAt: new Date(),
-    };
-  }
-
-  await db
-    .insert(schema.coachReviews)
-    .values(values)
-    .onConflictDoUpdate({
-      target: [
-        schema.coachReviews.accountId,
-        schema.coachReviews.scope,
-        schema.coachReviews.scopeKey,
-      ],
-      set: values,
-    });
+  await ensureCoachPlaybook(account.id);
+  await generateAndStoreCoachReview(account.id, input.scope, input.scopeKey);
 
   revalidatePath("/journal");
-}
-
-async function buildCoachReviewPayloadForScope({
-  accountId,
-  scope,
-  scopeKey,
-}: CoachReviewActionInput) {
-  const playbook = await ensureCoachPlaybook(accountId);
-  const [recapRow] = await db
-    .select()
-    .from(schema.journalEntries)
-    .where(
-      and(
-        eq(schema.journalEntries.accountId, accountId),
-        eq(schema.journalEntries.scope, scope),
-        eq(schema.journalEntries.scopeKey, scopeKey),
-      ),
-    )
-    .limit(1);
-  const trades = await loadTradesForCoachPayload(accountId, scope, scopeKey);
-  const tradeIds = trades.map((trade) => trade.id);
-  const [notes, executions] = tradeIds.length === 0
-    ? [[], []]
-    : await Promise.all([
-        db
-          .select()
-          .from(schema.journalEntries)
-          .where(
-            and(
-              eq(schema.journalEntries.accountId, accountId),
-              inArray(schema.journalEntries.tradeId, tradeIds),
-            ),
-          ),
-        db
-          .select()
-          .from(schema.executions)
-          .where(inArray(schema.executions.tradeId, tradeIds))
-          .orderBy(asc(schema.executions.executedAt), asc(schema.executions.id)),
-      ]);
-  const noteByTradeId = new Map(notes.flatMap((note) => (note.tradeId == null ? [] : [[note.tradeId, note]])));
-  const executionsByTradeId = new Map<number, typeof executions>();
-  for (const execution of executions) {
-    if (execution.tradeId == null) continue;
-    executionsByTradeId.set(execution.tradeId, [...(executionsByTradeId.get(execution.tradeId) ?? []), execution]);
-  }
-  const humanContext: CoachReviewHumanContext = {
-    recap: recapRow?.lessons ?? "",
-    intent: recapRow?.thesis ?? "",
-    didWell: recapRow?.whatWentWell ?? "",
-    standardsDrift: recapRow?.whatWentWrong ?? "",
-    emotionalState: recapRow?.emotionalState ?? "",
-  };
-  const executionFactsByTradeId = new Map(trades.map((trade) => {
-    const tradeExecutions = executionsByTradeId.get(trade.id) ?? [];
-    const facts = tradeExecutions.length === 0
-      ? null
-      : coachTradeExecutionFacts(analyzeTradeExecutions(
-          trade.side,
-          tradeExecutions.map((execution) => ({
-            id: execution.id,
-            executedAt: execution.executedAt,
-            price: execution.price,
-            quantity: execution.quantity,
-            side: execution.side,
-            posEffect: execution.posEffect,
-            brokerOrderKey: execution.brokerOrderKey,
-          })),
-        ));
-    return [trade.id, facts] as const;
-  }));
-  const opportunityContexts = await opportunityContextsForTrades(trades.map((trade) => ({
-    id: trade.id,
-    symbol: trade.symbol,
-    side: trade.side,
-    entryAt: trade.entryAt,
-    exitAt: trade.exitAt,
-    entryPrice: trade.avgEntryPrice,
-    quantity: trade.quantity,
-    pnl: netPnl(trade),
-    setup: trade.setup,
-    adverseAddTimes: executionFactsByTradeId.get(trade.id)?.adverseAdds.map((add) => add.executedAt),
-  })));
-  const tradeContexts: Omit<CoachReviewTradeContext, "ref">[] = trades.map((trade) => {
-    const note = noteByTradeId.get(trade.id);
-    const executionAnalysis = executionFactsByTradeId.get(trade.id) ?? null;
-    return {
-      id: trade.id,
-      symbol: trade.symbol,
-      side: trade.side,
-      quantity: trade.quantity,
-      entryAt: trade.entryAt,
-      exitAt: trade.exitAt,
-      entryPrice: trade.avgEntryPrice,
-      exitPrice: trade.avgExitPrice,
-      pnl: netPnl(trade),
-      setup: trade.setup,
-      primaryLabel: note?.emotionalState ?? null,
-      note: note?.lessons ?? null,
-      processTags: decodeJournalTags(note?.whatWentWell ?? null),
-      emotionTags: decodeJournalTags(note?.whatWentWrong ?? null),
-      executionAnalysis,
-      opportunityContext: opportunityContexts.get(trade.id) ?? null,
-    };
-  });
-  return buildCoachReviewPayload({
-    scope,
-    scopeKey,
-    generatedAt: new Date().toISOString(),
-    playbook: {
-      title: playbook.title,
-      body: playbook.body,
-      rubric: playbook.rubric,
-    },
-    humanContext,
-    deterministicFacts: buildSessionFactPack(trades),
-    trades: tradeContexts,
-  });
-}
-
-async function loadTradesForCoachPayload(accountId: number, scope: "day" | "week" | "month", scopeKey: string) {
-  const from = scope === "month" ? `${scopeKey}-01` : scopeKey;
-  const to = scope === "day"
-    ? scopeKey
-    : scope === "week"
-      ? new Date(Date.UTC(Number(scopeKey.slice(0, 4)), Number(scopeKey.slice(5, 7)) - 1, Number(scopeKey.slice(8, 10)) + 4)).toISOString().slice(0, 10)
-      : new Date(Date.UTC(Number(scopeKey.slice(0, 4)), Number(scopeKey.slice(5, 7)), 0)).toISOString().slice(0, 10);
-  const { start } = etDayRange(from);
-  const { end } = etDayRange(to);
-
-  return (
-    await db
-      .select()
-      .from(schema.trades)
-      .where(and(eq(schema.trades.accountId, accountId), gte(schema.trades.entryAt, start), lte(schema.trades.entryAt, end)))
-      .orderBy(asc(schema.trades.entryAt))
-  ).filter((trade) => {
-    if (trade.entryAt == null || trade.entryAt < start || trade.entryAt > end) return false;
-    const date = etDateString(trade.entryAt);
-    return date >= from && date <= to;
-  });
 }

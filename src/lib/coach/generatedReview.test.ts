@@ -56,4 +56,17 @@ describe("parseCoachStoredReview", () => {
 
     expect(stored && "error" in stored ? stored.error : null).toContain("OPENAI_API_KEY");
   });
+
+  it("keeps a valid generated review visible beside a later refresh error", () => {
+    const stored = parseCoachStoredReview(JSON.stringify({
+      version: 1,
+      model: "gpt-5.5",
+      generatedAt: "2026-07-02T17:00:00.000Z",
+      review: validReview,
+      error: "Provider temporarily unavailable.",
+    }));
+
+    expect(stored && "review" in stored ? stored.review.dayVerdict : null).toContain("mixed");
+    expect(stored && "error" in stored ? stored.error : null).toContain("temporarily");
+  });
 });

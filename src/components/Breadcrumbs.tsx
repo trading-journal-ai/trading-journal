@@ -24,6 +24,10 @@ export function originCrumbFromHref(href: string | undefined, fallback = "/trade
   let origin = isSafeInternalHref(href) ? href : fallback;
 
   for (let depth = 0; depth < 4; depth += 1) {
+    // A guided Coach review is an intentional intermediate destination. Keep
+    // its own return link so the trader can go trade → day review → week.
+    const url = new URL(origin, "http://journal.local");
+    if (url.pathname === "/journal" && url.searchParams.get("view") === "coach") break;
     const queryStart = origin.indexOf("?");
     if (queryStart < 0) break;
 

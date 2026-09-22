@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-09-17 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-09-22 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -40,6 +40,322 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-09-22** — Justin accepted the shared stat-bar work and authorized
+  publishing it with the finalized local Journal backlog (recap/coaching,
+  reflections/trade reviews, navigation and Import loading feedback). Refreshed
+  origin: local main had 32 committed accepted updates, no incoming commits and
+  no open PRs. Removed three redundant required properties from the weekly
+  coaching test fixture; the existing final spread supplies identical values.
+  All 122 tests across 19 changed test files passed, plus the five calendar
+  tests in the focused pass. Full validation ran: lint and demo-schema check
+  passed; Turbopack rejected the worktree dependency symlink. Node 22 webpack
+  production build passed, including TypeScript and route generation.
+  Generalized private review examples in documentation. Publication will use a
+  clean final-tree commit based on origin/main, retaining original local history
+  privately. No data/schema, credentials, dependencies or provider ownership
+  changes. Canonical integration, PR publication and final alignment are recorded
+  in the completion receipt above when finished.
+
+- **2026-09-22** — Follow-up on `codex/journal-stat-bar`: removed Sessions
+  from Week and shared Month/Calendar summary bars at Justin's request. All
+  period bars now start with Trades. Session data remains available to the
+  existing recap and calculations. Browser checked Week and Month in the demo
+  preview; focused ESLint and diff checks passed. Continued exploration, so
+  prior calculation tests and full-build/typecheck checks were not repeated.
+  Committed on the task branch; not merged, pushed or installed. Preview remains
+  at localhost:4321. Prior typecheck blockers and integration work remain as
+  recorded below.
+
+- **2026-09-22** — Exploratory Journal stat-bar update on
+  `codex/journal-stat-bar`, based on local main `22cf200`, in
+  `/private/tmp/trading-journal-stat-bar`. Added `TradingStatsBar` with shared
+  left-aligned Geist Sans label/value styling and compact/regular size props.
+  Day, Week, Month, Day Trades and Calendar Month consume it; P&L now stays
+  with the left-flowing group. Justin clarified the new metric as average net
+  P&L per share per trade and selected the label “Per share” from the existing
+  ledger. Reused its signed dollar/sub-cent format; combine each trade's
+  in-range session results before equally weighting unique trades. Missing
+  results show a dash; zero results count. No database/schema changes.
+  Validation: 11 focused Vitest tests passed; lint passed. Typecheck reaches
+  only three pre-existing TS2783 duplicate-property errors in
+  `src/lib/weeklyCoaching.test.ts` (id/date/net), confirmed in base source.
+  In-app demo preview checked Day → Week → Month, Day → Trades and standalone
+  Calendar; month figures/left alignment match, and the regular-size variant
+  renders at 22px. Empty Day state also checked. Full production verification
+  is deferred during exploration; no attempt to repair unrelated test errors.
+  Committed on the task branch; not merged into local main, pushed, or installed.
+  Demo preview remains at localhost:4321 for review; canonical localhost:4317
+  and private account data are untouched. Next: settle appearance, resolve the
+  existing typecheck failures separately, then run full verification before
+  authorized canonical integration. Old missing worktree registrations and
+  unrelated branch history were left intact; remote refs were not refreshed.
+
+- **2026-09-21** — Simplified Import's initial loading state per Justin's
+  follow-up: the button shows only a centered spinner, keeps the Sync button's
+  width, and resolves to Sync when account checking finishes. Removed the extra
+  initial bar; actual imports retain the Journal sweeping bar and busy action.
+  Justin requested this in the canonical local app, authorizing integration.
+  Implementation `05f2451` (including initial `54e21d3`) fast-forwarded into local
+  main and verified in the canonical app at localhost:4317. Desktop/390px
+  Playwright checks passed: spinner-only checking, unchanged button width after
+  resolving to Sync, import bar/busy button, reduced motion and error dismissal;
+  no page errors or live imports (server actions mocked). Screenshot inspected.
+  Validation: lint passed; default full validation encountered the shell Node
+  ABI mismatch, then Turbopack's external dependency-symlink limitation. Under
+  matching Node 22, demo-schema verification and `npm run build -- --webpack`
+  passed, including TypeScript and production routes. Nothing pushed remotely;
+  no broker/data contract changes or service restart.
+
+- **2026-09-21** — Refined header Import loading feedback on isolated branch
+  `codex/import-loading-feedback`. Account checks and imports reuse the Journal
+  day sweeping bar; checking and busy action buttons retain contrast and show a
+  spinner with the current operation. Both animations respect reduced motion.
+  Import actions, account/date scope, dedupe and persistence are unchanged.
+  `npm run verify:quick` and `git diff --check` passed. Browser plugin not
+  available; bundled Playwright with Chrome verified the actual modal at 1280px
+  and 390px against the temporary preview with mocked server-action responses:
+  checking, sync, disabled/busy button, reduced motion and error dismissal passed,
+  with no page errors. Screenshots inspected. No real broker calls or imports.
+  No new unit tests or full build for this small UI-only change. Committed on the
+  task branch for review; not merged into local main, pushed or installed.
+  Temporary preview stopped after verification. Existing stale Impeccable
+  sidecar and missing historical worktree registrations left unchanged.
+
+- **2026-09-20** — Extended the Day Coach hierarchy to surface saved trade
+  reviews after the day review. Authored `@tradeN` sections now render with
+  ticker/trade headings, time, P&L, note text, and an Edit link back to the same
+  ticker/day workspace. Add trade review exposes the day's tickers; unreviewed
+  trades stay out of the list. Extracted the ticker-section parser for shared
+  use and fixed chart moments such as `@11:15` being misread as Trade 11. Two
+  parser tests plus the 11 reflection/action tests passed. Desktop/mobile
+  preview checks covered populated and empty states. Full verification passed
+  with the existing NFT tracing warning. Committed as `2792c4c`, fast-forwarded
+  into local `main`, and verified in the canonical app against existing
+  saved trade reviews and their exact-trade Edit links. Remote publication
+  remains pending.
+
+- **2026-09-20** — Refined the Day review hierarchy on
+  `codex/day-reflection-entry`. P&L now presents a clearly labeled
+  trader-authored note, while Coach separates day-level reflection and evidence
+  from a trade-specific heading such as `SYN · Trade <N>`. The trade number uses
+  the same per-ticker chronological sequence as the ticker/day review workspace.
+  Legacy “Session reflection — added …” headings become reading metadata without
+  rewriting stored notes. Desktop and 390px preview checks passed, as did full
+  lint, TypeScript, demo-schema, and production-build verification (with the
+  existing NFT tracing warning). Committed as `e241f40`, fast-forwarded into
+  local `main`, and verified against an existing day note and its trade
+  sequence in the canonical app. Remote publication remains pending.
+
+- **2026-09-20** — Added Day P&L “Review your day” using the existing note composer and dictation on `codex/day-reflection-entry`. The general reflection shares the account-scoped day note with Coach and preserves optional guided answers; plain Save note does not generate feedback. Full verification passed (lint, demo schema, production build; existing NFT tracing warning) and 11 focused reflection/action tests passed. Desktop/mobile demo checks covered empty days, save/reopen, shared Coach text, and guided-answer preservation. No private notes were changed. Committed as `0e75e14` and fast-forwarded into local `main`; verified the existing reflection and edit/cancel controls in the canonical app. Temporary demo preview retired. Remote publication remains pending.
+
+- **2026-09-20** — Built the guided day-review flow on
+  `codex/guided-day-review` in an isolated worktree. Terra implemented the
+  optional question editor; Sol implemented coaching context/refresh and review
+  flags; root integrated navigation and reviewed the result. Week now combines
+  review triggers into a concise day link. Day Coach owns freeform reflection,
+  three optional answers, ticker/trade links and recorded giveback/size evidence.
+  Existing exact Q&A blocks are recognized without migrating or rewriting notes.
+  Plain save never generates; explicit save-and-refresh uses fresh context,
+  reveals AI output on success and retains prior feedback on failure. Week/month
+  generation now includes account/date-scoped daily reflections; ticker notes
+  remain separate from trade notes. Note freshness is visible, and atomic review
+  replacement protects concurrent requests. No schema/dependency changes.
+  Validation: 49 focused tests passed, including note-action ordering/failures,
+  scope rules, legacy parsing, flags and refresh preservation. Browser preview
+  verified Week→Day Coach, separate fields, demo save/reopen/edit/clear, and
+  desktop/390px layout without relevant console errors. Production validation
+  passed with the existing NFT warning after the initial sandboxed font fetch
+  failed. Implementation `d587a11` merged into local main. Canonical inspection
+  caught legacy CRLF note formatting; compatibility fix `5308e4c` passed its
+  regression and full validation, then merged. Existing answers now populate
+  separate fields without saving or rewriting the user's note. A final breadcrumb
+  fix retains Day Coach as the return destination before the parent week; its
+  regression and final full validation passed. Follow-up `6bb7e8c` merged into
+  local main; canonical Week→Day Coach→trade→Day Coach round trip passed.
+  All three existing answers populate their own fields; original saved content
+  was not mutated during verification. Preview closed/server stopped, viewport
+  restored, and canonical day reflection left open. A pre-existing React key
+  warning from DayViews/its P&L slot remains; no blocking runtime overlay was
+  observed. Standalone tsc also reported existing duplicate fixture properties
+  in weeklyCoaching.test.ts; production TypeScript/build passed.
+  No live model generation was run; provider output and live dictation were not
+  exercised. No private note content is recorded here. Nothing pushed remotely.
+
+- **2026-09-20** — Added a focused session-review slice on
+  `codex/weekly-session-review`. Reuses imported trade-activity endpoints to
+  identify a green-to-red giveback, links the largest loss, and compares peak
+  shares only with trades completed earlier in the same session/side/price band.
+  Existing account-scoped day notes are visible/editable in the weekly recap;
+  three optional prompts help the trader explain decisions without inferred
+  psychology. User-authorized session/trade reflections were saved through the
+  canonical UI; private content stays in the local database, not this worklog.
+  No schema changes or model generation. All 30 focused tests passed (including
+  existing weekly-coaching checks); `npm run verify:full` passed with the existing
+  NFT warning. Implementation `67fcd37` merged into local `main`. Canonical
+  verification passed: the selected session, curve arithmetic, same-session size
+  comparison, saved day/trade reflections, optional questions and existing-note
+  editor all worked. Desktop/default and phone-width visual checks passed;
+  viewport restored and temporary preview stopped. Nothing pushed remotely.
+
+- **2026-09-20** — Built richer weekly evidence on
+  `codex/weekly-coaching-evidence` in an isolated worktree. Justin authorized
+  efficient Sol/Terra delegation: Sol owns calculations/findings, Terra owns
+  presentation, root owns shared-market integration and final verification.
+  Reuses the Analytics completed-intraday trade projection, with explicit sample
+  coverage, and reads the existing shared market API. The main weekly P&L
+  accounting and personal notes remain unchanged. See [Weekly Recap Plan §13](product/WEEKLY_RECAP_PLAN.md#13-evolving-coaching-evidence--september-20-build).
+  Validation passed: 37 focused tests, demo desktop/mobile browser checks
+  (findings, metrics disclosure, exact trade links, preserved chart, no page
+  errors or recap overflow) and `npm run verify:full` (existing NFT warning).
+  Final review identified lifetime-history loading and repeated market reads;
+  these are addressed with bounded ET execution eligibility (complete fills
+  preserved) and a public-only day cache with request timeouts. Implementation
+  `38e51d1` merged into local `main`; canonical desktop/mobile checks passed,
+  including live shared-market coverage and trade links. Live review also
+  prompted a follow-up ranking fix: tiny fee-flip exceptions should not displace
+  payoff/hold/baseline observations. The focused regression and full build
+  passed. Follow-up `bf3da15` merged and canonical verification confirmed the
+  payoff observation is retained. Month and wholly future-week navigation
+  also passed without page errors. Temporary preview stopped; nothing pushed
+  remotely.
+
+- **2026-09-20** — Simplified weekly trade highlights on
+  `codex/weekly-highlight-clarity`: removed the two independent “other trades”
+  totals that looked like additive subtotals. Each highlight keeps only ticker,
+  actual weekly trade contribution and weekday(s), with the same review link.
+  Updated the content contract. All 12 focused tests and `npm run verify:full`
+  passed (existing NFT warning only). Fix `da2b4af` merged into local `main`;
+  canonical browser verification passed at desktop/narrow widths: both extra
+  totals absent, trade links/evidence preserved, no page errors or highlight
+  overflow. Nothing pushed remotely.
+
+- **2026-09-19** — Built the first progressive weekly recap on
+  `codex/progressive-weekly-recap`: light Monday/Tuesday, developing
+  Wednesday/Thursday, full Friday review beneath the existing curve. Uses
+  session progression, exact positive/negative trade links, net ticker breadth,
+  existing saved weekly focus and qualified recorded market counts. Outcomes
+  are not graded as decisions. No new generation, storage or provider contract.
+  See [Weekly Recap Plan](product/WEEKLY_RECAP_PLAN.md) for implementation
+  boundaries: weekday cadence, unverified import completeness, no calibrated
+  market heat, and no process/focus evaluation yet. Validated 18 focused tests,
+  TypeScript and `npm run verify:full`; build passed with the existing NFT
+  tracing warning. Playwright/installed Chrome (Browser skill unavailable)
+  verified demo desktop/narrow layouts, Tuesday/Thursday/Friday render states,
+  keyboard/tap disclosures, and exact trade navigation; no page errors.
+  Independent visual review passed. Implementation `230e665` merged into
+  local `main`; canonical `localhost:4317` verified the recap, existing chart,
+  keyboard evidence disclosure and exact trade navigation/return without page
+  errors. Temporary demo server stopped. Nothing pushed remotely. Existing Impeccable sidecar drift
+  and advisory font-size mismatches were left alone; canonical design and
+  incumbent UI govern this local extension.
+
+- **2026-09-19** — Preserved the weekly recap competitive research and evolving
+  content direction in [Weekly Recap Plan](product/WEEKLY_RECAP_PLAN.md) on
+  `docs/weekly-recap-plan`. Confirmed P&L-first use, light Monday/Tuesday,
+  greater detail Wednesday/Thursday and full Friday synthesis. Added proposed
+  evidence-qualified trade highlights and linkage to the existing independent
+  Cold/Selective/Hot market-context plan; richer market scoring remains
+  uncalibrated, and installed Server readiness was not audited in this pass.
+  Kept prior research, original recap outline, data gates and validation plan;
+  linked the plan from NEXT_SESSION and the original daily/weekly recap plan.
+  Planning only: no app, generation, schema, provider or trading-data changes.
+  Docs/link and whitespace checks only; no automated app tests needed.
+  Next: review concrete early/mid/final-week content examples and choose the
+  first supported implementation slice. Research remains a proposal, not a
+  shipped capability. No remote push or deployment.
+
+- **2026-09-18** — Simplified the weekly P&L popover to ticker names and trade
+  counts using existing session ticker aggregation; removed individual trade
+  rows and ET timestamps. Chart axis now shows weekdays only, with full dates
+  and missing-session status retained for assistive labels. Updated the design
+  contract. `npm run verify:full` passed with the existing NFT warning.
+  Canonical Playwright checks verified unique ticker rows and count reconciliation
+  for every imported day, no timestamps, weekday-only labels, and a contained
+  390px touch popover; no runtime errors. No new unit tests for this presentation
+  change, which reuses existing aggregation. Committed as `7df39f6` on
+  `codex/week-pnl-layout` and fast-forwarded into local main; verified live at
+  localhost:4317. No remote push or external deployment.
+
+- **2026-09-18** — Integrated the accepted weekly P&L preview into canonical
+  local main at Justin's request to view it in the main app. Fast-forwarded
+  `codex/week-pnl-layout` through `c837c80`. Final `npm run verify:full` passed
+  (lint, demo schema, TypeScript and production build; existing NFT warning).
+  The ten focused tests and desktop/narrow interaction checks passed in the
+  preceding iteration. Canonical browser verification at localhost:4317
+  confirmed the cumulative chart, top stat bar and individual-trade popover
+  against the existing account, with no runtime errors. Opened the current-week
+  main-app URL and stopped the temporary localhost:4326 preview. Source is
+  committed and merged locally; no remote push or external deployment.
+
+- **2026-09-18** — Refined the Week P&L preview on `codex/week-pnl-layout`
+  after Justin supplied the day-chart reference. Replaced the histogram with
+  a cumulative area curve, green/red around zero, and a dot per imported
+  session. Hover, keyboard focus, or tap opens that day's scrollable individual
+  trade list with ET times, symbols, sides, day P&L, and cumulative week total;
+  Close/Escape dismiss it. Fixed synthesized touch-leave closing the popover.
+  Weekly stats, neutral calendar strip and progress-copy placement are retained.
+  Compact trade details reuse the existing account-scoped session activity data.
+  Ten focused weekly accumulation/date/price-scale tests, targeted ESLint,
+  TypeScript and whitespace checks passed. Playwright/Chrome verified the
+  1440px desktop and 390px touch layouts, real trade rows in the popover,
+  pointer entry/scroll region, keyboard dismissal, day drilldown and empty week.
+  Existing empty-Day React key warning remains; no new chart errors observed.
+  This remains an exploratory iteration: full production verification is
+  deferred until acceptance (the prior histogram build passed).
+  Preview remains localhost:4326 using synthetic demo data. Committed on the
+  same task branch; not merged into canonical local main, pushed or deployed.
+
+- **2026-09-18** — Updated Journal Week → P&L on `codex/week-pnl-layout` in
+  `/private/tmp/trading-journal-week-pnl`. Added the Day-style compact stat bar
+  above the calendar strip, removed the current-day tint/dot/accent metrics,
+  replaced the stem timeline with a daily-result histogram using the shared
+  round-dollar scale, and moved week status/interpretation below the chart.
+  Missing sessions remain gaps; signed zero-based bars, hover/focus details,
+  semantic current-date markup and Day drilldowns remain available. Updated
+  the design contract. `npm run verify:full` passed on Node 22 (existing NFT
+  tracing warning); seven focused P&L scale/week-date tests and whitespace/layout
+  checks passed. Initial sandbox build could not fetch fonts; the network-enabled
+  rerun passed. Browser plugin not available; bundled Playwright with installed
+  Chrome verified desktop and narrow layouts, bar count, tooltip hover/focus,
+  Week → Day navigation, neutral today styling, and an empty current week using
+  synthetic demo data. Existing empty-Day React key warning remains unchanged.
+  Preview remains at `http://localhost:4326/journal?date=2026-06-10&scope=week`.
+  Committed on the task branch for review; not merged into local main, pushed,
+  or deployed. Canonical localhost:4317 remains unchanged pending acceptance.
+
+- **2026-09-17** — Corrected the target of the Today-navigation request to
+  Top Gainers on `codex/top-gainers-today`. Added an outlined Today link before
+  Previous/Next/Calendar across periods and Full archive. It resolves the
+  Eastern date at activation, opens Day, preserves filters and clears range
+  bounds, pagination and expansion; unpublished days keep the coverage message.
+  Restored the original Journal scope-tab behavior from before `f0d5681` because
+  that earlier implementation targeted the wrong screen. No data/provider changes.
+  All 26 focused Archive/Journal navigation tests and `npm run verify:full`
+  passed on Node 22, with the existing NFT tracing warning. In-app browser
+  verified Week → Today, retained session filtering, current-date heading and
+  unpublished-day state in the isolated preview; desktop screenshot showed the
+  new button fitting the existing controls without overlap. Mobile not retested.
+  Committed as `1ecde2c` and fast-forwarded into local main. Canonical browser
+  verification at `http://localhost:4317` confirmed Week → Today with both
+  symbol and session filters retained. Temporary preview stopped. No remote
+  push or deployment. Design sidecar drift remains outside this fix.
+
+- **2026-09-17** — Fixed the Journal Day tab on `codex/day-tab-today` to
+  navigate to the current Eastern calendar day from Day, Week or Month.
+  Resolves the date at click time, removes conflicting period filters, and
+  preserves return navigation. Historical day drilldowns remain available.
+  Updated the design contract. Ten focused navigation tests and
+  `npm run verify:full` passed on Node 22; the existing NFT tracing warning
+  remains. Initial checks encountered Node ABI, worktree symlink and sandbox
+  font-download issues, resolved without dependency or app-config changes.
+  In-app browser checks at the isolated demo preview passed for historical
+  Day/Week/Month to today, including reselecting the active Day tab.
+  Existing empty-day React key warning remains outside this change.
+  Committed as `f0d5681` and fast-forwarded into canonical local main. Verified
+  the historical Day tab navigates to today's URL, heading and data at
+  `http://localhost:4317`; stopped the temporary preview server. No remote push
+  or deployment. Mobile layout was not retested for this behavior-only change.
 
 - **2026-09-17** — Merged the clean Analytics/Top Gainers publication in
   [PR #79](https://github.com/trading-journal-ai/trading-journal/pull/79) as

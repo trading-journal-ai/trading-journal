@@ -68,6 +68,7 @@ export default async function JournalPage({
     month?: string;
     returnTo?: string;
     scope?: string;
+    view?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -91,11 +92,13 @@ export default async function JournalPage({
       : "/journal";
   const journalUrl = new URL(baseJournalHref, "http://journal.local");
   if (requestedScope !== "day") journalUrl.searchParams.set("scope", requestedScope);
+  if (params.view === "coach") journalUrl.searchParams.set("view", "coach");
   const journalHref = `${journalUrl.pathname}${journalUrl.search}`;
   const returnTo = appendReturnTo(journalHref, params.returnTo);
 
   return (
     <TradeJournalReview
+      key={`${activeAccount.id}:${journalDate ?? requestedMonth}:${requestedScope}:${params.view === "coach" ? "coach" : "pnl"}`}
       {...filters}
       basePath="/journal"
       returnTo={returnTo}
