@@ -14,10 +14,10 @@ Optional design experiments can wait.
 
 ## 1. Coach / recap — Journal
 
-**September 19 planning:** [Weekly Recap Plan](product/WEEKLY_RECAP_PLAN.md)
-records the competitive research, accepted weekday progression and proposed
-trade highlights/market context. Next, review concrete content examples; no
-recap implementation has been authorized by that planning conversation.
+**September 22 release:** [Weekly Recap Plan](product/WEEKLY_RECAP_PLAN.md)
+records the research and implemented progressive recap, evidence-based coaching
+and guided day review. These accepted features are included in PR #82. Richer
+market heat scoring and v2 review-schema adoption remain separate work.
 
 **Remaining:** adopt the v2 Coach Review schema in generation, validation,
 persistence and rendering; build the canonical `buildJournalDay()` / `JournalDayVM`
@@ -111,25 +111,17 @@ base; branch existence and old tests do not imply product acceptance.
 Related design/spec branches and other retained historical refs are mapped in
 [the branch inventory](REPOSITORY_CONSOLIDATION.md).
 
-## 4. GitHub publication — September 17 alignment
+## 4. GitHub publication — September 22 release
 
-The accepted Journal changes merged in
-[PR #79](https://github.com/trading-journal-ai/trading-journal/pull/79) as
-`6a19385`. Canonical local `main` now tracks the same clean remote history; its
-application source is unchanged from the verified local release. Start future
-Journal branches from this `main`.
+Release and merge status: [PR #82](https://github.com/trading-journal-ai/trading-journal/pull/82). It contains the
+accepted Journal recap/coaching, day reflections/trade reviews, navigation,
+Import loading feedback and shared Per share stat bars. The production build
+and 122 changed-file tests passed; the canonical app was verified.
+Future tasks should start from `origin/main` after this PR merges.
 
-The older local ancestry is preserved under
-`codex/private-main-pre-clean-alignment-sept17` and in a verified private Git
-bundle. It includes a historical design checkpoint with real trading examples.
-Do not merge, rebase onto, or push that preserved branch or other older refs
-without reviewing their ancestry. Existing local personal databases, screenshots,
-broker exports, and research outputs remain outside Git. The separate
-`codex/analytics-research-refresh` audit/prototype branch is not part of PR #79.
-Trading Server publication and installed services are separate.
-
-See the latest [worklog](PROJECT_STATUS.md#worklog) for validation and the
-[Analytics contract](analytics/ANALYTICS_REVIEW.md) for implemented scope.
+See the latest [worklog](PROJECT_STATUS.md#worklog) for the validation receipt.
+Trading Server publication and installed services remain separate. No hosted
+deployment is part of this release.
 
 ## Completed today / keep out of the Journal backlog
 

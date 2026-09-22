@@ -13,9 +13,17 @@ the PR. Day-to-day "where we stopped" notes go in the PROJECT_STATUS Worklog, no
 
 ---
 
+## 2026-09-22
+
+Changed ([PR #82](https://github.com/trading-journal-ai/trading-journal/pull/82)): Day, Week, Month,
+Day Trades and Calendar Month share a left-aligned stat bar with size variants.
+Per share shows the average net P&L per share per trade; period bars omit Sessions.
+This release also includes the accepted recap, day-review, navigation and Import
+updates below.
+
 ## 2026-09-21
 
-Local integration (PR pending): Header Import now shows a spinner inside the
+Changed ([PR #82](https://github.com/trading-journal-ai/trading-journal/pull/82)): Header Import now shows a spinner inside the
 Sync button while checking the account, then resolves to Sync without changing
 button width. Actual imports reuse the Journal day's sweeping progress bar and
 show an active busy button. Reduced-motion preferences are respected.
@@ -23,7 +31,7 @@ Implementation `05f2451`; verified in the canonical local app.
 
 ## 2026-09-20
 
-Local integration (PR pending): Day Coach now places authored trade reviews
+Changed ([PR #82](https://github.com/trading-journal-ai/trading-journal/pull/82)): Day Coach now places authored trade reviews
 after the day review. Saved `@tradeN` sections display with ticker/trade headers,
 time, P&L, note text, and an exact-trade Edit link; unreviewed trades stay out of
 the list. Add trade review reuses the ticker/day workflow. The shared section
@@ -31,7 +39,7 @@ parser also distinguishes chart moments such as `@11:15` from trade anchors.
 Implementation `2792c4c`; verified with existing saved reviews in the
 canonical local app.
 
-Local integration (PR pending): Day review formatting now distinguishes the
+Changed ([PR #82](https://github.com/trading-journal-ai/trading-journal/pull/82)): Day review formatting now distinguishes the
 trader's overall thoughts, guided reflection, recorded session evidence, and
 trade-specific follow-up. P&L stays note-focused; Coach labels its selected
 trade with the ticker and chronological per-ticker number, such as
@@ -39,12 +47,12 @@ trade with the ticker and chronological per-ticker number, such as
 rewriting stored notes. Implementation `e241f40`; verified in the canonical
 local app.
 
-Local integration (PR pending): Day P&L now includes “Review your day” below the
+Changed ([PR #82](https://github.com/trading-journal-ai/trading-journal/pull/82)): Day P&L now includes “Review your day” below the
 chart, with the existing note editor and dictation. It shares the general day
 reflection with Coach while preserving guided answers. Empty days also support
 reflection. Implementation `0e75e14`; verified in the canonical local app.
 
-Local integration (PR pending): Weekly review flags now link to guided Day Coach
+Changed ([PR #82](https://github.com/trading-journal-ai/trading-journal/pull/82)): Weekly review flags now link to guided Day Coach
 reflection. Existing notes and exact pasted Q&A remain editable in separate
 fields, including CRLF notes. Save answers is separate from Save & refresh
 Coach; weekly/monthly AI context includes daily reflections and ticker notes.
@@ -52,14 +60,14 @@ Changed-note notices, prior-feedback preservation and concurrent-refresh guards
 make regeneration explicit and recoverable. Implementation `d587a11`, note
 compatibility `5308e4c`; verified in the canonical local app.
 
-Local integration (PR pending): Weekly recap can highlight one green-to-red
+Changed ([PR #82](https://github.com/trading-journal-ai/trading-journal/pull/82)): Weekly recap can highlight one green-to-red
 session with recorded-curve giveback, its largest loss, and a same-session
 position-size comparison. The trader's existing day recap is visible/editable
 beside the facts, with optional review questions. Recollections and motives
 remain trader-authored; no new generation or schema. `67fcd37` verified in the
 canonical local app.
 
-Local integration (PR pending): Weekly coaching now adds progressive, linked
+Changed ([PR #82](https://github.com/trading-journal-ai/trading-journal/pull/82)): Weekly coaching now adds progressive, linked
 observations for win/loss economics, hold times, recorded fees and a prior
 30-day baseline, plus per-share and peak-exposure statistics. Its completed
 intraday sample is explicit. Shared-market review matches recorded movers by
@@ -67,14 +75,14 @@ ticker/date with coverage caveats; it does not infer heat, capture or psychology
 Data reads are bounded and public market records cached. Implemented in
 `38e51d1`, refined in `bf3da15`, and verified in the canonical app.
 
-Local fix (PR pending): Removed the independent “other trades” totals beneath
+Fixed ([PR #82](https://github.com/trading-journal-ai/trading-journal/pull/82)): Removed the independent “other trades” totals beneath
 weekly contributor/loss highlights. Each now shows only its own ticker, net
 trade contribution and weekday(s), avoiding the appearance of additive weekly
 subtotals. `da2b4af` verified in the canonical local app.
 
 ## 2026-09-19
 
-Local integration (PR pending): Journal Week now builds from a light Monday/
+Changed ([PR #82](https://github.com/trading-journal-ai/trading-journal/pull/82)): Journal Week now builds from a light Monday/
 Tuesday read to a developing midweek view and full Friday recap. Adds linked
 trade contribution highlights, session-end P&L progression, net ticker breadth,
 saved weekly focus and qualified recorded market observations. Outcome labels
@@ -84,7 +92,7 @@ Implementation `230e665` is verified in the canonical local app. See the
 
 ## 2026-09-18
 
-Local integration (PR pending): Journal Week places compact stats above the
+Changed ([PR #82](https://github.com/trading-journal-ai/trading-journal/pull/82)): Journal Week places compact stats above the
 neutral calendar strip, shows cumulative P&L with daily dots and hover/focus/tap
 trade-count popovers grouped by ticker, weekday-only axis labels, and week
 status and interpretation below the chart.

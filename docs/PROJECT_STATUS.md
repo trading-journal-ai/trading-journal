@@ -41,6 +41,19 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 
+- **2026-09-22 — Release receipt:** [PR #82](https://github.com/trading-journal-ai/trading-journal/pull/82)
+  tracks publication and merge status for the accepted Journal backlog and
+  shared stat bars. Canonical app verification passed for Day, Week and Month:
+  each shows Trades, Accuracy, Profit factor, Per share and P&L. The temporary
+  demo server is stopped. Publication source `0357abe` exactly matches the
+  tested application source; release-note follow-ups are documentation only.
+  Validation: 122 tests across all 19 changed test files and five additional
+  calendar tests passed. Lint, demo-schema, production TypeScript and webpack
+  build passed. Default Turbopack rejected an external dependency symlink;
+  the webpack fallback required no application-configuration changes.
+  Live broker imports, AI generation and dictation were not retested during
+  this release pass. No hosted deployment is included.
+
 - **2026-09-22** — Justin accepted the shared stat-bar work and authorized
   publishing it with the finalized local Journal backlog (recap/coaching,
   reflections/trade reviews, navigation and Import loading feedback). Refreshed
