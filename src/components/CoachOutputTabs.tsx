@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 /**
  * Two-tier coach output switcher: the deterministic (no-AI) read vs the
@@ -11,12 +11,25 @@ export default function CoachOutputTabs({
   deterministic,
   ai,
   hasAiReview,
+  reviewScope,
 }: {
   deterministic: ReactNode;
   ai: ReactNode;
   hasAiReview: boolean;
+  reviewScope?: { scope: string; scopeKey: string };
 }) {
   const [tab, setTab] = useState<"deterministic" | "ai">("deterministic");
+
+  const scope = reviewScope?.scope;
+  const scopeKey = reviewScope?.scopeKey;
+  useEffect(() => {
+    function refreshed(event: Event) {
+      if (!(event instanceof CustomEvent)) return;
+      if (event.detail?.scope === scope && event.detail?.scopeKey === scopeKey) setTab("ai");
+    }
+    window.addEventListener("coach-review-refreshed", refreshed);
+    return () => window.removeEventListener("coach-review-refreshed", refreshed);
+  }, [scope, scopeKey]);
 
   const tabClass = (active: boolean) =>
     `min-h-8 cursor-pointer whitespace-nowrap rounded-full px-3.5 text-[12.5px] font-semibold transition-colors ${

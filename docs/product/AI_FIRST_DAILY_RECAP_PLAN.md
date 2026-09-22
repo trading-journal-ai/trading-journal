@@ -197,6 +197,11 @@ claim, not like a miniature Reports page.
 
 ## Future scope: weekly & monthly coach recaps
 
+**September 19 refinement:** [Weekly Recap Plan](WEEKLY_RECAP_PLAN.md) preserves
+the competitive research and Justin's cadence: light Monday/Tuesday, deeper
+Wednesday/Thursday, full Friday recap. It adds proposed trade highlights and
+qualified market context without changing the implementation status below.
+
 The daily recap is the atom; the same coach-driven, evidence-led model should roll
 up into **weekly** and **monthly** recaps. This is future scope — after the daily
 recap contract ([COACH_REVIEW_SCHEMA_V2.md](COACH_REVIEW_SCHEMA_V2.md)) is real —

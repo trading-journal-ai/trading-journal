@@ -39,3 +39,14 @@ export function tradingCalendarWeeks(monthKey: string): TradingCalendarCell[][] 
 
   return weeks;
 }
+
+/** Weekly cumulative results only advance on imported sessions, in calendar order. */
+export function cumulativeWeekSessions<T extends { date: string; pnl: number }>(weekStart: string, rows: T[]) {
+  const byDate = new Map(rows.map((row) => [row.date, row]));
+  let total = 0;
+  return tradingWeekDates(weekStart).map((date) => {
+    const session = byDate.get(date);
+    if (session) total += session.pnl;
+    return { date, session, cumulativePnl: session ? total : null };
+  });
+}

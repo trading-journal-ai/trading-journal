@@ -245,14 +245,24 @@ function ImportDialog({ onClose }: { onClose: () => void }) {
             {contextError ? <div role="alert" className="text-sm text-[var(--red)]">{contextError} <button type="button" onClick={() => void refreshConnection()} className={`underline ${focusClass}`}>Retry</button></div> : null}
             <div className="flex items-center justify-end gap-5 border-t border-[var(--hairline)] pt-4">
               <button type="button" disabled={!destination || checking} onClick={chooseFile} className={`h-10 cursor-pointer text-sm font-semibold text-[var(--body)] disabled:cursor-not-allowed disabled:opacity-40 ${focusClass}`}>Upload file</button>
-              <Button variant="action" onClick={() => void sync()} disabled={checking || !destination || !sourceValue || Boolean(dateError)}>Sync</Button>
+              <Button variant="action" onClick={() => void sync()} disabled={checking || !destination || !sourceValue || Boolean(dateError)} aria-busy={checking}
+                aria-label={checking ? "Checking account" : undefined}
+                className={`inline-grid place-items-center ${checking ? "disabled:opacity-100 cursor-wait" : ""}`}>
+                <span className={`col-start-1 row-start-1 ${checking ? "invisible" : ""}`}>Sync</span>
+                {checking ? <span className="col-start-1 row-start-1 flex"><ImportSpinner /></span> : null}
+              </Button>
             </div>
           </div>
         ) : busy ? (
           <div className="space-y-5 py-3" role="status" aria-live="polite">
             <p className="text-sm text-[var(--muted)]">{destination?.name ?? "Schwab"}</p>
-            <div className="h-1 overflow-hidden rounded-full bg-[var(--surface-2)]"><div className="h-full w-1/3 animate-pulse rounded-full bg-[var(--accent)] motion-reduce:animate-none" /></div>
+            <ImportProgress />
             <p className="text-sm text-[var(--body)]">Adding activity to your journal. Keep this window open.</p>
+            <div className="flex justify-end border-t border-[var(--hairline)] pt-4">
+              <Button variant="action" disabled aria-busy="true" className="inline-flex cursor-wait items-center justify-center gap-2 disabled:opacity-100">
+                <ImportSpinner />{stage.label}
+              </Button>
+            </div>
           </div>
         ) : stage.kind === "result" && presentation ? (
           <div className="space-y-5" aria-live="polite">
@@ -276,6 +286,14 @@ function ImportDialog({ onClose }: { onClose: () => void }) {
       </div>
     </dialog>
   );
+}
+
+function ImportProgress() {
+  return <div className="import-progress-track" aria-hidden="true"><div className="import-progress-bar" /></div>;
+}
+
+function ImportSpinner() {
+  return <span aria-hidden="true" className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-r-transparent motion-reduce:animate-none" />;
 }
 
 function marketDate(date: Date) {

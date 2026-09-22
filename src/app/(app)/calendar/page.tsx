@@ -158,6 +158,7 @@ async function dailyAgg(accountId: number): Promise<{
         grossProfit: 0,
         grossLoss: 0,
       };
+      (cur.perShareTrades ??= []).push({ id: trade.id, perShare: trade.quantity === 0 ? null : pnl / Math.abs(trade.quantity) });
       cur.pnl += pnl;
       cur.trades += 1;
       if (pnl > 0) {

@@ -21,6 +21,7 @@ export type CoachStoredReview =
       model: string;
       generatedAt: string;
       review: CoachGeneratedReview;
+      error?: string;
     }
   | {
       version: 1;
@@ -114,16 +115,19 @@ export function parseCoachStoredReview(value: string | null): CoachStoredReview 
   try {
     const parsed: unknown = JSON.parse(value);
     if (!isRecord(parsed) || parsed.version !== 1 || typeof parsed.generatedAt !== "string") return null;
+    if (typeof parsed.model === "string" && parsed.review != null) {
+      return {
+        version: 1,
+        model: parsed.model,
+        generatedAt: parsed.generatedAt,
+        review: parseCoachGeneratedReview(parsed.review),
+        ...(typeof parsed.error === "string" ? { error: parsed.error } : {}),
+      };
+    }
     if (typeof parsed.error === "string") {
       return { version: 1, generatedAt: parsed.generatedAt, error: parsed.error };
     }
-    if (typeof parsed.model !== "string") return null;
-    return {
-      version: 1,
-      model: parsed.model,
-      generatedAt: parsed.generatedAt,
-      review: parseCoachGeneratedReview(parsed.review),
-    };
+    return null;
   } catch {
     return null;
   }

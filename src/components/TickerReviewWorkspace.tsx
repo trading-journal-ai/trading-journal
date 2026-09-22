@@ -13,6 +13,7 @@ import {
   type ReviewTagOption,
 } from "@/components/TickerReviewTradeExtras";
 import type { AnalyzedTradeExecution, TradeExecutionAnalysis, TradeSide } from "@/lib/executionAnalysis";
+import { savedReviewSections, serializeReviewSections } from "@/lib/tickerReviewSections";
 
 export type TickerReviewTrade = {
   id: number;
@@ -170,67 +171,6 @@ function mentionedTradeIds(note: string, trades: TickerReviewTrade[]) {
   }
 
   return ids;
-}
-
-type SavedReviewSection =
-  | { kind: "overall"; body: string }
-  | { kind: "trade"; tradeNumber: number; time: string | null; body: string }
-  | { kind: "moment"; time: string; body: string };
-
-function savedReviewSections(note: string, trades: TickerReviewTrade[]): SavedReviewSection[] {
-  const tradeByNumber = new Map(trades.map((trade) => [trade.number, trade]));
-  const sections: SavedReviewSection[] = [];
-  let current: SavedReviewSection = { kind: "overall", body: "" };
-
-  for (const line of note.split(/\r?\n/)) {
-    const anchor = line.match(/^@(?:trade)?(\d+)(?:\s*·\s*@?(\d{1,2}:\d{2}))?\s*(.*)$/i);
-    if (anchor) {
-      if (current.body.trim() || current.kind !== "overall") sections.push(current);
-      const tradeNumber = Number(anchor[1]);
-      const trade = tradeByNumber.get(tradeNumber);
-      current = {
-        kind: "trade",
-        tradeNumber,
-        time: anchor[2] ?? trade?.entryTime ?? null,
-        body: anchor[3],
-      };
-      continue;
-    }
-
-    const momentAnchor = line.match(/^@(\d{1,2}:\d{2})\s*(.*)$/);
-    if (momentAnchor) {
-      if (current.body.trim() || current.kind !== "overall") sections.push(current);
-      current = {
-        kind: "moment",
-        time: momentAnchor[1],
-        body: momentAnchor[2],
-      };
-      continue;
-    }
-
-    current.body = current.body ? `${current.body}\n${line}` : line;
-  }
-
-  if (current.body.trim() || current.kind !== "overall") sections.push(current);
-  return sections;
-}
-
-function serializeReviewSections(sections: SavedReviewSection[]) {
-  return sections
-    .map((section) => {
-      const body = section.body;
-      if (section.kind === "overall") return body;
-      if (section.kind === "trade") {
-        const time = section.time ? ` · @${section.time}` : "";
-        return `@trade${section.tradeNumber}${time}${body ? `\n${body}` : ""}`;
-      }
-      return `@${section.time}${body ? `\n${body}` : ""}`;
-    })
-    .filter(Boolean)
-    // A single newline is enough to place the next section anchor at the start
-    // of a line. Extra separator lines would be parsed back into the preceding
-    // body and grow on every edit.
-    .join("\n");
 }
 
 export default function TickerReviewWorkspace({

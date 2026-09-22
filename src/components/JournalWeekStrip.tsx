@@ -229,9 +229,7 @@ export default function JournalWeekStrip({
                 href={dayHref(basePath, day.date)}
                 aria-current={isToday ? "date" : undefined}
                 onNavigate={() => focusDay(day.date)}
-                className={`journal-week-day relative flex flex-col px-3.5 py-4 font-sans focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] ${
-                  isToday ? "journal-week-day--today z-[1]" : ""
-                }`}
+                className="journal-week-day relative flex flex-col px-3.5 py-4 font-sans focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)]"
               >
                 <span className="flex items-baseline gap-1.5 text-[16px] font-semibold leading-5 text-[var(--foreground)]">
                   {weekdayFmt.format(date)}

@@ -98,4 +98,12 @@ describe("Archive date navigation", () => {
     expect(params.get("date")).toBe("2026-09-16");
     expect(params.get("session")).toBe("afterHours");
   });
+  it.each(["day", "week", "month", "range", "archive"])("returns Today from %s without clamping to published history", (view) => {
+    const href = `/analytics/momentum-archive?view=${view}&date=2026-09-14&from=2026-09-01&to=2026-09-30&page=3&all=1&more=1&session=regular&q=SIM&sort=volume&direction=asc`;
+    const today = etDateString(Date.parse("2026-09-19T04:00:00Z") / 1000);
+    const target = new URL(archiveDateHref(href, today, "day"), "http://localhost");
+    expect(Object.fromEntries(target.searchParams)).toEqual({
+      date: "2026-09-19", session: "regular", q: "SIM", sort: "volume", direction: "asc",
+    });
+  });
 });

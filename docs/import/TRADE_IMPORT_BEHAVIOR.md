@@ -449,8 +449,13 @@ history visible and recoverable instead of silently corrupting the Journal.
 ## Compact modal (September 2026)
 
 The main Import modal uses one-step Schwab Sync and direct CSV selection. It shows
-progress, result, or actionable error in place of the preceding state. The result
-keeps executions added and duplicates skipped visible; fee updates and material
+progress, result, or actionable error in place of the preceding state. Imports
+reuse the Journal day's sweeping progress bar. During the initial account check,
+the Sync button holds its width and shows only a spinner, then resolves to Sync.
+While importing, the action button shows a spinner and the current operation.
+Busy buttons remain disabled to prevent repeat submissions; reduced-motion
+preferences stop both animations.
+The result keeps executions added and duplicates skipped visible; fee updates and material
 reconciliation/coverage notices remain explicit. A read-only preview is no longer
 a user-visible prerequisite, but backend normalization, dedupe, fee enrichment,
 reconciliation, and transactional persistence remain authoritative.

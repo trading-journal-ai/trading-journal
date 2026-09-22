@@ -195,6 +195,22 @@ Daily view should show:
 - Quiet access to the full day record: ticker/day workspaces, remaining trades,
   media, calculations, and analytics.
 
+Day review hierarchy:
+
+- Day → P&L uses **Day review** for the trader-authored note only. The note is
+  labeled **Overall thoughts**, with a compact Edit action and a readable prose
+  measure. It does not introduce Coach interpretation into the P&L surface.
+- Day → Coach keeps the broader review dialogue: overall thoughts, optional
+  guided reflection, recorded session evidence, and Coach output.
+- Day → Coach lists authored trade-review sections after the day review. Each is
+  titled with its actual target, for example **SYN · Trade <N>**, and links back
+  to the same ticker/day editor for changes. Unreviewed trades do not appear as
+  if they had notes; **Add trade review** opens the existing ticker workflow.
+  Trade numbers follow that workspace's chronological numbering for the symbol.
+- Legacy note text that begins with “Session reflection — added …” may present
+  that line as quiet metadata in reading mode while preserving the stored note
+  unchanged.
+
 The root Journal page should not reproduce the ticker/day workspace. It should
 surface only the evidence the Coach used, the context still missing, and the
 lesson that carries forward.
