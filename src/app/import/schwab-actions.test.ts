@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   authorizeSchwabLocally: vi.fn(),
   getSchwabConnectionState: vi.fn(),
+  importSchwabExecutions: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -17,7 +18,7 @@ vi.mock("@/lib/demoMode", () => ({
 vi.mock("@/lib/schwab/connection", () => ({
   getSchwabConnectionState: mocks.getSchwabConnectionState,
 }));
-vi.mock("@/lib/schwab/import", () => ({ importSchwabExecutions: vi.fn() }));
+vi.mock("@/lib/schwab/import", () => ({ importSchwabExecutions: mocks.importSchwabExecutions }));
 vi.mock("@/lib/schwab/localAuthorization", () => ({
   authorizeSchwabLocally: mocks.authorizeSchwabLocally,
   SchwabLocalAuthorizationError: class SchwabLocalAuthorizationError extends Error {},
@@ -30,13 +31,15 @@ vi.mock("@/lib/schwab/preview", () => ({
   SchwabAccountSelectionError: class SchwabAccountSelectionError extends Error {},
 }));
 
-import { authorizeSchwabAction } from "./schwab-actions";
+import { authorizeSchwabAction, importSchwabExecutionsAction } from "./schwab-actions";
+import { ImportPositionPolicyError } from "@/lib/import/positionPolicy";
 
 const originalProvider = process.env.SCHWAB_IMPORT_PROVIDER;
 
 afterEach(() => {
   mocks.authorizeSchwabLocally.mockReset();
   mocks.getSchwabConnectionState.mockReset();
+  mocks.importSchwabExecutions.mockReset();
   if (originalProvider == null) delete process.env.SCHWAB_IMPORT_PROVIDER;
   else process.env.SCHWAB_IMPORT_PROVIDER = originalProvider;
 });
@@ -52,4 +55,11 @@ describe("authorizeSchwabAction", () => {
     expect(mocks.authorizeSchwabLocally).not.toHaveBeenCalled();
     expect(mocks.getSchwabConnectionState).not.toHaveBeenCalled();
   });
+});
+
+it("returns the actionable long-only validation error to the import dialog", async () => {
+  const message = "Long-only import stopped: SYNTH. Include the opening purchase.";
+  mocks.importSchwabExecutions.mockRejectedValue(new ImportPositionPolicyError(message));
+  await expect(importSchwabExecutionsAction({accountSelection:"synthetic-account",from:"2026-06-01",to:"2026-06-05"}))
+    .resolves.toEqual({ok:false,kind:"validation",error:message});
 });

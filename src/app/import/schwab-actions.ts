@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { ImportDestinationError, requireImportDestination } from "@/lib/import/destination";
 import { canImportData } from "@/lib/demoMode";
+import { ImportPositionPolicyError } from "@/lib/import/positionPolicy";
 import { schwabRequiresReauthorization } from "@/lib/schwab/authErrors";
 import { getSchwabConnectionState } from "@/lib/schwab/connection";
 import { SchwabDateRangeError } from "@/lib/schwab/dates";
@@ -211,6 +212,7 @@ export async function importSchwabExecutionsAction(
       || error instanceof SchwabDateRangeError
       || error instanceof SchwabAccountSelectionError
       || error instanceof SchwabHistoryResponseError
+      || error instanceof ImportPositionPolicyError
       || error instanceof SchwabAppendSafetyError
       || error instanceof TradeReconciliationError
     ) {

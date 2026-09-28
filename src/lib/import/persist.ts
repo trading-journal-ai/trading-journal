@@ -14,6 +14,7 @@ import {
   type SourceConfidence,
 } from "./normalize";
 import type { ParsedExecution } from "./tos";
+import { assertImportPositionPolicy } from "./positionPolicy";
 
 export type ImportSummary = {
   batchId: number | null;
@@ -117,6 +118,7 @@ async function importNormalized(
   if (normalized.executions.length === 0) {
     throw new Error("No importable executions found in the CSV.");
   }
+  assertImportPositionPolicy(normalized.trades);
   const parsedRange = dateRange(normalized.executions);
 
   return db.transaction(async (tx) => {

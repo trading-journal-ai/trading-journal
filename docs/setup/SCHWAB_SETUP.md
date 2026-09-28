@@ -208,3 +208,11 @@ historical imports or temporary API outages.
    contains nothing else.
 
 No Schwab token or account number is stored in the tracked repository.
+
+## Long-only imports
+
+For long-only trading, set `JOURNAL_IMPORT_POSITION_MODE=long-only`. This
+blocks Schwab and CSV imports that would derive a short position and gives an
+actionable missing-opening-history error. Include the earlier buys in the sync
+range before retrying; a sell must not become a short merely because the buys
+were never imported. See [the import contract](../import/TRADE_IMPORT_BEHAVIOR.md#long-only-installation-policy).

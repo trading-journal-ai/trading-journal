@@ -1,7 +1,7 @@
 # Trade Import and Reconciliation Behavior
 
 > Status: current-state audit and target contract
-> Last reviewed: 2026-09-10
+> Last reviewed: 2026-09-28
 > Scope: stock and ETF executions imported through Schwab REST, ThinkorSwim
 > statements, and DAS/TraderVue summaries
 
@@ -30,6 +30,29 @@ incremental reconciliation and atomic persistence path. DAS/TraderVue summary
 files remain synthetic trade summaries rather than broker execution ledgers.
 The largest remaining correctness risks are listed in
 [Known correctness gaps](#known-correctness-gaps).
+
+## Long-only installation policy
+
+Set `JOURNAL_IMPORT_POSITION_MODE=long-only` for a trader who does not short.
+This setting applies across all journal accounts in the installation.
+The alternative `long-and-short` retains support for other installations;
+unset also retains that compatibility. Invalid nonempty values stop imports.
+
+Schwab and execution CSV imports check the reconstructed trades inside the
+persistence transaction, including stored opening fills from earlier dates.
+Any short result aborts the whole attempted import, including new fills,
+batches, symbol changes and fee enrichment. The error asks the user to include
+the missing opening purchase in the imported date range. Grouped CSV summaries
+use the same policy before persistence. Neither path fabricates opening fills.
+Normal long entries, partial exits, overnight closes and duplicate syncs keep
+existing behavior. Rejected fills remain at the broker/in the source CSV and
+can be retried with complete history; they are not saved as short trades.
+
+This is a forward import safeguard, not an automatic repair of pre-existing
+incorrect records. Backfilling missing opening fills into an already-derived
+short requires a verified targeted repair with a rollback backup, preserving
+trade identity and notes. Journal/Calendar still show ET execution-day activity
+and attribute realized P&L to partial/final closing fills.
 
 ## External research: what established journals do
 
@@ -366,7 +389,10 @@ trades in the same symbol are already stored.
 
 1. **Close-first forward fill**
 
-   If the Journal has no earlier open position, a new `TO CLOSE` sell can be
+   In `long-only` installations, the transactional position-policy check now
+   rejects any reconstructed short, including close-first forward sells.
+   For `long-and-short` installations the broader position-effect gap remains:
+   if the Journal has no earlier open position, a new `TO CLOSE` sell can be
    interpreted by the flat-to-flat matcher as a new short. Position effect is
    currently used as a historical safety check but not as a universal matching
    invariant. A close-first fill must be sent to **Needs review**, never allowed

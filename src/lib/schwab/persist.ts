@@ -3,6 +3,7 @@ import { db, schema } from "@/lib/db";
 import { executionFeeEntries, feeBreakdownEntries, FEE_EPSILON } from "@/lib/import/fees";
 import type { ParsedExecution } from "@/lib/import/tos";
 import { etDateString } from "@/lib/time";
+import { assertImportPositionPolicy } from "@/lib/import/positionPolicy";
 import { compareExecutions, executionComparisonKey } from "./duplicates";
 import {
   planFeeEnrichment,
@@ -251,6 +252,8 @@ export async function persistSchwabExecutions(input: {
 export async function persistExecutionLedger(
   input: PersistExecutionLedgerInput,
 ): Promise<ExecutionPersistenceSummary> {
+  // Validate configuration even for duplicate-only fee updates.
+  assertImportPositionPolicy([]);
   validateIncomingIdentities(
     input.executions,
     input.requireBrokerExecutionKeys ?? false,
@@ -583,6 +586,10 @@ export async function persistExecutionLedger(
       ...persistedHistoricalGroups,
       ...planTradeReconciliation(forwardReconciliationExecutions),
     ];
+
+    // Check the reconstructed position, including earlier stored opening fills.
+    // Throw inside the transaction so fills, fees and batches roll back together.
+    assertImportPositionPolicy(groups.map((group) => group.trade));
 
     let tradesCreated = 0;
     let tradesUpdated = 0;

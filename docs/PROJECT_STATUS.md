@@ -3,7 +3,7 @@
 > **The pick-up-where-we-left-off doc.** Read this first to re-orient. It's a thin
 > pointer to the detailed lists, not a copy of them — when in doubt, follow the links.
 >
-> **Last worked:** 2026-09-22 · **Convention:** at the end of each work session,
+> **Last worked:** 2026-09-28 · **Convention:** at the end of each work session,
 > add a dated entry to the [Worklog](#worklog) and bump "Last worked". When a
 > **Now** item ships, move it to [CHANGELOG.md](CHANGELOG.md) with its date.
 
@@ -40,6 +40,8 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
+
+- **2026-09-28 — Long-only import safeguard:** Added installation-wide `JOURNAL_IMPORT_POSITION_MODE=long-only` support to Schwab, execution CSV and grouped CSV persistence. Imports that would derive a short position stop atomically and prompt for the missing opening purchase; earlier stored buys still reconcile partial and overnight exits. Invalid configuration also stops duplicate-only fee enrichment. Unset or explicit `long-and-short` retains compatibility. Contract and sample configuration updated. Publication is a focused branch from current `origin/main`; private databases, local configuration, repair artifacts and unrelated local history are excluded. Validation on this publication branch: 37 focused tests passed, one optional private-fixture test skipped, and `npm run verify:full` passed under Node 22 with the existing NFT tracing warning. Full test suite was not rerun. Remote merge and deployment are not included in this handoff.
 
 - **2026-09-22 — Release receipt:** [PR #82](https://github.com/trading-journal-ai/trading-journal/pull/82)
   tracks publication and merge status for the accepted Journal backlog and
