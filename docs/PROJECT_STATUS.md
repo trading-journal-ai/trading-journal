@@ -38,6 +38,8 @@ Full sequencing lives in [DATA_MODEL.md §9](DATA_MODEL.md).
 
 ## Worklog
 
+- **2026-10-02 — Paused Insights prototype publication:** Task-only source snapshot of `07a9840`, rooted at verified GitHub main `c2dea448`, on `codex/publish-market-context-insights`. Includes only necessary shared UI prerequisites (CompactSelect, PeriodTabs panel/keyboard support, fullscreen dialog/fill-height, and minimal SharedNoteComposer compact/plain-text/textarea-attribute props). Excludes the private local history, label snapshot, raw data and study results. Levels work is paused; the next evaluation priority is volume/buying-pressure evidence and candle-over-candle momentum, with key reaction zones as supporting context. Not merged or deployed. Publication-specific checks: TypeScript, ESLint over changed UI/API/library files, and 60 focused review/detector/store/API tests passed. Full production build and fresh browser validation of this remote-base snapshot are deferred; the original local prototype had browser coverage. No production-readiness claim.
+
 Most recent first. One entry per work session: date · what happened · where we
 stopped. This is the "when did we last work on it" trail.
 

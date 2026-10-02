@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type PointerEvent as ReactPointerEvent } from "react";
+import { createPortal } from "react-dom";
 import {
   CandlestickSeries,
   ColorType,
@@ -44,12 +45,39 @@ export type TradeChartSummary = {
   shares: string;
 };
 
+/** A horizontal price band drawn behind the candles (support/resistance research). */
+export type ChartPriceZone = {
+  /** Optional candle-time boundaries for review areas; omitted means full-width. */
+  startT?: number;
+  endT?: number;
+  id: string;
+  low: number;
+  high: number;
+  /** Render only the midpoint price; tolerance stays internal. */
+  display?: "band" | "line";
+  tone: "support" | "resistance" | "flip" | "candidate";
+  label?: string;
+  /** Drawn stronger, for the zone being edited. */
+  emphasized?: boolean;
+};
+
+export type ChartPricePoint = { price: number; time: number | null };
+
 export type LightweightTradeChartProps = {
+  /** Optional price bands; off unless a consumer passes zones. */
+  priceZones?: ChartPriceZone[];
+  /** Reports the price (and candle time) under a click on the chart. */
+  onPriceClick?: (point: ChartPricePoint) => void;
+  /** Optional vertical drag/keyboard editing for an emphasized research band. */
+  onPriceZoneChange?: (id: string, edges: { low: number; high: number }) => void;
+  onPriceZoneSelect?: (id: string) => void;
+  onPriceZoneRemove?: (id: string) => void;
   indicatorsEnabled?: boolean;
   volumeEnabled?: boolean;
   candles: ChartCandle[];
   markers: ChartMarker[];
   enableFullscreen?: boolean;
+  fullscreenHeader?: ReactNode;
   enableTradeScopeToggle?: boolean;
   excursionsEnabled?: boolean;
   focusMinutesAfter?: number;
@@ -62,11 +90,88 @@ export type LightweightTradeChartProps = {
 
 type InteractiveLightweightTradeChartProps = Omit<LightweightTradeChartProps, "excursionsEnabled"> & {
   footerAction?: ReactNode;
+  fillHeight?: boolean;
 };
 
 type ChartViewMode = "candles" | "mae";
 
 const EMPTY_TRADE_SUMMARIES: TradeChartSummary[] = [];
+const EMPTY_PRICE_ZONES: ChartPriceZone[] = [];
+const ZONE_COLORS: Record<ChartPriceZone["tone"], string> = {
+  support: "var(--green)",
+  resistance: "var(--red)",
+  flip: "var(--accent)",
+  candidate: "var(--muted)",
+};
+type ZoneRect = { zone: ChartPriceZone; top: number; bottom: number; left: number; right: number };
+
+function PriceZoneOverlays({ rects, onPriceZoneChange, onPriceZoneSelect, onPriceZoneRemove, beginZoneDrag, moveZoneDrag, endZoneDrag }: {
+  rects: ZoneRect[];
+  onPriceZoneSelect?: (id: string) => void;
+  onPriceZoneRemove?: (id: string) => void;
+  onPriceZoneChange?: LightweightTradeChartProps["onPriceZoneChange"];
+  beginZoneDrag: (event: ReactPointerEvent<SVGRectElement>, zone: ChartPriceZone, edge: "low" | "high" | "move") => void;
+  moveZoneDrag: (event: ReactPointerEvent<SVGRectElement>) => void;
+  endZoneDrag: (event: ReactPointerEvent<SVGRectElement>) => void;
+}) {
+  return <>{rects.map(({ zone, top, bottom, left, right }) => {
+            const color = ZONE_COLORS[zone.tone];
+            const height = Math.max(2, bottom - top);
+            const lineOnly = zone.display === "line";
+            const y = (top + bottom) / 2;
+            return (
+              <g key={`zone-${zone.id}`} data-price-display={zone.display ?? "band"} aria-label={zone.label ?? (lineOnly ? `Level $${((zone.low + zone.high) / 2).toFixed(2)}` : `Price zone ${zone.low}–${zone.high}`)}>
+                {lineOnly ? <>
+                  <line x1={left} x2={right} y1={y} y2={y} stroke={color} strokeWidth={1} vectorEffect="non-scaling-stroke" strokeOpacity={zone.emphasized ? 1 : 0.6} />
+                  {onPriceZoneSelect ? <line x1={left} x2={right} y1={y} y2={y} stroke="transparent" strokeWidth={12}
+                    role="button" tabIndex={0} aria-label={`Select level $${((zone.low + zone.high) / 2).toFixed(2)}`}
+                    className="pointer-events-auto cursor-pointer focus:outline-none focus-visible:stroke-[var(--accent)]"
+                    onClick={(event) => { event.stopPropagation(); onPriceZoneSelect(zone.id); }}
+                    onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onPriceZoneSelect(zone.id); } }} /> : null}
+                </> : <>
+                <rect x={left} y={top} width={Math.max(2, right - left)} height={height} fill={color} opacity={zone.emphasized ? 0.2 : 0.09} />
+                <line x1={left} x2={right} y1={top} y2={top} stroke={color} strokeDasharray="4 4" strokeOpacity={zone.emphasized ? 0.9 : 0.5} />
+                <line x1={left} x2={right} y1={top + height} y2={top + height} stroke={color} strokeDasharray="4 4" strokeOpacity={zone.emphasized ? 0.9 : 0.5} />
+                </>}
+                {zone.label ? (
+                  <text x={zone.emphasized ? Math.max(8, Math.min(left + 4, right - 220)) : Math.max(8, left + 4)} y={Math.max(12, (lineOnly ? y : top) - 7)} fill={color} fontFamily="var(--font-mono)" fontSize="10" fontWeight="600">{zone.label}</text>
+                ) : null}
+                {zone.emphasized && onPriceZoneChange ? (lineOnly ? ["move"] as const : ["high", "move", "low"] as const).map((edge) => (
+                  <rect key={edge} role="slider" tabIndex={0}
+                    aria-label={edge === "move" ? "Move selected level" : `Adjust ${edge === "low" ? "lower" : "upper"} level edge`}
+                    aria-valuenow={edge === "move" ? (zone.low + zone.high) / 2 : zone[edge]}
+                    aria-valuetext={`$${(edge === "move" ? (zone.low + zone.high) / 2 : zone[edge]).toFixed(2)}`}
+                    aria-orientation="vertical"
+                    x={Math.max(8, right - (lineOnly ? 44 : edge === "high" ? 80 : edge === "low" ? 148 : 24))} y={(edge === "high" ? top : edge === "low" ? bottom : (top + bottom) / 2) - 5}
+                    width={lineOnly ? 10 : edge === "move" ? 24 : 56} height={10} rx={lineOnly ? 1 : 3} fill={lineOnly ? "var(--background)" : color} stroke={lineOnly ? color : undefined}
+                    className="pointer-events-auto cursor-ns-resize touch-none focus:outline-none focus-visible:stroke-[var(--foreground)]"
+                    onClick={(event) => event.stopPropagation()}
+                    onPointerDown={(event) => beginZoneDrag(event, zone, edge)}
+                    onPointerMove={moveZoneDrag}
+                    onPointerUp={endZoneDrag}
+                    onPointerCancel={endZoneDrag}
+                    onLostPointerCapture={endZoneDrag}
+                    onKeyDown={(event) => {
+                      if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+                      event.preventDefault(); event.stopPropagation();
+                      const delta = event.key === "ArrowUp" ? 0.01 : -0.01;
+                      const low = Number((edge === "high" ? zone.low : zone.low + delta).toFixed(lineOnly ? 6 : 2));
+                      const high = Number((edge === "low" ? zone.high : zone.high + delta).toFixed(lineOnly ? 6 : 2));
+                      if (low > 0 && high > low) onPriceZoneChange(zone.id, { low, high });
+                    }}
+                  />
+                )) : null}
+                {lineOnly && zone.emphasized && onPriceZoneRemove ? <g role="button" tabIndex={0} aria-label="Remove selected level"
+                  className="pointer-events-auto cursor-pointer focus:outline-none focus-visible:stroke-[var(--accent)]"
+                  onClick={(event) => { event.stopPropagation(); onPriceZoneRemove(zone.id); }}
+                  onKeyDown={(event) => { if (["Enter", " ", "Delete", "Backspace"].includes(event.key)) { event.preventDefault(); onPriceZoneRemove(zone.id); } }}>
+                  <circle cx={right - 14} cy={y} r={10} fill="var(--background)" stroke={color} />
+                  <path d={`M ${right - 17} ${y - 3} l 6 6 m 0 -6 l -6 6`} stroke={color} fill="none" />
+                </g> : null}
+              </g>
+            );
+  })}</>;
+}
 
 const OVERLAY_COLORS = { ema9: "#f59e0b", ema20: "#3b82f6", vwap: "#a855f7" } as const;
 
@@ -408,8 +513,22 @@ function InteractiveLightweightTradeChart({
   tradeSummaries = EMPTY_TRADE_SUMMARIES,
   chartHeightClass = "h-[520px]",
   footerAction,
+  fillHeight = false,
+  priceZones = EMPTY_PRICE_ZONES,
+  onPriceClick,
+  onPriceZoneChange,
+  onPriceZoneSelect,
+  onPriceZoneRemove,
 }: InteractiveLightweightTradeChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  // Review overlays change without rebuilding the chart or resetting its viewport.
+  const zonesRef = useRef(priceZones);
+  const markersRef = useRef(markers);
+  const syncMarkerTimesRef = useRef<(() => void) | null>(null);
+  const priceClickRef = useRef(onPriceClick);
+  const zoneDragRef = useRef<{ id: string; edge: "low" | "high" | "move"; price: number; low: number; high: number; lineOnly: boolean } | null>(null);
+  const scheduleOverlayRef = useRef<(() => void) | null>(null);
+  const [zoneRects, setZoneRects] = useState<ZoneRect[]>([]);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -425,6 +544,30 @@ function InteractiveLightweightTradeChart({
   );
   const [themeKey, setThemeKey] = useState(0);
   const activeTradeNumber = hoveredTradeNumber ?? selectedTradeNumber;
+  function beginZoneDrag(event: ReactPointerEvent<SVGRectElement>, zone: ChartPriceZone, edge: "low" | "high" | "move") {
+    event.preventDefault(); event.stopPropagation();
+    const rect = containerRef.current?.getBoundingClientRect();
+    const p = rect ? candleSeriesRef.current?.coordinateToPrice(event.clientY - rect.top) : null;
+    if (p == null) return;
+    zoneDragRef.current = { id: zone.id, edge, price: p, low: zone.low, high: zone.high, lineOnly: zone.display === "line" };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  function moveZoneDrag(event: ReactPointerEvent<SVGRectElement>) {
+    const drag = zoneDragRef.current;
+    if (!drag || !onPriceZoneChange) return;
+    event.stopPropagation();
+    const rect = containerRef.current?.getBoundingClientRect();
+    const p = rect ? candleSeriesRef.current?.coordinateToPrice(event.clientY - rect.top) : null;
+    if (p == null) return;
+    const delta = drag.lineOnly ? Math.round(((drag.low + drag.high) / 2 + p - drag.price) * 100) / 100 - (drag.low + drag.high) / 2 : p - drag.price;
+    const low = Number((drag.edge === "high" ? drag.low : drag.low + delta).toFixed(drag.lineOnly ? 6 : 2));
+    const high = Number((drag.edge === "low" ? drag.high : drag.high + delta).toFixed(drag.lineOnly ? 6 : 2));
+    if (low > 0 && high > low) onPriceZoneChange(drag.id, { low, high });
+  }
+  function endZoneDrag(event: ReactPointerEvent<SVGRectElement>) {
+    event.stopPropagation(); zoneDragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  }
   const tradeGuides = tradeGuidesForSummaries(markerPoints, tradeSummaries, chartSize.width);
   const activeTradeGuide = activeTradeNumber == null
     ? undefined
@@ -449,6 +592,21 @@ function InteractiveLightweightTradeChart({
   useEffect(() => {
     preferredTradeNumberRef.current = selectedTradeNumber;
   }, [selectedTradeNumber]);
+
+  useEffect(() => {
+    zonesRef.current = priceZones;
+    scheduleOverlayRef.current?.();
+  }, [priceZones]);
+
+  useEffect(() => {
+    markersRef.current = markers;
+    syncMarkerTimesRef.current?.();
+    scheduleOverlayRef.current?.();
+  }, [markers]);
+
+  useEffect(() => {
+    priceClickRef.current = onPriceClick;
+  }, [onPriceClick]);
 
   useEffect(() => {
     tradeSummariesRef.current = tradeSummaries;
@@ -599,24 +757,33 @@ function InteractiveLightweightTradeChart({
       priceLineVisible: false,
       visible: false,
     });
-    const executionMinutes = [...new Set(
-      markers
-        .filter((marker) => Number.isFinite(marker.t))
-        .map((marker) => executionMinute(marker.t)),
-    )]
-      .sort((left, right) => left - right);
-    const executionTimePoints: WhitespaceData[] = executionMinutes
-      .map((time) => ({ time: timeValue(time) }));
-    executionTimeSeries.setData(executionTimePoints);
-
-    const firstChartTime = Math.min(
-      candles[0]?.t ?? Number.POSITIVE_INFINITY,
-      executionMinutes[0] ?? Number.POSITIVE_INFINITY,
-    );
-    const lastChartTime = Math.max(
-      candles.at(-1)?.t ?? Number.NEGATIVE_INFINITY,
-      executionMinutes.at(-1) ?? Number.NEGATIVE_INFINITY,
-    );
+    const chartMinutes = new Set(candles.map((candle) => candle.t));
+    const executionMinutes = new Set<number>();
+    let firstChartTime = candles[0]?.t ?? Number.POSITIVE_INFINITY;
+    let lastChartTime = candles.at(-1)?.t ?? Number.NEGATIVE_INFINITY;
+    const syncMarkerTimes = () => {
+      let addedTime = false;
+      for (const marker of markersRef.current) {
+        if (!Number.isFinite(marker.t)) continue;
+        const minute = executionMinute(marker.t);
+        if (chartMinutes.has(minute) || executionMinutes.has(minute)) continue;
+        executionMinutes.add(minute);
+        firstChartTime = Math.min(firstChartTime, minute);
+        lastChartTime = Math.max(lastChartTime, minute);
+        addedTime = true;
+      }
+      if (!addedTime) return;
+      // Keep gap timestamps for this chart's lifetime: deselecting a marker must
+      // not shrink the time scale. New out-of-cache executions retain real time.
+      const visibleRange = chart.timeScale().getVisibleRange();
+      const points: WhitespaceData[] = [...executionMinutes]
+        .sort((left, right) => left - right)
+        .map((time) => ({ time: timeValue(time) }));
+      executionTimeSeries.setData(points);
+      if (visibleRange) chart.timeScale().setVisibleRange(visibleRange);
+    };
+    syncMarkerTimesRef.current = syncMarkerTimes;
+    syncMarkerTimes();
 
     const handleCandleHover = (param: MouseEventParams<Time>) => {
       if (param.point == null || typeof param.time !== "number") {
@@ -670,7 +837,7 @@ function InteractiveLightweightTradeChart({
       const plotWidth = chart.timeScale().width();
       setChartSize({ width: plotWidth, height: rect.height });
 
-      const nextMarkers = markers.flatMap((marker, index) => {
+      const nextMarkers = markersRef.current.flatMap((marker, index) => {
         const candleTime = timeValue(executionMinute(marker.t));
         const x = chart.timeScale().timeToCoordinate(candleTime);
         const y = candleSeries.priceToCoordinate(marker.price);
@@ -684,6 +851,20 @@ function InteractiveLightweightTradeChart({
       });
       setMarkerPoints(nextMarkers);
 
+      const nextZones = zonesRef.current.flatMap((zone) => {
+        const top = candleSeries.priceToCoordinate(Math.max(zone.low, zone.high));
+        const bottom = candleSeries.priceToCoordinate(Math.min(zone.low, zone.high));
+        const left = zone.startT == null ? 0 : chart.timeScale().timeToCoordinate(zone.startT as UTCTimestamp);
+        const right = zone.endT == null ? container.clientWidth : chart.timeScale().timeToCoordinate(zone.endT as UTCTimestamp);
+        if (top == null || bottom == null || left == null || right == null) return [];
+        if (zone.display === "line") {
+          if (right < 0 || left > plotWidth) return [];
+          // Anchor editing controls to the visible segment while zoomed/panned.
+          return [{ zone, top, bottom, left: Math.max(0, left), right: Math.min(plotWidth, right) }];
+        }
+        return [{ zone, top, bottom, left, right }];
+      });
+      setZoneRects(nextZones);
     };
 
     const scheduleMarkerUpdate = () => {
@@ -694,8 +875,28 @@ function InteractiveLightweightTradeChart({
       });
     };
 
+    scheduleOverlayRef.current = scheduleMarkerUpdate;
     const handleVisibleRangeChange = () => scheduleMarkerUpdate();
     const handleSizeChange = () => scheduleMarkerUpdate();
+    // Use pointer taps for optional research editing. The library deliberately drops
+    // the second of two fast clicks at different coordinates as a non-double-click.
+    let tapStart: { x: number; y: number } | null = null;
+    const handleTapStart = (event: PointerEvent) => {
+      tapStart = event.button === 0 ? { x: event.clientX, y: event.clientY } : null;
+    };
+    const cancelTap = () => { tapStart = null; };
+    const handleTapEnd = (event: PointerEvent) => {
+      const start = tapStart; tapStart = null;
+      if (!start || !priceClickRef.current || Math.abs(event.clientX - start.x) + Math.abs(event.clientY - start.y) > 4) return;
+      const bounds = container.getBoundingClientRect();
+      const price = candleSeries.coordinateToPrice(event.clientY - bounds.top);
+      const time = chart.timeScale().coordinateToTime(event.clientX - bounds.left);
+      if (price == null || !Number.isFinite(price)) return;
+      priceClickRef.current({ price, time: typeof time === "number" ? Number(time) : null });
+    };
+    container.addEventListener("pointerdown", handleTapStart);
+    container.addEventListener("pointerup", handleTapEnd);
+    container.addEventListener("pointercancel", cancelTap);
 
     chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
     chart.timeScale().subscribeSizeChange(handleSizeChange);
@@ -750,6 +951,12 @@ function InteractiveLightweightTradeChart({
 
     return () => {
       window.removeEventListener(CHART_FOCUS_EVENT, handleFocusRequest);
+      container.removeEventListener("pointerdown", handleTapStart);
+      container.removeEventListener("pointerup", handleTapEnd);
+      container.removeEventListener("pointercancel", cancelTap);
+      scheduleOverlayRef.current = null;
+      syncMarkerTimesRef.current = null;
+      setZoneRects([]);
       chart.unsubscribeCrosshairMove(handleCandleHover);
       chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
       chart.timeScale().unsubscribeSizeChange(handleSizeChange);
@@ -770,7 +977,7 @@ function InteractiveLightweightTradeChart({
       setMarkerPoints([]);
       setTradeOverlay(null);
     };
-  }, [candleData, candles, focusMinutesAfter, focusMinutesBefore, indicatorData, initialFocusTime, markers, themeKey, volumeEnabled]);
+  }, [candleData, candles, focusMinutesAfter, focusMinutesBefore, indicatorData, initialFocusTime, themeKey, volumeEnabled]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -908,9 +1115,9 @@ function InteractiveLightweightTradeChart({
   }, [candleData, candles, chartCoordinateKey, chartSize.width, maeTradeNumber, themeKey, tradeSummaries]);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+    <div className={`${fillHeight ? "flex h-full min-h-0 flex-col " : ""}overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]`}>
       <div
-        className={`relative w-full ${chartHeightClass}`}
+        className={`relative w-full ${fillHeight ? "min-h-0 flex-1" : chartHeightClass}`}
         onPointerDown={() => {
           setHoveredTradeNumber(null);
           setSelectedTradeNumber(null);
@@ -932,6 +1139,8 @@ function InteractiveLightweightTradeChart({
           viewBox={`0 0 ${chartSize.width} ${chartSize.height}`}
           width={chartSize.width}
         >
+          <PriceZoneOverlays rects={zoneRects} onPriceZoneChange={onPriceZoneChange} onPriceZoneSelect={onPriceZoneSelect} onPriceZoneRemove={onPriceZoneRemove}
+            beginZoneDrag={beginZoneDrag} moveZoneDrag={moveZoneDrag} endZoneDrag={endZoneDrag} />
           {tradeOverlay ? <TradeExcursionOverlay geometry={tradeOverlay} /> : null}
           {tradeGuides.map((guide) => {
             const tradeNumber = guide.summary.tradeNumber;
@@ -1093,7 +1302,7 @@ function InteractiveLightweightTradeChart({
           </div>
         ) : null}
       </div>
-      <div className="flex items-center justify-between gap-4 border-t border-[var(--hairline)] px-4 py-3 text-[12px] text-[var(--muted)]">
+      <div className="flex shrink-0 items-center justify-between gap-4 border-t border-[var(--hairline)] px-4 py-3 text-[12px] text-[var(--muted)]">
         <a
           href="https://www.tradingview.com/"
           target="_blank"
@@ -1141,6 +1350,9 @@ function ChartViewToggle({
 
 export default function LightweightTradeChart(props: LightweightTradeChartProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const fullscreenDialogRef = useRef<HTMLDialogElement>(null);
+  const expandButtonRef = useRef<HTMLButtonElement>(null);
+  const fullscreenOpen = props.enableFullscreen === true && isFullscreen && props.candles.length > 0;
   const [viewMode, setViewMode] = useState<ChartViewMode>("candles");
   const breathingAvailable = props.excursionsEnabled === true
     && (props.tradeSummaries?.some((summary) => (
@@ -1153,21 +1365,23 @@ export default function LightweightTradeChart(props: LightweightTradeChartProps)
   const activeViewMode: ChartViewMode = breathingAvailable ? viewMode : "candles";
 
   useEffect(() => {
-    if (!isFullscreen) return undefined;
+    if (!fullscreenOpen) return undefined;
+    const dialog = fullscreenDialogRef.current;
+    if (!dialog) return undefined;
 
     const previousOverflow = document.body.style.overflow;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsFullscreen(false);
-    };
-
+    dialog.showModal();
     document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleKeyDown);
+
+    // Switching chart views may replace the inline Expand button.
+    const restoreExpandFocus = () => expandButtonRef.current?.focus({ preventScroll: true });
 
     return () => {
+      dialog.close();
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
+      restoreExpandFocus();
     };
-  }, [isFullscreen]);
+  }, [fullscreenOpen]);
 
   if (props.candles.length === 0) return <EmptyTradeChart chartHeightClass={props.chartHeightClass} />;
 
@@ -1177,6 +1391,7 @@ export default function LightweightTradeChart(props: LightweightTradeChartProps)
       {props.enableFullscreen ? (
         <button
           type="button"
+          ref={expandButtonRef}
           aria-label="Expand chart"
           title="Expand chart"
           onClick={() => setIsFullscreen(true)}
@@ -1206,15 +1421,22 @@ export default function LightweightTradeChart(props: LightweightTradeChartProps)
         <InteractiveLightweightTradeChart {...props} footerAction={footerAction} />
       )}
 
-      {props.enableFullscreen && isFullscreen ? (
-        <div className="fixed inset-0 z-50 bg-[var(--background)]/90 px-6 py-5 backdrop-blur-sm">
-          <div className="mx-auto flex h-full max-w-[1600px] flex-col">
-            <div className="mb-4 flex justify-end">
+      {fullscreenOpen ? createPortal(
+        <dialog
+          ref={fullscreenDialogRef}
+          aria-label="Expanded chart"
+          onCancel={() => setIsFullscreen(false)}
+          onClose={() => setIsFullscreen(false)}
+          className="fixed inset-0 m-0 h-dvh max-h-none w-screen max-w-none overflow-hidden border-0 bg-[var(--background)] px-4 py-4 text-[var(--foreground)] sm:px-6"
+        >
+          <div className="flex h-full w-full flex-col">
+            <div className="mb-3 flex shrink-0 items-start justify-end gap-4">
+              {props.fullscreenHeader}
               <button
                 type="button"
                 aria-label="Close expanded chart"
                 onClick={() => setIsFullscreen(false)}
-                className="flex h-10 w-10 items-center justify-center rounded-[6px] border border-[var(--border)] font-mono text-[16px] text-[var(--foreground)] transition hover:bg-[var(--surface)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[6px] border border-[var(--border)] font-mono text-[16px] text-[var(--foreground)] transition hover:bg-[var(--surface)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
               >
                 X
               </button>
@@ -1224,27 +1446,22 @@ export default function LightweightTradeChart(props: LightweightTradeChartProps)
                 <TradeBreathingChart
                   allowAllTrades={props.enableTradeScopeToggle}
                   candles={props.candles}
-                  chartHeightClass="h-[calc(100vh-9rem)]"
+                  fillHeight
                   footerAction={<ChartViewToggle mode={activeViewMode} onChange={setViewMode} />}
                   initialActiveTradeNumber={props.initialActiveTradeNumber}
                   tradeSummaries={props.tradeSummaries ?? EMPTY_TRADE_SUMMARIES}
                 />
               ) : (
                 <InteractiveLightweightTradeChart
-                  candles={props.candles}
-                  focusMinutesAfter={props.focusMinutesAfter}
-                  focusMinutesBefore={props.focusMinutesBefore}
-                  initialActiveTradeNumber={props.initialActiveTradeNumber}
-                  initialFocusTime={props.initialFocusTime}
-                  markers={props.markers}
-                  tradeSummaries={props.tradeSummaries}
-                  chartHeightClass="h-[calc(100vh-9rem)]"
-                  footerAction={<ChartViewToggle mode={activeViewMode} onChange={setViewMode} />}
+                  {...props}
+                  fillHeight
+                  footerAction={breathingAvailable ? <ChartViewToggle mode={activeViewMode} onChange={setViewMode} /> : undefined}
                 />
               )}
             </div>
           </div>
-        </div>
+        </dialog>,
+        document.body,
       ) : null}
     </>
   );

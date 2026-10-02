@@ -500,12 +500,17 @@ async function MomentumArchiveContent({
         <h1 className="text-3xl font-semibold leading-tight tracking-[-0.02em] text-[var(--foreground)]">
           {periodScope ? journalPeriodLabel(periodScope, selectedDate) : customRange ? `${shortDate(customRange.from)} – ${shortDate(customRange.to)}` : "Full archive"}
         </h1>
+        <div className="flex items-center gap-1">
+        <Link href="/analytics/momentum-archive/insights"
+          className="rounded-md px-3 py-2 text-sm font-medium text-[var(--muted)] transition-colors hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+        >Insights</Link>
         <Link
           href={isFullArchive
             ? filters.returnTo ?? archiveHref(activeFilters, { view: "day", date: archiveDayTabDate(selectedDate, latestDate), page: 1, from: undefined, to: undefined, showAll: false, showContext: false })
             : archiveHref(activeFilters, { view: "archive", returnTo: currentHref, page: 1, from: undefined, to: undefined, showAll: false, showContext: false })}
           className="rounded-md px-3 py-2 text-sm font-medium text-[var(--muted)] transition-colors hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
         >{isFullArchive ? filters.returnTo ? "Back to previous view" : "Back to day view" : "Full archive"}</Link>
+        </div>
       </div>
       <AnalyticsSectionTabs active="momentum" className="mb-6" />
 

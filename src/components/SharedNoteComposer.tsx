@@ -1,11 +1,14 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ReactNode, TextareaHTMLAttributes } from "react";
 import { useEffect, useRef, useState } from "react";
 import DictationTextarea, { type DictationStatus } from "@/components/DictationTextarea";
 import { SETUP_PATTERN_CUES } from "@/lib/journalLabels";
 
 type SharedNoteComposerProps = {
+  dictationEnabled?: boolean;
+  size?: "compact" | "default";
+  textareaProps?: Pick<TextareaHTMLAttributes<HTMLTextAreaElement>, "maxLength" | "aria-label">;
   name: string;
   defaultValue: string;
   placeholder: string;
@@ -55,6 +58,9 @@ function SetupPatternCues() {
 }
 
 export default function SharedNoteComposer({
+  dictationEnabled = true,
+  size = "default",
+  textareaProps,
   name,
   defaultValue,
   placeholder,
@@ -86,6 +92,7 @@ export default function SharedNoteComposer({
   const [actionsHiddenDuringDictation, setActionsHiddenDuringDictation] = useState<boolean | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inputKey = `${localStorageKey ?? "server"}:${initialValue}`;
+  const inputClassName = textareaClassName ?? `${size === "compact" ? "min-h-[88px]" : "min-h-[128px]"} w-full resize-y rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-sm leading-6 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60`;
   const localMode = Boolean(localStorageKey);
   // Freeze the actions row in its pre-dictation state while recording, so
   // streamed live text doesn't pop the row in (or out) mid-dictation.
@@ -133,7 +140,8 @@ export default function SharedNoteComposer({
       {showSetupPatternCues ? <SetupPatternCues /> : null}
       <div className="block space-y-2">
         <span className="sr-only">Note</span>
-        <DictationTextarea
+        {dictationEnabled ? <DictationTextarea
+          {...textareaProps}
           key={inputKey}
           id={textareaId}
           name={name}
@@ -147,8 +155,21 @@ export default function SharedNoteComposer({
           onDictationStatusChange={handleDictationStatusChange}
           promptMode={dictationPromptMode}
           promptContent={dictationPromptContent}
-          className={textareaClassName ?? "min-h-[128px] w-full resize-y rounded-md border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-sm leading-6 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)] focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60"}
-        />
+          className={inputClassName}
+        /> : <textarea
+          {...textareaProps}
+          key={inputKey}
+          id={textareaId}
+          name={name}
+          rows={rows}
+          autoFocus={autoFocus}
+          disabled={disabled}
+          defaultValue={value === undefined ? initialValue : undefined}
+          value={value}
+          placeholder={placeholder}
+          onChange={(event) => onTextChange?.(event.target.value)}
+          className={inputClassName}
+        />}
       </div>
       {!actionsHidden ? <div className="flex flex-wrap items-center justify-between gap-3">
         <div>{savedLocal ? <span className="text-[11px] text-[var(--muted)]">Saved in this browser</span> : null}</div>

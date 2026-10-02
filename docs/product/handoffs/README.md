@@ -12,3 +12,5 @@ machines or workers.
   — Google Finance-inspired visual analysis for Journal, including the original
   reference image, product decisions, open questions, implementation entry
   points, and a copy-paste continuation prompt.
+
+- [Market Context Insights paused prototype](2026-10-market-context-insights/README.md) — volume/momentum evaluation next; levels remain supporting context.

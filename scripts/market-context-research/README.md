@@ -147,3 +147,12 @@ good candle structure is distinct from price-profile fit. These notes have not
 been converted into training labels. The next review needs separate interval,
 surrounding-move, structure, price-fit and setup-visibility judgments; see the
 master plan's first qualitative review section.
+
+## Insights prototype builders (October 2026)
+
+`build-insights.py` and `build-curl-days.py` build the local datasets for the Market Context
+Insights prototype (`/analytics/momentum-archive/insights`); `tradingview-csv-to-day.py`
+converts a TradingView one-minute export into a day file that `build-curl-days.py --extra`
+accepts. One-off analyses from the same session live in `studies/2026-10-02/`. Outputs go to
+gitignored `data/evals/market-insights/`. See the
+[handoff](../../docs/product/handoffs/2026-10-market-context-insights/README.md).

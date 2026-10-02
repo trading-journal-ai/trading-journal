@@ -468,3 +468,15 @@ Single-line native selects use a theme-aware caret inset 8px from the right
 edge, with 32px end padding to separate it from text. The global rule excludes
 multiple/listbox selects; forced-colors mode restores the native indicator.
 Native menus and keyboard selection remain unchanged.
+
+
+### Market Context Insights prototype (paused)
+
+`LevelReviewWorkspace` and `ChartReviewWorkspace` compose `LightweightTradeChart`,
+Button, CompactSelect, PeriodTabs and SharedNoteComposer. The shared chart owns the
+fullscreen dialog and optional price overlays: bands remain default; line mode adds
+selection, one move handle and removal. Evidence markers update without recreating
+the chart or resetting its viewport. Fullscreen edits remain in the review draft.
+CompactSelect owns the compact choice menu; optional PeriodTabs panel IDs enable
+keyboard navigation. SharedNoteComposer adds optional compact sizing, textarea
+attributes and dictation opt-out while retaining remote defaults. These shared UI prerequisites accompany the publication snapshot.

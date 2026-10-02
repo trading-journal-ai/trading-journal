@@ -16,6 +16,7 @@ type TradeBreathingChartProps = {
   candles: ChartCandle[];
   chartHeightClass?: string;
   footerAction?: ReactNode;
+  fillHeight?: boolean;
   initialActiveTradeNumber?: number;
   tradeSummaries: TradeChartSummary[];
 };
@@ -364,6 +365,7 @@ export default function TradeBreathingChart({
   candles,
   chartHeightClass = "h-[520px]",
   footerAction,
+  fillHeight = false,
   initialActiveTradeNumber,
   tradeSummaries,
 }: TradeBreathingChartProps) {
@@ -455,11 +457,11 @@ export default function TradeBreathingChart({
 
   if (trades.length === 0) {
     return (
-      <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-transparent">
-        <div className={`grid ${chartHeightClass} place-items-center px-6 text-center text-sm text-[var(--muted)]`}>
+      <div className={`${fillHeight ? "flex h-full min-h-0 flex-col " : ""}overflow-hidden rounded-lg border border-[var(--border)] bg-transparent`}>
+        <div className={`grid ${fillHeight ? "min-h-0 flex-1" : chartHeightClass} place-items-center px-6 text-center text-sm text-[var(--muted)]`}>
           MAE is unavailable for these trades.
         </div>
-        <div className="flex items-center justify-end border-t border-[var(--hairline)] px-4 py-3">
+        <div className="flex shrink-0 items-center justify-end border-t border-[var(--hairline)] px-4 py-3">
           {footerAction}
         </div>
       </div>
@@ -467,8 +469,8 @@ export default function TradeBreathingChart({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-transparent">
-      <div className={`relative ${activeScope === "all" ? "overflow-x-auto" : "overflow-hidden"} ${chartHeightClass}`}>
+    <div className={`${fillHeight ? "flex h-full min-h-0 flex-col " : ""}overflow-hidden rounded-lg border border-[var(--border)] bg-transparent`}>
+      <div className={`relative ${activeScope === "all" ? "overflow-x-auto" : "overflow-hidden"} ${fillHeight ? "min-h-0 flex-1" : chartHeightClass}`}>
         <div
           className="relative h-full"
           style={{ minWidth: minimumChartWidth }}
@@ -555,7 +557,7 @@ export default function TradeBreathingChart({
         </div>
       </div>
 
-      <div className="flex min-h-12 flex-wrap items-center justify-between gap-3 border-t border-[var(--hairline)] px-4 py-2.5">
+      <div className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[var(--hairline)] px-4 py-2.5">
         {inspectedTrade ? (
           <p className="font-mono text-[10.5px] tabular-nums text-[var(--muted)]" aria-live="polite">
             <span className="font-semibold text-[var(--foreground)]">T{inspectedTrade.summary.tradeNumber}</span>
